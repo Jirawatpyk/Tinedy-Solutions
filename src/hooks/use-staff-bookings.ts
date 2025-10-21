@@ -82,7 +82,9 @@ export function useStaffBookings() {
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split('T')[0]
+
+      // Use local timezone instead of UTC to avoid date shifting
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
       console.log('[StaffBookings] Today:', {
         todayDate: today,
@@ -92,7 +94,7 @@ export function useStaffBookings() {
 
       const nextWeek = new Date(today)
       nextWeek.setDate(nextWeek.getDate() + 7)
-      const nextWeekStr = nextWeek.toISOString().split('T')[0]
+      const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`
 
       // Fetch today's bookings
       const { data: todayData, error: todayError } = await supabase
@@ -148,14 +150,14 @@ export function useStaffBookings() {
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split('T')[0]
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
       // Get start of week (Monday)
       const startOfWeek = new Date(today)
       const day = startOfWeek.getDay()
       const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1)
       startOfWeek.setDate(diff)
-      const startOfWeekStr = startOfWeek.toISOString().split('T')[0]
+      const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
 
       // Jobs today
       const { count: jobsTodayCount } = await supabase
@@ -175,7 +177,7 @@ export function useStaffBookings() {
       // Completion rate (last 30 days)
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
+      const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
 
       const { count: totalJobs } = await supabase
         .from('bookings')
@@ -213,7 +215,7 @@ export function useStaffBookings() {
 
       // Total earnings this month
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      const startOfMonthStr = startOfMonth.toISOString().split('T')[0]
+      const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
       const { data: earningsData } = await supabase
         .from('bookings')
