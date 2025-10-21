@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { supabase } from '@/lib/supabase'
 
 const adminNavItems = [
@@ -144,7 +145,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* User info */}
           <div className="p-4 border-b border-tinedy-blue/20">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-tinedy-green flex items-center justify-center">
                 <span className="text-sm font-semibold">
                   {profile?.full_name?.charAt(0).toUpperCase()}
@@ -158,6 +159,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {profile?.role}
                 </p>
               </div>
+            </div>
+            <div className="flex justify-center">
+              <ThemeToggle />
             </div>
           </div>
 

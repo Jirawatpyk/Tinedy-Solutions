@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/auth-context'
+import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
 import { MainLayout } from './components/layout/main-layout'
 import { LoginPage } from './pages/auth/login'
@@ -22,8 +23,9 @@ import { Toaster } from './components/ui/toaster'
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <ThemeProvider defaultTheme="light" storageKey="tinedy-crm-theme">
+      <AuthProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -129,9 +131,10 @@ function App() {
             }
           />
         </Routes>
+        <Toaster />
       </BrowserRouter>
-      <Toaster />
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
