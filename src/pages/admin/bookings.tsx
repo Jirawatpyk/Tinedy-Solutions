@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Trash2, Users, User, Info, X, Calendar, Download } from 'lucide-react'
+import { Plus, Search, Trash2, Users, User, Info, X, Calendar, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -99,6 +99,9 @@ export function AdminBookings() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all')
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   // Detail Modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -216,7 +219,7 @@ export function AdminBookings() {
 
   useEffect(() => {
     filterBookings()
-     
+    setCurrentPage(1) // Reset to page 1 when filters change
   }, [searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter, bookings])
 
   const fetchBookings = async () => {
@@ -1952,13 +1955,55 @@ export function AdminBookings() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Pagination Controls - Top */}
+          {filteredBookings.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
+                  Show:
+                </Label>
+                <Select
+                  value={itemsPerPage.toString()}
+                  onValueChange={(value) => {
+                    setItemsPerPage(Number(value))
+                    setCurrentPage(1)
+                  }}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  per page
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredBookings.length)} to {Math.min(currentPage * itemsPerPage, filteredBookings.length)} of {filteredBookings.length} bookings
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {filteredBookings.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 No bookings found
               </p>
             ) : (
-              filteredBookings.map((booking) => (
+              (() => {
+                // Calculate pagination
+                const startIndex = (currentPage - 1) * itemsPerPage
+                const endIndex = startIndex + itemsPerPage
+                const paginatedBookings = filteredBookings.slice(startIndex, endIndex)
+
+                return paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -2052,9 +2097,55 @@ export function AdminBookings() {
                   </div>
                   </div>
                 </div>
-              ))
+                ))
+              })()
             )}
           </div>
+
+          {/* Pagination Controls - Bottom */}
+          {filteredBookings.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {Math.ceil(filteredBookings.length / itemsPerPage)}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(filteredBookings.length / itemsPerPage)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.ceil(filteredBookings.length / itemsPerPage))}
+                  disabled={currentPage >= Math.ceil(filteredBookings.length / itemsPerPage)}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
