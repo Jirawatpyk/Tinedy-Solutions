@@ -2058,9 +2058,6 @@ export function AdminBookings() {
                     <div className="text-sm text-muted-foreground">
                       {formatDate(booking.booking_date)} • {booking.start_time} - {booking.end_time}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formatFullAddress(booking)}
-                    </p>
                     {booking.profiles && (
                       <p className="text-sm text-tinedy-blue flex items-center gap-1">
                         <User className="h-3 w-3" />
