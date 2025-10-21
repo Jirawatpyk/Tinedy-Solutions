@@ -266,17 +266,16 @@ export function useChat() {
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {
     if (selectedUser) {
-      fetchMessages(selectedUser.id).then((fetchedMessages) => {
+      fetchMessages(selectedUser.id).then(async (fetchedMessages) => {
         // Mark unread messages from this user as read
         const unreadMessages = fetchedMessages
           .filter((m: Message) => m.sender_id === selectedUser.id && !m.is_read)
           .map((m: Message) => m.id)
 
         if (unreadMessages.length > 0) {
-          markAsRead(unreadMessages).then(() => {
-            // Reload conversations to update unread count
-            loadConversations()
-          })
+          await markAsRead(unreadMessages)
+          // Force reload conversations to update unread counts immediately
+          loadConversations()
         }
       })
     }
