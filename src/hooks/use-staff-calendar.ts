@@ -64,11 +64,12 @@ export function useStaffCalendar() {
         .select(`
           id,
           booking_date,
-          time_slot,
+          start_time,
+          end_time,
           status,
           notes,
           customers (full_name),
-          service_packages (name, duration)
+          service_packages (name, duration_minutes)
         `)
         .eq('staff_id', user.id)
         .gte('booking_date', today.toISOString().split('T')[0])
@@ -79,11 +80,11 @@ export function useStaffCalendar() {
 
       // Transform bookings to calendar events
       const calendarEvents: CalendarEvent[] = (data || []).map((booking: any) => {
-        const [hours, minutes] = booking.time_slot.split(':')
+        const [hours, minutes] = booking.start_time.split(':')
         const startDate = new Date(booking.booking_date)
         startDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
 
-        const duration = booking.service_packages?.duration || 60
+        const duration = booking.service_packages?.duration_minutes || 60
         const endDate = new Date(startDate)
         endDate.setMinutes(endDate.getMinutes() + duration)
 
