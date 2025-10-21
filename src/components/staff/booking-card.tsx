@@ -1,10 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play } from 'lucide-react'
+import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play, Users } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
+import { useAuth } from '@/contexts/auth-context'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -15,6 +16,11 @@ interface BookingCardProps {
 }
 
 export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCompleted, showDate = false }: BookingCardProps) {
+  const { user } = useAuth()
+
+  // Check if this is a team booking (not assigned to current user)
+  const isTeamBooking = booking.staff_id !== user?.id && booking.team_id
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -73,9 +79,17 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
               </div>
             )}
           </div>
-          <Badge className={getStatusColor(booking.status)} variant="outline">
-            {getStatusText(booking.status)}
-          </Badge>
+          <div className="flex flex-col gap-2 items-end">
+            <Badge className={getStatusColor(booking.status)} variant="outline">
+              {getStatusText(booking.status)}
+            </Badge>
+            {isTeamBooking && (
+              <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200" variant="outline">
+                <Users className="h-3 w-3 mr-1" />
+                งานทีม
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Customer Info */}

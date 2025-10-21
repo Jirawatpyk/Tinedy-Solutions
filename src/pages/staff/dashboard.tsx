@@ -15,6 +15,7 @@ import {
   DollarSign,
   RefreshCw,
   AlertCircle,
+  CheckCircle,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -22,6 +23,7 @@ export default function StaffDashboard() {
   const {
     todayBookings,
     upcomingBookings,
+    completedBookings,
     stats,
     loading,
     error,
@@ -42,6 +44,7 @@ export default function StaffDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [todayLimit, setTodayLimit] = useState(6)
   const [upcomingLimit, setUpcomingLimit] = useState(6)
+  const [completedLimit, setCompletedLimit] = useState(6)
   const { toast } = useToast()
 
   const handleRefresh = async () => {
@@ -268,6 +271,8 @@ export default function StaffDashboard() {
                     key={booking.id}
                     booking={booking}
                     onViewDetails={setSelectedBooking}
+                    onStartProgress={handleStartProgress}
+                    onMarkCompleted={handleMarkCompleted}
                     showDate={true}
                   />
                 ))}
@@ -280,6 +285,62 @@ export default function StaffDashboard() {
                     className="transition-all duration-200 hover:scale-105"
                   >
                     โหลดเพิ่ม +6 ({upcomingBookings.length - upcomingLimit} งานเหลืออยู่)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Past Bookings */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-gray-600" />
+              งานที่ผ่านมา
+            </h2>
+            {!loading && completedBookings.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                30 วันล่าสุด ({completedBookings.length} งาน)
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-48" />
+              ))}
+            </div>
+          ) : completedBookings.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                ไม่มีงานในอดีต 30 วันที่ผ่านมา
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {completedBookings.slice(0, completedLimit).map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onViewDetails={setSelectedBooking}
+                    onStartProgress={handleStartProgress}
+                    onMarkCompleted={handleMarkCompleted}
+                    showDate={true}
+                  />
+                ))}
+              </div>
+              {completedBookings.length > completedLimit && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={() => setCompletedLimit(prev => prev + 6)}
+                    variant="outline"
+                    className="transition-all duration-200 hover:scale-105"
+                  >
+                    โหลดเพิ่ม +6 ({completedBookings.length - completedLimit} งานเหลืออยู่)
                   </Button>
                 </div>
               )}

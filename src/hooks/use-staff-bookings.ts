@@ -26,6 +26,8 @@ export interface StaffBooking {
   state: string
   zip_code: string
   created_at: string
+  staff_id: string | null
+  team_id: string | null
   customers: {
     id: string
     full_name: string
@@ -52,6 +54,7 @@ export function useStaffBookings() {
   const { user } = useAuth()
   const [todayBookings, setTodayBookings] = useState<StaffBooking[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<StaffBooking[]>([])
+  const [completedBookings, setCompletedBookings] = useState<StaffBooking[]>([])
   const [stats, setStats] = useState<StaffStats>({
     jobsToday: 0,
     jobsThisWeek: 0,
@@ -61,13 +64,18 @@ export function useStaffBookings() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [myTeamIds, setMyTeamIds] = useState<string[]>([])
+  const [isTeamLead, setIsTeamLead] = useState(false)
 
   useEffect(() => {
     if (!user) return
 
+    checkTeamLeadStatus()
     loadBookings()
 
     // Real-time subscription for new bookings
+    // Note: Supabase realtime filters don't support OR conditions directly
+    // We'll subscribe to all changes and filter in the callback
     const channel = supabase
       .channel('staff-bookings')
       .on(
@@ -76,10 +84,17 @@ export function useStaffBookings() {
           event: '*',
           schema: 'public',
           table: 'bookings',
-          filter: `staff_id=eq.${user.id}`,
         },
-        () => {
-          loadBookings()
+        (payload) => {
+          const booking = payload.new as any
+
+          // Reload if booking is for current user OR for their team (if they're a lead)
+          const isMyBooking = booking.staff_id === user.id
+          const isMyTeamBooking = isTeamLead && myTeamIds.includes(booking.team_id)
+
+          if (isMyBooking || isMyTeamBooking) {
+            loadBookings()
+          }
         }
       )
       .subscribe()
@@ -87,7 +102,35 @@ export function useStaffBookings() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [user, isTeamLead, myTeamIds])
+
+  async function checkTeamLeadStatus() {
+    if (!user) return
+
+    try {
+      // Check if user is a team lead
+      const { data: teams, error } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('team_lead_id', user.id)
+        .eq('is_active', true)
+
+      if (error) throw error
+
+      const teamIds = teams?.map(t => t.id) || []
+      setMyTeamIds(teamIds)
+      setIsTeamLead(teamIds.length > 0)
+
+      console.log('[StaffBookings] Team Lead Status:', {
+        userId: user.id,
+        isLead: teamIds.length > 0,
+        teamCount: teamIds.length,
+        teamIds
+      })
+    } catch (err) {
+      console.error('Error checking team lead status:', err)
+    }
+  }
 
   async function loadBookings() {
     if (!user) return
@@ -113,14 +156,22 @@ export function useStaffBookings() {
       const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`
 
       // Fetch today's bookings
-      const { data: todayData, error: todayError } = await supabase
+      let todayQuery = supabase
         .from('bookings')
         .select(`
           *,
           customers (id, full_name, phone, avatar_url),
           service_packages (id, name, duration_minutes, price)
         `)
-        .eq('staff_id', user.id)
+
+      // If user is a team lead, fetch team bookings too
+      if (isTeamLead && myTeamIds.length > 0) {
+        todayQuery = todayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        todayQuery = todayQuery.eq('staff_id', user.id)
+      }
+
+      const { data: todayData, error: todayError } = await todayQuery
         .eq('booking_date', todayStr)
         .order('start_time', { ascending: true })
 
@@ -132,14 +183,22 @@ export function useStaffBookings() {
       })
 
       // Fetch upcoming bookings (next 7 days, excluding today)
-      const { data: upcomingData, error: upcomingError } = await supabase
+      let upcomingQuery = supabase
         .from('bookings')
         .select(`
           *,
           customers (id, full_name, phone, avatar_url),
           service_packages (id, name, duration_minutes, price)
         `)
-        .eq('staff_id', user.id)
+
+      // If user is a team lead, fetch team bookings too
+      if (isTeamLead && myTeamIds.length > 0) {
+        upcomingQuery = upcomingQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        upcomingQuery = upcomingQuery.eq('staff_id', user.id)
+      }
+
+      const { data: upcomingData, error: upcomingError} = await upcomingQuery
         .gt('booking_date', todayStr)
         .lte('booking_date', nextWeekStr)
         .order('booking_date', { ascending: true })
@@ -147,8 +206,37 @@ export function useStaffBookings() {
 
       if (upcomingError) throw upcomingError
 
+      // Fetch past bookings (last 30 days) - all statuses
+      const thirtyDaysAgo = new Date(today)
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
+
+      let completedQuery = supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, phone, avatar_url),
+          service_packages (id, name, duration_minutes, price)
+        `)
+
+      // If user is a team lead, fetch team bookings too
+      if (isTeamLead && myTeamIds.length > 0) {
+        completedQuery = completedQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        completedQuery = completedQuery.eq('staff_id', user.id)
+      }
+
+      const { data: completedData, error: completedError } = await completedQuery
+        .lt('booking_date', todayStr)
+        .gte('booking_date', thirtyDaysAgoStr)
+        .order('booking_date', { ascending: false })
+        .order('start_time', { ascending: false })
+
+      if (completedError) throw completedError
+
       setTodayBookings((todayData as any) || [])
       setUpcomingBookings((upcomingData as any) || [])
+      setCompletedBookings((completedData as any) || [])
 
       // Calculate stats
       await calculateStats()
@@ -175,44 +263,72 @@ export function useStaffBookings() {
       startOfWeek.setDate(diff)
       const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
 
-      // Jobs today
-      const { count: jobsTodayCount } = await supabase
+      // Jobs today - include team bookings if user is team lead
+      let jobsTodayQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
         .eq('booking_date', todayStr)
 
-      // Jobs this week
-      const { count: jobsWeekCount } = await supabase
+      if (isTeamLead && myTeamIds.length > 0) {
+        jobsTodayQuery = jobsTodayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        jobsTodayQuery = jobsTodayQuery.eq('staff_id', user.id)
+      }
+
+      const { count: jobsTodayCount } = await jobsTodayQuery
+
+      // Jobs this week - include team bookings if user is team lead
+      let jobsWeekQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
         .gte('booking_date', startOfWeekStr)
         .lte('booking_date', todayStr)
 
-      // Completion rate (last 30 days)
+      if (isTeamLead && myTeamIds.length > 0) {
+        jobsWeekQuery = jobsWeekQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        jobsWeekQuery = jobsWeekQuery.eq('staff_id', user.id)
+      }
+
+      const { count: jobsWeekCount } = await jobsWeekQuery
+
+      // Completion rate (last 30 days) - include team bookings if user is team lead
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
 
-      const { count: totalJobs } = await supabase
+      let totalJobsQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
         .gte('booking_date', thirtyDaysAgoStr)
         .lte('booking_date', todayStr)
 
-      const { count: completedJobs } = await supabase
+      if (isTeamLead && myTeamIds.length > 0) {
+        totalJobsQuery = totalJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        totalJobsQuery = totalJobsQuery.eq('staff_id', user.id)
+      }
+
+      const { count: totalJobs } = await totalJobsQuery
+
+      let completedJobsQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
         .eq('status', 'completed')
         .gte('booking_date', thirtyDaysAgoStr)
         .lte('booking_date', todayStr)
 
+      if (isTeamLead && myTeamIds.length > 0) {
+        completedJobsQuery = completedJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        completedJobsQuery = completedJobsQuery.eq('staff_id', user.id)
+      }
+
+      const { count: completedJobs } = await completedJobsQuery
+
       const completionRate = totalJobs ? ((completedJobs || 0) / totalJobs) * 100 : 0
 
-      // Average rating (from reviews)
+      // Average rating (from reviews) - only for personal bookings
       let avgRating = 0
       try {
         const { data: reviews, error: reviewError } = await supabase
@@ -229,18 +345,25 @@ export function useStaffBookings() {
         console.log('Reviews table not found, skipping rating calculation')
       }
 
-      // Total earnings this month
+      // Total earnings this month - include team bookings if user is team lead
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
-      const { data: earningsData } = await supabase
+      let earningsQuery = supabase
         .from('bookings')
         .select(`
           service_packages (price)
         `)
-        .eq('staff_id', user.id)
         .eq('status', 'completed')
         .gte('booking_date', startOfMonthStr)
+
+      if (isTeamLead && myTeamIds.length > 0) {
+        earningsQuery = earningsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        earningsQuery = earningsQuery.eq('staff_id', user.id)
+      }
+
+      const { data: earningsData } = await earningsQuery
 
       const totalEarnings = earningsData?.reduce((sum, booking: any) => {
         return sum + (booking.service_packages?.price || 0)
@@ -312,6 +435,7 @@ export function useStaffBookings() {
   return {
     todayBookings,
     upcomingBookings,
+    completedBookings,
     stats,
     loading,
     error,
