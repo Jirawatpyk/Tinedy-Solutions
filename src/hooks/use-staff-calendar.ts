@@ -20,6 +20,8 @@ export interface CalendarEvent {
   city: string
   state: string
   zip_code: string
+  staff_id: string | null
+  team_id: string | null
 }
 
 export function useStaffCalendar() {
@@ -80,6 +82,8 @@ export function useStaffCalendar() {
           city,
           state,
           zip_code,
+          staff_id,
+          team_id,
           customers (full_name, phone, avatar_url),
           service_packages (name, duration_minutes, price)
         `)
@@ -118,6 +122,8 @@ export function useStaffCalendar() {
           city: booking.city || '',
           state: booking.state || '',
           zip_code: booking.zip_code || '',
+          staff_id: booking.staff_id || null,
+          team_id: booking.team_id || null,
         }
       })
 

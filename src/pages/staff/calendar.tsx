@@ -193,6 +193,8 @@ export default function StaffCalendar() {
             state: selectedEvent.state,
             zip_code: selectedEvent.zip_code,
             created_at: new Date().toISOString(),
+            staff_id: selectedEvent.staff_id || null,
+            team_id: selectedEvent.team_id || null,
             customers: {
               id: '',
               full_name: selectedEvent.customer_name,
