@@ -5,9 +5,11 @@ import { useAuth } from '@/contexts/auth-context'
 export interface StaffBooking {
   id: string
   booking_date: string
-  time_slot: string
+  start_time: string
+  end_time: string
   status: string
   notes: string | null
+  address: string
   created_at: string
   customers: {
     id: string
@@ -96,7 +98,7 @@ export function useStaffBookings() {
         `)
         .eq('staff_id', user.id)
         .eq('booking_date', todayStr)
-        .order('time_slot', { ascending: true })
+        .order('start_time', { ascending: true })
 
       if (todayError) throw todayError
 
@@ -112,7 +114,7 @@ export function useStaffBookings() {
         .gt('booking_date', todayStr)
         .lte('booking_date', nextWeekStr)
         .order('booking_date', { ascending: true })
-        .order('time_slot', { ascending: true })
+        .order('start_time', { ascending: true })
 
       if (upcomingError) throw upcomingError
 

@@ -52,7 +52,7 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="font-semibold text-lg">{booking.time_slot}</span>
+            <span className="font-semibold text-lg">{booking.start_time} - {booking.end_time}</span>
           </div>
           <Badge className={getStatusColor(booking.status)} variant="outline">
             {getStatusText(booking.status)}

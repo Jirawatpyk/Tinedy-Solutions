@@ -158,7 +158,7 @@ export function BookingDetailsModal({
                 <Clock className="h-4 w-4" />
                 <span>เวลา</span>
               </div>
-              <p className="font-medium">{booking.time_slot}</p>
+              <p className="font-medium">{booking.start_time} - {booking.end_time}</p>
             </div>
           </div>
 

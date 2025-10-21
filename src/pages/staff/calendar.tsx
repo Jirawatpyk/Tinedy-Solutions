@@ -184,9 +184,11 @@ export default function StaffCalendar() {
           booking={{
             id: selectedEvent.booking_id,
             booking_date: format(selectedEvent.start, 'yyyy-MM-dd'),
-            time_slot: format(selectedEvent.start, 'HH:mm'),
+            start_time: format(selectedEvent.start, 'HH:mm'),
+            end_time: format(selectedEvent.end, 'HH:mm'),
             status: selectedEvent.status,
             notes: selectedEvent.notes,
+            address: '',
             created_at: new Date().toISOString(),
             customers: {
               id: '',
