@@ -21,6 +21,7 @@ import {
   StickyNote,
   CheckCircle2,
   Save,
+  MapPin,
 } from 'lucide-react'
 import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
@@ -184,6 +185,15 @@ export function BookingDetailsModal({
                   {booking.customers?.phone || 'ไม่มีข้อมูล'}
                 </p>
               </div>
+              {booking.address && (
+                <div>
+                  <p className="text-sm text-muted-foreground">ที่อยู่</p>
+                  <p className="font-medium flex items-start gap-2">
+                    <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
+                    <span>{booking.address}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
