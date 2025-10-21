@@ -65,12 +65,18 @@ export function useStaffBookings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [myTeamIds, setMyTeamIds] = useState<string[]>([])
-  const [isTeamLead, setIsTeamLead] = useState(false)
+  const [teamsLoaded, setTeamsLoaded] = useState(false)
 
+  // Load team membership once on mount
   useEffect(() => {
     if (!user) return
-
     checkTeamLeadStatus()
+  }, [user])
+
+  // Load bookings when teams are loaded or changed
+  useEffect(() => {
+    if (!user || !teamsLoaded) return
+
     loadBookings()
 
     // Real-time subscription for new bookings
@@ -102,7 +108,7 @@ export function useStaffBookings() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, isTeamLead, myTeamIds])
+  }, [user, teamsLoaded, myTeamIds.join(',')])
 
   async function checkTeamLeadStatus() {
     if (!user) return
@@ -128,7 +134,7 @@ export function useStaffBookings() {
       // Combine and deduplicate
       const allTeamIds = [...new Set([...memberTeamIds, ...leadTeamIds])]
       setMyTeamIds(allTeamIds)
-      setIsTeamLead(leadTeamIds.length > 0)
+      setTeamsLoaded(true)
 
       console.log('[StaffBookings] Team Membership:', {
         userId: user.id,
@@ -140,6 +146,7 @@ export function useStaffBookings() {
       })
     } catch (err) {
       console.error('Error checking team membership:', err)
+      setTeamsLoaded(true) // Still mark as loaded even on error
     }
   }
 
