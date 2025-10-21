@@ -60,23 +60,23 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4 sm:p-6">
-        {/* Header - Status and Time */}
+        {/* Header - Status and Date/Time */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="font-semibold text-lg">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="font-semibold text-lg">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
+            </div>
+            {showDate && (
+              <div className="text-sm text-muted-foreground ml-6">
+                {format(new Date(booking.booking_date), 'dd MMM yyyy')}
+              </div>
+            )}
           </div>
           <Badge className={getStatusColor(booking.status)} variant="outline">
             {getStatusText(booking.status)}
           </Badge>
         </div>
-
-        {/* Date (for upcoming bookings) */}
-        {showDate && (
-          <div className="mb-3 text-sm text-muted-foreground">
-            {format(new Date(booking.booking_date), 'dd MMM yyyy')}
-          </div>
-        )}
 
         {/* Customer Info */}
         <div className="space-y-3 mb-4">
