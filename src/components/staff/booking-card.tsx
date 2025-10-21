@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle } from 'lucide-react'
+import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
@@ -9,17 +9,20 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 interface BookingCardProps {
   booking: StaffBooking
   onViewDetails: (booking: StaffBooking) => void
+  onStartProgress?: (bookingId: string) => void
   onMarkCompleted?: (bookingId: string) => void
   showDate?: boolean
 }
 
-export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate = false }: BookingCardProps) {
+export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCompleted, showDate = false }: BookingCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200'
       case 'confirmed':
         return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'in_progress':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200'
       case 'cancelled':
@@ -35,6 +38,8 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
         return 'เสร็จสิ้น'
       case 'confirmed':
         return 'ยืนยันแล้ว'
+      case 'in_progress':
+        return 'กำลังดำเนินการ'
       case 'pending':
         return 'รอยืนยัน'
       case 'cancelled':
@@ -44,7 +49,8 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
     }
   }
 
-  const canMarkCompleted = booking.status === 'confirmed'
+  const canStartProgress = booking.status === 'confirmed'
+  const canMarkCompleted = booking.status === 'in_progress'
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -173,6 +179,17 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
           >
             ดูรายละเอียด
           </Button>
+          {canStartProgress && onStartProgress && (
+            <Button
+              onClick={() => onStartProgress(booking.id)}
+              variant="default"
+              className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700"
+              size="sm"
+            >
+              <Play className="h-4 w-4 mr-1" />
+              เริ่มดำเนินการ
+            </Button>
+          )}
           {canMarkCompleted && onMarkCompleted && (
             <Button
               onClick={() => onMarkCompleted(booking.id)}

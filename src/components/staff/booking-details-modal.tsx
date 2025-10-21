@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Save,
   MapPin,
+  Play,
 } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
@@ -33,6 +34,7 @@ interface BookingDetailsModalProps {
   booking: StaffBooking | null
   open: boolean
   onClose: () => void
+  onStartProgress?: (bookingId: string) => Promise<void>
   onMarkCompleted?: (bookingId: string) => Promise<void>
   onAddNotes?: (bookingId: string, notes: string) => Promise<void>
 }
@@ -41,11 +43,13 @@ export function BookingDetailsModal({
   booking,
   open,
   onClose,
+  onStartProgress,
   onMarkCompleted,
   onAddNotes,
 }: BookingDetailsModalProps) {
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
   const { toast } = useToast()
 
@@ -57,6 +61,8 @@ export function BookingDetailsModal({
         return 'bg-green-100 text-green-800 border-green-200'
       case 'confirmed':
         return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'in_progress':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200'
       case 'cancelled':
@@ -72,6 +78,8 @@ export function BookingDetailsModal({
         return 'เสร็จสิ้น'
       case 'confirmed':
         return 'ยืนยันแล้ว'
+      case 'in_progress':
+        return 'กำลังดำเนินการ'
       case 'pending':
         return 'รอยืนยัน'
       case 'cancelled':
@@ -104,6 +112,28 @@ export function BookingDetailsModal({
     }
   }
 
+  const handleStartProgress = async () => {
+    if (!onStartProgress) return
+
+    try {
+      setIsStarting(true)
+      await onStartProgress(booking.id)
+      toast({
+        title: 'เริ่มดำเนินการ',
+        description: 'เริ่มดำเนินการเรียบร้อยแล้ว',
+      })
+      onClose()
+    } catch {
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถเริ่มดำเนินการได้',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
   const handleMarkCompleted = async () => {
     if (!onMarkCompleted) return
 
@@ -126,7 +156,8 @@ export function BookingDetailsModal({
     }
   }
 
-  const canMarkCompleted = booking.status === 'confirmed'
+  const canStartProgress = booking.status === 'confirmed'
+  const canMarkCompleted = booking.status === 'in_progress'
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -301,6 +332,16 @@ export function BookingDetailsModal({
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ'}
+              </Button>
+            )}
+            {canStartProgress && onStartProgress && (
+              <Button
+                onClick={handleStartProgress}
+                disabled={isStarting}
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {isStarting ? 'กำลังบันทึก...' : 'เริ่มดำเนินการ'}
               </Button>
             )}
             {canMarkCompleted && onMarkCompleted && (

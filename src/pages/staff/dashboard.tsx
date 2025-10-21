@@ -23,6 +23,7 @@ export default function StaffDashboard() {
     stats,
     loading,
     error,
+    startProgress,
     markAsCompleted,
     addNotes,
     refresh,
@@ -40,6 +41,22 @@ export default function StaffDashboard() {
       title: 'รีเฟรชสำเร็จ',
       description: 'ข้อมูลได้รับการอัปเดตแล้ว',
     })
+  }
+
+  const handleStartProgress = async (bookingId: string) => {
+    try {
+      await startProgress(bookingId)
+      toast({
+        title: 'เริ่มดำเนินการ',
+        description: 'เริ่มดำเนินการเรียบร้อยแล้ว',
+      })
+    } catch (error) {
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถเริ่มดำเนินการได้',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleMarkCompleted = async (bookingId: string) => {
@@ -167,6 +184,7 @@ export default function StaffDashboard() {
                   key={booking.id}
                   booking={booking}
                   onViewDetails={setSelectedBooking}
+                  onStartProgress={handleStartProgress}
                   onMarkCompleted={handleMarkCompleted}
                   showDate={false}
                 />
@@ -222,6 +240,7 @@ export default function StaffDashboard() {
         booking={selectedBooking}
         open={!!selectedBooking}
         onClose={() => setSelectedBooking(null)}
+        onStartProgress={startProgress}
         onMarkCompleted={markAsCompleted}
         onAddNotes={addNotes}
       />

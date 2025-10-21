@@ -258,6 +258,23 @@ export function useStaffBookings() {
     }
   }
 
+  async function startProgress(bookingId: string) {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'in_progress' })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      // Reload bookings to reflect changes
+      await loadBookings()
+    } catch (err: any) {
+      console.error('Error starting progress:', err)
+      throw err
+    }
+  }
+
   async function markAsCompleted(bookingId: string) {
     try {
       const { error } = await supabase
@@ -298,6 +315,7 @@ export function useStaffBookings() {
     stats,
     loading,
     error,
+    startProgress,
     markAsCompleted,
     addNotes,
     refresh: loadBookings,
