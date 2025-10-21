@@ -67,12 +67,15 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.75rem;
+  margin-bottom: 2px !important;
+  position: relative !important;
 }
 
 @media (min-width: 768px) {
   .rbc-event {
     padding: 4px 6px;
     font-size: 0.875rem;
+    margin-bottom: 3px !important;
   }
 }
 
@@ -86,6 +89,18 @@
 
 .rbc-event-content {
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Fix overlapping events in month view */
+.rbc-row-segment {
+  padding: 0 1px !important;
+}
+
+.rbc-event-overlaps {
+  position: relative !important;
+  z-index: auto !important;
 }
 
 /* Week and Day views */

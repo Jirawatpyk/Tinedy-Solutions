@@ -187,21 +187,57 @@ export function useChat() {
         })
       )
 
+      // Filter to show only conversations with messages
+      const activeConversations = conversationsWithData.filter(conv => conv.lastMessage !== null)
+
       // Sort by last message time
-      conversationsWithData.sort((a, b) => {
+      activeConversations.sort((a, b) => {
         if (!a.lastMessage && !b.lastMessage) return 0
         if (!a.lastMessage) return 1
         if (!b.lastMessage) return -1
         return new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
       })
 
-      setConversations(conversationsWithData)
+      setConversations(activeConversations)
     } catch (error) {
       console.error('Error loading conversations:', error)
     } finally {
       setIsLoading(false)
     }
   }, [user, fetchUsers, getUnreadCount])
+
+  // Delete conversation (all messages with a specific user)
+  const deleteConversation = useCallback(async (otherUserId: string) => {
+    if (!user) return
+
+    try {
+      // Delete all messages between current user and other user
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+
+      if (error) throw error
+
+      // If currently viewing deleted conversation, clear selection
+      if (selectedUser?.id === otherUserId) {
+        setSelectedUser(null)
+        setMessages([])
+      }
+
+      // Reload conversations
+      await loadConversations()
+    } catch (error) {
+      console.error('Error deleting conversation:', error)
+      throw error
+    }
+  }, [user, selectedUser, loadConversations])
+
+  // Start new chat with a user
+  const startNewChat = useCallback(async (otherUser: Profile) => {
+    setSelectedUser(otherUser)
+    setMessages([])
+  }, [])
 
   // Setup real-time subscription
   useEffect(() => {
@@ -292,5 +328,8 @@ export function useChat() {
     sendMessageWithFile,
     getTotalUnreadCount,
     loadConversations,
+    deleteConversation,
+    startNewChat,
+    fetchUsers,
   }
 }

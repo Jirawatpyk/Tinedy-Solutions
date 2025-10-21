@@ -168,6 +168,7 @@ export default function StaffCalendar() {
                 messages={messages}
                 culture="th"
                 popup
+                dayMaxEvents={2}
                 step={30}
                 timeslots={2}
                 defaultView="month"

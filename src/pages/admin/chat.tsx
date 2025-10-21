@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { UserList } from '@/components/chat/user-list'
 import { ChatArea } from '@/components/chat/chat-area'
+import { NewChatModal } from '@/components/chat/new-chat-modal'
 import { useToast } from '@/hooks/use-toast'
+import type { Profile } from '@/types/chat'
 
 export function AdminChat() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const [newChatModalOpen, setNewChatModalOpen] = useState(false)
+  const [availableUsers, setAvailableUsers] = useState<Profile[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+
   const {
     messages,
     conversations,
@@ -16,6 +23,9 @@ export function AdminChat() {
     isSending,
     sendMessage,
     sendMessageWithFile,
+    deleteConversation,
+    startNewChat,
+    fetchUsers,
   } = useChat()
 
   const handleSelectUser = (userId: string) => {
@@ -43,6 +53,48 @@ export function AdminChat() {
     }
   }
 
+  const handleDeleteConversation = async (userId: string) => {
+    try {
+      await deleteConversation(userId)
+      toast({
+        title: 'สำเร็จ',
+        description: 'ลบการสนทนาเรียบร้อยแล้ว',
+      })
+    } catch (error) {
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถลบการสนทนาได้ กรุณาลองใหม่อีกครั้ง',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleNewChat = async () => {
+    setIsLoadingUsers(true)
+    try {
+      const users = await fetchUsers()
+      // Filter out users who already have conversations
+      const conversationUserIds = conversations.map((c) => c.user.id)
+      const usersWithoutConversation = users.filter(
+        (u) => !conversationUserIds.includes(u.id)
+      )
+      setAvailableUsers(usersWithoutConversation)
+      setNewChatModalOpen(true)
+    } catch (error) {
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถโหลดรายชื่อผู้ใช้ได้',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }
+
+  const handleSelectNewUser = (newUser: Profile) => {
+    startNewChat(newUser)
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       {/* Page Header */}
@@ -59,6 +111,8 @@ export function AdminChat() {
             conversations={conversations}
             selectedUserId={selectedUser?.id || null}
             onSelectUser={handleSelectUser}
+            onDeleteConversation={handleDeleteConversation}
+            onNewChat={handleNewChat}
             isLoading={isLoading}
           />
         </div>
@@ -74,6 +128,15 @@ export function AdminChat() {
           />
         </div>
       </div>
+
+      {/* New Chat Modal */}
+      <NewChatModal
+        open={newChatModalOpen}
+        onOpenChange={setNewChatModalOpen}
+        availableUsers={availableUsers}
+        onSelectUser={handleSelectNewUser}
+        isLoading={isLoadingUsers}
+      />
     </div>
   )
 }

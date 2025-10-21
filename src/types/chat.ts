@@ -26,6 +26,7 @@ export interface Profile {
   email: string
   role: 'admin' | 'staff'
   avatar_url?: string
+  is_online?: boolean
 }
 
 export interface Conversation {

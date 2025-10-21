@@ -12,7 +12,7 @@ import {
   Calendar,
   Briefcase,
   TrendingUp,
-  Star,
+  DollarSign,
   RefreshCw,
   AlertCircle,
 } from 'lucide-react'
@@ -40,6 +40,8 @@ export default function StaffDashboard() {
 
   const [selectedBooking, setSelectedBooking] = useState<StaffBooking | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [todayLimit, setTodayLimit] = useState(6)
+  const [upcomingLimit, setUpcomingLimit] = useState(6)
   const { toast } = useToast()
 
   const handleRefresh = async () => {
@@ -166,10 +168,10 @@ export default function StaffDashboard() {
             </div>
             <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
               <StatsCard
-                title="คะแนนเฉลี่ย"
-                value={stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
-                icon={Star}
-                description="จากรีวิวลูกค้า"
+                title="รายได้เดือนนี้"
+                value={`฿${stats.totalEarnings.toLocaleString()}`}
+                icon={DollarSign}
+                description="รายได้จากงานที่เสร็จสิ้น"
               />
             </div>
           </div>
@@ -203,18 +205,31 @@ export default function StaffDashboard() {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todayBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onViewDetails={setSelectedBooking}
-                  onStartProgress={handleStartProgress}
-                  onMarkCompleted={handleMarkCompleted}
-                  showDate={false}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {todayBookings.slice(0, todayLimit).map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onViewDetails={setSelectedBooking}
+                    onStartProgress={handleStartProgress}
+                    onMarkCompleted={handleMarkCompleted}
+                    showDate={false}
+                  />
+                ))}
+              </div>
+              {todayBookings.length > todayLimit && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={() => setTodayLimit(prev => prev + 6)}
+                    variant="outline"
+                    className="transition-all duration-200 hover:scale-105"
+                  >
+                    โหลดเพิ่ม +6 ({todayBookings.length - todayLimit} งานเหลืออยู่)
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -246,16 +261,29 @@ export default function StaffDashboard() {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcomingBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onViewDetails={setSelectedBooking}
-                  showDate={true}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingBookings.slice(0, upcomingLimit).map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onViewDetails={setSelectedBooking}
+                    showDate={true}
+                  />
+                ))}
+              </div>
+              {upcomingBookings.length > upcomingLimit && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={() => setUpcomingLimit(prev => prev + 6)}
+                    variant="outline"
+                    className="transition-all duration-200 hover:scale-105"
+                  >
+                    โหลดเพิ่ม +6 ({upcomingBookings.length - upcomingLimit} งานเหลืออยู่)
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
