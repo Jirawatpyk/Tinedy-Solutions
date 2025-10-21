@@ -27,6 +27,7 @@ import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
+import { BookingTimeline } from './booking-timeline'
 
 interface BookingDetailsModalProps {
   booking: StaffBooking | null
@@ -260,6 +261,10 @@ export function BookingDetailsModal({
               </div>
             </>
           )}
+
+          {/* Timeline */}
+          <Separator />
+          <BookingTimeline bookingId={booking.id} />
 
           {/* Add/Update Notes */}
           {onAddNotes && booking.status !== 'cancelled' && (

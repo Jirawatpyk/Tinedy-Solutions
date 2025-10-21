@@ -280,6 +280,35 @@ export type Database = {
           created_at?: string
         }
       }
+      booking_status_history: {
+        Row: {
+          id: string
+          booking_id: string
+          changed_by: string
+          old_status: string | null
+          new_status: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          changed_by: string
+          old_status?: string | null
+          new_status: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          changed_by?: string
+          old_status?: string | null
+          new_status?: string
+          notes?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
