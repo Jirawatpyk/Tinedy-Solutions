@@ -86,39 +86,51 @@ class NotificationService {
   }
 
   // Notification templates for common events
-  async notifyNewBooking(customerName: string, time: string, bookingId: string): Promise<void> {
+  async notifyNewBooking(customerName: string, time: string, bookingId: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
+    const isTeam = notificationType === 'team'
     await this.show({
-      title: '🔔 งานใหม่!',
-      body: `มีงานใหม่จาก ${customerName} เวลา ${time}`,
+      title: isTeam ? '👥 งานทีมใหม่!' : '🔔 งานใหม่!',
+      body: isTeam
+        ? `มีงานทีมใหม่จาก ${customerName} เวลา ${time}`
+        : `มีงานใหม่จาก ${customerName} เวลา ${time}`,
       tag: `new-booking-${bookingId}`,
       data: {
         type: 'new_booking',
         bookingId,
+        notificationType,
         url: '/staff'
       }
     })
   }
 
-  async notifyBookingReminder(customerName: string, time: string, bookingId: string): Promise<void> {
+  async notifyBookingReminder(customerName: string, time: string, bookingId: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
+    const isTeam = notificationType === 'team'
     await this.show({
-      title: '⏰ แจ้งเตือนงาน',
-      body: `งานกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`,
+      title: isTeam ? '👥 แจ้งเตือนงานทีม' : '⏰ แจ้งเตือนงาน',
+      body: isTeam
+        ? `งานทีมกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`
+        : `งานกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`,
       tag: `reminder-${bookingId}`,
       data: {
         type: 'reminder',
         bookingId,
+        notificationType,
         url: '/staff'
       }
     })
   }
 
-  async notifyBookingCancelled(customerName: string, time: string): Promise<void> {
+  async notifyBookingCancelled(customerName: string, time: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
+    const isTeam = notificationType === 'team'
     await this.show({
-      title: '❌ งานถูกยกเลิก',
-      body: `งานกับ ${customerName} เวลา ${time} ถูกยกเลิก`,
+      title: isTeam ? '👥 งานทีมถูกยกเลิก' : '❌ งานถูกยกเลิก',
+      body: isTeam
+        ? `งานทีมกับ ${customerName} เวลา ${time} ถูกยกเลิก`
+        : `งานกับ ${customerName} เวลา ${time} ถูกยกเลิก`,
       tag: 'booking-cancelled',
       data: {
-        type: 'cancelled'
+        type: 'cancelled',
+        notificationType
       }
     })
   }

@@ -7,6 +7,43 @@ export function useNotifications() {
   const { user } = useAuth()
   const [hasPermission, setHasPermission] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
+  const [myTeamIds, setMyTeamIds] = useState<string[]>([])
+
+  // Load team IDs that this user belongs to
+  useEffect(() => {
+    if (!user) return
+
+    const loadMyTeams = async () => {
+      try {
+        // Get teams where user is a member
+        const { data: memberTeams } = await supabase
+          .from('team_members')
+          .select('team_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+
+        // Get teams where user is the lead
+        const { data: leadTeams } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('team_lead_id', user.id)
+          .eq('is_active', true)
+
+        const memberTeamIds = memberTeams?.map(m => m.team_id) || []
+        const leadTeamIds = leadTeams?.map(t => t.id) || []
+
+        // Combine and deduplicate
+        const allTeamIds = [...new Set([...memberTeamIds, ...leadTeamIds])]
+        setMyTeamIds(allTeamIds)
+
+        console.log('[Notifications] User belongs to teams:', allTeamIds)
+      } catch (err) {
+        console.error('[Notifications] Error loading teams:', err)
+      }
+    }
+
+    loadMyTeams()
+  }, [user])
 
   // Request notification permission on mount
   useEffect(() => {
@@ -26,11 +63,11 @@ export function useNotifications() {
     return granted
   }
 
-  // Listen for new bookings assigned to this staff
+  // Listen for new bookings assigned to this staff OR their teams
   useEffect(() => {
     if (!user || !hasPermission) return
 
-    console.log('[Notifications] Setting up realtime listener for staff:', user.id)
+    console.log('[Notifications] Setting up realtime listener for staff:', user.id, 'teams:', myTeamIds)
 
     const channel = supabase
       .channel('staff-notifications')
@@ -40,12 +77,19 @@ export function useNotifications() {
           event: 'INSERT',
           schema: 'public',
           table: 'bookings',
-          filter: `staff_id=eq.${user.id}`,
         },
         async (payload: any) => {
           console.log('[Notifications] New booking detected:', payload)
 
           const booking = payload.new
+
+          // Check if this booking is relevant to current user
+          const isMyBooking = booking.staff_id === user.id
+          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
+
+          if (!isMyBooking && !isMyTeamBooking) {
+            return // Not relevant to this user
+          }
 
           // Fetch customer details
           const { data: customerData } = await supabase
@@ -57,11 +101,15 @@ export function useNotifications() {
           const customerName = customerData?.full_name || 'ลูกค้า'
           const time = `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
 
+          // Determine notification type
+          const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
           // Show notification
           await notificationService.notifyNewBooking(
             customerName,
             time,
-            booking.id
+            booking.id,
+            notificationType
           )
         }
       )
@@ -71,11 +119,18 @@ export function useNotifications() {
           event: 'UPDATE',
           schema: 'public',
           table: 'bookings',
-          filter: `staff_id=eq.${user.id}`,
         },
         async (payload: any) => {
           const oldBooking = payload.old
           const newBooking = payload.new
+
+          // Check if this booking is relevant to current user
+          const isMyBooking = newBooking.staff_id === user.id
+          const isMyTeamBooking = newBooking.team_id && myTeamIds.includes(newBooking.team_id)
+
+          if (!isMyBooking && !isMyTeamBooking) {
+            return // Not relevant to this user
+          }
 
           // Notify if booking was cancelled
           if (oldBooking.status !== 'cancelled' && newBooking.status === 'cancelled') {
@@ -88,7 +143,9 @@ export function useNotifications() {
             const customerName = customerData?.full_name || 'ลูกค้า'
             const time = `${newBooking.start_time.slice(0, 5)} - ${newBooking.end_time.slice(0, 5)}`
 
-            await notificationService.notifyBookingCancelled(customerName, time)
+            const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
+            await notificationService.notifyBookingCancelled(customerName, time, notificationType)
           }
         }
       )
@@ -98,9 +155,9 @@ export function useNotifications() {
       console.log('[Notifications] Cleaning up realtime listener')
       supabase.removeChannel(channel)
     }
-  }, [user, hasPermission])
+  }, [user, hasPermission, myTeamIds])
 
-  // Schedule reminder notifications for upcoming bookings
+  // Schedule reminder notifications for upcoming bookings (personal + team)
   useEffect(() => {
     if (!user || !hasPermission) return
 
@@ -110,31 +167,47 @@ export function useNotifications() {
 
       const todayStr = now.toISOString().split('T')[0]
       const timeStr = in30Minutes.toTimeString().slice(0, 5)
+      const endTimeStr = `${String(in30Minutes.getHours()).padStart(2, '0')}:${String(in30Minutes.getMinutes() + 5).padStart(2, '0')}`
 
-      // Find bookings starting in ~30 minutes
-      const { data: upcomingBookings } = await supabase
+      // Find bookings starting in ~30 minutes (personal + team)
+      let query = supabase
         .from('bookings')
         .select(`
           id,
           start_time,
           end_time,
+          staff_id,
+          team_id,
           customers (full_name)
         `)
-        .eq('staff_id', user.id)
         .eq('booking_date', todayStr)
         .eq('status', 'confirmed')
         .gte('start_time', timeStr)
-        .lte('start_time', `${String(in30Minutes.getHours()).padStart(2, '0')}:${String(in30Minutes.getMinutes() + 5).padStart(2, '0')}`)
+        .lte('start_time', endTimeStr)
+
+      // Filter for personal OR team bookings
+      if (myTeamIds.length > 0) {
+        query = query.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        query = query.eq('staff_id', user.id)
+      }
+
+      const { data: upcomingBookings } = await query
 
       if (upcomingBookings && upcomingBookings.length > 0) {
         for (const booking of upcomingBookings) {
           const customerName = (booking.customers as any)?.full_name || 'ลูกค้า'
           const time = `${booking.start_time.slice(0, 5)}`
 
+          const isMyBooking = (booking as any).staff_id === user.id
+          const isMyTeamBooking = (booking as any).team_id && myTeamIds.includes((booking as any).team_id)
+          const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
           await notificationService.notifyBookingReminder(
             customerName,
             time,
-            booking.id
+            booking.id,
+            notificationType
           )
         }
       }
@@ -147,7 +220,7 @@ export function useNotifications() {
     scheduleReminders()
 
     return () => clearInterval(interval)
-  }, [user, hasPermission])
+  }, [user, hasPermission, myTeamIds])
 
   return {
     hasPermission,
