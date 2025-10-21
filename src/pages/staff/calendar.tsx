@@ -43,7 +43,7 @@ const messages = {
 
 export default function StaffCalendar() {
   const { events, loading, error } = useStaffCalendar()
-  const { markAsCompleted, addNotes } = useStaffBookings()
+  const { startProgress, markAsCompleted, addNotes } = useStaffBookings()
   const [view, setView] = useState<View>('month')
   const [date, setDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -188,26 +188,27 @@ export default function StaffCalendar() {
             end_time: format(selectedEvent.end, 'HH:mm'),
             status: selectedEvent.status,
             notes: selectedEvent.notes,
-            address: '',
-            city: '',
-            state: '',
-            zip_code: '',
+            address: selectedEvent.address,
+            city: selectedEvent.city,
+            state: selectedEvent.state,
+            zip_code: selectedEvent.zip_code,
             created_at: new Date().toISOString(),
             customers: {
               id: '',
               full_name: selectedEvent.customer_name,
-              phone: '',
-              avatar_url: null,
+              phone: selectedEvent.customer_phone,
+              avatar_url: selectedEvent.customer_avatar,
             },
             service_packages: {
               id: '',
               name: selectedEvent.service_name,
-              duration_minutes: Math.round((selectedEvent.end.getTime() - selectedEvent.start.getTime()) / 60000),
-              price: 0,
+              duration_minutes: selectedEvent.service_duration,
+              price: selectedEvent.service_price,
             },
           }}
           open={!!selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onStartProgress={startProgress}
           onMarkCompleted={markAsCompleted}
           onAddNotes={addNotes}
         />

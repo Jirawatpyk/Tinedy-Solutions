@@ -52,6 +52,11 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
   const canStartProgress = booking.status === 'confirmed'
   const canMarkCompleted = booking.status === 'in_progress'
 
+  // Format time to remove seconds (HH:MM:SS -> HH:MM)
+  const formatTime = (time: string) => {
+    return time.split(':').slice(0, 2).join(':')
+  }
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4 sm:p-6">
@@ -59,7 +64,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="font-semibold text-lg">{booking.start_time} - {booking.end_time}</span>
+            <span className="font-semibold text-lg">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
           </div>
           <Badge className={getStatusColor(booking.status)} variant="outline">
             {getStatusText(booking.status)}

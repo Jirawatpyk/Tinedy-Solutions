@@ -9,9 +9,17 @@ export interface CalendarEvent {
   end: Date
   status: string
   customer_name: string
+  customer_phone: string
+  customer_avatar: string | null
   service_name: string
+  service_price: number
+  service_duration: number
   notes: string | null
   booking_id: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
 }
 
 export function useStaffCalendar() {
@@ -68,8 +76,12 @@ export function useStaffCalendar() {
           end_time,
           status,
           notes,
-          customers (full_name),
-          service_packages (name, duration_minutes)
+          address,
+          city,
+          state,
+          zip_code,
+          customers (full_name, phone, avatar_url),
+          service_packages (name, duration_minutes, price)
         `)
         .eq('staff_id', user.id)
         .gte('booking_date', today.toISOString().split('T')[0])
@@ -95,9 +107,17 @@ export function useStaffCalendar() {
           end: endDate,
           status: booking.status,
           customer_name: booking.customers?.full_name || 'Unknown Customer',
+          customer_phone: booking.customers?.phone || '',
+          customer_avatar: booking.customers?.avatar_url || null,
           service_name: booking.service_packages?.name || 'Unknown Service',
+          service_price: booking.service_packages?.price || 0,
+          service_duration: booking.service_packages?.duration_minutes || 60,
           notes: booking.notes,
           booking_id: booking.id,
+          address: booking.address || '',
+          city: booking.city || '',
+          state: booking.state || '',
+          zip_code: booking.zip_code || '',
         }
       })
 

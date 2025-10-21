@@ -159,6 +159,11 @@ export function BookingDetailsModal({
   const canStartProgress = booking.status === 'confirmed'
   const canMarkCompleted = booking.status === 'in_progress'
 
+  // Format time to remove seconds (HH:MM:SS -> HH:MM)
+  const formatTime = (time: string) => {
+    return time.split(':').slice(0, 2).join(':')
+  }
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -191,7 +196,7 @@ export function BookingDetailsModal({
                 <Clock className="h-4 w-4" />
                 <span>เวลา</span>
               </div>
-              <p className="font-medium">{booking.start_time} - {booking.end_time}</p>
+              <p className="font-medium">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</p>
             </div>
           </div>
 
