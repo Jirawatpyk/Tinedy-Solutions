@@ -62,14 +62,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
+
+      // If no profile exists, set to null (don't throw error)
       setProfile(data)
       return data
     } catch (error) {
       console.error('Error fetching profile:', error)
-      throw error
+      // Set profile to null instead of throwing
+      setProfile(null)
+      return null
     } finally {
       setLoading(false)
     }
