@@ -197,6 +197,7 @@ export default function StaffCalendar() {
               id: '',
               full_name: selectedEvent.customer_name,
               phone: '',
+              avatar_url: null,
             },
             service_packages: {
               id: '',

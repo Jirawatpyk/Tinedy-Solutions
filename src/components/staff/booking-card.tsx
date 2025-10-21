@@ -1,9 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, User, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle } from 'lucide-react'
+import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
+import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -68,8 +69,12 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
 
         {/* Customer Info */}
         <div className="space-y-3 mb-4">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="flex items-center gap-3">
+            <AvatarWithFallback
+              src={booking.customers?.avatar_url}
+              alt={booking.customers?.full_name || 'Unknown Customer'}
+              size="md"
+            />
             <span className="font-medium">
               {booking.customers?.full_name || 'Unknown Customer'}
             </span>

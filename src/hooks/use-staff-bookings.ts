@@ -30,6 +30,7 @@ export interface StaffBooking {
     id: string
     full_name: string
     phone: string
+    avatar_url: string | null
   } | null
   service_packages: {
     id: string
@@ -116,7 +117,7 @@ export function useStaffBookings() {
         .from('bookings')
         .select(`
           *,
-          customers (id, full_name, phone),
+          customers (id, full_name, phone, avatar_url),
           service_packages (id, name, duration_minutes, price)
         `)
         .eq('staff_id', user.id)
@@ -135,7 +136,7 @@ export function useStaffBookings() {
         .from('bookings')
         .select(`
           *,
-          customers (id, full_name, phone),
+          customers (id, full_name, phone, avatar_url),
           service_packages (id, name, duration_minutes, price)
         `)
         .eq('staff_id', user.id)
