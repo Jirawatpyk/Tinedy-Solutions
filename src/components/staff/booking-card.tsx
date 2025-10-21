@@ -98,6 +98,15 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
             </div>
           )}
 
+          {booking.address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-muted-foreground break-words">
+                {booking.address}
+              </span>
+            </div>
+          )}
+
           {booking.notes && (
             <div className="flex items-start gap-2">
               <StickyNote className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
