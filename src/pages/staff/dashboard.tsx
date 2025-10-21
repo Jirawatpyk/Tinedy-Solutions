@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useStaffBookings, type StaffBooking } from '@/hooks/use-staff-bookings'
+import { useNotifications } from '@/hooks/use-notifications'
 import { StatsCard } from '@/components/staff/stats-card'
 import { BookingCard } from '@/components/staff/booking-card'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
+import { NotificationPrompt } from '@/components/notifications/notification-prompt'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -28,6 +30,13 @@ export default function StaffDashboard() {
     addNotes,
     refresh,
   } = useStaffBookings()
+
+  const {
+    hasPermission,
+    isRequesting,
+    requestPermission,
+    isSupported,
+  } = useNotifications()
 
   const [selectedBooking, setSelectedBooking] = useState<StaffBooking | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -114,6 +123,14 @@ export default function StaffDashboard() {
       </div>
 
       <div className="p-4 sm:p-6 space-y-6">
+        {/* Notification Permission Prompt */}
+        {isSupported && !hasPermission && (
+          <NotificationPrompt
+            onRequest={requestPermission}
+            isRequesting={isRequesting}
+          />
+        )}
+
         {/* Stats Cards */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
