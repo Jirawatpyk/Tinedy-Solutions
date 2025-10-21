@@ -126,10 +126,18 @@ export function AdminStaff() {
           description: 'Staff member updated successfully',
         })
       } else {
+        // Get current session before creating new user
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+
         // Create new staff - requires Supabase auth signup
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
+          options: {
+            data: {
+              full_name: formData.full_name,
+            }
+          }
         })
 
         if (authError) throw authError
@@ -145,6 +153,14 @@ export function AdminStaff() {
           })
 
           if (profileError) throw profileError
+
+          // Restore admin session
+          if (currentSession) {
+            await supabase.auth.setSession({
+              access_token: currentSession.access_token,
+              refresh_token: currentSession.refresh_token,
+            })
+          }
 
           toast({
             title: 'Success',

@@ -97,6 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
     })
     if (error) throw error
 
@@ -109,6 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'staff', // Default role
       })
       if (profileError) throw profileError
+
+      // Set user and fetch the newly created profile
+      setUser(data.user)
+      await fetchProfile(data.user.id)
     }
   }
 
