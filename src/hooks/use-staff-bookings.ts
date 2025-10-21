@@ -84,6 +84,12 @@ export function useStaffBookings() {
       today.setHours(0, 0, 0, 0)
       const todayStr = today.toISOString().split('T')[0]
 
+      console.log('[StaffBookings] Today:', {
+        todayDate: today,
+        todayStr,
+        localDate: today.toLocaleDateString('th-TH'),
+      })
+
       const nextWeek = new Date(today)
       nextWeek.setDate(nextWeek.getDate() + 7)
       const nextWeekStr = nextWeek.toISOString().split('T')[0]
@@ -101,6 +107,11 @@ export function useStaffBookings() {
         .order('start_time', { ascending: true })
 
       if (todayError) throw todayError
+
+      console.log('[StaffBookings] Today result:', {
+        count: todayData?.length || 0,
+        bookings: todayData?.map(b => ({ date: b.booking_date, time: b.start_time }))
+      })
 
       // Fetch upcoming bookings (next 7 days, excluding today)
       const { data: upcomingData, error: upcomingError } = await supabase
@@ -184,14 +195,21 @@ export function useStaffBookings() {
       const completionRate = totalJobs ? ((completedJobs || 0) / totalJobs) * 100 : 0
 
       // Average rating (from reviews)
-      const { data: reviews } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('staff_id', user.id)
+      let avgRating = 0
+      try {
+        const { data: reviews, error: reviewError } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('staff_id', user.id)
 
-      const avgRating = reviews && reviews.length > 0
-        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-        : 0
+        // Ignore error if reviews table doesn't exist
+        if (!reviewError && reviews && reviews.length > 0) {
+          avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        }
+      } catch (err) {
+        // Reviews table might not exist, ignore error
+        console.log('Reviews table not found, skipping rating calculation')
+      }
 
       // Total earnings this month
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
