@@ -17,19 +17,31 @@ export function LoginPage() {
   const location = useLocation()
   const { toast } = useToast()
 
-  const from = location.state?.from?.pathname || '/admin'
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      await signIn(email, password)
+      const profile = await signIn(email, password)
       toast({
         title: 'Success',
         description: 'Successfully signed in!',
       })
-      navigate(from, { replace: true })
+
+      // Get the from path or determine default based on role
+      const from = location.state?.from?.pathname
+
+      if (from) {
+        // If redirected from a specific page, go there
+        navigate(from, { replace: true })
+      } else {
+        // Otherwise, redirect based on role
+        if (profile?.role === 'admin') {
+          navigate('/admin', { replace: true })
+        } else {
+          navigate('/staff', { replace: true })
+        }
+      }
     } catch (error) {
       toast({
         title: 'Error',

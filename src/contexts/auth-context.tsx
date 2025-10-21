@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -89,8 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Wait for profile to be fetched before resolving
     if (data.user) {
       setUser(data.user)
-      await fetchProfile(data.user.id)
+      const profileData = await fetchProfile(data.user.id)
+      return profileData
     }
+    return null
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
