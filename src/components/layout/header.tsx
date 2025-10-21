@@ -1,6 +1,7 @@
 import { Menu, Bell, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -8,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-30 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
         {/* Left side - Menu button */}
         <div className="flex items-center space-x-4">
@@ -32,8 +33,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {/* Right side - Notifications */}
+        {/* Right side - Notifications and Theme Toggle */}
         <div className="flex items-center space-x-2">
+          <ThemeToggle />
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full" />
