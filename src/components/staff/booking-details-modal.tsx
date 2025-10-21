@@ -186,12 +186,26 @@ export function BookingDetailsModal({
                 </p>
               </div>
               {booking.address && (
-                <div>
+                <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">ที่อยู่</p>
                   <p className="font-medium flex items-start gap-2">
                     <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
                     <span>{booking.address}</span>
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      window.open(
+                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.address)}`,
+                        '_blank'
+                      )
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    เปิดแผนที่
+                  </Button>
                 </div>
               )}
             </div>

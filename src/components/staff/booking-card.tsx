@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, User, Package, Phone, CheckCircle2, StickyNote } from 'lucide-react'
+import { Clock, User, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle } from 'lucide-react'
 import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 
@@ -108,7 +108,47 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
           )}
         </div>
 
-        {/* Actions */}
+        {/* Quick Actions */}
+        <div className="flex gap-2 mb-3">
+          <Button
+            onClick={() => window.open(`tel:${booking.customers?.phone}`)}
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            disabled={!booking.customers?.phone}
+          >
+            <Phone className="h-3 w-3 mr-1" />
+            โทร
+          </Button>
+          <Button
+            onClick={() => {
+              if (booking.address) {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.address)}`, '_blank')
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            disabled={!booking.address}
+          >
+            <MapPin className="h-3 w-3 mr-1" />
+            แผนที่
+          </Button>
+          <Button
+            onClick={() => {
+              // TODO: Integrate with chat system
+              alert('ฟีเจอร์แชทกำลังพัฒนา')
+            }}
+            variant="outline"
+            size="sm"
+            className="flex-1"
+          >
+            <MessageCircle className="h-3 w-3 mr-1" />
+            แชท
+          </Button>
+        </div>
+
+        {/* Main Actions */}
         <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => onViewDetails(booking)}

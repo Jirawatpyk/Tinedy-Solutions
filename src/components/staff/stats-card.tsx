@@ -15,7 +15,7 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon: Icon, description, trend, className = '' }: StatsCardProps) {
   return (
-    <Card className={className}>
+    <Card className={`hover:shadow-lg transition-all hover:scale-105 cursor-pointer ${className}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
