@@ -66,19 +66,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
       setProfile(data)
+      return data
     } catch (error) {
       console.error('Error fetching profile:', error)
+      throw error
     } finally {
       setLoading(false)
     }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) throw error
+
+    // Wait for profile to be fetched before resolving
+    if (data.user) {
+      setUser(data.user)
+      await fetchProfile(data.user.id)
+    }
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
