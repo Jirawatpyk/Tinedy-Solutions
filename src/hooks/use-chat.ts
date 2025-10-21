@@ -28,7 +28,7 @@ export function useChat() {
 
   // Fetch messages for selected user
   const fetchMessages = useCallback(async (otherUserId: string) => {
-    if (!user) return
+    if (!user) return []
 
     const { data, error } = await supabase
       .from('messages')
@@ -47,10 +47,12 @@ export function useChat() {
 
     if (error) {
       console.error('Error fetching messages:', error)
-      return
+      return []
     }
 
-    setMessages((data as any) || [])
+    const fetchedMessages = (data as any) || []
+    setMessages(fetchedMessages)
+    return fetchedMessages
   }, [user])
 
   // Send message (with optional attachments)
@@ -264,18 +266,21 @@ export function useChat() {
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {
     if (selectedUser) {
-      fetchMessages(selectedUser.id).then(() => {
+      fetchMessages(selectedUser.id).then((fetchedMessages) => {
         // Mark unread messages from this user as read
-        const unreadMessages = messages
-          .filter((m) => m.sender_id === selectedUser.id && !m.is_read)
-          .map((m) => m.id)
+        const unreadMessages = fetchedMessages
+          .filter((m: Message) => m.sender_id === selectedUser.id && !m.is_read)
+          .map((m: Message) => m.id)
 
         if (unreadMessages.length > 0) {
-          markAsRead(unreadMessages)
+          markAsRead(unreadMessages).then(() => {
+            // Reload conversations to update unread count
+            loadConversations()
+          })
         }
       })
     }
-  }, [selectedUser, fetchMessages])
+  }, [selectedUser, fetchMessages, markAsRead, loadConversations])
 
   return {
     messages,
