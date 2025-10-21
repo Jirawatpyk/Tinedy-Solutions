@@ -91,6 +91,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [user])
 
+  // Refetch when navigating to/from chat page
+  useEffect(() => {
+    if (!user) return
+
+    const fetchUnreadCount = async () => {
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .eq('is_read', false)
+
+      setUnreadCount(count || 0)
+    }
+
+    // Refetch when location changes (especially when leaving chat page)
+    fetchUnreadCount()
+  }, [location.pathname, user])
+
   const handleSignOut = async () => {
     try {
       await signOut()
