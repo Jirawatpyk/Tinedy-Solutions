@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 
+// Helper function to format full address
+export function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
+  const parts = [
+    booking.address,
+    booking.city,
+    booking.state,
+    booking.zip_code
+  ].filter(part => part && part.trim())
+
+  return parts.join(', ')
+}
+
 export interface StaffBooking {
   id: string
   booking_date: string
@@ -10,6 +22,9 @@ export interface StaffBooking {
   status: string
   notes: string | null
   address: string
+  city: string
+  state: string
+  zip_code: string
   created_at: string
   customers: {
     id: string

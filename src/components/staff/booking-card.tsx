@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Clock, User, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle } from 'lucide-react'
-import { type StaffBooking } from '@/hooks/use-staff-bookings'
+import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 
 interface BookingCardProps {
@@ -102,7 +102,7 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <span className="text-sm text-muted-foreground break-words">
-                {booking.address}
+                {formatFullAddress(booking)}
               </span>
             </div>
           )}
@@ -132,7 +132,8 @@ export function BookingCard({ booking, onViewDetails, onMarkCompleted, showDate 
           <Button
             onClick={() => {
               if (booking.address) {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.address)}`, '_blank')
+                const fullAddress = formatFullAddress(booking)
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank')
               }
             }}
             variant="outline"

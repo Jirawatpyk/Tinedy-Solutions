@@ -23,7 +23,7 @@ import {
   Save,
   MapPin,
 } from 'lucide-react'
-import { type StaffBooking } from '@/hooks/use-staff-bookings'
+import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
@@ -190,15 +190,16 @@ export function BookingDetailsModal({
                   <p className="text-sm text-muted-foreground">ที่อยู่</p>
                   <p className="font-medium flex items-start gap-2">
                     <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
-                    <span>{booking.address}</span>
+                    <span>{formatFullAddress(booking)}</span>
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full"
                     onClick={() => {
+                      const fullAddress = formatFullAddress(booking)
                       window.open(
-                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.address)}`,
+                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
                         '_blank'
                       )
                     }}

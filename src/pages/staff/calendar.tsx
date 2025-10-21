@@ -189,6 +189,9 @@ export default function StaffCalendar() {
             status: selectedEvent.status,
             notes: selectedEvent.notes,
             address: '',
+            city: '',
+            state: '',
+            zip_code: '',
             created_at: new Date().toISOString(),
             customers: {
               id: '',
