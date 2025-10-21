@@ -196,7 +196,7 @@ export default function StaffCalendar() {
             service_packages: {
               id: '',
               name: selectedEvent.service_name,
-              duration: Math.round((selectedEvent.end.getTime() - selectedEvent.start.getTime()) / 60000),
+              duration_minutes: Math.round((selectedEvent.end.getTime() - selectedEvent.start.getTime()) / 60000),
               price: 0,
             },
           }}

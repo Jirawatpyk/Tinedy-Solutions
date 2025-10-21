@@ -202,10 +202,10 @@ export function BookingDetailsModal({
                   {booking.service_packages?.name || 'Unknown Service'}
                 </p>
               </div>
-              {booking.service_packages?.duration && (
+              {booking.service_packages?.duration_minutes && (
                 <div>
                   <p className="text-sm text-muted-foreground">ระยะเวลา</p>
-                  <p className="font-medium">{booking.service_packages.duration} นาที</p>
+                  <p className="font-medium">{booking.service_packages.duration_minutes} นาที</p>
                 </div>
               )}
               {booking.service_packages?.price && (

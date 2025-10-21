@@ -17,7 +17,7 @@ export interface StaffBooking {
   service_packages: {
     id: string
     name: string
-    duration: number
+    duration_minutes: number
     price: number
   } | null
 }
@@ -92,7 +92,7 @@ export function useStaffBookings() {
         .select(`
           *,
           customers (id, full_name, phone),
-          service_packages (id, name, duration, price)
+          service_packages (id, name, duration_minutes, price)
         `)
         .eq('staff_id', user.id)
         .eq('booking_date', todayStr)
@@ -106,7 +106,7 @@ export function useStaffBookings() {
         .select(`
           *,
           customers (id, full_name, phone),
-          service_packages (id, name, duration, price)
+          service_packages (id, name, duration_minutes, price)
         `)
         .eq('staff_id', user.id)
         .gt('booking_date', todayStr)
