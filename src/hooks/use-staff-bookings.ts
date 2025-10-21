@@ -88,9 +88,9 @@ export function useStaffBookings() {
         (payload) => {
           const booking = payload.new as any
 
-          // Reload if booking is for current user OR for their team (if they're a lead)
+          // Reload if booking is for current user OR for any team they belong to
           const isMyBooking = booking.staff_id === user.id
-          const isMyTeamBooking = isTeamLead && myTeamIds.includes(booking.team_id)
+          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
 
           if (isMyBooking || isMyTeamBooking) {
             loadBookings()
@@ -108,27 +108,38 @@ export function useStaffBookings() {
     if (!user) return
 
     try {
-      // Check if user is a team lead
-      const { data: teams, error } = await supabase
+      // Get teams where user is a member
+      const { data: memberTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+
+      // Get teams where user is the lead
+      const { data: leadTeams } = await supabase
         .from('teams')
         .select('id')
         .eq('team_lead_id', user.id)
         .eq('is_active', true)
 
-      if (error) throw error
+      const memberTeamIds = memberTeams?.map(m => m.team_id) || []
+      const leadTeamIds = leadTeams?.map(t => t.id) || []
 
-      const teamIds = teams?.map(t => t.id) || []
-      setMyTeamIds(teamIds)
-      setIsTeamLead(teamIds.length > 0)
+      // Combine and deduplicate
+      const allTeamIds = [...new Set([...memberTeamIds, ...leadTeamIds])]
+      setMyTeamIds(allTeamIds)
+      setIsTeamLead(leadTeamIds.length > 0)
 
-      console.log('[StaffBookings] Team Lead Status:', {
+      console.log('[StaffBookings] Team Membership:', {
         userId: user.id,
-        isLead: teamIds.length > 0,
-        teamCount: teamIds.length,
-        teamIds
+        isLead: leadTeamIds.length > 0,
+        memberOfTeams: memberTeamIds.length,
+        leadOfTeams: leadTeamIds.length,
+        totalTeams: allTeamIds.length,
+        teamIds: allTeamIds
       })
     } catch (err) {
-      console.error('Error checking team lead status:', err)
+      console.error('Error checking team membership:', err)
     }
   }
 
@@ -164,8 +175,8 @@ export function useStaffBookings() {
           service_packages (id, name, duration_minutes, price)
         `)
 
-      // If user is a team lead, fetch team bookings too
-      if (isTeamLead && myTeamIds.length > 0) {
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
         todayQuery = todayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         todayQuery = todayQuery.eq('staff_id', user.id)
@@ -191,8 +202,8 @@ export function useStaffBookings() {
           service_packages (id, name, duration_minutes, price)
         `)
 
-      // If user is a team lead, fetch team bookings too
-      if (isTeamLead && myTeamIds.length > 0) {
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
         upcomingQuery = upcomingQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         upcomingQuery = upcomingQuery.eq('staff_id', user.id)
@@ -219,8 +230,8 @@ export function useStaffBookings() {
           service_packages (id, name, duration_minutes, price)
         `)
 
-      // If user is a team lead, fetch team bookings too
-      if (isTeamLead && myTeamIds.length > 0) {
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
         completedQuery = completedQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         completedQuery = completedQuery.eq('staff_id', user.id)
@@ -263,13 +274,13 @@ export function useStaffBookings() {
       startOfWeek.setDate(diff)
       const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
 
-      // Jobs today - include team bookings if user is team lead
+      // Jobs today - include team bookings if user belongs to any team
       let jobsTodayQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .eq('booking_date', todayStr)
 
-      if (isTeamLead && myTeamIds.length > 0) {
+      if (myTeamIds.length > 0) {
         jobsTodayQuery = jobsTodayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         jobsTodayQuery = jobsTodayQuery.eq('staff_id', user.id)
@@ -277,14 +288,14 @@ export function useStaffBookings() {
 
       const { count: jobsTodayCount } = await jobsTodayQuery
 
-      // Jobs this week - include team bookings if user is team lead
+      // Jobs this week - include team bookings if user belongs to any team
       let jobsWeekQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .gte('booking_date', startOfWeekStr)
         .lte('booking_date', todayStr)
 
-      if (isTeamLead && myTeamIds.length > 0) {
+      if (myTeamIds.length > 0) {
         jobsWeekQuery = jobsWeekQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         jobsWeekQuery = jobsWeekQuery.eq('staff_id', user.id)
@@ -292,7 +303,7 @@ export function useStaffBookings() {
 
       const { count: jobsWeekCount } = await jobsWeekQuery
 
-      // Completion rate (last 30 days) - include team bookings if user is team lead
+      // Completion rate (last 30 days) - include team bookings if user belongs to any team
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
@@ -303,7 +314,7 @@ export function useStaffBookings() {
         .gte('booking_date', thirtyDaysAgoStr)
         .lte('booking_date', todayStr)
 
-      if (isTeamLead && myTeamIds.length > 0) {
+      if (myTeamIds.length > 0) {
         totalJobsQuery = totalJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         totalJobsQuery = totalJobsQuery.eq('staff_id', user.id)
@@ -318,7 +329,7 @@ export function useStaffBookings() {
         .gte('booking_date', thirtyDaysAgoStr)
         .lte('booking_date', todayStr)
 
-      if (isTeamLead && myTeamIds.length > 0) {
+      if (myTeamIds.length > 0) {
         completedJobsQuery = completedJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         completedJobsQuery = completedJobsQuery.eq('staff_id', user.id)
@@ -345,7 +356,7 @@ export function useStaffBookings() {
         console.log('Reviews table not found, skipping rating calculation')
       }
 
-      // Total earnings this month - include team bookings if user is team lead
+      // Total earnings this month - include team bookings if user belongs to any team
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
@@ -357,7 +368,7 @@ export function useStaffBookings() {
         .eq('status', 'completed')
         .gte('booking_date', startOfMonthStr)
 
-      if (isTeamLead && myTeamIds.length > 0) {
+      if (myTeamIds.length > 0) {
         earningsQuery = earningsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
       } else {
         earningsQuery = earningsQuery.eq('staff_id', user.id)
