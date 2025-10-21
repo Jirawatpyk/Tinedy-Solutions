@@ -31,6 +31,8 @@ interface TeamMember {
   phone: string | null
   avatar_url: string | null
   role: string
+  is_active?: boolean
+  membership_id?: string
 }
 
 interface Team {
@@ -116,6 +118,8 @@ export function AdminTeams() {
             role
           ),
           team_members (
+            id,
+            is_active,
             profiles (
               id,
               full_name,
@@ -138,7 +142,11 @@ export function AdminTeams() {
         team_lead_id: team.team_lead_id,
         team_lead: team.team_lead,
         member_count: team.team_members?.length || 0,
-        members: team.team_members?.map((tm: any) => tm.profiles).filter(Boolean) || [],
+        members: team.team_members?.map((tm: any) => ({
+          ...tm.profiles,
+          is_active: tm.is_active,
+          membership_id: tm.id,
+        })).filter(Boolean) || [],
       }))
 
       setTeams(formattedTeams)
@@ -332,6 +340,31 @@ export function AdminTeams() {
     }
   }
 
+  const handleToggleMemberStatus = async (membershipId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .update({ is_active: !currentStatus })
+        .eq('id', membershipId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: `Member ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+      })
+
+      loadTeams()
+    } catch (error: any) {
+      console.error('Error toggling member status:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update member status',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const openCreateDialog = () => {
     setEditingTeam(null)
     setTeamName('')
@@ -476,6 +509,7 @@ export function AdminTeams() {
               onDelete={handleDeleteTeam}
               onAddMember={openMemberDialog}
               onRemoveMember={handleRemoveMember}
+              onToggleMemberStatus={handleToggleMemberStatus}
             />
           ))}
         </div>

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Switch } from '@/components/ui/switch'
 import { Edit, Trash2, UserPlus, Users, Crown } from 'lucide-react'
 
 interface TeamMember {
@@ -11,6 +12,8 @@ interface TeamMember {
   phone: string | null
   avatar_url: string | null
   role: string
+  is_active?: boolean
+  membership_id?: string
 }
 
 interface Team {
@@ -30,9 +33,10 @@ interface TeamCardProps {
   onDelete: (teamId: string) => void
   onAddMember: (team: Team) => void
   onRemoveMember: (teamId: string, staffId: string) => void
+  onToggleMemberStatus: (membershipId: string, currentStatus: boolean) => void
 }
 
-export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember }: TeamCardProps) {
+export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
   const getInitials = (name: string) => {
     const parts = name.split(' ')
     if (parts.length >= 2) {
@@ -135,23 +139,39 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember }
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{member.full_name}</p>
+                      <p className={`text-sm font-medium truncate ${member.is_active === false ? 'text-muted-foreground line-through' : ''}`}>
+                        {member.full_name}
+                      </p>
                       {team.team_lead_id === member.id && (
                         <Badge variant="secondary" className="h-5 px-1.5">
                           <Crown className="h-3 w-3 text-amber-600" />
                         </Badge>
                       )}
+                      {member.is_active === false && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-xs">
+                          Inactive
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemoveMember(team.id, member.id)}
-                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-3 w-3 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {member.membership_id && (
+                      <Switch
+                        checked={member.is_active !== false}
+                        onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
+                        className="scale-75"
+                      />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveMember(team.id, member.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))
             ) : (
