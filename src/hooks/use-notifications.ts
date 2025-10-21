@@ -19,7 +19,7 @@ export function useNotifications() {
         const { data: memberTeams } = await supabase
           .from('team_members')
           .select('team_id')
-          .eq('user_id', user.id)
+          .eq('staff_id', user.id)
           .eq('is_active', true)
 
         // Get teams where user is the lead
