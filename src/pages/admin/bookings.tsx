@@ -28,6 +28,18 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BookingDetailModal } from './booking-detail-modal'
 
+// Helper function to format full address
+function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
+  const parts = [
+    booking.address,
+    booking.city,
+    booking.state,
+    booking.zip_code
+  ].filter(part => part && part.trim())
+
+  return parts.join(', ')
+}
+
 interface Booking {
   id: string
   booking_date: string
@@ -36,6 +48,9 @@ interface Booking {
   status: string
   total_price: number
   address: string
+  city: string
+  state: string
+  zip_code: string
   staff_id: string | null
   team_id: string | null
   service_package_id: string
@@ -1002,7 +1017,7 @@ export function AdminBookings() {
         `${b.start_time}-${b.end_time}`,
         b.status,
         b.total_price,
-        b.address
+        formatFullAddress(b)
       ].join(','))
     ].join('\n')
 
@@ -2044,7 +2059,7 @@ export function AdminBookings() {
                       {formatDate(booking.booking_date)} • {booking.start_time} - {booking.end_time}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {booking.address}
+                      {formatFullAddress(booking)}
                     </p>
                     {booking.profiles && (
                       <p className="text-sm text-tinedy-blue flex items-center gap-1">

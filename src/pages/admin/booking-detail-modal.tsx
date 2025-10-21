@@ -21,6 +21,18 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { sendBookingReminder } from '@/lib/email'
 import { useToast } from '@/hooks/use-toast'
 
+// Helper function to format full address
+function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
+  const parts = [
+    booking.address,
+    booking.city,
+    booking.state,
+    booking.zip_code
+  ].filter(part => part && part.trim())
+
+  return parts.join(', ')
+}
+
 interface Booking {
   id: string
   booking_date: string
@@ -29,6 +41,9 @@ interface Booking {
   status: string
   total_price: number
   address: string
+  city: string
+  state: string
+  zip_code: string
   staff_id: string | null
   team_id: string | null
   service_package_id: string
@@ -86,7 +101,7 @@ export function BookingDetailModal({
         bookingDate: booking.booking_date,
         startTime: booking.start_time,
         endTime: booking.end_time,
-        location: booking.address,
+        location: formatFullAddress(booking),
       })
 
       if (result.success) {
@@ -192,7 +207,21 @@ export function BookingDetailModal({
               <MapPin className="h-5 w-5 text-tinedy-blue" />
               Location
             </h3>
-            <p className="text-sm">{booking.address}</p>
+            <p className="text-sm break-words">{formatFullAddress(booking)}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const fullAddress = formatFullAddress(booking)
+                window.open(
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
+                  '_blank'
+                )
+              }}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Open in Google Maps
+            </Button>
           </div>
 
           {/* Assignment Info */}
