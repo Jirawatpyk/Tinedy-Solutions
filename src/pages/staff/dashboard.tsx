@@ -123,30 +123,38 @@ export default function StaffDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="งานวันนี้"
-              value={stats.jobsToday}
-              icon={Briefcase}
-              description="งานที่ต้องทำวันนี้"
-            />
-            <StatsCard
-              title="งานสัปดาห์นี้"
-              value={stats.jobsThisWeek}
-              icon={Calendar}
-              description="งานทั้งหมดในสัปดาห์"
-            />
-            <StatsCard
-              title="อัตราความสำเร็จ"
-              value={`${stats.completionRate}%`}
-              icon={TrendingUp}
-              description="30 วันล่าสุด"
-            />
-            <StatsCard
-              title="คะแนนเฉลี่ย"
-              value={stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
-              icon={Star}
-              description="จากรีวิวลูกค้า"
-            />
+            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '0ms' }}>
+              <StatsCard
+                title="งานวันนี้"
+                value={stats.jobsToday}
+                icon={Briefcase}
+                description="งานที่ต้องทำวันนี้"
+              />
+            </div>
+            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '100ms' }}>
+              <StatsCard
+                title="งานสัปดาห์นี้"
+                value={stats.jobsThisWeek}
+                icon={Calendar}
+                description="งานทั้งหมดในสัปดาห์"
+              />
+            </div>
+            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '200ms' }}>
+              <StatsCard
+                title="อัตราความสำเร็จ"
+                value={`${stats.completionRate}%`}
+                icon={TrendingUp}
+                description="30 วันล่าสุด"
+              />
+            </div>
+            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
+              <StatsCard
+                title="คะแนนเฉลี่ย"
+                value={stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
+                icon={Star}
+                description="จากรีวิวลูกค้า"
+              />
+            </div>
           </div>
         )}
 

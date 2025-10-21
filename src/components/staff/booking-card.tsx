@@ -58,7 +58,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out animate-in fade-in-50 slide-in-from-bottom-4">
       <CardContent className="p-4 sm:p-6">
         {/* Header - Status and Date/Time */}
         <div className="flex items-start justify-between mb-4">
@@ -139,7 +139,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             onClick={() => window.open(`tel:${booking.customers?.phone}`)}
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
             disabled={!booking.customers?.phone}
           >
             <Phone className="h-3 w-3 mr-1" />
@@ -154,7 +154,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             }}
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
             disabled={!booking.address}
           >
             <MapPin className="h-3 w-3 mr-1" />
@@ -167,7 +167,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             }}
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <MessageCircle className="h-3 w-3 mr-1" />
             แชท
@@ -179,7 +179,7 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
           <Button
             onClick={() => onViewDetails(booking)}
             variant="outline"
-            className="flex-1 min-w-[120px]"
+            className="flex-1 min-w-[120px] transition-all duration-200 hover:scale-105 active:scale-95"
             size="sm"
           >
             ดูรายละเอียด
@@ -188,10 +188,10 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             <Button
               onClick={() => onStartProgress(booking.id)}
               variant="default"
-              className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700"
+              className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
               size="sm"
             >
-              <Play className="h-4 w-4 mr-1" />
+              <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
               เริ่มดำเนินการ
             </Button>
           )}
@@ -199,10 +199,10 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             <Button
               onClick={() => onMarkCompleted(booking.id)}
               variant="default"
-              className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700"
+              className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
               size="sm"
             >
-              <CheckCircle2 className="h-4 w-4 mr-1" />
+              <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
               เสร็จสิ้น
             </Button>
           )}
