@@ -28,19 +28,28 @@ export function LoginPage() {
         description: 'Successfully signed in!',
       })
 
-      // Get the from path or determine default based on role
+      // Determine default path based on role
+      const defaultPath = profile?.role === 'admin' ? '/admin' : '/staff'
+
+      // Get the from path
       const from = location.state?.from?.pathname
 
+      // Only use 'from' path if it matches the user's role
       if (from) {
-        // If redirected from a specific page, go there
-        navigate(from, { replace: true })
-      } else {
-        // Otherwise, redirect based on role
-        if (profile?.role === 'admin') {
-          navigate('/admin', { replace: true })
+        const isAdminPath = from.startsWith('/admin')
+        const isStaffPath = from.startsWith('/staff')
+
+        if (profile?.role === 'admin' && isAdminPath) {
+          navigate(from, { replace: true })
+        } else if (profile?.role === 'staff' && isStaffPath) {
+          navigate(from, { replace: true })
         } else {
-          navigate('/staff', { replace: true })
+          // Role doesn't match the path, use default
+          navigate(defaultPath, { replace: true })
         }
+      } else {
+        // No from path, use default based on role
+        navigate(defaultPath, { replace: true })
       }
     } catch (error) {
       toast({

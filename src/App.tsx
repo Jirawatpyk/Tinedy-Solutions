@@ -90,6 +90,30 @@ function App() {
           {/* Redirect root to admin dashboard */}
           <Route path="/" element={<Navigate to="/admin" replace />} />
 
+          {/* Unauthorized */}
+          <Route
+            path="/unauthorized"
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow">
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+                  <h1 className="text-4xl font-display font-bold text-tinedy-dark">
+                    403
+                  </h1>
+                  <p className="text-lg font-semibold text-tinedy-dark mt-4">Unauthorized</p>
+                  <p className="text-muted-foreground mt-2">
+                    You don't have permission to access this page
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/login'}
+                    className="mt-6 px-6 py-2 bg-tinedy-blue text-white rounded-lg hover:bg-tinedy-blue/90 transition-colors"
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              </div>
+            }
+          />
+
           {/* 404 */}
           <Route
             path="*"
