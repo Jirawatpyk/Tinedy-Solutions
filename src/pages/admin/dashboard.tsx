@@ -8,37 +8,68 @@ import {
   Users,
   DollarSign,
   Clock,
-  BriefcaseBusiness,
-  TrendingUp,
+  Phone,
+  MapPin,
+  User,
 } from 'lucide-react'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { format } from 'date-fns'
+import { th } from 'date-fns/locale'
+import { BookingDetailModal } from './booking-detail-modal'
+import { useToast } from '@/hooks/use-toast'
 
 interface Stats {
   totalBookings: number
   totalRevenue: number
   totalCustomers: number
   pendingBookings: number
-  activeTeams: number
 }
 
-interface RecentBooking {
+interface BookingStatus {
+  status: string
+  count: number
+  color: string
+}
+
+interface TodayBooking {
   id: string
   booking_date: string
+  start_time: string
+  end_time: string
   status: string
   total_price: number
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  staff_id: string | null
+  team_id: string | null
+  service_package_id: string
+  payment_status?: string
+  payment_method?: string
+  amount_paid?: number
+  payment_date?: string
+  payment_notes?: string
   customers: {
     full_name: string
+    phone: string
+    email: string
   } | null
   service_packages: {
+    name: string
+    service_type: string
+  } | null
+  profiles: {
+    full_name: string
+  } | null
+  teams: {
     name: string
   } | null
 }
 
-interface TeamStats {
-  id: string
-  name: string
-  totalBookings: number
-  completedBookings: number
+interface DailyRevenue {
+  date: string
   revenue: number
 }
 
@@ -48,11 +79,14 @@ export function AdminDashboard() {
     totalRevenue: 0,
     totalCustomers: 0,
     pendingBookings: 0,
-    activeTeams: 0,
   })
-  const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
-  const [teamStats, setTeamStats] = useState<TeamStats[]>([])
+  const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatus[]>([])
+  const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
+  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchDashboardData()
@@ -87,75 +121,84 @@ export function AdminDashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending')
 
-      // Fetch active teams count
-      const { count: activeTeams } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
-
       setStats({
         totalBookings: totalBookings || 0,
         totalRevenue,
         totalCustomers: totalCustomers || 0,
         pendingBookings: pendingBookings || 0,
-        activeTeams: activeTeams || 0,
       })
 
-      // Fetch recent bookings
-      const { data: bookings, error: bookingsError } = await supabase
+      // Fetch bookings by status for pie chart
+      const { data: allBookings } = await supabase
+        .from('bookings')
+        .select('status')
+
+      const statusCounts: Record<string, number> = {}
+      allBookings?.forEach((booking) => {
+        statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1
+      })
+
+      const statusColors: Record<string, string> = {
+        confirmed: '#3b82f6',
+        pending: '#f59e0b',
+        in_progress: '#8b5cf6',
+        completed: '#10b981',
+        cancelled: '#ef4444',
+      }
+
+      const statusData: BookingStatus[] = Object.entries(statusCounts).map(([status, count]) => ({
+        status: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+        count,
+        color: statusColors[status] || '#6b7280',
+      }))
+
+      setBookingsByStatus(statusData)
+
+      // Fetch today's bookings
+      const today = new Date().toISOString().split('T')[0]
+      const { data: todayData } = await supabase
         .from('bookings')
         .select(`
-          id,
-          booking_date,
-          status,
-          total_price,
-          customers (full_name),
-          service_packages (name)
+          *,
+          customers (full_name, phone, email),
+          service_packages (name, service_type),
+          profiles (full_name),
+          teams (name)
         `)
-        .order('created_at', { ascending: false })
-        .limit(5)
+        .eq('booking_date', today)
+        .order('start_time', { ascending: true })
 
-      if (bookingsError) {
-        console.error('Error fetching recent bookings:', bookingsError)
+      setTodayBookings((todayData as any) || [])
+
+      // Fetch daily revenue for last 7 days
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+      const { data: revenueData } = await supabase
+        .from('bookings')
+        .select('booking_date, total_price')
+        .eq('status', 'completed')
+        .gte('booking_date', sevenDaysAgo.toISOString().split('T')[0])
+        .order('booking_date', { ascending: true })
+
+      const revenueByDate: Record<string, number> = {}
+      for (let i = 0; i < 7; i++) {
+        const date = new Date()
+        date.setDate(date.getDate() - (6 - i))
+        const dateStr = date.toISOString().split('T')[0]
+        revenueByDate[dateStr] = 0
       }
 
-      setRecentBookings((bookings as any) || [])
+      revenueData?.forEach((item) => {
+        const dateStr = item.booking_date
+        revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + Number(item.total_price)
+      })
 
-      // Fetch team stats
-      const { data: teams } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('is_active', true)
+      const revenueArray: DailyRevenue[] = Object.entries(revenueByDate).map(([date, revenue]) => ({
+        date: format(new Date(date), 'dd MMM', { locale: th }),
+        revenue,
+      }))
 
-      if (teams) {
-        const teamsWithStats = await Promise.all(
-          teams.map(async (team) => {
-            // Get all bookings for this team
-            const { data: teamBookings } = await supabase
-              .from('bookings')
-              .select('id, status, total_price')
-              .eq('team_id', team.id)
-
-            const totalBookings = teamBookings?.length || 0
-            const completedBookings = teamBookings?.filter(b => b.status === 'completed').length || 0
-            const revenue = teamBookings
-              ?.filter(b => b.status === 'completed')
-              .reduce((sum, b) => sum + Number(b.total_price), 0) || 0
-
-            return {
-              id: team.id,
-              name: team.name,
-              totalBookings,
-              completedBookings,
-              revenue,
-            }
-          })
-        )
-
-        // Sort by revenue (top performers first)
-        teamsWithStats.sort((a, b) => b.revenue - a.revenue)
-        setTeamStats(teamsWithStats)
-      }
+      setDailyRevenue(revenueArray)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -165,33 +208,169 @@ export function AdminDashboard() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { variant: 'warning' as const, label: 'Pending' },
-      confirmed: { variant: 'info' as const, label: 'Confirmed' },
-      in_progress: { variant: 'default' as const, label: 'In Progress' },
-      completed: { variant: 'success' as const, label: 'Completed' },
-      cancelled: { variant: 'destructive' as const, label: 'Cancelled' },
+      pending: { className: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pending' },
+      confirmed: { className: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Confirmed' },
+      in_progress: { className: 'bg-purple-100 text-purple-800 border-purple-200', label: 'In Progress' },
+      completed: { className: 'bg-green-100 text-green-800 border-green-200', label: 'Completed' },
+      cancelled: { className: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelled' },
+      no_show: { className: 'bg-red-100 text-red-800 border-red-200', label: 'No Show' },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || {
-      variant: 'default' as const,
+      className: 'bg-gray-100 text-gray-800 border-gray-200',
       label: status,
     }
 
-    return <Badge variant={config.variant}>{config.label}</Badge>
+    return <Badge variant="outline" className={config.className}>{config.label}</Badge>
   }
+
+  const getPaymentStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
+      case 'partial':
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
+      case 'refunded':
+        return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
+      default:
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Unpaid</Badge>
+    }
+  }
+
+  const getAvailableStatuses = (currentStatus: string): string[] => {
+    const transitions: Record<string, string[]> = {
+      pending: ['pending', 'confirmed', 'cancelled'],
+      confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
+      in_progress: ['in_progress', 'completed', 'cancelled'],
+      completed: ['completed'],
+      cancelled: ['cancelled'],
+      no_show: ['no_show'],
+    }
+    return transitions[currentStatus] || [currentStatus]
+  }
+
+  const getStatusLabel = (status: string): string => {
+    const labels: Record<string, string> = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      no_show: 'No Show',
+    }
+    return labels[status] || status
+  }
+
+  const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
+    if (currentStatus === newStatus) return
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: `Status changed to ${newStatus}`,
+      })
+
+      if (selectedBooking && selectedBooking.id === bookingId) {
+        setSelectedBooking({ ...selectedBooking, status: newStatus })
+      }
+
+      fetchDashboardData()
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update status',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const deleteBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to delete this booking?')) return
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking deleted successfully',
+      })
+      setIsDetailOpen(false)
+      fetchDashboardData()
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete booking',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const markAsPaid = async (bookingId: string, method: string = 'cash') => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: selectedBooking?.total_price || 0,
+          payment_date: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking marked as paid',
+      })
+
+      if (selectedBooking) {
+        setSelectedBooking({
+          ...selectedBooking,
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: selectedBooking.total_price,
+          payment_date: new Date().toISOString().split('T')[0],
+        })
+      }
+
+      fetchDashboardData()
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update payment',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const openBookingDetail = (booking: TodayBooking) => {
+    setSelectedBooking(booking)
+    setIsDetailOpen(true)
+  }
+
 
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header */}
         <div className="space-y-2">
           <Skeleton className="h-9 w-40" />
           <Skeleton className="h-4 w-80" />
         </div>
-
-        {/* Stats cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -203,56 +382,6 @@ export function AdminDashboard() {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Content grid skeleton */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Recent bookings skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <Skeleton className="h-6 w-20" />
-                      <Skeleton className="h-5 w-20 rounded-full" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Team stats skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-32" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="p-4 border rounded-lg">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <div className="flex gap-4">
-                        <Skeleton className="h-3 w-20" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     )
@@ -271,7 +400,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
@@ -319,21 +448,6 @@ export function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Teams</CardTitle>
-            <BriefcaseBusiness className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.activeTeams}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Service teams
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
@@ -348,103 +462,183 @@ export function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Content grid - Recent Bookings and Team Performance */}
+      {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent bookings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display">Recent Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentBookings.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No bookings yet
-                </p>
-              ) : (
-                recentBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="space-y-1 flex-1">
-                      <p className="font-medium text-tinedy-dark">
-                        {booking.customers?.full_name || 'Unknown Customer'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.service_packages?.name || 'Unknown Service'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(booking.booking_date)}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="font-semibold text-tinedy-dark">
-                          {formatCurrency(Number(booking.total_price))}
-                        </p>
-                      </div>
-                      {getStatusBadge(booking.status)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Team Performance */}
+        {/* Bookings Status */}
         <Card>
           <CardHeader>
             <CardTitle className="font-display flex items-center gap-2">
-              <BriefcaseBusiness className="h-5 w-5 text-tinedy-blue" />
-              Team Performance
+              <Calendar className="h-5 w-5 text-tinedy-blue" />
+              Bookings Status
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {teamStats.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No teams yet
-                </p>
-              ) : (
-                teamStats.map((team, index) => (
-                  <div
-                    key={team.id}
-                    className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+            {bookingsByStatus.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No bookings yet
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={bookingsByStatus as any}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ status, percent }: any) => `${status}: ${((percent as number) * 100).toFixed(0)}%`}
+                    outerRadius={90}
+                    innerRadius={60}
+                    fill="#8884d8"
+                    dataKey="count"
+                    paddingAngle={2}
+                    nameKey="status"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {index === 0 && (
-                          <TrendingUp className="h-4 w-4 text-tinedy-green" />
-                        )}
-                        <p className="font-medium text-tinedy-dark">{team.name}</p>
-                      </div>
-                      <Badge variant={index === 0 ? "default" : "outline"} className={index === 0 ? "bg-tinedy-green" : ""}>
-                        {index === 0 ? "Top" : `#${index + 1}`}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Total Jobs</p>
-                        <p className="font-semibold text-tinedy-dark">{team.totalBookings}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Completed</p>
-                        <p className="font-semibold text-tinedy-green">{team.completedBookings}</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">Revenue</p>
-                      <p className="font-bold text-tinedy-dark">{formatCurrency(team.revenue)}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                    {bookingsByStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value} bookings`, '']}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    iconType="circle"
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Daily Revenue Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-tinedy-green" />
+              Revenue (Last 7 Days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dailyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Bar dataKey="revenue" fill="#22c55e" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
+
+      {/* Today's Appointments */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-tinedy-blue" />
+            Today's Appointments ({todayBookings.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {todayBookings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No appointments for today
+              </p>
+            ) : (
+              todayBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 cursor-pointer"
+                  onClick={() => openBookingDetail(booking)}
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-tinedy-dark">
+                          {booking.customers?.full_name || 'Unknown Customer'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {booking.customers?.email || 'No email'}
+                        </p>
+                      </div>
+                      <div className="sm:hidden">
+                        {getStatusBadge(booking.status)}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center">
+                        <Badge variant="outline" className="mr-2">
+                          {booking.service_packages?.service_type || 'service'}
+                        </Badge>
+                        {booking.service_packages?.name || 'Unknown Service'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      <span>{booking.customers?.phone || 'No phone'}</span>
+                    </div>
+                    {booking.address && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="line-clamp-1">{booking.address}</span>
+                      </div>
+                    )}
+                    {booking.profiles && (
+                      <p className="text-sm text-tinedy-blue flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Staff: {booking.profiles.full_name}
+                      </p>
+                    )}
+                    {booking.teams && (
+                      <p className="text-sm text-tinedy-green flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        Team: {booking.teams.name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
+                    <div className="flex-1 sm:flex-none">
+                      <p className="font-semibold text-tinedy-dark text-lg">
+                        {formatCurrency(Number(booking.total_price))}
+                      </p>
+                    </div>
+                    <div className="hidden sm:block">
+                      {getStatusBadge(booking.status)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Booking Detail Modal */}
+      <BookingDetailModal
+        booking={selectedBooking}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEdit={() => {}}
+        onDelete={deleteBooking}
+        onStatusChange={handleStatusChange}
+        onMarkAsPaid={markAsPaid}
+        getStatusBadge={getStatusBadge}
+        getPaymentStatusBadge={getPaymentStatusBadge}
+        getAvailableStatuses={getAvailableStatuses}
+        getStatusLabel={getStatusLabel}
+      />
     </div>
   )
 }

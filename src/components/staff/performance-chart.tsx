@@ -67,7 +67,12 @@ export function PerformanceChart({ stats }: PerformanceChartProps) {
               />
               <YAxis
                 tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  if (value >= 1000) {
+                    return `${(value / 1000).toFixed(1)}k`
+                  }
+                  return value.toString()
+                }}
               />
               <Tooltip
                 contentStyle={{

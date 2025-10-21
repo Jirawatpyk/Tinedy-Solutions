@@ -104,7 +104,19 @@ export function useNotifications() {
           // Determine notification type
           const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
 
-          // Show notification
+          // Save to in-app notifications
+          await supabase.from('notifications').insert({
+            user_id: user.id,
+            type: notificationType === 'team' ? 'team_booking' : 'new_booking',
+            title: notificationType === 'team' ? '👥 งานทีมใหม่!' : '🔔 งานใหม่!',
+            message: notificationType === 'team'
+              ? `มีงานทีมใหม่จาก ${customerName} เวลา ${time}`
+              : `มีงานใหม่จาก ${customerName} เวลา ${time}`,
+            booking_id: booking.id,
+            team_id: booking.team_id || null,
+          })
+
+          // Show browser notification
           await notificationService.notifyNewBooking(
             customerName,
             time,
@@ -132,20 +144,74 @@ export function useNotifications() {
             return // Not relevant to this user
           }
 
+          const { data: customerData} = await supabase
+            .from('customers')
+            .select('full_name')
+            .eq('id', newBooking.customer_id)
+            .single()
+
+          const customerName = customerData?.full_name || 'ลูกค้า'
+          const time = `${newBooking.start_time.slice(0, 5)} - ${newBooking.end_time.slice(0, 5)}`
+          const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
           // Notify if booking was cancelled
           if (oldBooking.status !== 'cancelled' && newBooking.status === 'cancelled') {
-            const { data: customerData } = await supabase
-              .from('customers')
-              .select('full_name')
-              .eq('id', newBooking.customer_id)
-              .single()
-
-            const customerName = customerData?.full_name || 'ลูกค้า'
-            const time = `${newBooking.start_time.slice(0, 5)} - ${newBooking.end_time.slice(0, 5)}`
-
-            const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+            // Save to in-app notifications
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              type: 'booking_cancelled',
+              title: notificationType === 'team' ? '👥 งานทีมถูกยกเลิก' : '❌ งานถูกยกเลิก',
+              message: notificationType === 'team'
+                ? `งานทีมกับ ${customerName} เวลา ${time} ถูกยกเลิก`
+                : `งานกับ ${customerName} เวลา ${time} ถูกยกเลิก`,
+              booking_id: newBooking.id,
+              team_id: newBooking.team_id || null,
+            })
 
             await notificationService.notifyBookingCancelled(customerName, time, notificationType)
+          }
+
+          // Notify if status changed (confirmed -> in_progress -> completed)
+          if (oldBooking.status !== newBooking.status && newBooking.status !== 'cancelled') {
+            const statusMap: Record<string, string> = {
+              confirmed: 'ยืนยันแล้ว',
+              in_progress: 'กำลังดำเนินการ',
+              completed: 'เสร็จสิ้น',
+            }
+            const statusText = statusMap[newBooking.status] || newBooking.status
+
+            const emojiMap: Record<string, string> = {
+              confirmed: '✅',
+              in_progress: '🔄',
+              completed: '✨',
+            }
+            const statusEmoji = emojiMap[newBooking.status] || '📝'
+
+            // Save to in-app notifications
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              type: 'booking_updated',
+              title: notificationType === 'team' ? '👥 อัปเดตสถานะงานทีม' : `${statusEmoji} อัปเดตสถานะงาน`,
+              message: notificationType === 'team'
+                ? `งานทีมกับ ${customerName} เวลา ${time} → ${statusText}`
+                : `งานกับ ${customerName} เวลา ${time} → ${statusText}`,
+              booking_id: newBooking.id,
+              team_id: newBooking.team_id || null,
+            })
+
+            // Show browser notification
+            await notificationService.show({
+              title: notificationType === 'team' ? '👥 อัปเดตสถานะงานทีม' : `${statusEmoji} อัปเดตสถานะงาน`,
+              body: notificationType === 'team'
+                ? `งานทีมกับ ${customerName} เวลา ${time} → ${statusText}`
+                : `งานกับ ${customerName} เวลา ${time} → ${statusText}`,
+              tag: `status-update-${newBooking.id}`,
+              data: {
+                type: 'booking_updated',
+                bookingId: newBooking.id,
+                url: '/staff'
+              }
+            })
           }
         }
       )
@@ -164,10 +230,11 @@ export function useNotifications() {
     const scheduleReminders = async () => {
       const now = new Date()
       const in30Minutes = new Date(now.getTime() + 30 * 60 * 1000)
+      const in35Minutes = new Date(now.getTime() + 35 * 60 * 1000)
 
       const todayStr = now.toISOString().split('T')[0]
       const timeStr = in30Minutes.toTimeString().slice(0, 5)
-      const endTimeStr = `${String(in30Minutes.getHours()).padStart(2, '0')}:${String(in30Minutes.getMinutes() + 5).padStart(2, '0')}`
+      const endTimeStr = in35Minutes.toTimeString().slice(0, 5)
 
       // Find bookings starting in ~30 minutes (personal + team)
       let query = supabase
@@ -202,6 +269,18 @@ export function useNotifications() {
           const isMyBooking = (booking as any).staff_id === user.id
           const isMyTeamBooking = (booking as any).team_id && myTeamIds.includes((booking as any).team_id)
           const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
+          // Save to in-app notifications
+          await supabase.from('notifications').insert({
+            user_id: user.id,
+            type: 'booking_reminder',
+            title: notificationType === 'team' ? '👥 แจ้งเตือนงานทีม' : '⏰ แจ้งเตือนงาน',
+            message: notificationType === 'team'
+              ? `งานทีมกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`
+              : `งานกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`,
+            booking_id: booking.id,
+            team_id: (booking as any).team_id || null,
+          })
 
           await notificationService.notifyBookingReminder(
             customerName,

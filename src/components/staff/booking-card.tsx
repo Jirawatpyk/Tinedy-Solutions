@@ -1,11 +1,12 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play, Users } from 'lucide-react'
+import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play, Users, Loader2 } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
+import { useState } from 'react'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -17,6 +18,8 @@ interface BookingCardProps {
 
 export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCompleted, showDate = false }: BookingCardProps) {
   const { user } = useAuth()
+  const [isStarting, setIsStarting] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
 
   // Check if this is a team booking (not assigned to current user)
   const isTeamBooking = booking.staff_id !== user?.id && booking.team_id
@@ -200,24 +203,62 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
           </Button>
           {canStartProgress && onStartProgress && (
             <Button
-              onClick={() => onStartProgress(booking.id)}
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault()
+                setIsStarting(true)
+                try {
+                  await onStartProgress(booking.id)
+                } finally {
+                  setIsStarting(false)
+                }
+              }}
+              disabled={isStarting}
               variant="default"
               className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
               size="sm"
             >
-              <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
-              เริ่มดำเนินการ
+              {isStarting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  กำลังดำเนินการ...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
+                  เริ่มดำเนินการ
+                </>
+              )}
             </Button>
           )}
           {canMarkCompleted && onMarkCompleted && (
             <Button
-              onClick={() => onMarkCompleted(booking.id)}
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault()
+                setIsCompleting(true)
+                try {
+                  await onMarkCompleted(booking.id)
+                } finally {
+                  setIsCompleting(false)
+                }
+              }}
+              disabled={isCompleting}
               variant="default"
               className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
               size="sm"
             >
-              <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
-              เสร็จสิ้น
+              {isCompleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
+                  เสร็จสิ้น
+                </>
+              )}
             </Button>
           )}
         </div>
