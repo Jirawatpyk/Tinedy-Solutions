@@ -320,7 +320,7 @@ export function AdminStaff() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ scrollBehavior: 'auto' }}>
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -335,7 +335,11 @@ export function AdminStaff() {
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
+              onClick={(e) => {
+                e.preventDefault()
+                resetForm()
+              }}
+              type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Staff Member
@@ -565,7 +569,11 @@ export function AdminStaff() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredStaff.slice(0, displayCount).map((member) => (
-              <Card key={member.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={member.id}
+                className="hover:shadow-md transition-shadow"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
