@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { email, password, full_name, phone, role } = await req.json()
+    const { email, password, full_name, phone, role, staff_number, skills } = await req.json()
 
     if (!email || !password || !full_name) {
       throw new Error('Missing required fields: email, password, full_name')
@@ -82,6 +82,8 @@ serve(async (req) => {
       full_name,
       phone: phone || null,
       role: role || 'staff',
+      staff_number: staff_number || null,
+      skills: skills || null,
     })
 
     if (profileError) {

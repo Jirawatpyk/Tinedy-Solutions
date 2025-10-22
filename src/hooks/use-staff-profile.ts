@@ -10,6 +10,8 @@ export interface StaffProfile {
   phone: string | null
   avatar_url: string | null
   role: string
+  staff_number: string | null
+  skills: string[] | null
   created_at: string
 }
 
@@ -44,6 +46,8 @@ export function useStaffProfile() {
         phone: profile.phone,
         avatar_url: profile.avatar_url,
         role: profile.role,
+        staff_number: profile.staff_number || null,
+        skills: profile.skills || null,
         created_at: profile.created_at,
       })
     } catch (err) {

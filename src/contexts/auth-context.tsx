@@ -9,6 +9,8 @@ type Profile = {
   avatar_url: string | null
   role: 'admin' | 'staff'
   phone: string | null
+  staff_number: string | null
+  skills: string[] | null
   created_at: string
   updated_at: string
 }

@@ -5,6 +5,7 @@ import { PerformanceChart } from '@/components/staff/performance-chart'
 import { StatsCard } from '@/components/staff/stats-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -22,6 +23,8 @@ import {
   Phone,
   User,
   Calendar,
+  Hash,
+  Award,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -281,6 +284,35 @@ export default function StaffProfile() {
                   </span>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>รหัสพนักงาน</Label>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+                  <span>{staffProfile.staff_number || 'ไม่ได้ระบุ'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Skills Section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Award className="h-4 w-4" />
+                ทักษะ
+              </Label>
+              {staffProfile.skills && staffProfile.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
+                  {staffProfile.skills.map((skill, index) => (
+                    <Badge key={index} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <span className="text-muted-foreground italic">ไม่มีทักษะที่เพิ่ม</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
@@ -23,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield, Hash, Award } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface StaffMember {
@@ -33,6 +34,8 @@ interface StaffMember {
   avatar_url: string | null
   role: 'admin' | 'staff'
   phone: string | null
+  staff_number: string | null
+  skills: string[] | null
   created_at: string
   updated_at: string
 }
@@ -58,13 +61,15 @@ export function AdminStaff() {
     phone: '',
     role: 'staff' as 'admin' | 'staff',
     password: '',
+    staff_number: '',
+    skills: '',
   })
 
   const fetchStaff = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, full_name, avatar_url, role, phone, staff_number, skills, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -113,6 +118,12 @@ export function AdminStaff() {
     e.preventDefault()
 
     try {
+      // Convert skills string to array
+      const skillsArray = formData.skills
+        .split(',')
+        .map(skill => skill.trim())
+        .filter(skill => skill.length > 0)
+
       if (editingStaff) {
         // Update existing staff
         const { error } = await supabase
@@ -121,6 +132,7 @@ export function AdminStaff() {
             full_name: formData.full_name,
             phone: formData.phone,
             role: formData.role,
+            skills: skillsArray.length > 0 ? skillsArray : null,
           })
           .eq('id', editingStaff.id)
 
@@ -139,6 +151,8 @@ export function AdminStaff() {
             full_name: formData.full_name,
             phone: formData.phone,
             role: formData.role,
+            staff_number: formData.staff_number || undefined,
+            skills: skillsArray.length > 0 ? skillsArray : undefined,
           },
         })
 
@@ -208,6 +222,8 @@ export function AdminStaff() {
       phone: staffMember.phone || '',
       role: staffMember.role,
       password: '', // Don't show existing password
+      staff_number: staffMember.staff_number || '',
+      skills: staffMember.skills ? staffMember.skills.join(', ') : '',
     })
     setIsDialogOpen(true)
   }
@@ -220,6 +236,8 @@ export function AdminStaff() {
       phone: '',
       role: 'staff',
       password: '',
+      staff_number: '',
+      skills: '',
     })
   }
 
@@ -393,6 +411,38 @@ export function AdminStaff() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="staff_number">Staff Number</Label>
+                <Input
+                  id="staff_number"
+                  value={formData.staff_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, staff_number: e.target.value })
+                  }
+                  placeholder="Auto-generated if left empty"
+                  disabled={!!editingStaff}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty for auto-generation
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="skills">Skills</Label>
+                <Textarea
+                  id="skills"
+                  value={formData.skills}
+                  onChange={(e) =>
+                    setFormData({ ...formData, skills: e.target.value })
+                  }
+                  placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter skills separated by commas
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
                 <Select
                   value={formData.role}
@@ -561,6 +611,32 @@ export function AdminStaff() {
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Phone className="h-4 w-4 mr-2" />
                       {member.phone}
+                    </div>
+                  )}
+                  {member.staff_number && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Hash className="h-4 w-4 mr-2" />
+                      {member.staff_number}
+                    </div>
+                  )}
+                  {member.skills && member.skills.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Award className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Skills:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {member.skills.map((skill, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Award className="h-4 w-4 mr-2" />
+                      <span className="italic">No skills added</span>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground border-t pt-2">
