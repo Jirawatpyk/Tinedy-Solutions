@@ -331,7 +331,21 @@ export function AdminStaff() {
             Manage your team members
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              // Prevent scroll jump when closing dialog
+              const scrollY = window.scrollY
+              setIsDialogOpen(false)
+              requestAnimationFrame(() => {
+                window.scrollTo(0, scrollY)
+              })
+            } else {
+              setIsDialogOpen(true)
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
