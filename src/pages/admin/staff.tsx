@@ -588,14 +588,22 @@ export function AdminStaff() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => openEditDialog(member)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          openEditDialog(member)
+                        }}
+                        type="button"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteStaff(member.id, member.full_name)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          deleteStaff(member.id, member.full_name)
+                        }}
+                        type="button"
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -656,7 +664,11 @@ export function AdminStaff() {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setDisplayCount(prev => prev + ITEMS_PER_LOAD)
+                  }}
+                  type="button"
                   className="gap-2"
                 >
                   <Plus className="h-4 w-4" />
