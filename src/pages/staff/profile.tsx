@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+import { getErrorMessage } from '@/lib/error-utils'
 
 export default function StaffProfile() {
   const {
@@ -69,10 +70,10 @@ export default function StaffProfile() {
         description: 'ข้อมูลโปรไฟล์ของคุณได้รับการอัปเดตแล้ว',
       })
       setEditing(false)
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -108,10 +109,10 @@ export default function StaffProfile() {
       })
       setNewPassword('')
       setConfirmPassword('')
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: error.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

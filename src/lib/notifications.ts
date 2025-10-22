@@ -1,12 +1,20 @@
 // Notification Service for Browser Push Notifications
 
+export interface NotificationData {
+  type: string
+  bookingId?: string
+  notificationType?: 'personal' | 'team'
+  url?: string
+  [key: string]: unknown
+}
+
 export interface NotificationOptions {
   title: string
   body: string
   icon?: string
   badge?: string
   tag?: string
-  data?: any
+  data?: NotificationData
 }
 
 class NotificationService {

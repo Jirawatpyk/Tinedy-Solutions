@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -89,20 +89,9 @@ export function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBookings()
-    fetchTeams()
-     
-  }, [currentDate])
-
-  useEffect(() => {
-    filterBookings()
-     
-  }, [bookings, selectedTeam])
-
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('teams')
         .select('id, name')
         .eq('is_active', true)
@@ -113,9 +102,9 @@ export function AdminCalendar() {
     } catch (error) {
       console.error('Error fetching teams:', error)
     }
-  }
+  }, [])
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true)
       const monthStart = startOfMonth(currentDate)
@@ -152,14 +141,14 @@ export function AdminCalendar() {
 
       if (error) throw error
       // Transform array relations to single objects
-      const transformedData = (data || []).map((booking: any) => ({
+      const transformedData = (data || []).map((booking) => ({
         ...booking,
         customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
         profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
         teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
         service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
       }))
-      setBookings(transformedData)
+      setBookings(transformedData as Booking[])
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast({
@@ -170,15 +159,24 @@ export function AdminCalendar() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentDate, toast])
 
-  const filterBookings = () => {
+  const filterBookings = useCallback(() => {
     if (selectedTeam === 'all') {
       setFilteredBookings(bookings)
     } else {
       setFilteredBookings(bookings.filter(b => b.team_id === selectedTeam))
     }
-  }
+  }, [bookings, selectedTeam])
+
+  useEffect(() => {
+    fetchBookings()
+    fetchTeams()
+  }, [currentDate, fetchBookings, fetchTeams])
+
+  useEffect(() => {
+    filterBookings()
+  }, [filterBookings])
 
   const getBookingsForDate = (date: Date) => {
     return filteredBookings.filter((booking) =>

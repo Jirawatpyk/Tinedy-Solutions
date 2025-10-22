@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard,
@@ -48,8 +48,10 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { profile, user, signOut } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const navItems = profile?.role === 'admin' ? adminNavItems : staffNavItems
 
@@ -111,9 +113,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleSignOut = async () => {
     try {
+      setIsLoggingOut(true)
       await signOut()
+      // Let onAuthStateChange handle the redirect naturally
+      // This prevents double redirect
     } catch (error) {
-      console.error('Error signing out:', error)
+      console.error('[Sidebar] Error signing out:', error)
+      setIsLoggingOut(false)
+      // If there's an error, manually navigate to login
+      navigate('/login', { replace: true })
     }
   }
 
@@ -199,9 +207,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               variant="ghost"
               className="w-full justify-start text-tinedy-off-white hover:bg-tinedy-blue/50 hover:text-white"
               onClick={handleSignOut}
+              disabled={isLoggingOut}
             >
-              <LogOut className="h-5 w-5 mr-3" />
-              Sign Out
+              {isLoggingOut ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
+                  Signing out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-5 w-5 mr-3" />
+                  Sign Out
+                </>
+              )}
             </Button>
           </div>
         </div>

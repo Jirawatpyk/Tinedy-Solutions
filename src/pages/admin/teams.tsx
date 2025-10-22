@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ import {
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { TeamCard } from '@/components/teams/team-card'
+import { getErrorMessage } from '@/lib/error-utils'
 
 interface TeamMember {
   id: string
@@ -41,7 +42,7 @@ interface Team {
   description: string | null
   created_at: string
   team_lead_id: string | null
-  team_lead?: TeamMember
+  team_lead?: TeamMember | null
   member_count?: number
   members?: TeamMember[]
 }
@@ -63,40 +64,13 @@ export function AdminTeams() {
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
   const [selectedStaffId, setSelectedStaffId] = useState('')
 
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(12)
+  const ITEMS_PER_LOAD = 12
+
   const { toast } = useToast()
 
-  useEffect(() => {
-    loadTeams()
-    loadAvailableStaff()
-  }, [])
-
-  useEffect(() => {
-    filterTeams()
-  }, [searchQuery, teams])
-
-  const filterTeams = () => {
-    let filtered = teams
-
-    if (searchQuery) {
-      filtered = filtered.filter((team) =>
-        team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        team.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    setFilteredTeams(filtered)
-  }
-
-  const getTeamStats = () => {
-    const totalTeams = teams.length
-    const teamsWithLeads = teams.filter(t => t.team_lead_id).length
-    const totalMembers = teams.reduce((sum, team) => sum + (team.member_count || 0), 0)
-    return { totalTeams, teamsWithLeads, totalMembers }
-  }
-
-  const stats = getTeamStats()
-
-  async function loadTeams() {
+  const loadTeams = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -134,33 +108,89 @@ export function AdminTeams() {
 
       if (teamsError) throw teamsError
 
-      const formattedTeams = (teamsData || []).map((team: any) => ({
-        id: team.id,
-        name: team.name,
-        description: team.description,
-        created_at: team.created_at,
-        team_lead_id: team.team_lead_id,
-        team_lead: team.team_lead,
-        member_count: team.team_members?.length || 0,
-        members: team.team_members?.map((tm: any) => ({
-          ...tm.profiles,
-          is_active: tm.is_active,
-          membership_id: tm.id,
-        })).filter(Boolean) || [],
-      }))
+      interface TeamData {
+        id: string
+        name: string
+        description: string | null
+        created_at: string
+        team_lead_id: string | null
+        team_lead: TeamMember[] | TeamMember | null
+        team_members: Array<{
+          id: string
+          is_active: boolean
+          profiles: TeamMember[] | TeamMember
+        }> | null
+      }
+
+      const formattedTeams = (teamsData || []).map((team: TeamData) => {
+        // Handle team_lead as array or single object
+        const teamLead = Array.isArray(team.team_lead) ? team.team_lead[0] : team.team_lead
+
+        return {
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          created_at: team.created_at,
+          team_lead_id: team.team_lead_id,
+          team_lead: teamLead,
+          member_count: team.team_members?.length || 0,
+          members: team.team_members?.map((tm) => {
+            // Handle profiles as array or single object
+            const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
+            return {
+              ...profile,
+              is_active: tm.is_active,
+              membership_id: tm.id,
+            }
+          }).filter(Boolean) || [],
+        }
+      })
 
       setTeams(formattedTeams)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading teams:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load teams',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
+  }, [toast])
+
+  const filterTeams = useCallback(() => {
+    let filtered = teams
+
+    if (searchQuery) {
+      filtered = filtered.filter((team) =>
+        team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        team.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    setFilteredTeams(filtered)
+    // Reset display count when filter changes
+    setDisplayCount(ITEMS_PER_LOAD)
+  }, [searchQuery, teams, ITEMS_PER_LOAD])
+
+  const getTeamStats = () => {
+    const totalTeams = teams.length
+    const teamsWithLeads = teams.filter(t => t.team_lead_id).length
+    const totalMembers = teams.reduce((sum, team) => sum + (team.member_count || 0), 0)
+    return { totalTeams, teamsWithLeads, totalMembers }
   }
+
+  const stats = getTeamStats()
+
+  useEffect(() => {
+    loadTeams()
+    loadAvailableStaff()
+  }, [loadTeams])
+
+  useEffect(() => {
+    filterTeams()
+  }, [filterTeams])
 
   async function loadAvailableStaff() {
     try {
@@ -172,8 +202,8 @@ export function AdminTeams() {
 
       if (error) throw error
       setAvailableStaff(data || [])
-    } catch (error: any) {
-      console.error('Error loading staff:', error)
+    } catch (error) {
+      console.error('Error loading staff:', getErrorMessage(error))
     }
   }
 
@@ -188,19 +218,40 @@ export function AdminTeams() {
     }
 
     try {
-      const { error } = await supabase
+      // Create the team
+      const { data: newTeam, error: teamError } = await supabase
         .from('teams')
         .insert({
           name: teamName,
           description: teamDescription || null,
           team_lead_id: teamLeadId || null,
         })
+        .select()
+        .single()
 
-      if (error) throw error
+      if (teamError) throw teamError
+
+      // If a team lead was selected, automatically add them as a member
+      if (teamLeadId && newTeam) {
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: newTeam.id,
+            staff_id: teamLeadId,
+            is_active: true,
+          })
+
+        if (memberError) {
+          console.error('Error adding team lead as member:', memberError)
+          // Don't throw - team was created successfully, just log the warning
+        }
+      }
 
       toast({
         title: 'Success',
-        description: 'Team created successfully',
+        description: teamLeadId
+          ? 'Team created and team lead added as member'
+          : 'Team created successfully',
       })
 
       setDialogOpen(false)
@@ -208,11 +259,11 @@ export function AdminTeams() {
       setTeamDescription('')
       setTeamLeadId('')
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating team:', error)
       toast({
         title: 'Error',
-        description: 'Failed to create team',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -244,11 +295,11 @@ export function AdminTeams() {
       setTeamDescription('')
       setTeamLeadId('')
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating team:', error)
       toast({
         title: 'Error',
-        description: 'Failed to update team',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -271,11 +322,11 @@ export function AdminTeams() {
       })
 
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting team:', error)
       toast({
         title: 'Error',
-        description: 'Failed to delete team',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -302,11 +353,11 @@ export function AdminTeams() {
       setMemberDialogOpen(false)
       setSelectedStaffId('')
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding member:', error)
       toast({
         title: 'Error',
-        description: 'Failed to add member',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -330,11 +381,11 @@ export function AdminTeams() {
       })
 
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error removing member:', error)
       toast({
         title: 'Error',
-        description: 'Failed to remove member',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -355,11 +406,11 @@ export function AdminTeams() {
       })
 
       loadTeams()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error toggling member status:', error)
       toast({
         title: 'Error',
-        description: 'Failed to update member status',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -500,19 +551,40 @@ export function AdminTeams() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTeams.map((team) => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              onEdit={openEditDialog}
-              onDelete={handleDeleteTeam}
-              onAddMember={openMemberDialog}
-              onRemoveMember={handleRemoveMember}
-              onToggleMemberStatus={handleToggleMemberStatus}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTeams.slice(0, displayCount).map((team) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                onEdit={openEditDialog}
+                onDelete={handleDeleteTeam}
+                onAddMember={openMemberDialog}
+                onRemoveMember={handleRemoveMember}
+                onToggleMemberStatus={handleToggleMemberStatus}
+              />
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {displayCount < filteredTeams.length && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Showing {displayCount} of {filteredTeams.length} teams
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Load More Teams
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Create/Edit Team Dialog */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getErrorMessage } from '@/lib/error-utils'
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,11 @@ export function AdminCustomers() {
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(12)
+  const ITEMS_PER_LOAD = 12
+
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -80,17 +86,7 @@ export function AdminCustomers() {
     notes: '',
   })
 
-  useEffect(() => {
-    fetchCustomers()
-     
-  }, [])
-
-  useEffect(() => {
-    filterCustomers()
-     
-  }, [searchQuery, relationshipFilter, customers])
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('customers')
@@ -109,9 +105,9 @@ export function AdminCustomers() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const filterCustomers = () => {
+  const filterCustomers = useCallback(() => {
     let filtered = customers
 
     // Filter by search query
@@ -132,7 +128,17 @@ export function AdminCustomers() {
     }
 
     setFilteredCustomers(filtered)
-  }
+    // Reset display count when filter changes
+    setDisplayCount(ITEMS_PER_LOAD)
+  }, [customers, searchQuery, relationshipFilter, ITEMS_PER_LOAD])
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
+
+  useEffect(() => {
+    filterCustomers()
+  }, [filterCustomers])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -180,11 +186,11 @@ export function AdminCustomers() {
       setIsDialogOpen(false)
       resetForm()
       fetchCustomers()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving customer:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save customer',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -583,6 +589,7 @@ export function AdminCustomers() {
                   onChange={(e) =>
                     setFormData({ ...formData, notes: e.target.value })
                   }
+                  placeholder="Add any additional notes about this customer..."
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -698,17 +705,18 @@ export function AdminCustomers() {
       </Card>
 
       {/* Customers list */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredCustomers.length === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="py-8">
-              <p className="text-center text-muted-foreground">
-                No customers found
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredCustomers.map((customer) => {
+      {filteredCustomers.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-center text-muted-foreground">
+              No customers found
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredCustomers.slice(0, displayCount).map((customer) => {
             const hasCompleteProfile = customer.address && customer.city && customer.state
             const isRecent = () => {
               const createdDate = new Date(customer.created_at)
@@ -870,9 +878,29 @@ export function AdminCustomers() {
                 </CardContent>
               </Card>
             )
-          })
-        )}
-      </div>
+          })}
+          </div>
+
+          {/* Load More Button */}
+          {displayCount < filteredCustomers.length && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Showing {displayCount} of {filteredCustomers.length} customers
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Load More Customers
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   )
 }

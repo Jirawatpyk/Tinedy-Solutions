@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -132,22 +132,7 @@ export function AdminReports() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBookings()
-    fetchCustomers()
-    fetchStaff()
-    fetchTeams()
-     
-  }, [])
-
-  useEffect(() => {
-    if (bookings.length > 0) {
-      updateChartData()
-    }
-     
-  }, [bookings, dateRange])
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -177,9 +162,9 @@ export function AdminReports() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       // Fetch all customers
       const { data: customersData, error: customersError } = await supabase
@@ -223,9 +208,9 @@ export function AdminReports() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
 
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       // Fetch all staff members
       const { data: staffData, error: staffError } = await supabase
@@ -272,9 +257,9 @@ export function AdminReports() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
 
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     try {
       // Fetch all teams
       const { data: teamsData, error: teamsError } = await supabase
@@ -346,9 +331,9 @@ export function AdminReports() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
 
-  const updateChartData = () => {
+  const updateChartData = useCallback(() => {
     const { start, end } = getDateRangePreset(dateRange)
     const mappedBookings = bookings.map((b) => ({
       id: b.id,
@@ -360,7 +345,18 @@ export function AdminReports() {
     }))
     const data = generateChartData(mappedBookings, start, end)
     setChartData(data)
-  }
+  }, [bookings, dateRange])
+
+  useEffect(() => {
+    fetchBookings()
+    fetchCustomers()
+    fetchStaff()
+    fetchTeams()
+  }, [fetchBookings, fetchCustomers, fetchStaff, fetchTeams])
+
+  useEffect(() => {
+    updateChartData()
+  }, [updateChartData])
 
   if (loading) {
     return (
@@ -700,8 +696,8 @@ export function AdminReports() {
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
-                  label={(props: any) =>
-                    props.percent > 0 ? `${props.name}: ${(props.percent * 100).toFixed(0)}%` : ''
+                  label={(props: { name?: string; percent?: number }) =>
+                    (props.percent || 0) > 0 ? `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(0)}%` : ''
                   }
                 >
                   {statusBreakdown.map((entry, index) => (
@@ -739,9 +735,10 @@ export function AdminReports() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: any) =>
-                    `${props.name}: ${(props.percent * 100).toFixed(0)}%`
-                  }
+                  label={(props: { name?: string; percent?: number }) => {
+                    const percent = Number(props.percent || 0)
+                    return `${props.name || ''}: ${(percent * 100).toFixed(0)}%`
+                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -1199,9 +1196,10 @@ export function AdminReports() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(props: any) =>
-                      props.percent > 0.05 ? `${props.name}: ${(props.percent * 100).toFixed(0)}%` : ''
-                    }
+                    label={(props: { name?: string; percent?: number }) => {
+                      const percent = Number(props.percent || 0)
+                      return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
+                    }}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -1536,9 +1534,10 @@ export function AdminReports() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(props: any) =>
-                      props.percent > 0.05 ? `${props.name}: ${(props.percent * 100).toFixed(0)}%` : ''
-                    }
+                    label={(props: { name?: string; percent?: number }) => {
+                      const percent = Number(props.percent || 0)
+                      return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
+                    }}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"

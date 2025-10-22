@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,18 +59,7 @@ export function AdminServicePackages() {
   })
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchPackages()
-     
-  }, [])
-
-  useEffect(() => {
-    filterPackages()
-    calculateStats()
-     
-  }, [searchQuery, typeFilter, packages])
-
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('service_packages')
@@ -89,9 +78,20 @@ export function AdminServicePackages() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const filterPackages = () => {
+  const calculateStats = useCallback(() => {
+    const total = packages.length
+    const active = packages.filter((p) => p.is_active).length
+    const inactive = total - active
+    const avgPrice = total > 0
+      ? packages.reduce((sum, p) => sum + Number(p.price), 0) / total
+      : 0
+
+    setStats({ total, active, inactive, avgPrice })
+  }, [packages])
+
+  const filterPackages = useCallback(() => {
     let filtered = packages
 
     if (searchQuery) {
@@ -106,18 +106,16 @@ export function AdminServicePackages() {
     }
 
     setFilteredPackages(filtered)
-  }
+  }, [packages, searchQuery, typeFilter])
 
-  const calculateStats = () => {
-    const total = packages.length
-    const active = packages.filter((p) => p.is_active).length
-    const inactive = total - active
-    const avgPrice = total > 0
-      ? packages.reduce((sum, p) => sum + Number(p.price), 0) / total
-      : 0
+  useEffect(() => {
+    fetchPackages()
+  }, [fetchPackages])
 
-    setStats({ total, active, inactive, avgPrice })
-  }
+  useEffect(() => {
+    filterPackages()
+    calculateStats()
+  }, [filterPackages, calculateStats])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

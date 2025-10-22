@@ -2,6 +2,28 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { notificationService } from '@/lib/notifications'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+
+// Types for Supabase realtime payloads
+interface BookingPayload {
+  id: string
+  customer_id: string
+  staff_id: string | null
+  team_id: string | null
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+}
+
+interface BookingWithCustomer {
+  id: string
+  start_time: string
+  end_time: string
+  staff_id: string | null
+  team_id: string | null
+  customers: { full_name: string } | { full_name: string }[] | null
+}
 
 export function useNotifications() {
   const { user } = useAuth()
@@ -71,17 +93,17 @@ export function useNotifications() {
 
     const channel = supabase
       .channel('staff-notifications')
-      .on(
+      .on<BookingPayload>(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'bookings',
         },
-        async (payload: any) => {
+        async (payload: RealtimePostgresChangesPayload<BookingPayload>) => {
           console.log('[Notifications] New booking detected:', payload)
 
-          const booking = payload.new
+          const booking = payload.new as BookingPayload
 
           // Check if this booking is relevant to current user
           const isMyBooking = booking.staff_id === user.id
@@ -125,16 +147,16 @@ export function useNotifications() {
           )
         }
       )
-      .on(
+      .on<BookingPayload>(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'bookings',
         },
-        async (payload: any) => {
-          const oldBooking = payload.old
-          const newBooking = payload.new
+        async (payload: RealtimePostgresChangesPayload<BookingPayload>) => {
+          const oldBooking = payload.old as BookingPayload
+          const newBooking = payload.new as BookingPayload
 
           // Check if this booking is relevant to current user
           const isMyBooking = newBooking.staff_id === user.id
@@ -262,12 +284,14 @@ export function useNotifications() {
       const { data: upcomingBookings } = await query
 
       if (upcomingBookings && upcomingBookings.length > 0) {
-        for (const booking of upcomingBookings) {
-          const customerName = (booking.customers as any)?.full_name || 'ลูกค้า'
+        for (const booking of upcomingBookings as BookingWithCustomer[]) {
+          const customerName = Array.isArray(booking.customers)
+            ? booking.customers[0]?.full_name || 'ลูกค้า'
+            : booking.customers?.full_name || 'ลูกค้า'
           const time = `${booking.start_time.slice(0, 5)}`
 
-          const isMyBooking = (booking as any).staff_id === user.id
-          const isMyTeamBooking = (booking as any).team_id && myTeamIds.includes((booking as any).team_id)
+          const isMyBooking = booking.staff_id === user.id
+          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
           const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
 
           // Save to in-app notifications
@@ -279,7 +303,7 @@ export function useNotifications() {
               ? `งานทีมกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`
               : `งานกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`,
             booking_id: booking.id,
-            team_id: (booking as any).team_id || null,
+            team_id: booking.team_id || null,
           })
 
           await notificationService.notifyBookingReminder(

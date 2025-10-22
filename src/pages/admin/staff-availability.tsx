@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -97,20 +97,7 @@ export function AdminStaffAvailability() {
   })
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchStaffMembers()
-    setWeekDates(getCurrentWeekDates())
-     
-  }, [])
-
-  useEffect(() => {
-    if (selectedStaff) {
-      fetchAvailability()
-    }
-     
-  }, [selectedStaff])
-
-  const fetchStaffMembers = async () => {
+  const fetchStaffMembers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -134,9 +121,9 @@ export function AdminStaffAvailability() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const fetchAvailability = async () => {
+  const fetchAvailability = useCallback(async () => {
     if (!selectedStaff) return
 
     try {
@@ -157,7 +144,18 @@ export function AdminStaffAvailability() {
         variant: 'destructive',
       })
     }
-  }
+  }, [selectedStaff, toast])
+
+  useEffect(() => {
+    fetchStaffMembers()
+    setWeekDates(getCurrentWeekDates())
+  }, [fetchStaffMembers])
+
+  useEffect(() => {
+    if (selectedStaff) {
+      fetchAvailability()
+    }
+  }, [selectedStaff, fetchAvailability])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,11 @@ export function AdminStaff() {
   const [roleFilter, setRoleFilter] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
+
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(12)
+  const ITEMS_PER_LOAD = 12
+
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -55,17 +60,7 @@ export function AdminStaff() {
     password: '',
   })
 
-  useEffect(() => {
-    fetchStaff()
-     
-  }, [])
-
-  useEffect(() => {
-    filterStaff()
-     
-  }, [searchQuery, roleFilter, staff])
-
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -84,9 +79,9 @@ export function AdminStaff() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const filterStaff = () => {
+  const filterStaff = useCallback(() => {
     let filtered = staff
 
     if (searchQuery) {
@@ -102,7 +97,17 @@ export function AdminStaff() {
     }
 
     setFilteredStaff(filtered)
-  }
+    // Reset display count when filter changes
+    setDisplayCount(ITEMS_PER_LOAD)
+  }, [staff, searchQuery, roleFilter, ITEMS_PER_LOAD])
+
+  useEffect(() => {
+    fetchStaff()
+  }, [fetchStaff])
+
+  useEffect(() => {
+    filterStaff()
+  }, [filterStaff])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,47 +131,33 @@ export function AdminStaff() {
           description: 'Staff member updated successfully',
         })
       } else {
-        // Get current session before creating new user
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-
-        // Create new staff - requires Supabase auth signup
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: formData.full_name,
-            }
-          }
-        })
-
-        if (authError) throw authError
-
-        if (authData.user) {
-          // Create profile
-          const { error: profileError } = await supabase.from('profiles').insert({
-            id: authData.user.id,
+        // Call Edge Function to create staff (production-grade approach)
+        const { data, error } = await supabase.functions.invoke('create-staff', {
+          body: {
             email: formData.email,
+            password: formData.password,
             full_name: formData.full_name,
             phone: formData.phone,
             role: formData.role,
-          })
+          },
+        })
 
-          if (profileError) throw profileError
+        console.log('Edge Function Response:', { data, error })
 
-          // Restore admin session
-          if (currentSession) {
-            await supabase.auth.setSession({
-              access_token: currentSession.access_token,
-              refresh_token: currentSession.refresh_token,
-            })
-          }
-
-          toast({
-            title: 'Success',
-            description: 'Staff member created successfully',
-          })
+        if (error) {
+          console.error('Edge Function Error:', error)
+          throw new Error(`Edge Function Error: ${error.message || JSON.stringify(error)}`)
         }
+
+        if (!data?.success) {
+          console.error('Edge Function returned failure:', data)
+          throw new Error(data?.error || 'Failed to create staff')
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Staff member created successfully',
+        })
       }
 
       setIsDialogOpen(false)
@@ -512,73 +503,94 @@ export function AdminStaff() {
       </Card>
 
       {/* Staff list */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredStaff.length === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="py-8">
-              <p className="text-center text-muted-foreground">
-                No staff members found
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredStaff.map((member) => (
-            <Card key={member.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
-                      {member.full_name.charAt(0).toUpperCase()}
+      {filteredStaff.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-center text-muted-foreground">
+              No staff members found
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredStaff.slice(0, displayCount).map((member) => (
+              <Card key={member.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
+                        {member.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-display">
+                          {member.full_name}
+                        </CardTitle>
+                        <Badge
+                          variant={member.role === 'admin' ? 'default' : 'secondary'}
+                          className="mt-1"
+                        >
+                          {member.role === 'admin' ? '👑 Admin' : 'Staff'}
+                        </Badge>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-lg font-display">
-                        {member.full_name}
-                      </CardTitle>
-                      <Badge
-                        variant={member.role === 'admin' ? 'default' : 'secondary'}
-                        className="mt-1"
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(member)}
                       >
-                        {member.role === 'admin' ? '👑 Admin' : 'Staff'}
-                      </Badge>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteStaff(member.id, member.full_name)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditDialog(member)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteStaff(member.id, member.full_name)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Mail className="h-4 w-4 mr-2" />
-                  {member.email}
-                </div>
-                {member.phone && (
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4 mr-2" />
-                    {member.phone}
+                    <Mail className="h-4 w-4 mr-2" />
+                    {member.email}
                   </div>
-                )}
-                <p className="text-xs text-muted-foreground border-t pt-2">
-                  Joined {formatDate(member.created_at)}
+                  {member.phone && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {member.phone}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground border-t pt-2">
+                    Joined {formatDate(member.created_at)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {displayCount < filteredStaff.length && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Showing {displayCount} of {filteredStaff.length} staff members
                 </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Load More Staff
+                </Button>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

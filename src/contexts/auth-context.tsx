@@ -125,7 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    // Ignore AuthSessionMissingError since the goal is to sign out anyway
+    if (error && error.name !== 'AuthSessionMissingError') {
+      throw error
+    }
   }
 
   const value = {

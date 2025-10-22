@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { CheckCircle2, Clock, XCircle, AlertCircle, Play } from 'lucide-react'
@@ -15,7 +15,7 @@ interface StatusHistoryItem {
   created_at: string
   profiles: {
     full_name: string
-  } | null
+  } | null | { full_name: string }[]
 }
 
 interface BookingTimelineProps {
@@ -26,11 +26,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
   const [history, setHistory] = useState<StatusHistoryItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchStatusHistory()
-  }, [bookingId])
-
-  async function fetchStatusHistory() {
+  const fetchStatusHistory = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -49,13 +45,17 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setHistory(data as any || [])
+      setHistory((data as StatusHistoryItem[]) || [])
     } catch (error) {
       console.error('Error fetching status history:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [bookingId])
+
+  useEffect(() => {
+    fetchStatusHistory()
+  }, [fetchStatusHistory])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -165,7 +165,9 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
                   <p>
                     <span className="font-medium">
-                      {item.profiles?.full_name || 'ระบบ'}
+                      {Array.isArray(item.profiles)
+                        ? item.profiles[0]?.full_name || 'ระบบ'
+                        : item.profiles?.full_name || 'ระบบ'}
                     </span>
                     {' • '}
                     {format(new Date(item.created_at), 'dd MMM yyyy, HH:mm น.', { locale: th })}

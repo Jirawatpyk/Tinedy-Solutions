@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { getErrorMessage } from '@/lib/error-utils'
 import {
   ArrowLeft,
   Mail,
@@ -183,25 +184,11 @@ export function AdminCustomerDetail() {
     staff_id: '',
     notes: '',
   })
-  const [servicePackages, setServicePackages] = useState<any[]>([])
-  const [staffMembers, setStaffMembers] = useState<any[]>([])
+  const [servicePackages, setServicePackages] = useState<Array<{ id: string; name: string; price: number; service_type: string; duration_minutes: number }>>([])
+  const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string }>>([])
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (id) {
-      fetchCustomerDetails()
-    }
-     
-  }, [id])
-
-  useEffect(() => {
-    if (isBookingDialogOpen) {
-      fetchServicePackagesAndStaff()
-    }
-     
-  }, [isBookingDialogOpen])
-
-  const fetchCustomerDetails = async () => {
+  const fetchCustomerDetails = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -270,14 +257,14 @@ export function AdminCustomerDetail() {
         setBookings([])
       } else {
         // Transform array relations to single objects
-        const transformedBookings = (bookingsData || []).map((booking: any) => ({
+        const transformedBookings = (bookingsData || []).map((booking) => ({
           ...booking,
           service: Array.isArray(booking.service) ? booking.service[0] : booking.service,
           staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
         }))
         setBookings(transformedBookings)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching customer details:', error)
       toast({
         title: 'Error',
@@ -287,9 +274,9 @@ export function AdminCustomerDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, toast])
 
-  const fetchServicePackagesAndStaff = async () => {
+  const fetchServicePackagesAndStaff = useCallback(async () => {
     try {
       // Fetch service packages
       const { data: packages, error: packagesError } = await supabase
@@ -310,7 +297,7 @@ export function AdminCustomerDetail() {
 
       if (staffError) throw staffError
       setStaffMembers(staff || [])
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching data:', error)
       toast({
         title: 'Error',
@@ -318,7 +305,19 @@ export function AdminCustomerDetail() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    if (id) {
+      fetchCustomerDetails()
+    }
+  }, [id, fetchCustomerDetails])
+
+  useEffect(() => {
+    if (isBookingDialogOpen) {
+      fetchServicePackagesAndStaff()
+    }
+  }, [isBookingDialogOpen, fetchServicePackagesAndStaff])
 
   // Calculate end_time from start_time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -372,11 +371,11 @@ export function AdminCustomerDetail() {
         notes: '',
       })
       fetchCustomerDetails() // Refresh data
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating booking:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create booking',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -428,11 +427,11 @@ export function AdminCustomerDetail() {
 
       setIsEditDialogOpen(false)
       fetchCustomerDetails() // Refresh data
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating customer:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update customer',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -471,11 +470,11 @@ export function AdminCustomerDetail() {
       setIsNoteDialogOpen(false)
       setNoteText('')
       fetchCustomerDetails() // Refresh data
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding note:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add note',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -494,11 +493,11 @@ export function AdminCustomerDetail() {
         description: 'Customer deleted successfully',
       })
       navigate('/admin/customers')
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting customer:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete customer',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -1326,7 +1325,7 @@ export function AdminCustomerDetail() {
                 <Label htmlFor="edit_relationship_level">Relationship Level *</Label>
                 <Select
                   value={editForm.relationship_level}
-                  onValueChange={(value: any) => setEditForm({ ...editForm, relationship_level: value })}
+                  onValueChange={(value: 'new' | 'regular' | 'vip' | 'inactive') => setEditForm({ ...editForm, relationship_level: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1343,7 +1342,7 @@ export function AdminCustomerDetail() {
                 <Label htmlFor="edit_preferred_contact_method">Preferred Contact *</Label>
                 <Select
                   value={editForm.preferred_contact_method}
-                  onValueChange={(value: any) => setEditForm({ ...editForm, preferred_contact_method: value })}
+                  onValueChange={(value: 'phone' | 'email' | 'line' | 'sms') => setEditForm({ ...editForm, preferred_contact_method: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />

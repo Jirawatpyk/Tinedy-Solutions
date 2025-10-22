@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BookingDetailModal } from './booking-detail-modal'
+import { getErrorMessage } from '@/lib/error-utils'
 
 // Helper function to format full address
 function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
@@ -145,7 +146,7 @@ export function AdminBookings() {
   // Conflict Detection
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([])
   const [showConflictDialog, setShowConflictDialog] = useState(false)
-  const [pendingBookingData, setPendingBookingData] = useState<any>(null)
+  const [pendingBookingData, setPendingBookingData] = useState<Record<string, unknown> | null>(null)
   const [conflictOverride, setConflictOverride] = useState(false)
   // Status Workflow
   const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
@@ -174,15 +175,34 @@ export function AdminBookings() {
   })
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBookings()
-    fetchServicePackages()
-    fetchStaffMembers()
-    fetchTeams()
-     
-  }, [])
+  const fetchBookings = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (full_name, email),
+          service_packages (name, service_type),
+          profiles (full_name),
+          teams (name)
+        `)
+        .order('created_at', { ascending: false })
 
-  const filterBookings = () => {
+      if (error) throw error
+      setBookings(data || [])
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load bookings',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  const filterBookings = useCallback(() => {
     let filtered = bookings
 
     if (searchQuery) {
@@ -230,39 +250,23 @@ export function AdminBookings() {
     }
 
     setFilteredBookings(filtered)
-  }
+  }, [bookings, searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter])
+
+  useEffect(() => {
+    fetchBookings()
+    fetchServicePackages()
+    fetchStaffMembers()
+    fetchTeams()
+  }, [fetchBookings])
 
   useEffect(() => {
     filterBookings()
-    setCurrentPage(1) // Reset to page 1 when filters change
-  }, [searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter, bookings])
+  }, [filterBookings])
 
-  const fetchBookings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (full_name, email),
-          service_packages (name, service_type),
-          profiles (full_name),
-          teams (name)
-        `)
-        .order('booking_date', { ascending: false })
-
-      if (error) throw error
-      setBookings(data || [])
-    } catch (error) {
-      console.error('Error fetching bookings:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load bookings',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Reset to page 1 only when filters change (not when bookings data changes)
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter])
 
   const fetchServicePackages = async () => {
     try {
@@ -316,6 +320,11 @@ export function AdminBookings() {
     const endHours = Math.floor(totalMinutes / 60) % 24
     const endMinutes = totalMinutes % 60
     return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
+  }
+
+  // Format time to remove seconds (HH:MM:SS -> HH:MM)
+  const formatTime = (time: string) => {
+    return time.split(':').slice(0, 2).join(':')
   }
 
   // Check existing customer by email
@@ -534,10 +543,10 @@ export function AdminBookings() {
       resetForm()
       setConflictOverride(false)
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create booking',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -563,10 +572,10 @@ export function AdminBookings() {
       setPendingBookingData(null)
       setConflictingBookings([])
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create booking',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -722,10 +731,10 @@ export function AdminBookings() {
       setShowStatusConfirmDialog(false)
       setPendingStatusChange(null)
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update booking status',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -891,10 +900,10 @@ export function AdminBookings() {
       setIsEditOpen(false)
       setConflictOverride(false)
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update booking',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -924,10 +933,10 @@ export function AdminBookings() {
       setPendingBookingData(null)
       setConflictingBookings([])
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update booking',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -968,10 +977,10 @@ export function AdminBookings() {
       setSelectedBookings([])
       setBulkStatus('')
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update bookings',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -995,10 +1004,10 @@ export function AdminBookings() {
       })
       setSelectedBookings([])
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete bookings',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -1064,10 +1073,10 @@ export function AdminBookings() {
       }
 
       fetchBookings()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update payment',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -1869,7 +1878,7 @@ export function AdminBookings() {
                       <p className="font-medium text-sm">{conflict.customers?.full_name || 'Unknown'}</p>
                       <p className="text-xs text-muted-foreground">{conflict.service_packages?.name}</p>
                       <p className="text-xs text-red-600 font-medium">
-                        {formatDate(conflict.booking_date)} • {conflict.start_time} - {conflict.end_time}
+                        {formatDate(conflict.booking_date)} • {formatTime(conflict.start_time)} - {formatTime(conflict.end_time)}
                       </p>
                       {conflict.profiles && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -2056,7 +2065,7 @@ export function AdminBookings() {
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatDate(booking.booking_date)} • {booking.start_time} - {booking.end_time}
+                      {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                     </div>
                     {booking.profiles && (
                       <p className="text-sm text-tinedy-blue flex items-center gap-1">

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { getErrorMessage } from '@/lib/error-utils'
 
 export interface StaffProfile {
   id: string
@@ -32,13 +33,7 @@ export function useStaffProfile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user || !profile) return
-    loadProfile()
-    loadPerformanceStats()
-  }, [user, profile])
-
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     if (!profile) return
 
     try {
@@ -51,13 +46,13 @@ export function useStaffProfile() {
         role: profile.role,
         created_at: profile.created_at,
       })
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading profile:', err)
-      setError(err.message)
+      setError(getErrorMessage(err))
     }
-  }
+  }, [profile])
 
-  async function loadPerformanceStats() {
+  const loadPerformanceStats = useCallback(async () => {
     if (!user) return
 
     try {
@@ -107,8 +102,15 @@ export function useStaffProfile() {
         .eq('status', 'completed')
         .gte('booking_date', sixMonthsAgoStr)
 
-      const totalRevenue = revenueData?.reduce((sum, booking: any) => {
-        return sum + (booking.service_packages?.price || 0)
+      interface RevenueBooking {
+        service_packages: { price: number }[] | { price: number } | null
+      }
+
+      const totalRevenue = (revenueData as RevenueBooking[] | null)?.reduce((sum, booking) => {
+        const servicePackage = Array.isArray(booking.service_packages)
+          ? booking.service_packages[0]
+          : booking.service_packages
+        return sum + (servicePackage?.price || 0)
       }, 0) || 0
 
       // Monthly breakdown
@@ -123,9 +125,15 @@ export function useStaffProfile() {
         .gte('booking_date', sixMonthsAgoStr)
         .order('booking_date', { ascending: true })
 
+      interface MonthlyBooking {
+        booking_date: string
+        status: string
+        service_packages: { price: number }[] | { price: number } | null
+      }
+
       // Group by month
       const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
-      monthlyBookings?.forEach((booking: any) => {
+      ;(monthlyBookings as MonthlyBooking[] | null)?.forEach((booking) => {
         const month = new Date(booking.booking_date).toISOString().slice(0, 7) // YYYY-MM
         if (!monthlyMap.has(month)) {
           monthlyMap.set(month, { jobs: 0, revenue: 0 })
@@ -133,7 +141,10 @@ export function useStaffProfile() {
         const data = monthlyMap.get(month)!
         data.jobs += 1
         if (booking.status === 'completed') {
-          data.revenue += booking.service_packages?.price || 0
+          const servicePackage = Array.isArray(booking.service_packages)
+            ? booking.service_packages[0]
+            : booking.service_packages
+          data.revenue += servicePackage?.price || 0
         }
       })
 
@@ -153,13 +164,19 @@ export function useStaffProfile() {
         totalRevenue,
         monthlyData,
       })
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading performance stats:', err)
-      setError(err.message)
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user || !profile) return
+    loadProfile()
+    loadPerformanceStats()
+  }, [user, profile, loadProfile, loadPerformanceStats])
 
   async function updateProfile(updates: {
     full_name?: string
@@ -177,7 +194,7 @@ export function useStaffProfile() {
 
       // Reload profile
       await loadProfile()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating profile:', err)
       throw err
     }
@@ -235,7 +252,7 @@ export function useStaffProfile() {
       await loadProfile()
 
       return data.publicUrl
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error uploading avatar:', err)
       throw err
     }
@@ -248,7 +265,7 @@ export function useStaffProfile() {
       })
 
       if (error) throw error
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error changing password:', err)
       throw err
     }

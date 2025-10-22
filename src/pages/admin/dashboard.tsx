@@ -13,6 +13,7 @@ import {
   User,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/error-utils'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
@@ -30,6 +31,7 @@ interface BookingStatus {
   status: string
   count: number
   color: string
+  [key: string]: string | number
 }
 
 interface TodayBooking {
@@ -168,7 +170,7 @@ export function AdminDashboard() {
         .eq('booking_date', today)
         .order('start_time', { ascending: true })
 
-      setTodayBookings((todayData as any) || [])
+      setTodayBookings((todayData as TodayBooking[]) || [])
 
       // Fetch daily revenue for last 7 days
       const sevenDaysAgo = new Date()
@@ -282,10 +284,10 @@ export function AdminDashboard() {
       }
 
       fetchDashboardData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update status',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -347,10 +349,10 @@ export function AdminDashboard() {
       }
 
       fetchDashboardData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update payment',
+        description: getErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -481,11 +483,15 @@ export function AdminDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={bookingsByStatus as any}
+                    data={bookingsByStatus as Record<string, unknown>[]}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ status, percent }: any) => `${status}: ${((percent as number) * 100).toFixed(0)}%`}
+                    label={(props) => {
+                      const entry = props.payload as BookingStatus
+                      const percent = props.percent as number
+                      return `${entry.status}: ${(percent * 100).toFixed(0)}%`
+                    }}
                     outerRadius={90}
                     innerRadius={60}
                     fill="#8884d8"

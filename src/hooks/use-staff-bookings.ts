@@ -1,6 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { getErrorMessage } from '@/lib/error-utils'
+
+// Types for realtime payload
+interface RealtimeBookingPayload {
+  staff_id: string | null
+  team_id: string | null
+  [key: string]: unknown
+}
+
+interface BookingWithPrice {
+  service_packages: {
+    price: number
+  } | {
+    price: number
+  }[] | null
+}
 
 // Helper function to format full address
 export function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
@@ -67,50 +83,7 @@ export function useStaffBookings() {
   const [myTeamIds, setMyTeamIds] = useState<string[]>([])
   const [teamsLoaded, setTeamsLoaded] = useState(false)
 
-  // Load team membership once on mount
-  useEffect(() => {
-    if (!user) return
-    checkTeamLeadStatus()
-  }, [user])
-
-  // Load bookings when teams are loaded or changed
-  useEffect(() => {
-    if (!user || !teamsLoaded) return
-
-    loadBookings()
-
-    // Real-time subscription for new bookings
-    // Note: Supabase realtime filters don't support OR conditions directly
-    // We'll subscribe to all changes and filter in the callback
-    const channel = supabase
-      .channel('staff-bookings')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-        },
-        (payload) => {
-          const booking = payload.new as any
-
-          // Reload if booking is for current user OR for any team they belong to
-          const isMyBooking = booking.staff_id === user.id
-          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
-
-          if (isMyBooking || isMyTeamBooking) {
-            loadBookings()
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, teamsLoaded, myTeamIds.join(',')])
-
-  async function checkTeamLeadStatus() {
+  const checkTeamLeadStatus = useCallback(async () => {
     if (!user) return
 
     try {
@@ -148,125 +121,9 @@ export function useStaffBookings() {
       console.error('Error checking team membership:', err)
       setTeamsLoaded(true) // Still mark as loaded even on error
     }
-  }
+  }, [user])
 
-  async function loadBookings() {
-    if (!user) return
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      // Use local timezone instead of UTC to avoid date shifting
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-      console.log('[StaffBookings] Today:', {
-        todayDate: today,
-        todayStr,
-        localDate: today.toLocaleDateString('th-TH'),
-      })
-
-      const nextWeek = new Date(today)
-      nextWeek.setDate(nextWeek.getDate() + 7)
-      const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`
-
-      // Fetch today's bookings
-      let todayQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
-
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        todayQuery = todayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        todayQuery = todayQuery.eq('staff_id', user.id)
-      }
-
-      const { data: todayData, error: todayError } = await todayQuery
-        .eq('booking_date', todayStr)
-        .order('start_time', { ascending: true })
-
-      if (todayError) throw todayError
-
-      console.log('[StaffBookings] Today result:', {
-        count: todayData?.length || 0,
-        bookings: todayData?.map(b => ({ date: b.booking_date, time: b.start_time }))
-      })
-
-      // Fetch upcoming bookings (next 7 days, excluding today)
-      let upcomingQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
-
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        upcomingQuery = upcomingQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        upcomingQuery = upcomingQuery.eq('staff_id', user.id)
-      }
-
-      const { data: upcomingData, error: upcomingError} = await upcomingQuery
-        .gt('booking_date', todayStr)
-        .lte('booking_date', nextWeekStr)
-        .order('booking_date', { ascending: true })
-        .order('start_time', { ascending: true })
-
-      if (upcomingError) throw upcomingError
-
-      // Fetch past bookings (last 30 days) - all statuses
-      const thirtyDaysAgo = new Date(today)
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
-
-      let completedQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
-
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        completedQuery = completedQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        completedQuery = completedQuery.eq('staff_id', user.id)
-      }
-
-      const { data: completedData, error: completedError } = await completedQuery
-        .lt('booking_date', todayStr)
-        .gte('booking_date', thirtyDaysAgoStr)
-        .order('booking_date', { ascending: false })
-        .order('start_time', { ascending: false })
-
-      if (completedError) throw completedError
-
-      setTodayBookings((todayData as any) || [])
-      setUpcomingBookings((upcomingData as any) || [])
-      setCompletedBookings((completedData as any) || [])
-
-      // Calculate stats
-      await calculateStats()
-    } catch (err: any) {
-      console.error('Error loading bookings:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function calculateStats() {
+  const calculateStats = useCallback(async () => {
     if (!user) return
 
     try {
@@ -383,8 +240,11 @@ export function useStaffBookings() {
 
       const { data: earningsData } = await earningsQuery
 
-      const totalEarnings = earningsData?.reduce((sum, booking: any) => {
-        return sum + (booking.service_packages?.price || 0)
+      const totalEarnings = (earningsData as BookingWithPrice[])?.reduce((sum, booking) => {
+        const price = Array.isArray(booking.service_packages)
+          ? booking.service_packages[0]?.price || 0
+          : booking.service_packages?.price || 0
+        return sum + price
       }, 0) || 0
 
       setStats({
@@ -397,7 +257,166 @@ export function useStaffBookings() {
     } catch (err) {
       console.error('Error calculating stats:', err)
     }
-  }
+  }, [user, myTeamIds])
+
+  const loadBookings = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // Use local timezone instead of UTC to avoid date shifting
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+      console.log('[StaffBookings] Today:', {
+        todayDate: today,
+        todayStr,
+        localDate: today.toLocaleDateString('th-TH'),
+      })
+
+      const nextWeek = new Date(today)
+      nextWeek.setDate(nextWeek.getDate() + 7)
+      const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`
+
+      // Fetch today's bookings
+      let todayQuery = supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, phone, avatar_url),
+          service_packages (id, name, duration_minutes, price)
+        `)
+
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
+        todayQuery = todayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        todayQuery = todayQuery.eq('staff_id', user.id)
+      }
+
+      const { data: todayData, error: todayError } = await todayQuery
+        .eq('booking_date', todayStr)
+        .order('start_time', { ascending: true })
+
+      if (todayError) throw todayError
+
+      console.log('[StaffBookings] Today result:', {
+        count: todayData?.length || 0,
+        bookings: todayData?.map(b => ({ date: b.booking_date, time: b.start_time }))
+      })
+
+      // Fetch upcoming bookings (next 7 days, excluding today)
+      let upcomingQuery = supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, phone, avatar_url),
+          service_packages (id, name, duration_minutes, price)
+        `)
+
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
+        upcomingQuery = upcomingQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        upcomingQuery = upcomingQuery.eq('staff_id', user.id)
+      }
+
+      const { data: upcomingData, error: upcomingError} = await upcomingQuery
+        .gt('booking_date', todayStr)
+        .lte('booking_date', nextWeekStr)
+        .order('booking_date', { ascending: true })
+        .order('start_time', { ascending: true })
+
+      if (upcomingError) throw upcomingError
+
+      // Fetch past bookings (last 30 days) - all statuses
+      const thirtyDaysAgo = new Date(today)
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
+
+      let completedQuery = supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, phone, avatar_url),
+          service_packages (id, name, duration_minutes, price)
+        `)
+
+      // If user belongs to any team, fetch team bookings too
+      if (myTeamIds.length > 0) {
+        completedQuery = completedQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+      } else {
+        completedQuery = completedQuery.eq('staff_id', user.id)
+      }
+
+      const { data: completedData, error: completedError } = await completedQuery
+        .lt('booking_date', todayStr)
+        .gte('booking_date', thirtyDaysAgoStr)
+        .order('booking_date', { ascending: false })
+        .order('start_time', { ascending: false })
+
+      if (completedError) throw completedError
+
+      setTodayBookings((todayData as StaffBooking[]) || [])
+      setUpcomingBookings((upcomingData as StaffBooking[]) || [])
+      setCompletedBookings((completedData as StaffBooking[]) || [])
+
+      // Calculate stats
+      await calculateStats()
+    } catch (err) {
+      console.error('Error loading bookings:', err)
+      setError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [user, myTeamIds, calculateStats])
+
+  // Load team membership once on mount
+  useEffect(() => {
+    if (!user) return
+    checkTeamLeadStatus()
+  }, [user, checkTeamLeadStatus])
+
+  // Load bookings when teams are loaded or changed
+  useEffect(() => {
+    if (!user || !teamsLoaded) return
+
+    loadBookings()
+
+    // Real-time subscription for new bookings
+    // Note: Supabase realtime filters don't support OR conditions directly
+    // We'll subscribe to all changes and filter in the callback
+    const channel = supabase
+      .channel('staff-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+        },
+        (payload) => {
+          const booking = payload.new as RealtimeBookingPayload
+
+          // Reload if booking is for current user OR for any team they belong to
+          const isMyBooking = booking.staff_id === user.id
+          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
+
+          if (isMyBooking || isMyTeamBooking) {
+            loadBookings()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, teamsLoaded, myTeamIds, loadBookings])
 
   async function startProgress(bookingId: string) {
     try {
@@ -410,7 +429,7 @@ export function useStaffBookings() {
 
       // Reload bookings to reflect changes
       await loadBookings()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error starting progress:', err)
       throw err
     }
@@ -427,7 +446,7 @@ export function useStaffBookings() {
 
       // Reload bookings to reflect changes
       await loadBookings()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error marking as completed:', err)
       throw err
     }
@@ -444,7 +463,7 @@ export function useStaffBookings() {
 
       // Reload bookings to reflect changes
       await loadBookings()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding notes:', err)
       throw err
     }

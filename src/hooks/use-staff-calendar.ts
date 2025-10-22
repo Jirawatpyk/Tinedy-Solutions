@@ -1,6 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { getErrorMessage } from '@/lib/error-utils'
+
+interface BookingData {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  notes: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  zip_code: string | null
+  staff_id: string | null
+  team_id: string | null
+  customers: {
+    full_name: string
+    phone: string
+    avatar_url: string | null
+  }[] | {
+    full_name: string
+    phone: string
+    avatar_url: string | null
+  } | null
+  service_packages: {
+    name: string
+    duration_minutes: number
+    price: number
+  }[] | {
+    name: string
+    duration_minutes: number
+    price: number
+  } | null
+}
 
 export interface CalendarEvent {
   id: string
@@ -30,34 +64,7 @@ export function useStaffCalendar() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) return
-
-    loadEvents()
-
-    // Real-time subscription for booking changes
-    const channel = supabase
-      .channel('staff-calendar')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `staff_id=eq.${user.id}`,
-        },
-        () => {
-          loadEvents()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user])
-
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     if (!user) return
 
     try {
@@ -95,27 +102,35 @@ export function useStaffCalendar() {
       if (fetchError) throw fetchError
 
       // Transform bookings to calendar events
-      const calendarEvents: CalendarEvent[] = (data || []).map((booking: any) => {
+      const calendarEvents: CalendarEvent[] = (data as BookingData[] || []).map((booking) => {
         const [hours, minutes] = booking.start_time.split(':')
         const startDate = new Date(booking.booking_date)
         startDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
 
-        const duration = booking.service_packages?.duration_minutes || 60
+        // Handle customers as array or single object
+        const customer = Array.isArray(booking.customers) ? booking.customers[0] : booking.customers
+
+        // Handle service_packages as array or single object
+        const servicePackage = Array.isArray(booking.service_packages)
+          ? booking.service_packages[0]
+          : booking.service_packages
+
+        const duration = servicePackage?.duration_minutes || 60
         const endDate = new Date(startDate)
         endDate.setMinutes(endDate.getMinutes() + duration)
 
         return {
           id: booking.id,
-          title: `${booking.customers?.full_name || 'Unknown'} - ${booking.service_packages?.name || 'Unknown Service'}`,
+          title: `${customer?.full_name || 'Unknown'} - ${servicePackage?.name || 'Unknown Service'}`,
           start: startDate,
           end: endDate,
           status: booking.status,
-          customer_name: booking.customers?.full_name || 'Unknown Customer',
-          customer_phone: booking.customers?.phone || '',
-          customer_avatar: booking.customers?.avatar_url || null,
-          service_name: booking.service_packages?.name || 'Unknown Service',
-          service_price: booking.service_packages?.price || 0,
-          service_duration: booking.service_packages?.duration_minutes || 60,
+          customer_name: customer?.full_name || 'Unknown Customer',
+          customer_phone: customer?.phone || '',
+          customer_avatar: customer?.avatar_url || null,
+          service_name: servicePackage?.name || 'Unknown Service',
+          service_price: servicePackage?.price || 0,
+          service_duration: servicePackage?.duration_minutes || 60,
           notes: booking.notes,
           booking_id: booking.id,
           address: booking.address || '',
@@ -128,13 +143,40 @@ export function useStaffCalendar() {
       })
 
       setEvents(calendarEvents)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading calendar events:', err)
-      setError(err.message)
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+
+    loadEvents()
+
+    // Real-time subscription for booking changes
+    const channel = supabase
+      .channel('staff-calendar')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `staff_id=eq.${user.id}`,
+        },
+        () => {
+          loadEvents()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, loadEvents])
 
   return {
     events,

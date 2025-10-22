@@ -22,7 +22,7 @@ interface Team {
   description: string | null
   created_at: string
   team_lead_id: string | null
-  team_lead?: TeamMember
+  team_lead?: TeamMember | null
   member_count?: number
   members?: TeamMember[]
 }

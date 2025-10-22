@@ -50,7 +50,13 @@ export function useChat() {
       return []
     }
 
-    const fetchedMessages = (data as any) || []
+    // Handle array response from Supabase join query
+    const fetchedMessages = (data || []).map((msg: { sender: Profile | Profile[]; recipient: Profile | Profile[]; [key: string]: unknown }) => ({
+      ...msg,
+      sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
+      recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
+    })) as Message[]
+
     setMessages(fetchedMessages)
     return fetchedMessages
   }, [user])
@@ -80,7 +86,7 @@ export function useChat() {
       if (error) throw error
 
       // Add message to local state immediately
-      setMessages((prev) => [...prev, data as any])
+      setMessages((prev) => [...prev, data as Message])
       return data
     } catch (error) {
       console.error('Error sending message:', error)
@@ -181,7 +187,7 @@ export function useChat() {
 
           return {
             user: otherUser,
-            lastMessage: lastMessages && lastMessages.length > 0 ? (lastMessages[0] as any) : null,
+            lastMessage: lastMessages && lastMessages.length > 0 ? (lastMessages[0] as Message) : null,
             unreadCount,
           }
         })

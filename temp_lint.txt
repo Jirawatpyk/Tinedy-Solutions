@@ -1,0 +1,89 @@
+
+> tinedy-crm@0.0.0 lint
+> eslint .
+
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\hooks\use-staff-profile.ts
+   39:6   warning  React Hook useEffect has missing dependencies: 'loadPerformanceStats' and 'loadProfile'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   54:19  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  110:63  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  128:42  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  156:19  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  180:19  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  238:19  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+  251:19  warning  Unexpected any. Specify a different type                                                                                                     @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\bookings.tsx
+   148:64  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   183:6   warning  React Hook useEffect has a missing dependency: 'fetchBookings'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+   237:6   warning  React Hook useEffect has a missing dependency: 'filterBookings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   541:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   570:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   729:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   898:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   931:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   975:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+  1002:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+  1071:21  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\calendar.tsx
+   96:6   warning  React Hook useEffect has a missing dependency: 'fetchBookings'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+  101:6   warning  React Hook useEffect has a missing dependency: 'filterBookings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  155:58  warning  Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\customer-detail.tsx
+   186:58  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   187:52  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   195:6   warning  React Hook useEffect has a missing dependency: 'fetchCustomerDetails'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+   202:6   warning  React Hook useEffect has a missing dependency: 'fetchServicePackagesAndStaff'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   273:72  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   280:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   313:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   375:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   431:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   474:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   497:21  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  1329:42  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  1346:42  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\customers.tsx
+   86:6   warning  React Hook useEffect has a missing dependency: 'fetchCustomers'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+   91:6   warning  React Hook useEffect has a missing dependency: 'filterCustomers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  183:21  warning  Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\reports.tsx
+   141:6   warning  React Hook useEffect has missing dependencies: 'fetchBookings', 'fetchCustomers', 'fetchStaff', and 'fetchTeams'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   148:6   warning  React Hook useEffect has a missing dependency: 'updateChartData'. Either include it or remove the dependency array                                                    react-hooks/exhaustive-deps
+   703:34  warning  Unexpected any. Specify a different type                                                                                                                              @typescript-eslint/no-explicit-any
+   742:34  warning  Unexpected any. Specify a different type                                                                                                                              @typescript-eslint/no-explicit-any
+  1202:36  warning  Unexpected any. Specify a different type                                                                                                                              @typescript-eslint/no-explicit-any
+  1539:36  warning  Unexpected any. Specify a different type                                                                                                                              @typescript-eslint/no-explicit-any
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\service-packages.tsx
+  65:6  warning  React Hook useEffect has a missing dependency: 'fetchPackages'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  71:6  warning  React Hook useEffect has missing dependencies: 'calculateStats' and 'filterPackages'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\staff-availability.tsx
+  104:6  warning  React Hook useEffect has a missing dependency: 'fetchStaffMembers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  111:6  warning  React Hook useEffect has a missing dependency: 'fetchAvailability'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\staff.tsx
+  61:6  warning  React Hook useEffect has a missing dependency: 'fetchStaff'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+  66:6  warning  React Hook useEffect has a missing dependency: 'filterStaff'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Jiraw\OneDrive\Desktop\CRM tinedy\tinedy-crm\src\pages\admin\teams.tsx
+   71:6   warning  React Hook useEffect has a missing dependency: 'loadTeams'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+   75:6   warning  React Hook useEffect has a missing dependency: 'filterTeams'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  137:59  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  145:46  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  153:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  175:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  211:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  247:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  274:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  305:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  333:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  358:21  warning  Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+✖ 62 problems (0 errors, 62 warnings)
+

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { sendBookingReminder } from '@/lib/email'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 
 // Helper function to format full address
@@ -88,30 +88,44 @@ export function BookingDetailModal({
   const [sendingReminder, setSendingReminder] = useState(false)
   const { toast } = useToast()
 
+  // Format time to remove seconds (HH:MM:SS -> HH:MM)
+  const formatTime = (time: string) => {
+    return time.split(':').slice(0, 2).join(':')
+  }
+
   const handleSendReminder = async () => {
     if (!booking || !booking.customers) return
 
     setSendingReminder(true)
 
     try {
-      const result = await sendBookingReminder({
-        customerName: booking.customers.full_name,
-        customerEmail: booking.customers.email,
-        serviceName: booking.service_packages?.name || 'Service',
-        bookingDate: booking.booking_date,
-        startTime: booking.start_time,
-        endTime: booking.end_time,
-        location: formatFullAddress(booking),
+      // Call Edge Function to send email
+      const { data, error } = await supabase.functions.invoke('send-booking-reminder', {
+        body: {
+          customerName: booking.customers.full_name,
+          customerEmail: booking.customers.email,
+          serviceName: booking.service_packages?.name || 'Service',
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+          location: formatFullAddress(booking),
+        },
       })
 
-      if (result.success) {
-        toast({
-          title: 'Reminder Sent!',
-          description: `Email sent to ${booking.customers.email}`,
-        })
-      } else {
-        throw new Error(result.error || 'Failed to send reminder')
+      if (error) {
+        console.error('Edge Function Error:', error)
+        throw new Error(error.message || 'Failed to call Edge Function')
       }
+
+      if (!data?.success) {
+        console.error('Email send failed:', data)
+        throw new Error(data?.error || 'Failed to send reminder')
+      }
+
+      toast({
+        title: 'Reminder Sent!',
+        description: `Email sent to ${booking.customers.email}`,
+      })
     } catch (error) {
       toast({
         title: 'Failed to Send Reminder',
@@ -195,7 +209,7 @@ export function BookingDetailModal({
               <div>
                 <Label className="text-muted-foreground">Time</Label>
                 <p className="font-medium">
-                  {booking.start_time} - {booking.end_time}
+                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                 </p>
               </div>
             </div>
