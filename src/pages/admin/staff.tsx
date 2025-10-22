@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield, Hash, Award } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield, Hash, Award, Star } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface StaffMember {
@@ -38,6 +38,7 @@ interface StaffMember {
   skills: string[] | null
   created_at: string
   updated_at: string
+  average_rating?: number
 }
 
 export function AdminStaff() {
@@ -73,7 +74,50 @@ export function AdminStaff() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setStaff(data || [])
+
+      // Fetch ratings for all staff
+      const staffData = data || []
+      const staffIds = staffData.map(s => s.id)
+
+      if (staffIds.length > 0) {
+        interface ReviewData {
+          rating: number
+          bookings: { staff_id: string } | { staff_id: string }[]
+        }
+
+        const { data: ratingsData } = await supabase
+          .from('reviews')
+          .select('rating, bookings!inner(staff_id)')
+          .in('bookings.staff_id', staffIds)
+
+        // Group ratings by staff_id
+        const staffRatings: Record<string, number[]> = {}
+
+        ratingsData?.forEach((review: ReviewData) => {
+          const bookings = Array.isArray(review.bookings) ? review.bookings[0] : review.bookings
+          const staffId = bookings?.staff_id
+          if (staffId) {
+            if (!staffRatings[staffId]) {
+              staffRatings[staffId] = []
+            }
+            staffRatings[staffId].push(review.rating)
+          }
+        })
+
+        // Calculate average rating for each staff
+        const staffWithRatings = staffData.map(staff => {
+          const ratings = staffRatings[staff.id]
+          if (ratings && ratings.length > 0) {
+            const average = ratings.reduce((a, b) => a + b, 0) / ratings.length
+            return { ...staff, average_rating: average }
+          }
+          return staff
+        })
+
+        setStaff(staffWithRatings)
+      } else {
+        setStaff(staffData)
+      }
     } catch (error) {
       console.error('Error fetching staff:', error)
       toast({
@@ -579,12 +623,21 @@ export function AdminStaff() {
                         <CardTitle className="text-lg font-display">
                           {member.full_name}
                         </CardTitle>
-                        <Badge
-                          variant={member.role === 'admin' ? 'default' : 'secondary'}
-                          className="mt-1"
-                        >
-                          {member.role === 'admin' ? '👑 Admin' : 'Staff'}
-                        </Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge
+                            variant={member.role === 'admin' ? 'default' : 'secondary'}
+                          >
+                            {member.role === 'admin' ? '👑 Admin' : 'Staff'}
+                          </Badge>
+                          {member.average_rating !== undefined && (
+                            <div className="flex items-center gap-1 text-yellow-500">
+                              <Star className="h-3 w-3 fill-yellow-400" />
+                              <span className="text-xs font-semibold text-gray-700">
+                                {member.average_rating.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -623,7 +676,7 @@ export function AdminStaff() {
                     </div>
                   )}
                   {member.skills && member.skills.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex items-center gap-2">
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Award className="h-4 w-4 mr-2" />
                         <span className="font-medium">Skills:</span>

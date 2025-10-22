@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -11,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { BookingDetailModal } from './booking-detail-modal'
+import { getErrorMessage } from '@/lib/error-utils'
 import {
   ChevronLeft,
   ChevronRight,
@@ -44,8 +47,21 @@ interface Booking {
   customer_id: string
   staff_id: string | null
   team_id: string | null
+  service_package_id: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  payment_status?: string
+  payment_method?: string
+  amount_paid?: number
+  payment_date?: string
+  payment_notes?: string
   customers: {
+    id: string
     full_name: string
+    phone: string
+    email: string
   } | null
   profiles: {
     full_name: string
@@ -55,6 +71,7 @@ interface Booking {
   } | null
   service_packages: {
     name: string
+    service_type: string
   } | null
 }
 
@@ -87,6 +104,8 @@ export function AdminCalendar() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const { toast } = useToast()
 
   const fetchTeams = useCallback(async () => {
@@ -113,17 +132,12 @@ export function AdminCalendar() {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id,
-          booking_date,
-          start_time,
-          end_time,
-          status,
-          total_price,
-          customer_id,
-          staff_id,
-          team_id,
+          *,
           customers!inner (
-            full_name
+            id,
+            full_name,
+            phone,
+            email
           ),
           profiles (
             full_name
@@ -132,7 +146,8 @@ export function AdminCalendar() {
             name
           ),
           service_packages!inner (
-            name
+            name,
+            service_type
           )
         `)
         .gte('booking_date', format(monthStart, 'yyyy-MM-dd'))
@@ -196,6 +211,172 @@ export function AdminCalendar() {
     setCurrentDate(new Date())
     setSelectedDate(new Date())
   }
+
+  const openBookingDetail = (booking: Booking) => {
+    setSelectedBooking(booking)
+    setIsDetailOpen(true)
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { className: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pending' },
+      confirmed: { className: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Confirmed' },
+      in_progress: { className: 'bg-purple-100 text-purple-800 border-purple-200', label: 'In Progress' },
+      completed: { className: 'bg-green-100 text-green-800 border-green-200', label: 'Completed' },
+      cancelled: { className: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelled' },
+      no_show: { className: 'bg-red-100 text-red-800 border-red-200', label: 'No Show' },
+    }
+
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+      className: 'bg-gray-100 text-gray-800 border-gray-200',
+      label: status,
+    }
+
+    return <Badge variant="outline" className={config.className}>{config.label}</Badge>
+  }
+
+  const getPaymentStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
+      case 'partial':
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
+      case 'refunded':
+        return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
+      default:
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Unpaid</Badge>
+    }
+  }
+
+  const getAvailableStatuses = (currentStatus: string): string[] => {
+    const transitions: Record<string, string[]> = {
+      pending: ['pending', 'confirmed', 'cancelled'],
+      confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
+      in_progress: ['in_progress', 'completed', 'cancelled'],
+      completed: ['completed'],
+      cancelled: ['cancelled'],
+      no_show: ['no_show'],
+    }
+    return transitions[currentStatus] || [currentStatus]
+  }
+
+  const getStatusLabel = (status: string): string => {
+    const labels: Record<string, string> = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      no_show: 'No Show',
+    }
+    return labels[status] || status
+  }
+
+  const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
+    if (currentStatus === newStatus) return
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: `Status changed to ${newStatus}`,
+      })
+
+      // Update selected booking if it's the same one
+      if (selectedBooking && selectedBooking.id === bookingId) {
+        setSelectedBooking({ ...selectedBooking, status: newStatus })
+      }
+
+      fetchBookings()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleMarkAsPaid = async (bookingId: string, method: string = 'cash') => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: selectedBooking?.total_price || 0,
+          payment_date: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking marked as paid',
+      })
+
+      if (selectedBooking) {
+        setSelectedBooking({
+          ...selectedBooking,
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: selectedBooking.total_price,
+          payment_date: new Date().toISOString().split('T')[0],
+        })
+      }
+
+      // Update bookings list without refetching all data
+      setBookings(prev =>
+        prev.map(b => b.id === bookingId ? {
+          ...b,
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: b.total_price,
+          payment_date: new Date().toISOString().split('T')[0],
+        } : b)
+      )
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDelete = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to delete this booking?')) return
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking deleted successfully',
+      })
+      setIsDetailOpen(false)
+      fetchBookings()
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete booking',
+        variant: 'destructive',
+      })
+    }
+  }
+
 
   // Generate calendar days
   const monthStart = startOfMonth(currentDate)
@@ -294,34 +475,34 @@ export function AdminCalendar() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="font-display text-2xl">
-                {format(currentDate, 'MMMM yyyy')}
-              </CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={goToPreviousMonth}
-                  className="h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={goToNextMonth}
-                  className="h-8 w-8"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+          {/* Calendar */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-2xl">
+                  {format(currentDate, 'MMMM yyyy')}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={goToPreviousMonth}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={goToNextMonth}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+            </CardHeader>
+            <CardContent>
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1">
               {/* Day headers */}
@@ -451,7 +632,8 @@ export function AdminCalendar() {
                 {selectedDateBookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className={`p-3 rounded-lg border-2 ${
+                    onClick={() => openBookingDetail(booking)}
+                    className={`p-3 rounded-lg border-2 cursor-pointer hover:opacity-80 transition-opacity ${
                       STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS]
                     }`}
                   >
@@ -496,6 +678,27 @@ export function AdminCalendar() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Booking Detail Modal */}
+      <BookingDetailModal
+        booking={selectedBooking}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEdit={() => {
+          // Edit functionality can be added later if needed
+          toast({
+            title: 'Edit Booking',
+            description: 'Please use the Bookings page to edit this booking',
+          })
+        }}
+        onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
+        onMarkAsPaid={handleMarkAsPaid}
+        getStatusBadge={getStatusBadge}
+        getPaymentStatusBadge={getPaymentStatusBadge}
+        getAvailableStatuses={getAvailableStatuses}
+        getStatusLabel={getStatusLabel}
+      />
     </div>
   )
 }

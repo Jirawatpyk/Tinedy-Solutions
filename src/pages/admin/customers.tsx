@@ -751,12 +751,14 @@ export function AdminCustomers() {
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CardTitle className="text-lg font-display text-tinedy-dark">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                        {customer.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg font-display text-tinedy-dark mb-2">
                           {customer.full_name}
                         </CardTitle>
-                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {/* Relationship Level Badge */}
                         <Badge variant="outline" className={`text-xs ${relationshipInfo.className}`}>
@@ -803,6 +805,7 @@ export function AdminCustomers() {
                             )}
                           </>
                         )}
+                      </div>
                       </div>
                     </div>
                     <div className="flex gap-1">

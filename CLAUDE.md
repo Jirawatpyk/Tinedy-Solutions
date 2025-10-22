@@ -2,220 +2,288 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Commands
 
-Tinedy CRM is an enterprise booking management system for Cleaning and Training services. Built with React 18, TypeScript, Tailwind CSS, and Supabase for backend/auth.
-
-**Key Features:**
-- Admin portal for booking/customer/staff/team management
-- Staff portal for viewing assignments and schedules
-- Real-time chat system
-- Automated email reminders (Resend API)
-- Calendar view with react-big-calendar
-- Reports and analytics
-- Role-based access control (admin/staff)
-
-## Development Commands
-
+### Development
 ```bash
-# Start development server (port 5173)
-npm run dev
-
-# Build for production (TypeScript + Vite)
-npm run build
-
-# Lint code (ESLint 9 with TypeScript rules)
-npm run lint
-
-# Preview production build
-npm run preview
+npm run dev        # Start development server (Vite on port 5173)
+npm run build      # Type-check with tsc and build for production
+npm run lint       # Run ESLint
+npm run preview    # Preview production build locally
 ```
 
-## Code Architecture
-
-### Authentication & Authorization Flow
-
-**AuthContext Pattern** (`src/contexts/auth-context.tsx`):
-- Wraps entire app in `<AuthProvider>`
-- Provides `user`, `profile`, `signIn`, `signUp`, `signOut`
-- Profile includes `role` field ('admin' | 'staff') for access control
-- Auto-syncs with Supabase auth state via `onAuthStateChange`
-- Fetches profile data from `profiles` table on login
-
-**Protected Routes** (`src/App.tsx` + `src/components/auth/protected-route.tsx`):
-- `<ProtectedRoute allowedRoles={['admin']}>` guards admin routes
-- `<ProtectedRoute allowedRoles={['staff']}>` guards staff routes
-- Redirects to `/login` if unauthenticated
-- Shows access denied if wrong role
-
-**Route Structure:**
-```
-/login                    - Public
-/admin/*                  - Admin only (dashboard, bookings, customers, etc.)
-/staff/*                  - Staff only (dashboard, calendar, profile, chat)
-/ (root)                  - Redirects to /admin
+### Build Issues
+If you encounter Vite cache issues during development:
+```bash
+rm -rf node_modules/.vite && npm run dev
 ```
 
-### Supabase Query Patterns
+## Architecture Overview
 
-**Critical: Array vs Object Relations**
+### Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + Shadcn UI (Radix UI primitives)
+- **Backend**: Supabase (PostgreSQL + Auth + Realtime)
+- **Routing**: React Router v7
+- **State**: React Context (Auth) + Local State
+- **Forms**: React Hook Form + Zod validation
+- **Charts**: Recharts
+- **Calendar**: React Big Calendar
+- **Icons**: Lucide React
 
-Supabase returns related data as **arrays by default**, but TypeScript interfaces often expect **single objects**. Always transform after querying:
+### Currency Format
+The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()` in `src/lib/utils.ts`. Never use USD ($).
 
+### Role-Based Access Control
+Two primary roles with separate portals:
+- **Admin**: Full system access at `/admin/*` routes
+- **Staff**: Limited access at `/staff/*` routes
+
+Authentication flows through `AuthContext` (`src/contexts/auth-context.tsx`):
+- Manages `user` (Supabase auth) and `profile` (custom profiles table)
+- Profile includes: `role`, `staff_number`, `skills`, etc.
+- Protected routes use `ProtectedRoute` component with `allowedRoles` prop
+
+### Database Architecture
+
+**Core Tables:**
+- `profiles` - User profiles (extends Supabase auth.users)
+- `customers` - Customer records
+- `service_packages` - Service offerings (cleaning, training, etc.)
+- `bookings` - Main booking records with team/staff assignment
+- `teams` - Staff team organization
+- `team_members` - Many-to-many team membership
+- `messages` - Internal chat system
+- `reviews` - Customer ratings for staff (may not exist in all deployments)
+
+**Key Patterns:**
+- All tables use Row Level Security (RLS) policies
+- Bookings can be assigned to either `staff_id` OR `team_id` (not both)
+- Team bookings are visible to all team members
+- Auto-generated fields: `staff_number` (STF0001, STF0002...)
+- Timestamps: `created_at`, `updated_at` (auto-managed)
+
+### Booking System
+
+**Assignment Logic:**
+Bookings support two assignment modes:
+1. **Individual**: Assigned to specific `staff_id`
+2. **Team**: Assigned to `team_id`, visible to all team members
+
+**Status Flow:**
+`pending` ’ `confirmed` ’ `in_progress` ’ `completed`/`cancelled`
+
+**Time Format:**
+- Database stores `HH:MM:SS`
+- UI displays `HH:MM` via `formatTime()` helper
+- Always remove seconds when displaying to users
+
+### Performance Patterns
+
+**Staff Bookings Hook** (`src/hooks/use-staff-bookings.ts`):
+- Fetches bookings in 3 categories: today, upcoming, completed
+- Calculates stats (jobs, completion rate, earnings) in **parallel** using `Promise.all()`
+- Stats calculation runs in background (non-blocking)
+- Uses Supabase realtime subscriptions for live updates
+- Team bookings filtered with: `or(staff_id.eq.${userId},team_id.in.(${teamIds}))`
+
+**Query Optimization:**
+- Use `Promise.all()` for parallel database queries
+- Use `{ count: 'exact', head: true }` for count-only queries
+- Implement pagination for large datasets
+- Use indexes on frequently queried columns
+
+### UI/UX Conventions
+
+**Mobile-First:**
+All components designed mobile-first, scale up with Tailwind breakpoints:
+- `sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px)
+
+**Address Display:**
+Always show full address format:
 ```typescript
-// L WRONG - TypeScript error: array assigned to object
-const { data } = await supabase
-  .from('bookings')
-  .select('*, customers(full_name)')
-setBookings(data)
-
-//  CORRECT - Transform arrays to objects
-const { data } = await supabase
-  .from('bookings')
-  .select('*, customers!inner(full_name)')  // Use !inner for required joins
-
-const transformed = data.map(booking => ({
-  ...booking,
-  customers: Array.isArray(booking.customers)
-    ? booking.customers[0]
-    : booking.customers
-}))
-setBookings(transformed)
+[address, city, state, zip_code].filter(Boolean).join(', ')
 ```
 
-**Pattern used in:**
-- `src/pages/admin/calendar.tsx` (lines 155-161)
-- `src/pages/admin/customer-detail.tsx` (lines 263-269)
+**Booking Cards:**
+- Card click opens detail modal
+- Action buttons (Call, Maps, etc.) use `e.stopPropagation()` to prevent modal opening
+- Time displayed without seconds
+- Full address shown
 
-### Component Organization
+**Dialog/Modal Behavior:**
+- Radix UI Dialog components can cause scroll position jumps
+- **DO NOT** attempt to fix scroll jump issues with complex workarounds
+- Previous attempts failed: `preventDefault()`, `stopPropagation()`, `modal={false}`, scroll position saving
+- Accept default Dialog behavior unless user explicitly requests a fix
 
-**Page-Specific Components:**
-- Modal/dialog components used only by one page ’ place in `src/pages/admin/`
-- Example: `booking-detail-modal.tsx` is in `src/pages/admin/` not `src/components/`
+### Supabase Integration
 
-**Shared Components:**
-- UI primitives (shadcn/ui) ’ `src/components/ui/`
-- Auth components ’ `src/components/auth/`
-- Layout components ’ `src/components/layout/`
+**Client Initialization:**
+Located in `src/lib/supabase.ts` using environment variables:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-### Booking Workflow & Status Transitions
+**Edge Functions:**
+Located in `supabase/functions/`:
+- `create-staff` - Creates staff users with proper auth and profile setup
+- Call via: `supabase.functions.invoke('function-name', { body: {...} })`
 
-**Valid status transitions** (`src/pages/admin/bookings.tsx` lines 607-617):
-```
-pending ’ confirmed | cancelled
-confirmed ’ in_progress | cancelled | no_show
-in_progress ’ completed | cancelled
-completed ’ [final state]
-cancelled ’ [final state]
-no_show ’ [final state]
-```
-
-**Conflict Detection:**
-Bookings check for staff/team conflicts before creation/update. If conflicts exist, user must explicitly override. See `checkBookingConflicts()` function in bookings.tsx.
-
-### Email System
-
-**Resend Integration** (`src/lib/email.ts`):
-- `sendBookingReminder()` sends HTML emails
-- Uses `VITE_RESEND_API_KEY` environment variable
-- Called from booking detail modal "Send Reminder" button
-- Returns `{ success: boolean, error?: string }`
-
-## Styling & Design System
-
-**Tailwind Custom Colors:**
-```css
-tinedy-blue: #2e4057       /* Primary brand, buttons */
-tinedy-green: #8fb996      /* Success, secondary actions */
-tinedy-yellow: #e7d188     /* Highlights, warnings */
-tinedy-off-white: #f5f3ee  /* Background */
-tinedy-dark: #2d241d       /* Text, headings */
-```
-
-**Fonts:**
-- `font-sans` (Poppins) - Body text
-- `font-display` (Raleway) - Headings
-- `font-rule` (Sarabun) - Special text
-
-**Mobile-First:** All components designed for mobile first, then scaled up at sm/md/lg/xl breakpoints.
-
-## ESLint Configuration
-
-**Relaxed for pragmatism** (`eslint.config.js`):
-- `@typescript-eslint/no-explicit-any`: OFF (Supabase queries often need any)
-- `@typescript-eslint/no-unused-vars`: Ignores variables starting with `_`
-- `react-hooks/exhaustive-deps`: OFF (manual dependency management)
-
-**Naming convention:** Prefix unused variables with `_` to avoid lint errors:
+**Realtime Subscriptions:**
 ```typescript
-const { booking_id, isEdit: _isEdit, ...data } = formData
+const channel = supabase
+  .channel('channel-name')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'table_name' }, callback)
+  .subscribe()
+
+// Cleanup
+return () => supabase.removeChannel(channel)
 ```
 
-## Environment Variables
+**Error Handling:**
+- Reviews table may not exist in all deployments - wrap in try-catch
+- Use `getErrorMessage()` utility from `src/lib/error-utils.ts`
+- Display errors via toast notifications
 
-Required `.env` file:
+### Design System
+
+**Colors (Tailwind config):**
+- `tinedy-blue`: #2e4057 (primary brand)
+- `tinedy-green`: #8fb996 (success/secondary)
+- `tinedy-yellow`: #e7d188 (accents/warnings)
+- `tinedy-off-white`: #f5f3ee (backgrounds)
+- `tinedy-dark`: #2d241d (text)
+
+**Typography:**
+- Sans (Body): Poppins
+- Display (Headings): Raleway
+- Rule (Labels): Sarabun
+
+**Component Library:**
+- Use Shadcn UI components from `src/components/ui/`
+- Built on Radix UI primitives
+- Customize via `className` prop with Tailwind
+
+### Database Migrations
+
+Migration files in `supabase/migrations/` are manually run in Supabase Dashboard SQL Editor.
+
+**Recent migrations:**
+- `20250122_create_reviews_table.sql` - Reviews system
+- `20250122_add_staff_number_and_skills.sql` - Staff fields with auto-generation
+
+**Migration Pattern:**
+```sql
+-- Add columns
+ALTER TABLE table_name ADD COLUMN IF NOT EXISTS column_name TYPE;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_name ON table_name(column_name);
+
+-- Create/update trigger
+CREATE OR REPLACE FUNCTION function_name() ...
+CREATE TRIGGER trigger_name BEFORE INSERT ON table_name ...
+
+-- Migrate existing data
+DO $$ ... $$;
+```
+
+### Code Style
+
+**Component Patterns:**
+- Functional components with hooks
+- TypeScript interfaces for all props/data
+- Extract reusable logic to custom hooks (`src/hooks/`)
+- Use `useCallback` for functions passed to dependencies
+
+**State Management:**
+- Global auth state via Context
+- Feature state via custom hooks (e.g., `useStaffBookings`)
+- Local component state for UI-only concerns
+
+**Error Boundaries:**
+- Try-catch blocks for async operations
+- Toast notifications for user-facing errors
+- Console errors for debugging
+
+**TypeScript:**
+- Strict mode enabled
+- No implicit any
+- Proper typing for Supabase queries
+- Use `any` with type assertions only when necessary
+
+### Common Pitfalls
+
+1. **Supabase Promise Types**: Supabase queries return `PromiseLike`, not `Promise`. Use `async/await` instead of `.catch()`:
+   ```typescript
+   // L Wrong
+   supabase.from('table').select().then().catch()
+
+   //  Correct
+   const { data, error } = await supabase.from('table').select()
+   ```
+
+2. **Team Booking Queries**: Always check both `staff_id` and `team_id`:
+   ```typescript
+   .or(`staff_id.eq.${userId},team_id.in.(${teamIds})`)
+   ```
+
+3. **Time Display**: Always format time to remove seconds before showing to users
+
+4. **Currency**: Always use `formatCurrency()` from utils, never hardcode $ symbol
+
+5. **Full Address**: Always join all address components (address, city, state, zip_code)
+
+6. **Build Errors**: Always run `npm run build` before committing to catch TypeScript errors
+
+### Git Workflow
+
+**Commit Messages:**
+Use conventional format with co-author:
+```
+Brief summary of changes
+
+- Bullet point 1
+- Bullet point 2
+
+> Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Before Push:**
+1. Run `npm run build` to verify no TypeScript errors
+2. Test affected features in dev mode
+3. Commit with descriptive message
+4. Push to remote
+
+### Feature Status
+
+**Implemented:**
+- Admin Dashboard with stats and charts
+- Booking Management (CRUD)
+- Customer Management
+- Staff Management with auto-generated staff numbers
+- Team Management
+- Calendar views (admin and staff)
+- Chat system with realtime updates
+- Staff Availability management
+- Service Packages
+- Reports with analytics
+
+**Not Implemented:**
+- Customer Portal (customers cannot self-service)
+- Payment Integration (Stripe/Omise)
+- SMS/Email Notifications
+- Audit Log (removed - not needed for current scope)
+- Advanced reporting features
+
+### Environment Setup
+
+Required `.env` variables:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_RESEND_API_KEY=your_resend_api_key  # Optional for email features
 ```
 
-## Database Schema Notes
-
-**Main Tables:**
-- `profiles` - User profiles (id matches auth.users.id)
-- `customers` - Customer information
-- `service_packages` - Available services (cleaning/training)
-- `bookings` - Service bookings (links customer + service + staff/team)
-- `teams` - Staff team organization
-- `team_members` - Team membership junction table
-- `messages` - Chat messages
-- `audit_logs` - System audit trail
-
-**Important:** All tables use Row Level Security (RLS). Queries run as authenticated user with role-based policies.
-
-## Common Patterns
-
-### Error Handling
-```typescript
-try {
-  const { data, error } = await supabase.from('table').select()
-  if (error) throw error
-  // ...
-} catch (error) {
-  toast({
-    title: 'Error',
-    description: error instanceof Error ? error.message : 'An error occurred',
-    variant: 'destructive'
-  })
-}
-```
-
-### Form Data Management
-Large pages (bookings, customer-detail) use multiple `useState` for complex forms. Keep form state local to component, not global context.
-
-### Toast Notifications
-Use `useToast()` hook from `@/hooks/use-toast` for all user feedback (success, error, info).
-
-## Deployment
-
-**Build output:** `dist/` directory
-
-**Vercel deployment:**
-1. Connect GitHub repository
-2. Set environment variables in Vercel dashboard
-3. Build command: `npm run build`
-4. Output directory: `dist`
-
-**Note:** Bundle size is large (~1.4MB). Consider code splitting for optimization in future.
-
-## Known Issues & Quirks
-
-1. **Vite cache issues:** If dev server behaves oddly, delete `node_modules/.vite` and restart
-2. **Supabase type mismatches:** Always check if relations return arrays vs objects after queries
-3. **react-big-calendar types:** Custom type definitions in `src/types/react-big-calendar.d.ts` with eslint disabled
-4. **Windows paths:** Project uses Windows-style paths (`c:\Users\...`) - adjust for other OS
-
-## Thai Language Support
-
-Many UI strings are in Thai. When modifying user-facing text, maintain Thai language or ask user for translation preferences.
+Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.

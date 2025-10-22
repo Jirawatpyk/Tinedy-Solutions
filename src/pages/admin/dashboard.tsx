@@ -11,10 +11,11 @@ import {
   Phone,
   MapPin,
   User,
+  TrendingUp,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/error-utils'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -25,6 +26,13 @@ interface Stats {
   totalRevenue: number
   totalCustomers: number
   pendingBookings: number
+}
+
+interface StatsChange {
+  bookingsChange: number
+  revenueChange: number
+  customersChange: number
+  pendingChange: number
 }
 
 interface BookingStatus {
@@ -54,6 +62,7 @@ interface TodayBooking {
   payment_date?: string
   payment_notes?: string
   customers: {
+    id: string
     full_name: string
     phone: string
     email: string
@@ -81,6 +90,12 @@ export function AdminDashboard() {
     totalRevenue: 0,
     totalCustomers: 0,
     pendingBookings: 0,
+  })
+  const [statsChange, setStatsChange] = useState<StatsChange>({
+    bookingsChange: 0,
+    revenueChange: 0,
+    customersChange: 0,
+    pendingChange: 0,
   })
   const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatus[]>([])
   const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
@@ -130,6 +145,67 @@ export function AdminDashboard() {
         pendingBookings: pendingBookings || 0,
       })
 
+      // Fetch today's new data (created today only)
+      const nowToday = new Date()
+      const bangkokOffsetToday = 7 * 60 * 60 * 1000
+      const bangkokTimeToday = new Date(nowToday.getTime() + bangkokOffsetToday)
+      const todayStr = bangkokTimeToday.toISOString().split('T')[0]
+
+      // Calculate start of day in Bangkok timezone (00:00:00)
+      const todayStart = `${todayStr}T00:00:00+07:00`
+      const todayEnd = `${todayStr}T23:59:59+07:00`
+
+      console.log('Today date for stats:', todayStr)
+      console.log('Query range:', todayStart, 'to', todayEnd)
+
+      // Today's new bookings count (created today)
+      const { data: todayBookingsData, count: todayBookings } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact' })
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+
+      console.log('Today bookings found:', todayBookings, 'records:', todayBookingsData?.length)
+
+      // Today's new revenue (from bookings completed today)
+      const { data: todayRevenueData } = await supabase
+        .from('bookings')
+        .select('total_price')
+        .eq('status', 'completed')
+        .gte('updated_at', todayStart)
+        .lte('updated_at', todayEnd)
+
+      const todayRevenue = todayRevenueData?.reduce(
+        (sum, booking) => sum + Number(booking.total_price),
+        0
+      ) || 0
+
+      // Today's new customers (created today)
+      const { count: todayCustomers } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+
+      // Today's new pending (created today)
+      const { count: todayPending } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+
+      // Set today's changes
+      console.log('=== Today\'s New Stats ===')
+      console.log('New today:', { todayBookings, todayRevenue, todayCustomers, todayPending })
+
+      setStatsChange({
+        bookingsChange: todayBookings || 0,
+        revenueChange: todayRevenue,
+        customersChange: todayCustomers || 0,
+        pendingChange: todayPending || 0,
+      })
+
       // Fetch bookings by status for pie chart
       const { data: allBookings } = await supabase
         .from('bookings')
@@ -156,13 +232,22 @@ export function AdminDashboard() {
 
       setBookingsByStatus(statusData)
 
-      // Fetch today's bookings
-      const today = new Date().toISOString().split('T')[0]
+      // Fetch today's bookings (using Thailand timezone UTC+7)
+      const now = new Date()
+      // Add 7 hours to UTC to get Bangkok time
+      const bangkokOffset = 7 * 60 * 60 * 1000 // 7 hours in milliseconds
+      const bangkokTime = new Date(now.getTime() + bangkokOffset)
+      const today = bangkokTime.toISOString().split('T')[0]
+
+      console.log('Current UTC time:', now.toISOString())
+      console.log('Bangkok time (UTC+7):', bangkokTime.toISOString())
+      console.log('Today date for query:', today)
+
       const { data: todayData } = await supabase
         .from('bookings')
         .select(`
           *,
-          customers (full_name, phone, email),
+          customers (id, full_name, phone, email),
           service_packages (name, service_type),
           profiles (full_name),
           teams (name)
@@ -348,7 +433,16 @@ export function AdminDashboard() {
         })
       }
 
-      fetchDashboardData()
+      // Update today bookings list without refetching all data
+      setTodayBookings(prev =>
+        prev.map(b => b.id === bookingId ? {
+          ...b,
+          payment_status: 'paid',
+          payment_method: method,
+          amount_paid: b.total_price,
+          payment_date: new Date().toISOString().split('T')[0],
+        } : b)
+      )
     } catch (error) {
       toast({
         title: 'Error',
@@ -367,10 +461,13 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
+        {/* Page header skeleton */}
         <div className="space-y-2">
           <Skeleton className="h-9 w-40" />
           <Skeleton className="h-4 w-80" />
         </div>
+
+        {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -385,6 +482,51 @@ export function AdminDashboard() {
             </Card>
           ))}
         </div>
+
+        {/* Charts skeleton */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-[300px] w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Today's Appointments skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-56" />
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -412,9 +554,15 @@ export function AdminDashboard() {
             <div className="text-2xl font-bold text-tinedy-dark">
               {stats.totalBookings}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All time bookings
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                All time bookings
+              </p>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${statsChange.bookingsChange > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                {statsChange.bookingsChange > 0 && <TrendingUp className="h-3 w-3" />}
+                <span>+{statsChange.bookingsChange} today</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -427,9 +575,15 @@ export function AdminDashboard() {
             <div className="text-2xl font-bold text-tinedy-dark">
               {formatCurrency(stats.totalRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              From completed bookings
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                From completed bookings
+              </p>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${statsChange.revenueChange > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                {statsChange.revenueChange > 0 && <TrendingUp className="h-3 w-3" />}
+                <span>+{formatCurrency(statsChange.revenueChange)} today</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -442,9 +596,15 @@ export function AdminDashboard() {
             <div className="text-2xl font-bold text-tinedy-dark">
               {stats.totalCustomers}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active customers
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                Active customers
+              </p>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${statsChange.customersChange > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                {statsChange.customersChange > 0 && <TrendingUp className="h-3 w-3" />}
+                <span>+{statsChange.customersChange} today</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -457,9 +617,15 @@ export function AdminDashboard() {
             <div className="text-2xl font-bold text-tinedy-dark">
               {stats.pendingBookings}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Awaiting confirmation
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                Awaiting confirmation
+              </p>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${statsChange.pendingChange > 0 ? 'text-orange-600' : 'text-gray-600'}`}>
+                {statsChange.pendingChange > 0 && <TrendingUp className="h-3 w-3" />}
+                <span>+{statsChange.pendingChange} today</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -480,44 +646,59 @@ export function AdminDashboard() {
                 No bookings yet
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={bookingsByStatus as Record<string, unknown>[]}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(props) => {
-                      const entry = props.payload as BookingStatus
-                      const percent = props.percent as number
-                      return `${entry.status}: ${(percent * 100).toFixed(0)}%`
-                    }}
-                    outerRadius={90}
-                    innerRadius={60}
-                    fill="#8884d8"
-                    dataKey="count"
-                    paddingAngle={2}
-                    nameKey="status"
-                  >
-                    {bookingsByStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value} bookings`, '']}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconType="circle"
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="space-y-4">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={bookingsByStatus as Record<string, unknown>[]}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(props) => {
+                        const entry = props.payload as BookingStatus
+                        const percent = props.percent as number
+                        return `${entry.status}: ${(percent * 100).toFixed(0)}%`
+                      }}
+                      outerRadius={90}
+                      innerRadius={60}
+                      fill="#8884d8"
+                      dataKey="count"
+                      paddingAngle={2}
+                      nameKey="status"
+                    >
+                      {bookingsByStatus.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => [`${value} bookings`, '']}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Status Count Summary */}
+                <div className="flex flex-wrap justify-center gap-4 pt-2 border-t">
+                  {bookingsByStatus.map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="text-sm font-medium text-tinedy-dark">
+                        {entry.status}
+                      </span>
+                      <span className="text-sm font-bold text-tinedy-dark">
+                        {entry.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

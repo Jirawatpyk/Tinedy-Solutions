@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard } from 'lucide-react'
+import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -52,10 +52,17 @@ interface Booking {
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
-  customers: { full_name: string; email: string } | null
+  customers: { full_name: string; email: string; id: string } | null
   service_packages: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
   teams: { name: string } | null
+}
+
+interface Review {
+  id: string
+  rating: number
+  comment: string | null
+  created_at: string
 }
 
 interface BookingDetailModalProps {
@@ -86,7 +93,122 @@ export function BookingDetailModal({
   getStatusLabel,
 }: BookingDetailModalProps) {
   const [sendingReminder, setSendingReminder] = useState(false)
+  const [review, setReview] = useState<Review | null>(null)
+  const [rating, setRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0)
+  const [savingReview, setSavingReview] = useState(false)
   const { toast } = useToast()
+
+  const resetReview = useCallback(() => {
+    setReview(null)
+    setRating(0)
+  }, [])
+
+  const fetchReview = useCallback(async () => {
+    if (!booking?.id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('booking_id', booking.id)
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (data) {
+        setReview(data)
+        setRating(data.rating)
+      } else {
+        resetReview()
+      }
+    } catch (error) {
+      console.error('Error fetching review:', error)
+    }
+  }, [booking, resetReview])
+
+  // Fetch existing review when booking changes
+  useEffect(() => {
+    if (booking?.id) {
+      fetchReview()
+    } else {
+      resetReview()
+    }
+  }, [booking?.id, fetchReview, resetReview])
+
+  const handleSaveReview = async () => {
+    if (!booking?.id || (!booking?.staff_id && !booking?.team_id) || !booking?.customers?.id || rating === 0) {
+      toast({
+        title: 'Cannot save review',
+        description: 'Please select a rating and ensure booking has assigned staff or team',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSavingReview(true)
+
+    try {
+      if (review) {
+        // Update existing review
+        const { error } = await supabase
+          .from('reviews')
+          .update({
+            rating,
+          })
+          .eq('id', review.id)
+
+        if (error) throw error
+
+        toast({
+          title: 'Review Updated',
+          description: 'The review has been updated successfully',
+        })
+      } else {
+        // Create new review
+        const reviewData: {
+          booking_id: string
+          customer_id: string
+          rating: number
+          staff_id?: string | null
+          team_id?: string | null
+        } = {
+          booking_id: booking.id,
+          customer_id: booking.customers.id,
+          rating,
+        }
+
+        // Add staff_id or team_id
+        if (booking.staff_id) {
+          reviewData.staff_id = booking.staff_id
+        } else if (booking.team_id) {
+          reviewData.team_id = booking.team_id
+        }
+
+        const { error } = await supabase
+          .from('reviews')
+          .insert(reviewData)
+
+        if (error) throw error
+
+        toast({
+          title: 'Review Saved',
+          description: 'The review has been saved successfully',
+        })
+      }
+
+      await fetchReview()
+    } catch (error) {
+      console.error('Error saving review:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save review',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingReview(false)
+    }
+  }
 
   // Format time to remove seconds (HH:MM:SS -> HH:MM)
   const formatTime = (time: string) => {
@@ -141,7 +263,7 @@ export function BookingDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Booking Details</DialogTitle>
           <DialogDescription>
@@ -238,32 +360,96 @@ export function BookingDetailModal({
             </Button>
           </div>
 
-          {/* Assignment Info */}
-          {(booking.profiles || booking.teams) && (
-            <div className="space-y-3 border-b pb-4">
-              <h3 className="font-semibold text-lg">Assignment</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {booking.profiles && (
-                  <div>
-                    <Label className="text-muted-foreground">Assigned Staff</Label>
-                    <p className="font-medium flex items-center gap-1">
-                      <User className="h-3 w-3 text-tinedy-blue" />
-                      {booking.profiles.full_name}
-                    </p>
-                  </div>
-                )}
-                {booking.teams && (
-                  <div>
-                    <Label className="text-muted-foreground">Assigned Team</Label>
-                    <p className="font-medium flex items-center gap-1">
-                      <Users className="h-3 w-3 text-tinedy-green" />
-                      {booking.teams.name}
-                    </p>
-                  </div>
-                )}
+          {/* Assignment Info & Rating */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-b pb-4">
+            {/* Assignment Section */}
+            {(booking.profiles || booking.teams) && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Assignment</h3>
+                <div className="space-y-3">
+                  {booking.profiles && (
+                    <div>
+                      <Label className="text-muted-foreground">Assigned Staff</Label>
+                      <p className="font-medium flex items-center gap-1">
+                        <User className="h-3 w-3 text-tinedy-blue" />
+                        {booking.profiles.full_name}
+                      </p>
+                    </div>
+                  )}
+                  {booking.teams && (
+                    <div>
+                      <Label className="text-muted-foreground">Assigned Team</Label>
+                      <p className="font-medium flex items-center gap-1">
+                        <Users className="h-3 w-3 text-tinedy-green" />
+                        {booking.teams.name}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Rating Section */}
+            {(booking.staff_id || booking.team_id) && booking.status === 'completed' && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  Service Rating
+                </h3>
+                <div className="space-y-3">
+                  {/* Star Rating */}
+                  <div>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                          aria-label={`Rate ${star} stars`}
+                          title={`Rate ${star} stars`}
+                        >
+                          <Star
+                            className={`h-6 w-6 ${
+                              star <= (hoverRating || rating)
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      {rating > 0 && (
+                        <span className="ml-2 text-sm font-medium text-muted-foreground">
+                          {rating}/5
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  {rating > 0 && (
+                    <Button
+                      onClick={handleSaveReview}
+                      disabled={savingReview}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {savingReview ? 'Saving...' : review ? 'Update Review' : 'Save Review'}
+                    </Button>
+                  )}
+
+                  {/* Existing Review Display */}
+                  {review && (
+                    <div className="text-xs text-muted-foreground">
+                      Last updated: {formatDate(review.created_at)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Payment Info */}
           <div className="space-y-3 border-b pb-4">

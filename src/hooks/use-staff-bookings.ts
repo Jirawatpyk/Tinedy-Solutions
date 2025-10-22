@@ -18,6 +18,10 @@ interface BookingWithPrice {
   }[] | null
 }
 
+interface ReviewData {
+  rating: number
+}
+
 // Helper function to format full address
 export function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
   const parts = [
@@ -145,13 +149,10 @@ export function useStaffBookings() {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
-      // Helper function to build queries
-      const buildQuery = (baseQuery: any) => {
-        if (myTeamIds.length > 0) {
-          return baseQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-        }
-        return baseQuery.eq('staff_id', user.id)
-      }
+      // Build filter condition
+      const filterCondition = myTeamIds.length > 0
+        ? `staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`
+        : null
 
       // Run all queries in parallel
       const [
@@ -163,40 +164,68 @@ export function useStaffBookings() {
         earningsResult
       ] = await Promise.all([
         // Jobs today
-        buildQuery(
-          supabase
+        (async () => {
+          let query = supabase
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .eq('booking_date', todayStr)
-        ).then((r: any) => r.count),
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+          const r = await query
+          return r.count
+        })(),
 
         // Jobs this week
-        buildQuery(
-          supabase
+        (async () => {
+          let query = supabase
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .gte('booking_date', startOfWeekStr)
             .lte('booking_date', todayStr)
-        ).then((r: any) => r.count),
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+          const r = await query
+          return r.count
+        })(),
 
         // Total jobs (30 days)
-        buildQuery(
-          supabase
+        (async () => {
+          let query = supabase
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .gte('booking_date', thirtyDaysAgoStr)
             .lte('booking_date', todayStr)
-        ).then((r: any) => r.count),
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+          const r = await query
+          return r.count
+        })(),
 
         // Completed jobs (30 days)
-        buildQuery(
-          supabase
+        (async () => {
+          let query = supabase
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'completed')
             .gte('booking_date', thirtyDaysAgoStr)
             .lte('booking_date', todayStr)
-        ).then((r: any) => r.count),
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+          const r = await query
+          return r.count
+        })(),
 
         // Reviews
         (async () => {
@@ -212,19 +241,26 @@ export function useStaffBookings() {
         })(),
 
         // Earnings
-        buildQuery(
-          supabase
+        (async () => {
+          let query = supabase
             .from('bookings')
             .select('service_packages (price)')
             .eq('status', 'completed')
             .gte('booking_date', startOfMonthStr)
-        ).then((r: any) => r.data)
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+          const r = await query
+          return r.data
+        })()
       ])
 
       // Calculate stats from results
       const completionRate = totalJobsResult ? ((completedJobsResult || 0) / totalJobsResult) * 100 : 0
       const avgRating = reviewsResult && reviewsResult.length > 0
-        ? reviewsResult.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewsResult.length
+        ? reviewsResult.reduce((sum: number, r: ReviewData) => sum + r.rating, 0) / reviewsResult.length
         : 0
 
       const totalEarnings = (earningsResult as BookingWithPrice[])?.reduce((sum, booking) => {

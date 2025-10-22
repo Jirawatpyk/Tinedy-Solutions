@@ -1,19 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -22,23 +11,48 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Calendar, Plus, Trash2, Clock } from 'lucide-react'
-
-interface StaffAvailability {
-  id: string
-  staff_id: string
-  day_of_week: number
-  start_time: string
-  end_time: string
-  is_available: boolean
-  notes: string | null
-}
+import { Calendar } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 interface Staff {
   id: string
   full_name: string
   email: string
   role: string
+}
+
+interface ServicePackage {
+  name: string
+}
+
+interface Customer {
+  full_name: string
+}
+
+interface Profile {
+  full_name: string
+}
+
+interface BookingRaw {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  service_packages: ServicePackage[] | ServicePackage | null
+  customers: Customer[] | Customer | null
+  profiles: Profile[] | Profile | null
+}
+
+interface Booking {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  service_packages: ServicePackage | null
+  customers: Customer | null
+  profiles: Profile | null
 }
 
 const DAYS_OF_WEEK = [
@@ -85,16 +99,9 @@ const TIME_SLOTS = [
 export function AdminStaffAvailability() {
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('')
-  const [availability, setAvailability] = useState<StaffAvailability[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [weekDates, setWeekDates] = useState<Date[]>([])
-  const [selectedDays, setSelectedDays] = useState<number[]>([])
-  const [formData, setFormData] = useState({
-    start_time: '',
-    end_time: '',
-    notes: '',
-  })
   const { toast } = useToast()
 
   const fetchStaffMembers = useCallback(async () => {
@@ -107,10 +114,8 @@ export function AdminStaffAvailability() {
       if (error) throw error
       setStaffMembers(data || [])
 
-      // Auto-select first staff member
-      if (data && data.length > 0) {
-        setSelectedStaff(data[0].id)
-      }
+      // Auto-select "All Staff"
+      setSelectedStaff('all')
     } catch (error) {
       console.error('Error fetching staff:', error)
       toast({
@@ -123,28 +128,74 @@ export function AdminStaffAvailability() {
     }
   }, [toast])
 
-  const fetchAvailability = useCallback(async () => {
-    if (!selectedStaff) return
+  const fetchBookings = useCallback(async () => {
+    if (weekDates.length === 0) return
 
     try {
-      const { data, error } = await supabase
-        .from('staff_availability')
-        .select('*')
-        .eq('staff_id', selectedStaff)
-        .order('day_of_week')
+      // Get start and end dates of the week
+      const startDate = weekDates[0].toISOString().split('T')[0]
+      const endDate = weekDates[6].toISOString().split('T')[0]
+
+      console.log('Fetching bookings for:', {
+        staff_id: selectedStaff,
+        startDate,
+        endDate,
+      })
+
+      let query = supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_date,
+          start_time,
+          end_time,
+          status,
+          staff_id,
+          team_id,
+          service_packages (name),
+          customers (full_name),
+          profiles (full_name)
+        `)
+        .gte('booking_date', startDate)
+        .lte('booking_date', endDate)
+        .order('booking_date')
         .order('start_time')
 
+      // Filter by staff if not "all"
+      if (selectedStaff && selectedStaff !== 'all') {
+        query = query.eq('staff_id', selectedStaff)
+      }
+
+      const { data, error } = await query
+
+      console.log('Bookings fetched:', data)
+
       if (error) throw error
-      setAvailability(data || [])
+
+      // Transform data to match Booking interface
+      const transformedData = (data || []).map((booking: BookingRaw): Booking => ({
+        ...booking,
+        service_packages: Array.isArray(booking.service_packages)
+          ? booking.service_packages[0] || null
+          : booking.service_packages,
+        customers: Array.isArray(booking.customers)
+          ? booking.customers[0] || null
+          : booking.customers,
+        profiles: Array.isArray(booking.profiles)
+          ? booking.profiles[0] || null
+          : booking.profiles,
+      }))
+
+      setBookings(transformedData)
     } catch (error) {
-      console.error('Error fetching availability:', error)
+      console.error('Error fetching bookings:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load availability',
+        description: 'Failed to load bookings',
         variant: 'destructive',
       })
     }
-  }, [selectedStaff, toast])
+  }, [selectedStaff, weekDates, toast])
 
   useEffect(() => {
     fetchStaffMembers()
@@ -152,112 +203,96 @@ export function AdminStaffAvailability() {
   }, [fetchStaffMembers])
 
   useEffect(() => {
-    if (selectedStaff) {
-      fetchAvailability()
-    }
-  }, [selectedStaff, fetchAvailability])
+    fetchBookings()
+  }, [selectedStaff, fetchBookings])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const getBookingsForDay = (dayIndex: number) => {
+    const date = weekDates[dayIndex]
+    if (!date) return []
 
-    if (!selectedStaff) {
-      toast({
-        title: 'Error',
-        description: 'Please select a staff member',
-        variant: 'destructive',
-      })
-      return
-    }
+    const dateStr = date.toISOString().split('T')[0]
 
-    if (selectedDays.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please select at least one day',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    try {
-      // Create availability records for each selected day
-      const records = selectedDays.map((day) => ({
-        staff_id: selectedStaff,
-        day_of_week: day,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        notes: formData.notes || null,
-        is_available: true,
-      }))
-
-      const { error } = await supabase.from('staff_availability').insert(records)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Availability added for ${selectedDays.length} day${selectedDays.length > 1 ? 's' : ''}`,
-      })
-      setIsDialogOpen(false)
-      resetForm()
-      fetchAvailability()
-    } catch (error) {
-      const dbError = error as { message?: string }
-      toast({
-        title: 'Error',
-        description: dbError.message || 'Failed to add availability',
-        variant: 'destructive',
-      })
-    }
+    return bookings.filter((booking) => booking.booking_date === dateStr)
   }
 
-  const deleteAvailability = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this availability slot?')) return
+  const calculateBookingPosition = (startTime: string, endTime: string) => {
+    // Convert time to minutes from midnight
+    const [startHour, startMin] = startTime.split(':').map(Number)
+    const [endHour, endMin] = endTime.split(':').map(Number)
 
-    try {
-      const { error } = await supabase
-        .from('staff_availability')
-        .delete()
-        .eq('id', id)
+    const startMinutes = startHour * 60 + startMin
+    const endMinutes = endHour * 60 + endMin
 
-      if (error) throw error
+    // Calendar starts at 08:00
+    const calendarStart = 8 * 60 // 480 minutes
+    const calendarEnd = 20 * 60 // 1200 minutes (20:00)
+    const totalMinutes = calendarEnd - calendarStart
 
-      toast({
-        title: 'Success',
-        description: 'Availability deleted successfully',
-      })
-      fetchAvailability()
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete availability',
-        variant: 'destructive',
-      })
-    }
+    const top = ((startMinutes - calendarStart) / totalMinutes) * 100
+    const height = ((endMinutes - startMinutes) / totalMinutes) * 100
+
+    return { top: `${Math.max(0, top)}%`, height: `${height}%` }
   }
 
-  const resetForm = () => {
-    setSelectedDays([])
-    setFormData({
-      start_time: '',
-      end_time: '',
-      notes: '',
+  // Check if two bookings overlap in time
+  const doBookingsOverlap = (booking1: Booking, booking2: Booking) => {
+    const [start1Hour, start1Min] = booking1.start_time.split(':').map(Number)
+    const [end1Hour, end1Min] = booking1.end_time.split(':').map(Number)
+    const [start2Hour, start2Min] = booking2.start_time.split(':').map(Number)
+    const [end2Hour, end2Min] = booking2.end_time.split(':').map(Number)
+
+    const start1 = start1Hour * 60 + start1Min
+    const end1 = end1Hour * 60 + end1Min
+    const start2 = start2Hour * 60 + start2Min
+    const end2 = end2Hour * 60 + end2Min
+
+    return start1 < end2 && start2 < end1
+  }
+
+  // Calculate layout for overlapping bookings
+  const getBookingLayout = (dayBookings: Booking[]) => {
+    const layouts: Array<{
+      booking: Booking
+      column: number
+      totalColumns: number
+    }> = []
+
+    dayBookings.forEach((booking, index) => {
+      // Find all bookings that overlap with this one
+      const overlapping = dayBookings.filter((other, otherIndex) => {
+        if (index === otherIndex) return false
+        return doBookingsOverlap(booking, other)
+      })
+
+      // Calculate column position
+      let column = 0
+      const columnsUsed = new Set<number>()
+
+      overlapping.forEach((other) => {
+        const otherIndex = dayBookings.indexOf(other)
+        if (otherIndex < index) {
+          const otherLayout = layouts[otherIndex]
+          if (otherLayout) {
+            columnsUsed.add(otherLayout.column)
+          }
+        }
+      })
+
+      // Find first available column
+      while (columnsUsed.has(column)) {
+        column++
+      }
+
+      const totalColumns = overlapping.length + 1
+
+      layouts.push({
+        booking,
+        column,
+        totalColumns,
+      })
     })
-  }
 
-  const toggleDay = (day: number) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    )
-  }
-
-  const getAvailabilityForDayAndTime = (day: number, time: string) => {
-    return availability.find(
-      (avail) =>
-        avail.day_of_week === day &&
-        avail.start_time <= time &&
-        avail.end_time > time &&
-        avail.is_available
-    )
+    return layouts
   }
 
   const selectedStaffData = staffMembers.find((s) => s.id === selectedStaff)
@@ -271,7 +306,6 @@ export function AdminStaffAvailability() {
             <Skeleton className="h-9 w-56" />
             <Skeleton className="h-4 w-72" />
           </div>
-          <Skeleton className="h-10 w-48" />
         </div>
 
         {/* Staff selector skeleton */}
@@ -310,27 +344,6 @@ export function AdminStaffAvailability() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Availability slots skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Skeleton className="h-8 w-8" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     )
   }
@@ -344,127 +357,9 @@ export function AdminStaffAvailability() {
             Staff Availability
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage staff work schedules and availability
+            View staff work schedules and bookings
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
-              disabled={!selectedStaff}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Availability
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Availability Slot</DialogTitle>
-              <DialogDescription>
-                Set available hours for {selectedStaffData?.full_name}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Days *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {DAYS_OF_WEEK.map((day, index) => (
-                    <Button
-                      key={index}
-                      type="button"
-                      variant={selectedDays.includes(index) ? 'default' : 'outline'}
-                      className={`w-full ${
-                        selectedDays.includes(index)
-                          ? 'bg-tinedy-blue hover:bg-tinedy-blue/90'
-                          : ''
-                      }`}
-                      onClick={() => toggleDay(index)}
-                    >
-                      {day}
-                    </Button>
-                  ))}
-                </div>
-                {selectedDays.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {selectedDays.length} day{selectedDays.length > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">Start Time *</Label>
-                  <Select
-                    value={formData.start_time}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, start_time: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Start" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_SLOTS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="end_time">End Time *</Label>
-                  <Select
-                    value={formData.end_time}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, end_time: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="End" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_SLOTS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="e.g., Lunch break, Preferred hours..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-tinedy-blue">
-                  Add Availability
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Staff selector */}
@@ -479,6 +374,7 @@ export function AdminStaffAvailability() {
                 <SelectValue placeholder="Choose staff member" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
                 {staffMembers.map((staff) => (
                   <SelectItem key={staff.id} value={staff.id}>
                     {staff.full_name} - {staff.role}
@@ -495,122 +391,199 @@ export function AdminStaffAvailability() {
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Weekly Availability Schedule
-            {selectedStaffData && (
+            Weekly Booking Schedule
+            {selectedStaff === 'all' ? (
+              <span className="text-sm font-normal text-muted-foreground">
+                - All Staff
+              </span>
+            ) : selectedStaffData ? (
               <span className="text-sm font-normal text-muted-foreground">
                 - {selectedStaffData.full_name}
               </span>
-            )}
+            ) : null}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2 font-medium text-sm text-muted-foreground sticky left-0 bg-background">
-                    Time
-                  </th>
-                  {DAYS_OF_WEEK.map((day, index) => {
-                    const date = weekDates[index]
-                    const dateStr = date
-                      ? date.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      : ''
-                    return (
-                      <th
-                        key={index}
-                        className="text-center p-2 font-medium text-sm text-muted-foreground min-w-[100px]"
-                      >
-                        <div>{day}</div>
-                        <div className="text-xs text-tinedy-blue font-semibold">
-                          {dateStr}
-                        </div>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {TIME_SLOTS.map((time) => (
-                  <tr key={time} className="border-b hover:bg-accent/20">
-                    <td className="p-2 text-sm font-medium sticky left-0 bg-background">
+            <div className="flex gap-2">
+              {/* Time column */}
+              <div className="flex flex-col w-20 flex-shrink-0">
+                <div className="h-12 border-b font-medium text-sm text-muted-foreground flex items-center">
+                  Time
+                </div>
+                <div className="relative" style={{ height: '720px' }}>
+                  {TIME_SLOTS.map((time, index) => (
+                    <div
+                      key={time}
+                      className="absolute w-full text-sm font-medium text-muted-foreground"
+                      style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
+                    >
                       {time}
-                    </td>
-                    {DAYS_OF_WEEK.map((_, dayIndex) => {
-                      const avail = getAvailabilityForDayAndTime(dayIndex, time)
-                      return (
-                        <td
-                          key={dayIndex}
-                          className={`p-1 text-center ${
-                            avail ? 'bg-tinedy-green/20' : 'bg-gray-50'
-                          }`}
-                        >
-                          {avail && (
-                            <div className="text-xs">
-                              <Badge
-                                variant="outline"
-                                className="bg-tinedy-green/30 text-tinedy-dark border-tinedy-green"
-                              >
-                                Available
-                              </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Day columns */}
+              {DAYS_OF_WEEK.map((day, dayIndex) => {
+                const date = weekDates[dayIndex]
+                const dateStr = date
+                  ? date.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  : ''
+                const dayBookings = getBookingsForDay(dayIndex)
+
+                return (
+                  <div key={dayIndex} className="flex-1 min-w-[120px]">
+                    {/* Day header */}
+                    <div className="h-12 border-b text-center font-medium text-sm text-muted-foreground flex flex-col items-center justify-center">
+                      <div>{day}</div>
+                      <div className="text-xs text-tinedy-blue font-semibold">
+                        {dateStr}
+                      </div>
+                    </div>
+
+                    {/* Timeline area */}
+                    <div className="relative bg-gray-50/50 border-r" style={{ height: '720px' }}>
+                      {/* Hour lines */}
+                      {TIME_SLOTS.map((_, index) => (
+                        <div
+                          key={index}
+                          className="absolute w-full border-t border-gray-200"
+                          style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
+                        />
+                      ))}
+
+                      {/* Booking bars */}
+                      {getBookingLayout(dayBookings).map((layout) => {
+                        const { booking, column, totalColumns } = layout
+                        const position = calculateBookingPosition(
+                          booking.start_time,
+                          booking.end_time
+                        )
+
+                        const statusColors = {
+                          pending: 'bg-yellow-400 hover:bg-yellow-500',
+                          confirmed: 'bg-tinedy-blue hover:bg-tinedy-blue/90',
+                          in_progress: 'bg-purple-500 hover:bg-purple-600',
+                          completed: 'bg-green-500 hover:bg-green-600',
+                          cancelled: 'bg-red-500 hover:bg-red-600',
+                        }
+
+                        const bgColor = statusColors[booking.status as keyof typeof statusColors] || 'bg-tinedy-blue'
+
+                        // Calculate width and left position for overlapping bookings
+                        const gap = 2 // Gap between bars in percentage
+                        const widthPercent = (100 / totalColumns) - gap
+                        const leftPercent = (column / totalColumns) * 100 + (gap / 2)
+
+                        return (
+                          <div
+                            key={booking.id}
+                            className={`absolute rounded-md ${bgColor} text-white shadow-sm transition-all cursor-pointer overflow-hidden`}
+                            style={{
+                              top: position.top,
+                              height: position.height,
+                              left: `${leftPercent}%`,
+                              width: `${widthPercent}%`,
+                            }}
+                          >
+                            <div className="px-2 py-1 h-full flex items-center justify-center">
+                              <div className="font-semibold text-xs truncate writing-mode-vertical transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
+                                {booking.profiles?.full_name || 'Staff'}
+                              </div>
                             </div>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="mt-4 flex flex-wrap gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-yellow-400 rounded"></div>
+              <span>Pending</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-tinedy-blue rounded"></div>
+              <span>Confirmed</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-purple-500 rounded"></div>
+              <span>In Progress</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <span>Completed</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-500 rounded"></div>
+              <span>Cancelled</span>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Availability Slots List */}
+      {/* Bookings Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Availability Slots</CardTitle>
+          <CardTitle className="font-display">This Week's Bookings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {availability.length === 0 ? (
+            {bookings.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No availability slots set. Click "Add Availability" to get started.
+                No bookings scheduled for this week.
               </p>
             ) : (
-              availability.map((avail) => (
-                <div
-                  key={avail.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <Badge className="bg-tinedy-blue">
-                      {DAYS_OF_WEEK[avail.day_of_week]}
-                    </Badge>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {avail.start_time} - {avail.end_time}
-                      </span>
-                    </div>
-                    {avail.notes && (
-                      <span className="text-sm text-muted-foreground">
-                        {avail.notes}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteAvailability(avail.id)}
+              bookings.map((booking) => {
+                const date = new Date(booking.booking_date)
+                const dayName = DAYS_OF_WEEK[date.getDay()]
+                const dateStr = date.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })
+
+                return (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))
+                    <div className="flex items-center gap-4">
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          {dayName}, {dateStr}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {booking.start_time} - {booking.end_time}
+                        </div>
+                      </div>
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          {booking.service_packages?.name}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {booking.customers?.full_name}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        booking.status === 'confirmed' ? 'default' : 'secondary'
+                      }
+                    >
+                      {booking.status}
+                    </Badge>
+                  </div>
+                )
+              })
             )}
           </div>
         </CardContent>

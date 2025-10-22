@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { Edit, Trash2, UserPlus, Users, Crown } from 'lucide-react'
+import { Edit, Trash2, UserPlus, Users, Crown, Star } from 'lucide-react'
 
 interface TeamMember {
   id: string
@@ -25,6 +25,7 @@ interface Team {
   team_lead?: TeamMember | null
   member_count?: number
   members?: TeamMember[]
+  average_rating?: number
 }
 
 interface TeamCardProps {
@@ -57,10 +58,20 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
               <CardTitle className="text-lg font-display">
                 {team.name}
               </CardTitle>
-              <Badge variant="secondary" className="mt-1">
-                <Users className="h-3 w-3 mr-1" />
-                {team.member_count || 0} members
-              </Badge>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary">
+                  <Users className="h-3 w-3 mr-1" />
+                  {team.member_count || 0} members
+                </Badge>
+                {team.average_rating !== undefined && (
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Star className="h-3 w-3 fill-yellow-400" />
+                    <span className="text-xs font-semibold text-gray-700">
+                      {team.average_rating.toFixed(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2">

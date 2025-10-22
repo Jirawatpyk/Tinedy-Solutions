@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Sparkles,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import {
@@ -77,6 +78,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 
 interface Customer {
   id: string
@@ -156,6 +158,7 @@ export function AdminCustomerDetail() {
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
 
   // Form states
   const [noteText, setNoteText] = useState('')
@@ -182,10 +185,13 @@ export function AdminCustomerDetail() {
     start_time: '',
     service_package_id: '',
     staff_id: '',
+    team_id: '',
     notes: '',
   })
+  const [assignmentType, setAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
   const [servicePackages, setServicePackages] = useState<Array<{ id: string; name: string; price: number; service_type: string; duration_minutes: number }>>([])
   const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string }>>([])
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
   const [submitting, setSubmitting] = useState(false)
 
   const fetchCustomerDetails = useCallback(async () => {
@@ -297,6 +303,15 @@ export function AdminCustomerDetail() {
 
       if (staffError) throw staffError
       setStaffMembers(staff || [])
+
+      // Fetch teams
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name')
+        .order('name')
+
+      if (teamsError) throw teamsError
+      setTeams(teamsData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
       toast({
@@ -330,7 +345,7 @@ export function AdminCustomerDetail() {
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!id) return
+    if (!id || !customer) return
 
     try {
       setSubmitting(true)
@@ -350,8 +365,14 @@ export function AdminCustomerDetail() {
         start_time: bookingForm.start_time,
         end_time: endTime,
         service_package_id: bookingForm.service_package_id,
-        staff_id: bookingForm.staff_id || null,
+        staff_id: assignmentType === 'staff' ? (bookingForm.staff_id || null) : null,
+        team_id: assignmentType === 'team' ? (bookingForm.team_id || null) : null,
+        address: customer.address || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        zip_code: customer.zip_code || '',
         notes: bookingForm.notes || null,
+        total_price: selectedPackage.price,
         status: 'pending',
       })
 
@@ -368,8 +389,10 @@ export function AdminCustomerDetail() {
         start_time: '',
         service_package_id: '',
         staff_id: '',
+        team_id: '',
         notes: '',
       })
+      setAssignmentType('none')
       fetchCustomerDetails() // Refresh data
     } catch (error) {
       console.error('Error creating booking:', error)
@@ -1141,26 +1164,105 @@ export function AdminCustomerDetail() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Assign to */}
             <div className="space-y-2">
-              <Label htmlFor="staff_id">Staff (Optional)</Label>
+              <Label htmlFor="assignment_type">Assign to</Label>
               <Select
-                value={bookingForm.staff_id}
-                onValueChange={(value) =>
-                  setBookingForm({ ...bookingForm, staff_id: value })
-                }
+                value={assignmentType}
+                onValueChange={(value: 'none' | 'staff' | 'team') => {
+                  setAssignmentType(value)
+                  setBookingForm({ ...bookingForm, staff_id: '', team_id: '' })
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
+                  <SelectValue placeholder="Select assignment type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.full_name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="staff">Individual Staff</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Staff Selector */}
+            {assignmentType === 'staff' && (
+              <div className="space-y-2">
+                <Label htmlFor="staff_id">Select Staff *</Label>
+                <Select
+                  value={bookingForm.staff_id}
+                  onValueChange={(value) =>
+                    setBookingForm({ ...bookingForm, staff_id: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select staff..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffMembers.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        {staff.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Team Selector */}
+            {assignmentType === 'team' && (
+              <div className="space-y-2">
+                <Label htmlFor="team_id">Select Team *</Label>
+                <Select
+                  value={bookingForm.team_id}
+                  onValueChange={(value) =>
+                    setBookingForm({ ...bookingForm, team_id: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Check Availability Button */}
+            {assignmentType !== 'none' && (
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
+                  onClick={() => {
+                    setIsBookingDialogOpen(false)
+                    setIsAvailabilityModalOpen(true)
+                  }}
+                  disabled={
+                    !bookingForm.booking_date ||
+                    !bookingForm.start_time ||
+                    !bookingForm.service_package_id
+                  }
+                >
+                  <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
+                  Check Staff Availability
+                </Button>
+                {(!bookingForm.booking_date || !bookingForm.start_time || !bookingForm.service_package_id) && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Please select date, time, and service first
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="booking_notes">Notes (Optional)</Label>
               <Textarea
@@ -1395,6 +1497,50 @@ export function AdminCustomerDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Staff Availability Modal */}
+      {bookingForm.service_package_id && bookingForm.booking_date && bookingForm.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isAvailabilityModalOpen}
+          onClose={() => {
+            setIsAvailabilityModalOpen(false)
+            setIsBookingDialogOpen(true)
+          }}
+          assignmentType={assignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            setBookingForm({ ...bookingForm, staff_id: staffId })
+            setIsAvailabilityModalOpen(false)
+            setIsBookingDialogOpen(true)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            setBookingForm({ ...bookingForm, team_id: teamId })
+            setIsAvailabilityModalOpen(false)
+            setIsBookingDialogOpen(true)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={bookingForm.booking_date}
+          startTime={bookingForm.start_time}
+          endTime={
+            bookingForm.service_package_id
+              ? calculateEndTime(
+                  bookingForm.start_time,
+                  servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.duration_minutes || 0
+                )
+              : ''
+          }
+          servicePackageId={bookingForm.service_package_id}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.name
+          }
+        />
+      )}
     </div>
   )
 }

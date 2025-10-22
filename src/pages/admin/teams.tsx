@@ -45,6 +45,7 @@ interface Team {
   team_lead?: TeamMember | null
   member_count?: number
   members?: TeamMember[]
+  average_rating?: number
 }
 
 export function AdminTeams() {
@@ -72,8 +73,6 @@ export function AdminTeams() {
 
   const loadTeams = useCallback(async () => {
     try {
-      setLoading(true)
-
       // Fetch teams with member count and team lead
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
@@ -122,7 +121,7 @@ export function AdminTeams() {
         }> | null
       }
 
-      const formattedTeams = (teamsData || []).map((team: TeamData) => {
+      const formattedTeams: Team[] = (teamsData || []).map((team: TeamData) => {
         // Handle team_lead as array or single object
         const teamLead = Array.isArray(team.team_lead) ? team.team_lead[0] : team.team_lead
 
@@ -143,8 +142,45 @@ export function AdminTeams() {
               membership_id: tm.id,
             }
           }).filter(Boolean) || [],
+          average_rating: undefined,
         }
       })
+
+      // Fetch ratings for all teams
+      const teamIds = formattedTeams.map(t => t.id)
+      if (teamIds.length > 0) {
+        const { data: ratingsData } = await supabase
+          .from('reviews')
+          .select('rating, bookings!inner(team_id)')
+          .in('bookings.team_id', teamIds)
+
+        // Calculate average rating for each team
+        const teamRatings: Record<string, number[]> = {}
+
+        interface ReviewData {
+          rating: number
+          bookings: { team_id: string } | { team_id: string }[]
+        }
+
+        ratingsData?.forEach((review: ReviewData) => {
+          const bookings = Array.isArray(review.bookings) ? review.bookings[0] : review.bookings
+          if (bookings && bookings.team_id) {
+            const teamId = bookings.team_id
+            if (!teamRatings[teamId]) {
+              teamRatings[teamId] = []
+            }
+            teamRatings[teamId].push(review.rating)
+          }
+        })
+
+        // Add average rating to teams
+        formattedTeams.forEach(team => {
+          const ratings = teamRatings[team.id]
+          if (ratings && ratings.length > 0) {
+            team.average_rating = ratings.reduce((a, b) => a + b, 0) / ratings.length
+          }
+        })
+      }
 
       setTeams(formattedTeams)
     } catch (error) {
@@ -440,14 +476,71 @@ export function AdminTeams() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-32" />
+      <div className="space-y-6">
+        {/* Page header skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-10 w-40" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-64" />
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-3 w-28" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Search skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+
+        {/* Team cards skeleton */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <div className="space-y-2 pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -455,11 +548,11 @@ export function AdminTeams() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Teams</h1>
+          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Teams Management</h1>
           <p className="text-muted-foreground mt-1">Manage teams and team members</p>
         </div>
         <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">

@@ -22,12 +22,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Trash2, Users, User, Info, X, Calendar, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Search, Trash2, Users, User, Info, X, Calendar, Download, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getErrorMessage } from '@/lib/error-utils'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 
 // Helper function to format full address
 function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
@@ -60,7 +61,7 @@ interface Booking {
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
-  customers: { full_name: string; email: string } | null
+  customers: { id: string; full_name: string; email: string } | null
   service_packages: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
   teams: { name: string } | null
@@ -173,6 +174,8 @@ export function AdminBookings() {
     notes: '',
     total_price: 0,
   })
+  // Staff Availability Modal
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
   const { toast } = useToast()
 
   const fetchBookings = useCallback(async () => {
@@ -181,7 +184,7 @@ export function AdminBookings() {
         .from('bookings')
         .select(`
           *,
-          customers (full_name, email),
+          customers (id, full_name, email),
           service_packages (name, service_type),
           profiles (full_name),
           teams (name)
@@ -424,7 +427,7 @@ export function AdminBookings() {
         .from('bookings')
         .select(`
           *,
-          customers (full_name, email),
+          customers (id, full_name, email),
           service_packages (name, service_type),
           profiles (full_name),
           teams (name)
@@ -1282,6 +1285,64 @@ export function AdminBookings() {
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="booking_date">Booking Date *</Label>
+                  <Input
+                    id="booking_date"
+                    type="date"
+                    value={formData.booking_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, booking_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="start_time">Start Time *</Label>
+                  <Input
+                    id="start_time"
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) =>
+                      setFormData({ ...formData, start_time: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="end_time_display">End Time (Auto-calculated)</Label>
+                  <Input
+                    id="end_time_display"
+                    type="text"
+                    value={
+                      formData.start_time && formData.service_package_id
+                        ? calculateEndTime(
+                            formData.start_time,
+                            servicePackages.find(pkg => pkg.id === formData.service_package_id)?.duration_minutes || 0
+                          )
+                        : '--:--'
+                    }
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="total_price">Total Price *</Label>
+                  <Input
+                    id="total_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.total_price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_price: parseFloat(e.target.value) })
+                    }
+                    required
+                  />
+                </div>
+
                 {/* Assignment Type Selector */}
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Assign to</Label>
@@ -1353,63 +1414,33 @@ export function AdminBookings() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="booking_date">Booking Date *</Label>
-                  <Input
-                    id="booking_date"
-                    type="date"
-                    value={formData.booking_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, booking_date: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">Start Time *</Label>
-                  <Input
-                    id="start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, start_time: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="end_time_display">End Time (Auto-calculated)</Label>
-                  <Input
-                    id="end_time_display"
-                    type="text"
-                    value={
-                      formData.start_time && formData.service_package_id
-                        ? calculateEndTime(
-                            formData.start_time,
-                            servicePackages.find(pkg => pkg.id === formData.service_package_id)?.duration_minutes || 0
-                          )
-                        : '--:--'
-                    }
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="total_price">Total Price *</Label>
-                  <Input
-                    id="total_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.total_price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, total_price: parseFloat(e.target.value) })
-                    }
-                    required
-                  />
-                </div>
+                {/* Check Availability Button */}
+                {assignmentType !== 'none' && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
+                      onClick={() => {
+                        setIsDialogOpen(false)
+                        setIsAvailabilityModalOpen(true)
+                      }}
+                      disabled={
+                        !formData.booking_date ||
+                        !formData.start_time ||
+                        !formData.service_package_id
+                      }
+                    >
+                      <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
+                      Check Staff Availability
+                    </Button>
+                    {(!formData.booking_date || !formData.start_time || !formData.service_package_id) && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Please select date, time, and service package first
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="address">Address *</Label>
@@ -1487,6 +1518,50 @@ export function AdminBookings() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Staff Availability Modal */}
+        {formData.service_package_id && formData.booking_date && formData.start_time && (
+          <StaffAvailabilityModal
+            isOpen={isAvailabilityModalOpen}
+            onClose={() => {
+              setIsAvailabilityModalOpen(false)
+              setIsDialogOpen(true)
+            }}
+            assignmentType={assignmentType === 'staff' ? 'individual' : 'team'}
+            onSelectStaff={(staffId) => {
+              setFormData({ ...formData, staff_id: staffId })
+              setIsAvailabilityModalOpen(false)
+              setIsDialogOpen(true)
+              toast({
+                title: 'Staff Selected',
+                description: 'Staff member has been assigned to the booking',
+              })
+            }}
+            onSelectTeam={(teamId) => {
+              setFormData({ ...formData, team_id: teamId })
+              setIsAvailabilityModalOpen(false)
+              setIsDialogOpen(true)
+              toast({
+                title: 'Team Selected',
+                description: 'Team has been assigned to the booking',
+              })
+            }}
+            date={formData.booking_date}
+            startTime={formData.start_time}
+            endTime={
+              formData.service_package_id
+                ? calculateEndTime(
+                    formData.start_time,
+                    servicePackages.find(pkg => pkg.id === formData.service_package_id)?.duration_minutes || 0
+                  )
+                : formData.end_time
+            }
+            servicePackageId={formData.service_package_id}
+            servicePackageName={
+              servicePackages.find(pkg => pkg.id === formData.service_package_id)?.name
+            }
+          />
+        )}
       </div>
 
       {/* Filters */}
