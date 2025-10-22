@@ -341,7 +341,7 @@ export function AdminStaff() {
               Add Staff Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>
                 {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
