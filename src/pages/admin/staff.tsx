@@ -335,10 +335,7 @@ export function AdminStaff() {
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={(e) => {
-                e.preventDefault()
-                resetForm()
-              }}
+              onClick={resetForm}
               type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
