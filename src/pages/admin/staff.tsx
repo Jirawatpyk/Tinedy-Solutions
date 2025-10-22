@@ -320,7 +320,7 @@ export function AdminStaff() {
   }
 
   return (
-    <div className="space-y-6" style={{ scrollBehavior: 'auto' }}>
+    <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -331,32 +331,17 @@ export function AdminStaff() {
             Manage your team members
           </p>
         </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              // Prevent scroll jump when closing dialog
-              const scrollY = window.scrollY
-              setIsDialogOpen(false)
-              requestAnimationFrame(() => {
-                window.scrollTo(0, scrollY)
-              })
-            } else {
-              setIsDialogOpen(true)
-            }
-          }}
-        >
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={false}>
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={resetForm}
-              type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Staff Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
@@ -583,7 +568,6 @@ export function AdminStaff() {
               <Card
                 key={member.id}
                 className="hover:shadow-md transition-shadow"
-                onClick={(e) => e.stopPropagation()}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -607,22 +591,14 @@ export function AdminStaff() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          openEditDialog(member)
-                        }}
-                        type="button"
+                        onClick={() => openEditDialog(member)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          deleteStaff(member.id, member.full_name)
-                        }}
-                        type="button"
+                        onClick={() => deleteStaff(member.id, member.full_name)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -683,11 +659,7 @@ export function AdminStaff() {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setDisplayCount(prev => prev + ITEMS_PER_LOAD)
-                  }}
-                  type="button"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
                   className="gap-2"
                 >
                   <Plus className="h-4 w-4" />
