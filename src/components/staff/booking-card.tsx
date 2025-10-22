@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, MessageCircle, Play, Users, Loader2 } from 'lucide-react'
+import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, Play, Users, Loader2 } from 'lucide-react'
 import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
@@ -67,7 +67,10 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
   }
 
   return (
-    <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out animate-in fade-in-50 slide-in-from-bottom-4">
+    <Card
+      className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out animate-in fade-in-50 slide-in-from-bottom-4 cursor-pointer"
+      onClick={() => onViewDetails(booking)}
+    >
       <CardContent className="p-4 sm:p-6">
         {/* Header - Status and Date/Time */}
         <div className="flex items-start justify-between mb-4">
@@ -153,7 +156,10 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
         {/* Quick Actions */}
         <div className="flex gap-2 mb-3">
           <Button
-            onClick={() => window.open(`tel:${booking.customers?.phone}`)}
+            onClick={(e) => {
+              e.stopPropagation()
+              window.open(`tel:${booking.customers?.phone}`)
+            }}
             variant="outline"
             size="sm"
             className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
@@ -163,7 +169,8 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             โทร
           </Button>
           <Button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation()
               if (booking.address) {
                 const fullAddress = formatFullAddress(booking)
                 window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank')
@@ -177,91 +184,75 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             <MapPin className="h-3 w-3 mr-1" />
             แผนที่
           </Button>
-          <Button
-            onClick={() => {
-              // TODO: Integrate with chat system
-              alert('ฟีเจอร์แชทกำลังพัฒนา')
-            }}
-            variant="outline"
-            size="sm"
-            className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
-          >
-            <MessageCircle className="h-3 w-3 mr-1" />
-            แชท
-          </Button>
         </div>
 
         {/* Main Actions */}
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            onClick={() => onViewDetails(booking)}
-            variant="outline"
-            className="flex-1 min-w-[120px] transition-all duration-200 hover:scale-105 active:scale-95"
-            size="sm"
-          >
-            ดูรายละเอียด
-          </Button>
-          {canStartProgress && onStartProgress && (
-            <Button
-              type="button"
-              onClick={async (e) => {
-                e.preventDefault()
-                setIsStarting(true)
-                try {
-                  await onStartProgress(booking.id)
-                } finally {
-                  setIsStarting(false)
-                }
-              }}
-              disabled={isStarting}
-              variant="default"
-              className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
-              size="sm"
-            >
-              {isStarting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  กำลังดำเนินการ...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
-                  เริ่มดำเนินการ
-                </>
-              )}
-            </Button>
-          )}
-          {canMarkCompleted && onMarkCompleted && (
-            <Button
-              type="button"
-              onClick={async (e) => {
-                e.preventDefault()
-                setIsCompleting(true)
-                try {
-                  await onMarkCompleted(booking.id)
-                } finally {
-                  setIsCompleting(false)
-                }
-              }}
-              disabled={isCompleting}
-              variant="default"
-              className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
-              size="sm"
-            >
-              {isCompleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  กำลังบันทึก...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
-                  เสร็จสิ้น
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        {(canStartProgress || canMarkCompleted) && (
+          <div className="flex gap-2 flex-wrap">
+            {canStartProgress && onStartProgress && (
+              <Button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  setIsStarting(true)
+                  try {
+                    await onStartProgress(booking.id)
+                  } finally {
+                    setIsStarting(false)
+                  }
+                }}
+                disabled={isStarting}
+                variant="default"
+                className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
+                size="sm"
+              >
+                {isStarting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    กำลังดำเนินการ...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
+                    เริ่มดำเนินการ
+                  </>
+                )}
+              </Button>
+            )}
+            {canMarkCompleted && onMarkCompleted && (
+              <Button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  setIsCompleting(true)
+                  try {
+                    await onMarkCompleted(booking.id)
+                  } finally {
+                    setIsCompleting(false)
+                  }
+                }}
+                disabled={isCompleting}
+                variant="default"
+                className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
+                size="sm"
+              >
+                {isCompleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    กำลังบันทึก...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
+                    เสร็จสิ้น
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

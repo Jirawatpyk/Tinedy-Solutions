@@ -178,9 +178,9 @@ export function BookingDetailModal({
                 <Label className="text-muted-foreground">Service Package</Label>
                 <p className="font-medium">{booking.service_packages?.name || 'N/A'}</p>
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label className="text-muted-foreground">Service Type</Label>
-                <Badge variant="outline">{booking.service_packages?.service_type || 'N/A'}</Badge>
+                <Badge variant="outline" className="w-fit">{booking.service_packages?.service_type || 'N/A'}</Badge>
               </div>
               <div>
                 <Label className="text-muted-foreground">Price</Label>

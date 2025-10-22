@@ -331,7 +331,7 @@ export function AdminStaff() {
             Manage your team members
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={false}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"

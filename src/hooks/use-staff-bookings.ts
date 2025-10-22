@@ -138,109 +138,96 @@ export function useStaffBookings() {
       startOfWeek.setDate(diff)
       const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
 
-      // Jobs today - include team bookings if user belongs to any team
-      let jobsTodayQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('booking_date', todayStr)
-
-      if (myTeamIds.length > 0) {
-        jobsTodayQuery = jobsTodayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        jobsTodayQuery = jobsTodayQuery.eq('staff_id', user.id)
-      }
-
-      const { count: jobsTodayCount } = await jobsTodayQuery
-
-      // Jobs this week - include team bookings if user belongs to any team
-      let jobsWeekQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .gte('booking_date', startOfWeekStr)
-        .lte('booking_date', todayStr)
-
-      if (myTeamIds.length > 0) {
-        jobsWeekQuery = jobsWeekQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        jobsWeekQuery = jobsWeekQuery.eq('staff_id', user.id)
-      }
-
-      const { count: jobsWeekCount } = await jobsWeekQuery
-
-      // Completion rate (last 30 days) - include team bookings if user belongs to any team
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
 
-      let totalJobsQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .gte('booking_date', thirtyDaysAgoStr)
-        .lte('booking_date', todayStr)
-
-      if (myTeamIds.length > 0) {
-        totalJobsQuery = totalJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        totalJobsQuery = totalJobsQuery.eq('staff_id', user.id)
-      }
-
-      const { count: totalJobs } = await totalJobsQuery
-
-      let completedJobsQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('booking_date', thirtyDaysAgoStr)
-        .lte('booking_date', todayStr)
-
-      if (myTeamIds.length > 0) {
-        completedJobsQuery = completedJobsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        completedJobsQuery = completedJobsQuery.eq('staff_id', user.id)
-      }
-
-      const { count: completedJobs } = await completedJobsQuery
-
-      const completionRate = totalJobs ? ((completedJobs || 0) / totalJobs) * 100 : 0
-
-      // Average rating (from reviews) - only for personal bookings
-      let avgRating = 0
-      try {
-        const { data: reviews, error: reviewError } = await supabase
-          .from('reviews')
-          .select('rating')
-          .eq('staff_id', user.id)
-
-        // Ignore error if reviews table doesn't exist
-        if (!reviewError && reviews && reviews.length > 0) {
-          avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-        }
-      } catch (err) {
-        // Reviews table might not exist, ignore error
-        console.log('Reviews table not found, skipping rating calculation')
-      }
-
-      // Total earnings this month - include team bookings if user belongs to any team
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
-      let earningsQuery = supabase
-        .from('bookings')
-        .select(`
-          service_packages (price)
-        `)
-        .eq('status', 'completed')
-        .gte('booking_date', startOfMonthStr)
-
-      if (myTeamIds.length > 0) {
-        earningsQuery = earningsQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        earningsQuery = earningsQuery.eq('staff_id', user.id)
+      // Helper function to build queries
+      const buildQuery = (baseQuery: any) => {
+        if (myTeamIds.length > 0) {
+          return baseQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
+        }
+        return baseQuery.eq('staff_id', user.id)
       }
 
-      const { data: earningsData } = await earningsQuery
+      // Run all queries in parallel
+      const [
+        jobsTodayResult,
+        jobsWeekResult,
+        totalJobsResult,
+        completedJobsResult,
+        reviewsResult,
+        earningsResult
+      ] = await Promise.all([
+        // Jobs today
+        buildQuery(
+          supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .eq('booking_date', todayStr)
+        ).then((r: any) => r.count),
 
-      const totalEarnings = (earningsData as BookingWithPrice[])?.reduce((sum, booking) => {
+        // Jobs this week
+        buildQuery(
+          supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .gte('booking_date', startOfWeekStr)
+            .lte('booking_date', todayStr)
+        ).then((r: any) => r.count),
+
+        // Total jobs (30 days)
+        buildQuery(
+          supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .gte('booking_date', thirtyDaysAgoStr)
+            .lte('booking_date', todayStr)
+        ).then((r: any) => r.count),
+
+        // Completed jobs (30 days)
+        buildQuery(
+          supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'completed')
+            .gte('booking_date', thirtyDaysAgoStr)
+            .lte('booking_date', todayStr)
+        ).then((r: any) => r.count),
+
+        // Reviews
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('reviews')
+              .select('rating')
+              .eq('staff_id', user.id)
+            return data
+          } catch {
+            return null
+          }
+        })(),
+
+        // Earnings
+        buildQuery(
+          supabase
+            .from('bookings')
+            .select('service_packages (price)')
+            .eq('status', 'completed')
+            .gte('booking_date', startOfMonthStr)
+        ).then((r: any) => r.data)
+      ])
+
+      // Calculate stats from results
+      const completionRate = totalJobsResult ? ((completedJobsResult || 0) / totalJobsResult) * 100 : 0
+      const avgRating = reviewsResult && reviewsResult.length > 0
+        ? reviewsResult.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewsResult.length
+        : 0
+
+      const totalEarnings = (earningsResult as BookingWithPrice[])?.reduce((sum, booking) => {
         const price = Array.isArray(booking.service_packages)
           ? booking.service_packages[0]?.price || 0
           : booking.service_packages?.price || 0
@@ -248,8 +235,8 @@ export function useStaffBookings() {
       }, 0) || 0
 
       setStats({
-        jobsToday: jobsTodayCount || 0,
-        jobsThisWeek: jobsWeekCount || 0,
+        jobsToday: jobsTodayResult || 0,
+        jobsThisWeek: jobsWeekResult || 0,
         completionRate: Math.round(completionRate),
         averageRating: Math.round(avgRating * 10) / 10,
         totalEarnings,
@@ -365,8 +352,8 @@ export function useStaffBookings() {
       setUpcomingBookings((upcomingData as StaffBooking[]) || [])
       setCompletedBookings((completedData as StaffBooking[]) || [])
 
-      // Calculate stats
-      await calculateStats()
+      // Calculate stats in background (don't wait for it)
+      calculateStats()
     } catch (err) {
       console.error('Error loading bookings:', err)
       setError(getErrorMessage(err))

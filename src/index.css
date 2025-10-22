@@ -59,12 +59,6 @@
     @apply bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
   }
-
-  /* Prevent Dialog from locking body scroll and causing scroll jump */
-  body[data-scroll-locked] {
-    margin-right: 0 !important;
-    overflow: visible !important;
-  }
 }
 
 @layer utilities {

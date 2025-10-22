@@ -51,17 +51,6 @@ function App() {
             <Route path="reports" element={<AdminReports />} />
             <Route path="teams" element={<AdminTeams />} />
             <Route
-              path="audit-log"
-              element={
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-display font-bold text-tinedy-dark">
-                    Audit Log
-                  </h2>
-                  <p className="text-muted-foreground mt-2">Coming soon...</p>
-                </div>
-              }
-            />
-            <Route
               path="settings"
               element={
                 <div className="text-center py-12">

@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Package,
   BarChart3,
-  FileText,
   Settings,
   LogOut,
   ClipboardList,
@@ -30,7 +29,6 @@ const adminNavItems = [
   { name: 'Chat', href: '/admin/chat', icon: MessageSquare },
   { name: 'Service Packages', href: '/admin/packages', icon: Package },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 

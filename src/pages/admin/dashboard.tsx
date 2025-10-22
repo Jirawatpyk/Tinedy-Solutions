@@ -596,9 +596,13 @@ export function AdminDashboard() {
                       <span>{booking.customers?.phone || 'No phone'}</span>
                     </div>
                     {booking.address && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span className="line-clamp-1">{booking.address}</span>
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">
+                          {[booking.address, booking.city, booking.state, booking.zip_code]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </span>
                       </div>
                     )}
                     {booking.profiles && (
