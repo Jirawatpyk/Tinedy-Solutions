@@ -79,6 +79,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 
 interface Customer {
   id: string
@@ -119,16 +120,34 @@ interface Booking {
   id: string
   booking_date: string
   start_time: string
+  end_time: string
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
   notes: string | null
+  total_price: number
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  staff_id: string | null
+  team_id: string | null
+  service_package_id: string
+  payment_status?: string
+  payment_method?: string
+  amount_paid?: number
+  payment_date?: string
+  payment_notes?: string
   service: {
     name: string
     service_type: string
     price: number
-  }
+  } | null
   staff: {
     full_name: string
-  }
+  } | null
+  service_packages: { name: string; service_type: string } | null
+  customers: { full_name: string; email: string; id: string } | null
+  profiles: { full_name: string } | null
+  teams: { name: string } | null
 }
 
 interface ChartDataPoint {
@@ -159,6 +178,8 @@ export function AdminCustomerDetail() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
+  const [isBookingDetailModalOpen, setIsBookingDetailModalOpen] = useState(false)
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
 
   // Form states
   const [noteText, setNoteText] = useState('')
@@ -193,6 +214,76 @@ export function AdminCustomerDetail() {
   const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string }>>([])
   const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
   const [submitting, setSubmitting] = useState(false)
+
+  const refreshBookings = useCallback(async () => {
+    if (!id) return
+
+    try {
+      // Fetch booking history with full details
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(
+          `
+          *,
+          service:service_packages!bookings_service_package_id_fkey (
+            name,
+            service_type,
+            price
+          ),
+          staff:profiles!bookings_staff_id_fkey (
+            full_name
+          ),
+          service_packages!bookings_service_package_id_fkey (
+            name,
+            service_type
+          ),
+          customers (
+            id,
+            full_name,
+            email
+          ),
+          profiles:profiles!bookings_staff_id_fkey (
+            full_name
+          ),
+          teams (
+            name
+          )
+        `
+        )
+        .eq('customer_id', id)
+        .order('booking_date', { ascending: false })
+
+      if (bookingsError) {
+        console.warn('Error fetching bookings:', bookingsError)
+        setBookings([])
+      } else {
+        // Transform array relations to single objects
+        const transformedBookings = (bookingsData || []).map((booking) => ({
+          ...booking,
+          service: Array.isArray(booking.service) ? booking.service[0] : booking.service,
+          staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
+          service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
+          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+          teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
+        }))
+        setBookings(transformedBookings)
+      }
+
+      // Also refresh stats
+      const { data: statsData } = await supabase
+        .from('customer_lifetime_value')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (statsData) {
+        setStats(statsData)
+      }
+    } catch (error) {
+      console.error('Error refreshing bookings:', error)
+    }
+  }, [id])
 
   const fetchCustomerDetails = useCallback(async () => {
     try {
@@ -235,16 +326,12 @@ export function AdminCustomerDetail() {
         setStats(statsData)
       }
 
-      // Fetch booking history
+      // Fetch booking history with full details
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(
           `
-          id,
-          booking_date,
-          start_time,
-          status,
-          notes,
+          *,
           service:service_packages!bookings_service_package_id_fkey (
             name,
             service_type,
@@ -252,6 +339,21 @@ export function AdminCustomerDetail() {
           ),
           staff:profiles!bookings_staff_id_fkey (
             full_name
+          ),
+          service_packages!bookings_service_package_id_fkey (
+            name,
+            service_type
+          ),
+          customers (
+            id,
+            full_name,
+            email
+          ),
+          profiles:profiles!bookings_staff_id_fkey (
+            full_name
+          ),
+          teams (
+            name
           )
         `
         )
@@ -267,6 +369,10 @@ export function AdminCustomerDetail() {
           ...booking,
           service: Array.isArray(booking.service) ? booking.service[0] : booking.service,
           staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
+          service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
+          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+          teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
         }))
         setBookings(transformedBookings)
       }
@@ -1016,7 +1122,14 @@ export function AdminCustomerDetail() {
                       className: 'bg-gray-100 text-gray-700 border-gray-300'
                     }
                     return (
-                      <TableRow key={booking.id}>
+                      <TableRow
+                        key={booking.id}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          setSelectedBookingId(booking.id)
+                          setIsBookingDetailModalOpen(true)
+                        }}
+                      >
                         <TableCell className="font-medium">
                           <div>{formatDate(booking.booking_date)}</div>
                           <div className="text-xs text-muted-foreground">
@@ -1539,6 +1652,139 @@ export function AdminCustomerDetail() {
           servicePackageName={
             servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.name
           }
+        />
+      )}
+
+      {/* Booking Detail Modal */}
+      {selectedBookingId && (
+        <BookingDetailModal
+          booking={bookings.find(b => b.id === selectedBookingId) || null}
+          isOpen={isBookingDetailModalOpen}
+          onClose={() => {
+            setIsBookingDetailModalOpen(false)
+            setSelectedBookingId(null)
+            refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+          }}
+          onEdit={(booking) => {
+            navigate(`/admin/bookings?edit=${booking.id}`)
+          }}
+          onDelete={async (bookingId) => {
+            try {
+              const { error } = await supabase
+                .from('bookings')
+                .delete()
+                .eq('id', bookingId)
+
+              if (error) throw error
+
+              toast({
+                title: 'Success',
+                description: 'Booking deleted successfully',
+              })
+
+              setIsBookingDetailModalOpen(false)
+              setSelectedBookingId(null)
+              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+            } catch (error) {
+              toast({
+                title: 'Error',
+                description: 'Failed to delete booking',
+                variant: 'destructive',
+              })
+            }
+          }}
+          onStatusChange={async (bookingId, _currentStatus, newStatus) => {
+            try {
+              const { error } = await supabase
+                .from('bookings')
+                .update({ status: newStatus })
+                .eq('id', bookingId)
+
+              if (error) throw error
+
+              toast({
+                title: 'Success',
+                description: `Status updated to ${newStatus}`,
+              })
+
+              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+            } catch (error) {
+              toast({
+                title: 'Error',
+                description: 'Failed to update status',
+                variant: 'destructive',
+              })
+            }
+          }}
+          onMarkAsPaid={async (bookingId, method) => {
+            try {
+              const booking = bookings.find(b => b.id === bookingId)
+              const { error } = await supabase
+                .from('bookings')
+                .update({
+                  payment_status: 'paid',
+                  payment_method: method,
+                  payment_date: new Date().toISOString(),
+                  amount_paid: booking?.total_price || 0,
+                })
+                .eq('id', bookingId)
+
+              if (error) throw error
+
+              toast({
+                title: 'Success',
+                description: 'Payment marked as paid',
+              })
+
+              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+            } catch (error) {
+              toast({
+                title: 'Error',
+                description: 'Failed to update payment status',
+                variant: 'destructive',
+              })
+            }
+          }}
+          getStatusBadge={(status) => {
+            const statusConfig: Record<string, { label: string; className: string }> = {
+              pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+              confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-700 border-blue-300' },
+              in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700 border-purple-300' },
+              completed: { label: 'Completed', className: 'bg-green-100 text-green-700 border-green-300' },
+              cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 border-red-300' },
+              no_show: { label: 'No Show', className: 'bg-gray-100 text-gray-700 border-gray-300' },
+            }
+            const config = statusConfig[status] || { label: status, className: '' }
+            return <Badge variant="outline" className={config.className}>{config.label}</Badge>
+          }}
+          getPaymentStatusBadge={(status) => {
+            if (status === 'paid') {
+              return <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
+            }
+            return <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300">Pending</Badge>
+          }}
+          getAvailableStatuses={(currentStatus) => {
+            const statusFlow: Record<string, string[]> = {
+              pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
+              confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
+              in_progress: ['in_progress', 'completed', 'cancelled'],
+              completed: ['completed'],
+              cancelled: ['cancelled', 'pending'],
+              no_show: ['no_show', 'pending'],
+            }
+            return statusFlow[currentStatus] || [currentStatus]
+          }}
+          getStatusLabel={(status) => {
+            const labels: Record<string, string> = {
+              pending: 'Pending',
+              confirmed: 'Confirmed',
+              in_progress: 'In Progress',
+              completed: 'Completed',
+              cancelled: 'Cancelled',
+              no_show: 'No Show',
+            }
+            return labels[status] || status
+          }}
         />
       )}
     </div>

@@ -39,6 +39,10 @@ import {
   getPeakHoursData,
   calculateCustomerMetrics,
   getTopCustomers,
+  getCustomerAcquisitionTrend,
+  getCustomerCLVDistribution,
+  getCustomerSegmentation,
+  getRepeatCustomerRateTrend,
   calculateStaffMetrics,
   getStaffPerformance,
   formatGrowth,
@@ -69,11 +73,12 @@ interface BookingWithService {
   status: string
   created_at: string
   customer_id: string
+  staff_id: string | null
   service_package_id: string
   service_packages: {
     name: string
     service_type: string
-  }[] | null
+  } | null
 }
 
 interface Customer {
@@ -146,6 +151,7 @@ export function AdminReports() {
           status,
           created_at,
           customer_id,
+          staff_id,
           service_package_id,
           service_packages (
             name,
@@ -155,7 +161,7 @@ export function AdminReports() {
         .order('booking_date', { ascending: true })
 
       if (error) throw error
-      setBookings(data || [])
+      setBookings((data as any) || [])
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast({
@@ -345,7 +351,9 @@ export function AdminReports() {
       total_price: b.total_price,
       status: b.status,
       created_at: b.created_at,
-      service_type: b.service_packages?.[0]?.service_type,
+      customer_id: b.customer_id,
+      staff_id: b.staff_id,
+      service_type: b.service_packages?.service_type,
     }))
     const data = generateChartData(mappedBookings, start, end)
     setChartData(data)
@@ -430,12 +438,13 @@ export function AdminReports() {
     total_price: b.total_price,
     status: b.status,
     created_at: b.created_at,
-    service_type: b.service_packages?.[0]?.service_type,
+    staff_id: b.staff_id,
+    service_type: b.service_packages?.service_type,
   }))
 
   // Calculate top service packages by booking count
   const packageCounts = bookings.reduce((acc, booking) => {
-    const packageName = booking.service_packages?.[0]?.name
+    const packageName = booking.service_packages?.name
     if (packageName) {
       acc[packageName] = (acc[packageName] || 0) + 1
     }
@@ -1042,6 +1051,194 @@ export function AdminReports() {
               <p className="text-xs text-muted-foreground mt-1">
                 Revenue per customer
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Customer Analytics Charts Row 1 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Customer Acquisition Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Customer Acquisition Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={getCustomerAcquisitionTrend(
+                    customers,
+                    getDateRangePreset(dateRange).start,
+                    getDateRangePreset(dateRange).end
+                  )}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    stroke="#888"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#888" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke={CHART_COLORS.primary}
+                    strokeWidth={2}
+                    dot={{ fill: CHART_COLORS.primary, r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="New Customers"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Customer Lifetime Value Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Customer Lifetime Value Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={getCustomerCLVDistribution(customersWithBookings)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="range"
+                    tick={{ fontSize: 12 }}
+                    stroke="#888"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#888" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="count"
+                    fill={CHART_COLORS.secondary}
+                    radius={[4, 4, 0, 0]}
+                    name="Customers"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Customer Analytics Charts Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Customer Segmentation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Customer Segmentation by Booking Frequency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={getCustomerSegmentation(customersWithBookings)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(props: any) => {
+                      const percent = Number(props.percent || 0)
+                      return percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
+                    }}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {getCustomerSegmentation(customersWithBookings).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-1 gap-2 mt-4">
+                {getCustomerSegmentation(customersWithBookings).map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-sm text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Repeat Customer Rate Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <Repeat className="h-5 w-5" />
+                Repeat Customer Rate Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={getRepeatCustomerRateTrend(
+                    customersWithBookings,
+                    getDateRangePreset(dateRange).start,
+                    getDateRangePreset(dateRange).end
+                  )}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#888"
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => `${value}%`}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="rate"
+                    stroke={CHART_COLORS.success}
+                    strokeWidth={2}
+                    dot={{ fill: CHART_COLORS.success, r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="Repeat Rate %"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>

@@ -9,7 +9,7 @@ interface Booking {
   service_type?: string
   created_at: string
   customer_id?: string
-  staff_id?: string
+  staff_id?: string | null
 }
 
 export interface RevenueMetrics {
@@ -385,6 +385,127 @@ export const getTopCustomers = (
   return customerStats
     .sort((a, b) => b.totalRevenue - a.totalRevenue)
     .slice(0, limit)
+}
+
+/**
+ * Get customer acquisition trend (monthly new customers)
+ */
+export const getCustomerAcquisitionTrend = (
+  customers: Customer[],
+  startDate: Date,
+  endDate: Date
+): { date: string; count: number }[] => {
+  const months = eachDayOfInterval({ start: startDate, end: endDate })
+    .filter((d) => d.getDate() === 1) // First day of each month
+
+  return months.map((month) => {
+    const monthStart = startOfMonth(month)
+    const monthEnd = endOfMonth(month)
+
+    const count = customers.filter((c) =>
+      isWithinInterval(new Date(c.created_at), { start: monthStart, end: monthEnd })
+    ).length
+
+    return {
+      date: format(month, 'MMM yyyy'),
+      count,
+    }
+  })
+}
+
+/**
+ * Get customer lifetime value distribution
+ */
+export const getCustomerCLVDistribution = (
+  customers: CustomerWithBookings[]
+): { range: string; count: number }[] => {
+  const ranges = [
+    { min: 0, max: 500, label: '฿0-500' },
+    { min: 500, max: 1000, label: '฿500-1K' },
+    { min: 1000, max: 2000, label: '฿1K-2K' },
+    { min: 2000, max: 5000, label: '฿2K-5K' },
+    { min: 5000, max: Infinity, label: '฿5K+' },
+  ]
+
+  return ranges.map((range) => {
+    const count = customers.filter((customer) => {
+      const totalRevenue = customer.bookings
+        .filter((b) => b.status === 'completed')
+        .reduce((sum, b) => sum + Number(b.total_price), 0)
+
+      return totalRevenue >= range.min && totalRevenue < range.max
+    }).length
+
+    return {
+      range: range.label,
+      count,
+    }
+  })
+}
+
+/**
+ * Get customer segmentation by booking frequency
+ */
+export const getCustomerSegmentation = (
+  customers: CustomerWithBookings[]
+): { name: string; value: number; color: string }[] => {
+  let newCustomers = 0
+  let regular = 0
+  let vip = 0
+
+  customers.forEach((customer) => {
+    const bookingCount = customer.bookings.length
+
+    if (bookingCount === 1) {
+      newCustomers++
+    } else if (bookingCount <= 5) {
+      regular++
+    } else {
+      vip++
+    }
+  })
+
+  return [
+    { name: 'New (1 booking)', value: newCustomers, color: '#3b82f6' },
+    { name: 'Regular (2-5 bookings)', value: regular, color: '#10b981' },
+    { name: 'VIP (5+ bookings)', value: vip, color: '#f59e0b' },
+  ]
+}
+
+/**
+ * Get repeat customer rate trend (monthly)
+ */
+export const getRepeatCustomerRateTrend = (
+  customers: CustomerWithBookings[],
+  startDate: Date,
+  endDate: Date
+): { date: string; rate: number }[] => {
+  const months = eachDayOfInterval({ start: startDate, end: endDate })
+    .filter((d) => d.getDate() === 1) // First day of each month
+
+  return months.map((month) => {
+    const monthStart = startOfMonth(month)
+    const monthEnd = endOfMonth(month)
+
+    // Customers who had bookings in this month
+    const customersThisMonth = customers.filter((c) =>
+      c.bookings.some((b) =>
+        isWithinInterval(new Date(b.booking_date), { start: monthStart, end: monthEnd })
+      )
+    )
+
+    // Customers who had more than one booking (ever)
+    const repeatCustomers = customersThisMonth.filter((c) => c.bookings.length > 1)
+
+    const rate = customersThisMonth.length > 0
+      ? (repeatCustomers.length / customersThisMonth.length) * 100
+      : 0
+
+    return {
+      date: format(month, 'MMM yyyy'),
+      rate: Math.round(rate * 10) / 10, // Round to 1 decimal
+    }
+  })
 }
 
 // ============================================================================
