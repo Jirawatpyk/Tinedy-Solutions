@@ -1,5 +1,54 @@
 import { format, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns'
 
+// Type definitions
+interface BookingForExport {
+  id: string
+  booking_date: string
+  start_time?: string
+  total_price: number
+  status: string
+  created_at: string
+  service_packages?: {
+    name: string
+    service_type: string
+  } | null
+}
+
+interface CustomerForExport {
+  id: string
+  full_name: string
+  email: string
+  phone?: string
+  created_at: string
+}
+
+interface TopCustomerForExport {
+  name: string
+  email: string
+  totalBookings: number
+  totalRevenue: number
+  lastBooking?: string
+}
+
+interface StaffPerformanceForExport {
+  name: string
+  totalJobs: number
+  completedJobs: number
+  revenue: number
+  completionRate: number
+  avgJobValue: number
+  utilizationRate: number
+}
+
+interface TeamForExport {
+  name: string
+  bookings: Array<{
+    status: string
+    total_price: number
+  }>
+  team_members: unknown[]
+}
+
 /**
  * Get date range based on preset
  */
@@ -33,7 +82,7 @@ const getDateRangePreset = (preset: string): { start: Date; end: Date } => {
 /**
  * Convert array of objects to CSV format
  */
-export const convertToCSV = (data: any[], headers: string[]): string => {
+export const convertToCSV = (data: Record<string, unknown>[], headers: string[]): string => {
   if (data.length === 0) return ''
 
   // Create header row
@@ -83,7 +132,7 @@ export const downloadCSV = (csvContent: string, filename: string): void => {
  * Export Revenue & Bookings data
  */
 export const exportRevenueBookings = (
-  bookings: any[],
+  bookings: BookingForExport[],
   dateRange: string,
   exportType: 'summary' | 'detailed' | 'all'
 ): void => {
@@ -150,7 +199,7 @@ export const exportRevenueBookings = (
  * Export Revenue by Service Type
  */
 export const exportRevenueByServiceType = (
-  bookings: any[],
+  bookings: BookingForExport[],
   dateRange: string
 ): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
@@ -199,7 +248,7 @@ export const exportRevenueByServiceType = (
  * Export Peak Hours data
  */
 export const exportPeakHours = (
-  bookings: any[],
+  bookings: BookingForExport[],
   dateRange: string
 ): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
@@ -249,7 +298,7 @@ export const exportPeakHours = (
  * Export Top Service Packages
  */
 export const exportTopServicePackages = (
-  bookings: any[],
+  bookings: BookingForExport[],
   dateRange: string,
   limit: number = 10
 ): void => {
@@ -306,8 +355,8 @@ export const exportTopServicePackages = (
  * Export Customers data
  */
 export const exportCustomers = (
-  customers: any[],
-  topCustomers: any[],
+  customers: CustomerForExport[],
+  topCustomers: TopCustomerForExport[],
   exportType: 'all-customers' | 'top-customers' | 'all'
 ): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
@@ -350,7 +399,7 @@ export const exportCustomers = (
 /**
  * Export Staff Performance data
  */
-export const exportStaffPerformance = (staffPerformance: any[]): void => {
+export const exportStaffPerformance = (staffPerformance: StaffPerformanceForExport[]): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 
   const staffData = staffPerformance.map(s => ({
@@ -378,17 +427,17 @@ export const exportStaffPerformance = (staffPerformance: any[]): void => {
 /**
  * Export Team Performance data
  */
-export const exportTeamPerformance = (teamsData: any[]): void => {
+export const exportTeamPerformance = (teamsData: TeamForExport[]): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 
   const teamData = teamsData.map((team, index) => {
     const totalJobs = team.bookings.length
-    const completed = team.bookings.filter((b: any) => b.status === 'completed').length
-    const inProgress = team.bookings.filter((b: any) => b.status === 'in_progress').length
-    const pending = team.bookings.filter((b: any) => b.status === 'pending').length
+    const completed = team.bookings.filter((b) => b.status === 'completed').length
+    const inProgress = team.bookings.filter((b) => b.status === 'in_progress').length
+    const pending = team.bookings.filter((b) => b.status === 'pending').length
     const revenue = team.bookings
-      .filter((b: any) => b.status === 'completed')
-      .reduce((sum: number, b: any) => sum + Number(b.total_price), 0)
+      .filter((b) => b.status === 'completed')
+      .reduce((sum: number, b) => sum + Number(b.total_price), 0)
     const memberCount = team.team_members.length
     const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
 

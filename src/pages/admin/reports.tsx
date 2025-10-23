@@ -81,6 +81,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import type { PieLabelRenderProps } from 'recharts'
 
 interface BookingWithService {
   id: string
@@ -179,7 +180,29 @@ export function AdminReports() {
         .order('booking_date', { ascending: true })
 
       if (error) throw error
-      setBookings((data as any) || [])
+
+      // Transform Supabase data - service_packages comes as array, we need single object
+      interface SupabaseBooking {
+        id: string
+        booking_date: string
+        start_time: string
+        total_price: number
+        status: string
+        created_at: string
+        customer_id: string
+        staff_id: string | null
+        service_package_id: string
+        service_packages: { name: string; service_type: string }[] | { name: string; service_type: string } | null
+      }
+
+      const transformedBookings = (data as SupabaseBooking[] || []).map((booking): BookingWithService => ({
+        ...booking,
+        service_packages: Array.isArray(booking.service_packages)
+          ? booking.service_packages[0] || null
+          : booking.service_packages
+      }))
+
+      setBookings(transformedBookings)
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast({
@@ -1283,7 +1306,7 @@ export function AdminReports() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(props: any) => {
+                    label={(props: PieLabelRenderProps) => {
                       const percent = Number(props.percent || 0)
                       return percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
                     }}
