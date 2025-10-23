@@ -28,8 +28,25 @@ import {
   Activity,
   BriefcaseBusiness,
   Target,
+  Download,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  exportRevenueBookings,
+  exportRevenueByServiceType,
+  exportPeakHours,
+  exportTopServicePackages,
+  exportCustomers,
+  exportStaffPerformance,
+  exportTeamPerformance,
+} from '@/lib/export'
 import {
   calculateRevenueMetrics,
   calculateBookingMetrics,
@@ -136,6 +153,7 @@ export function AdminReports() {
   const [teamsWithBookings, setTeamsWithBookings] = useState<TeamWithBookings[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('thisMonth')
+  const [activeTab, setActiveTab] = useState('revenue')
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const { toast } = useToast()
 
@@ -343,6 +361,66 @@ export function AdminReports() {
     }
   }, [toast])
 
+  const handleExport = (exportType: string) => {
+    try {
+      switch (exportType) {
+        // Revenue & Bookings exports
+        case 'revenue-summary':
+          exportRevenueBookings(bookings, dateRange, 'summary')
+          toast({ title: 'Export successful', description: 'Revenue summary exported to CSV' })
+          break
+        case 'bookings-list':
+          exportRevenueBookings(bookings, dateRange, 'detailed')
+          toast({ title: 'Export successful', description: 'Bookings list exported to CSV' })
+          break
+        case 'revenue-by-service':
+          exportRevenueByServiceType(bookings, dateRange)
+          toast({ title: 'Export successful', description: 'Revenue by service type exported to CSV' })
+          break
+        case 'peak-hours':
+          exportPeakHours(bookings, dateRange)
+          toast({ title: 'Export successful', description: 'Peak hours data exported to CSV' })
+          break
+        case 'top-packages':
+          exportTopServicePackages(bookings, dateRange, 10)
+          toast({ title: 'Export successful', description: 'Top service packages exported to CSV' })
+          break
+
+        // Customers exports
+        case 'customers-all': {
+          const topCustomersData = getTopCustomers(customersWithBookings, 10)
+          exportCustomers(customers, topCustomersData, 'all')
+          toast({ title: 'Export successful', description: 'Customer data exported to CSV' })
+          break
+        }
+
+        // Staff exports
+        case 'staff-performance': {
+          const staffPerformanceData = getStaffPerformance(staffWithBookings)
+          exportStaffPerformance(staffPerformanceData)
+          toast({ title: 'Export successful', description: 'Staff performance data exported to CSV' })
+          break
+        }
+
+        // Teams exports
+        case 'teams-performance':
+          exportTeamPerformance(teamsWithBookings)
+          toast({ title: 'Export successful', description: 'Team performance data exported to CSV' })
+          break
+
+        default:
+          console.warn('Unknown export type:', exportType)
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export data. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const updateChartData = useCallback(() => {
     const { start, end } = getDateRangePreset(dateRange)
     const mappedBookings = bookings.map((b) => ({
@@ -483,26 +561,72 @@ export function AdminReports() {
             Revenue insights and business metrics
           </p>
         </div>
-        <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Select period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="yesterday">Yesterday</SelectItem>
-            <SelectItem value="last7days">Last 7 Days</SelectItem>
-            <SelectItem value="last30days">Last 30 Days</SelectItem>
-            <SelectItem value="thisWeek">This Week</SelectItem>
-            <SelectItem value="lastWeek">Last Week</SelectItem>
-            <SelectItem value="thisMonth">This Month</SelectItem>
-            <SelectItem value="lastMonth">Last Month</SelectItem>
-            <SelectItem value="last3months">Last 3 Months</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
+              <SelectItem value="last7days">Last 7 Days</SelectItem>
+              <SelectItem value="last30days">Last 30 Days</SelectItem>
+              <SelectItem value="thisWeek">This Week</SelectItem>
+              <SelectItem value="lastWeek">Last Week</SelectItem>
+              <SelectItem value="thisMonth">This Month</SelectItem>
+              <SelectItem value="lastMonth">Last Month</SelectItem>
+              <SelectItem value="last3months">Last 3 Months</SelectItem>
+            </SelectContent>
+          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {activeTab === 'revenue' && (
+                <>
+                  <DropdownMenuItem onClick={() => handleExport('revenue-summary')}>
+                    Revenue Summary
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('bookings-list')}>
+                    Bookings List
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('revenue-by-service')}>
+                    Revenue by Service Type
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('peak-hours')}>
+                    Peak Hours Data
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('top-packages')}>
+                    Top Service Packages
+                  </DropdownMenuItem>
+                </>
+              )}
+              {activeTab === 'customers' && (
+                <DropdownMenuItem onClick={() => handleExport('customers-all')}>
+                  Export All Customer Data
+                </DropdownMenuItem>
+              )}
+              {activeTab === 'staff' && (
+                <DropdownMenuItem onClick={() => handleExport('staff-performance')}>
+                  Export Staff Performance
+                </DropdownMenuItem>
+              )}
+              {activeTab === 'teams' && (
+                <DropdownMenuItem onClick={() => handleExport('teams-performance')}>
+                  Export Team Performance
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs defaultValue="revenue" className="space-y-6">
+      <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="revenue" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1947,10 +2071,10 @@ export function AdminReports() {
                       Revenue
                     </th>
                     <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
-                      Avg/Member
+                      Rate
                     </th>
                     <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
-                      Rate
+                      Utilization
                     </th>
                   </tr>
                 </thead>
@@ -1972,7 +2096,6 @@ export function AdminReports() {
                           .filter(b => b.status === 'completed')
                           .reduce((sum, b) => sum + Number(b.total_price), 0)
                         const memberCount = team.team_members.length
-                        const avgPerMember = memberCount > 0 ? revenue / memberCount : 0
                         const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
 
                         return {
@@ -1984,7 +2107,6 @@ export function AdminReports() {
                           inProgress,
                           pending,
                           revenue,
-                          avgPerMember,
                           completionRate,
                         }
                       })
@@ -2018,9 +2140,6 @@ export function AdminReports() {
                           <td className="py-3 font-bold text-right text-tinedy-dark">
                             {formatCurrency(team.revenue)}
                           </td>
-                          <td className="py-3 text-sm text-right text-muted-foreground">
-                            {formatCurrency(team.avgPerMember)}
-                          </td>
                           <td className="py-3 text-sm text-right">
                             <span
                               className={`font-semibold ${
@@ -2034,12 +2153,55 @@ export function AdminReports() {
                               {team.completionRate.toFixed(0)}%
                             </span>
                           </td>
+                          <td className="py-3 text-sm text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${
+                                    team.completionRate >= 80
+                                      ? 'bg-green-500'
+                                      : team.completionRate >= 60
+                                      ? 'bg-yellow-500'
+                                      : 'bg-orange-500'
+                                  }`}
+                                  style={{ width: `${team.completionRate}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-medium">
+                                {team.completionRate.toFixed(0)}%
+                              </span>
+                            </div>
+                          </td>
                         </tr>
                       ))
                   )}
                 </tbody>
               </table>
             </div>
+            {teamsWithBookings.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-muted-foreground">
+                      High Utilization (&gt;80%)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <span className="text-muted-foreground">
+                      Medium Utilization (60-80%)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <span className="text-muted-foreground">
+                      Low Utilization (&lt;60%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
