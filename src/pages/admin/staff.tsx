@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield, Hash, Award, Star } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { useNavigate } from 'react-router-dom'
 
 interface StaffMember {
   id: string
@@ -42,6 +43,7 @@ interface StaffMember {
 }
 
 export function AdminStaff() {
+  const navigate = useNavigate()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -611,7 +613,8 @@ export function AdminStaff() {
             {filteredStaff.slice(0, displayCount).map((member) => (
               <Card
                 key={member.id}
-                className="hover:shadow-md transition-shadow"
+                className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
+                onClick={() => navigate(`/admin/staff/${member.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -640,7 +643,7 @@ export function AdminStaff() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="icon"

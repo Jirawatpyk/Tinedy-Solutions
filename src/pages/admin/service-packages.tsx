@@ -57,6 +57,11 @@ export function AdminServicePackages() {
     inactive: 0,
     avgPrice: 0,
   })
+
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(12)
+  const ITEMS_PER_LOAD = 12
+
   const { toast } = useToast()
 
   const fetchPackages = useCallback(async () => {
@@ -106,7 +111,9 @@ export function AdminServicePackages() {
     }
 
     setFilteredPackages(filtered)
-  }, [packages, searchQuery, typeFilter])
+    // Reset display count when filter changes
+    setDisplayCount(ITEMS_PER_LOAD)
+  }, [packages, searchQuery, typeFilter, ITEMS_PER_LOAD])
 
   useEffect(() => {
     fetchPackages()
@@ -538,80 +545,105 @@ export function AdminServicePackages() {
       </Card>
 
       {/* Packages Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredPackages.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No packages found</p>
-          </div>
-        ) : (
-          filteredPackages.map((pkg) => (
-            <Card key={pkg.id} className={!pkg.is_active ? 'opacity-60' : ''}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="font-display text-lg">
-                      {pkg.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      {getServiceTypeBadge(pkg.service_type)}
-                      <Badge variant={pkg.is_active ? 'default' : 'outline'}>
-                        {pkg.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
+      {filteredPackages.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No packages found</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredPackages.slice(0, displayCount).map((pkg) => (
+              <Card key={pkg.id} className={!pkg.is_active ? 'opacity-60' : ''}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="font-display text-lg">
+                        {pkg.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-2">
+                        {getServiceTypeBadge(pkg.service_type)}
+                        <Badge variant={pkg.is_active ? 'default' : 'outline'}>
+                          {pkg.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {pkg.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {pkg.description}
-                  </p>
-                )}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {pkg.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {pkg.description}
+                    </p>
+                  )}
 
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{pkg.duration_minutes} min</span>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{pkg.duration_minutes} min</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold text-tinedy-dark">
+                        {formatCurrency(Number(pkg.price))}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold text-tinedy-dark">
-                      {formatCurrency(Number(pkg.price))}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleEdit(pkg)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleActive(pkg)}
-                  >
-                    {pkg.is_active ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deletePackage(pkg.id)}
-                  >
-                    <Trash2 className="h-3 w-3 text-destructive" />
-                  </Button>
-                </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleEdit(pkg)}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleActive(pkg)}
+                    >
+                      {pkg.is_active ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deletePackage(pkg.id)}
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {displayCount < filteredPackages.length && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Showing {displayCount} of {filteredPackages.length} packages
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Load More Packages
+                </Button>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -21,6 +21,11 @@ interface Staff {
   role: string
 }
 
+interface Team {
+  id: string
+  name: string
+}
+
 interface ServicePackage {
   name: string
 }
@@ -98,11 +103,13 @@ const TIME_SLOTS = [
 
 export function AdminStaffAvailability() {
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('')
+  const [selectedTeam, setSelectedTeam] = useState<string>('')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [weekDates, setWeekDates] = useState<Date[]>([])
-  const { toast } = useToast()
+  const { toast} = useToast()
 
   const fetchStaffMembers = useCallback(async () => {
     try {
@@ -125,6 +132,28 @@ export function AdminStaffAvailability() {
       })
     } finally {
       setLoading(false)
+    }
+  }, [toast])
+
+  const fetchTeams = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('id, name')
+        .order('name')
+
+      if (error) throw error
+      setTeams(data || [])
+
+      // Auto-select "All Teams"
+      setSelectedTeam('all')
+    } catch (error) {
+      console.error('Error fetching teams:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load teams',
+        variant: 'destructive',
+      })
     }
   }, [toast])
 
@@ -166,6 +195,11 @@ export function AdminStaffAvailability() {
         query = query.eq('staff_id', selectedStaff)
       }
 
+      // Filter by team if not "all"
+      if (selectedTeam && selectedTeam !== 'all') {
+        query = query.eq('team_id', selectedTeam)
+      }
+
       const { data, error } = await query
 
       console.log('Bookings fetched:', data)
@@ -195,16 +229,17 @@ export function AdminStaffAvailability() {
         variant: 'destructive',
       })
     }
-  }, [selectedStaff, weekDates, toast])
+  }, [selectedStaff, selectedTeam, weekDates, toast])
 
   useEffect(() => {
     fetchStaffMembers()
+    fetchTeams()
     setWeekDates(getCurrentWeekDates())
-  }, [fetchStaffMembers])
+  }, [fetchStaffMembers, fetchTeams])
 
   useEffect(() => {
     fetchBookings()
-  }, [selectedStaff, fetchBookings])
+  }, [selectedStaff, selectedTeam, fetchBookings])
 
   const getBookingsForDay = (dayIndex: number) => {
     const date = weekDates[dayIndex]
@@ -362,26 +397,47 @@ export function AdminStaffAvailability() {
         </div>
       </div>
 
-      {/* Staff selector */}
+      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <Label htmlFor="staff_select" className="whitespace-nowrap">
-              Select Staff:
-            </Label>
-            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-              <SelectTrigger className="max-w-md">
-                <SelectValue placeholder="Choose staff member" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staffMembers.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.full_name} - {staff.role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center gap-4">
+              <Label htmlFor="staff_select" className="whitespace-nowrap">
+                Select Staff:
+              </Label>
+              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Choose staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.full_name} - {staff.role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Label htmlFor="team_select" className="whitespace-nowrap">
+                Select Team:
+              </Label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Choose team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>

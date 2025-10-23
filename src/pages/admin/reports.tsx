@@ -69,7 +69,9 @@ interface BookingWithService {
   status: string
   created_at: string
   customer_id: string
+  service_package_id: string
   service_packages: {
+    name: string
     service_type: string
   }[] | null
 }
@@ -144,7 +146,9 @@ export function AdminReports() {
           status,
           created_at,
           customer_id,
+          service_package_id,
           service_packages (
+            name,
             service_type
           )
         `)
@@ -429,6 +433,20 @@ export function AdminReports() {
     service_type: b.service_packages?.[0]?.service_type,
   }))
 
+  // Calculate top service packages by booking count
+  const packageCounts = bookings.reduce((acc, booking) => {
+    const packageName = booking.service_packages?.[0]?.name
+    if (packageName) {
+      acc[packageName] = (acc[packageName] || 0) + 1
+    }
+    return acc
+  }, {} as Record<string, number>)
+
+  const topPackages = Object.entries(packageCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
   const revenueMetrics = calculateRevenueMetrics(mappedBookings)
   const bookingMetrics = calculateBookingMetrics(mappedBookings)
   const serviceTypeRevenue = getRevenueByServiceType(mappedBookings)
@@ -442,7 +460,7 @@ export function AdminReports() {
   const serviceTypePieData = [
     { name: 'Cleaning', value: serviceTypeRevenue.cleaning, color: CHART_COLORS.primary },
     { name: 'Training', value: serviceTypeRevenue.training, color: CHART_COLORS.secondary },
-  ]
+  ].filter(item => item.value > 0)
 
   return (
     <div className="space-y-6">
@@ -766,7 +784,10 @@ export function AdminReports() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Charts Row 3 - Booking Statistics & Top Packages */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Booking Statistics */}
         <Card>
           <CardHeader>
@@ -834,9 +855,58 @@ export function AdminReports() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Top Service Packages */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Top Service Packages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topPackages.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={topPackages}
+                  layout="vertical"
+                  margin={{ left: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" tick={{ fontSize: 12 }} stroke="#888" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tick={{ fontSize: 12 }}
+                    stroke="#888"
+                    width={100}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="count"
+                    fill={CHART_COLORS.accent}
+                    radius={[0, 4, 4, 0]}
+                    name="Bookings"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No service package data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Charts Row 3 - Peak Hours Analysis */}
+      {/* Charts Row 4 - Peak Hours Analysis */}
       <Card>
         <CardHeader>
           <CardTitle className="font-display">Peak Hours Heatmap</CardTitle>

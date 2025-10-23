@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { supabase } from '@/lib/supabase'
 import {
@@ -12,6 +13,8 @@ import {
   MapPin,
   User,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -103,6 +106,8 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [appointmentsPage, setAppointmentsPage] = useState(1)
+  const appointmentsPerPage = 5
   const { toast } = useToast()
 
   useEffect(() => {
@@ -740,7 +745,10 @@ export function AdminDashboard() {
                 No appointments for today
               </p>
             ) : (
-              todayBookings.map((booking) => (
+              <>
+                {todayBookings
+                  .slice((appointmentsPage - 1) * appointmentsPerPage, appointmentsPage * appointmentsPerPage)
+                  .map((booking) => (
                 <div
                   key={booking.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 cursor-pointer"
@@ -810,7 +818,39 @@ export function AdminDashboard() {
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
+
+                {/* Pagination */}
+                {todayBookings.length > appointmentsPerPage && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(appointmentsPage - 1) * appointmentsPerPage + 1} to{' '}
+                      {Math.min(appointmentsPage * appointmentsPerPage, todayBookings.length)} of{' '}
+                      {todayBookings.length} appointments
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppointmentsPage(prev => Math.max(1, prev - 1))}
+                        disabled={appointmentsPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppointmentsPage(prev => Math.min(Math.ceil(todayBookings.length / appointmentsPerPage), prev + 1))}
+                        disabled={appointmentsPage >= Math.ceil(todayBookings.length / appointmentsPerPage)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>

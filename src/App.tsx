@@ -9,6 +9,7 @@ import { AdminBookings } from './pages/admin/bookings'
 import { AdminCustomers } from './pages/admin/customers'
 import { AdminCustomerDetail } from './pages/admin/customer-detail'
 import { AdminStaff } from './pages/admin/staff'
+import { AdminStaffPerformance } from './pages/admin/staff-performance'
 import { AdminStaffAvailability } from './pages/admin/staff-availability'
 import { AdminServicePackages } from './pages/admin/service-packages'
 import { AdminReports } from './pages/admin/reports'
@@ -44,6 +45,7 @@ function App() {
             <Route path="customers" element={<AdminCustomers />} />
             <Route path="customers/:id" element={<AdminCustomerDetail />} />
             <Route path="staff" element={<AdminStaff />} />
+            <Route path="staff/:id" element={<AdminStaffPerformance />} />
             <Route path="staff-availability" element={<AdminStaffAvailability />} />
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="chat" element={<AdminChat />} />
