@@ -1013,7 +1013,7 @@ export function AdminDashboard() {
       {/* Edit Booking Modal */}
       {selectedBooking && (
         <BookingEditModal
-          isOpen={isEditOpen}
+          isOpen={isEditOpen && !isEditAvailabilityOpen}
           onClose={() => {
             setIsEditOpen(false)
             editForm.reset()
@@ -1026,7 +1026,6 @@ export function AdminDashboard() {
           staffMembers={staffMembers}
           teams={teams}
           onOpenAvailabilityModal={() => {
-            setIsEditOpen(false)
             setIsEditAvailabilityOpen(true)
           }}
           editForm={editForm}
@@ -1042,13 +1041,11 @@ export function AdminDashboard() {
           isOpen={isEditAvailabilityOpen}
           onClose={() => {
             setIsEditAvailabilityOpen(false)
-            setIsEditOpen(true)
           }}
           assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
             editForm.handleChange('staff_id', staffId)
             setIsEditAvailabilityOpen(false)
-            setIsEditOpen(true)
             toast({
               title: 'Staff Selected',
               description: 'Staff member has been assigned to the booking',
@@ -1057,7 +1054,6 @@ export function AdminDashboard() {
           onSelectTeam={(teamId) => {
             editForm.handleChange('team_id', teamId)
             setIsEditAvailabilityOpen(false)
-            setIsEditOpen(true)
             toast({
               title: 'Team Selected',
               description: 'Team has been assigned to the booking',

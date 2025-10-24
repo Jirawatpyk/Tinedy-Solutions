@@ -376,10 +376,7 @@ export function BookingEditModal({
                   type="button"
                   variant="outline"
                   className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
-                  onClick={() => {
-                    onClose()
-                    onOpenAvailabilityModal()
-                  }}
+                  onClick={onOpenAvailabilityModal}
                   disabled={
                     !editForm.formData.booking_date ||
                     !editForm.formData.start_time ||

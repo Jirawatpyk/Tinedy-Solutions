@@ -1028,7 +1028,7 @@ export function AdminCalendar() {
 
       {/* Create Booking Modal */}
       <BookingCreateModal
-        isOpen={isCreateOpen}
+        isOpen={isCreateOpen && !isCreateAvailabilityOpen}
         onClose={() => {
           setIsCreateOpen(false)
           createForm.reset()
@@ -1040,7 +1040,6 @@ export function AdminCalendar() {
         staffMembers={staffMembers}
         teams={teams}
         onOpenAvailabilityModal={() => {
-          setIsCreateOpen(false)
           setIsCreateAvailabilityOpen(true)
         }}
         createForm={createForm}
@@ -1052,7 +1051,7 @@ export function AdminCalendar() {
       {/* Edit Booking Modal */}
       {selectedBooking && (
         <BookingEditModal
-          isOpen={isEditOpen}
+          isOpen={isEditOpen && !isEditAvailabilityOpen}
           onClose={() => {
             setIsEditOpen(false)
             editForm.reset()
@@ -1065,7 +1064,6 @@ export function AdminCalendar() {
           staffMembers={staffMembers}
           teams={teams}
           onOpenAvailabilityModal={() => {
-            setIsEditOpen(false)
             setIsEditAvailabilityOpen(true)
           }}
           editForm={editForm}
