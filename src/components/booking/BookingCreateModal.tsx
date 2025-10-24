@@ -23,6 +23,7 @@ import { Info, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getErrorMessage } from '@/lib/error-utils'
+import type { ServicePackage } from '@/types'
 
 interface Customer {
   id: string
@@ -33,13 +34,6 @@ interface Customer {
   city: string | null
   state: string | null
   zip_code: string | null
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
 }
 
 interface StaffMember {

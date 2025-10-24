@@ -20,19 +20,7 @@ import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star 
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
-import { formatTime } from '@/lib/booking-utils'
-
-// Helper function to format full address
-function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
-  const parts = [
-    booking.address,
-    booking.city,
-    booking.state,
-    booking.zip_code
-  ].filter(part => part && part.trim())
-
-  return parts.join(', ')
-}
+import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 
 interface Booking {
   id: string

@@ -17,6 +17,7 @@ import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatTime } from '@/lib/booking-utils'
+import type { ServicePackage } from '@/types'
 import {
   ChevronLeft,
   ChevronRight,
@@ -92,13 +93,6 @@ interface Staff {
   full_name: string
   email: string
   role: string
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
 }
 
 interface BookingFormData {

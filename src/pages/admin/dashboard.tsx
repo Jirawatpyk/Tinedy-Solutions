@@ -23,6 +23,7 @@ import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
+import type { ServicePackage } from '@/types'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { useToast } from '@/hooks/use-toast'
 
@@ -88,13 +89,6 @@ interface TodayBooking {
 interface DailyRevenue {
   date: string
   revenue: number
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
 }
 
 interface StaffMember {

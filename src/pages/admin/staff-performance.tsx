@@ -28,6 +28,7 @@ import {
 } from 'recharts'
 import { Badge } from '@/components/ui/badge'
 import { formatTime } from '@/lib/booking-utils'
+import type { ServicePackage } from '@/types'
 
 interface Staff {
   id: string
@@ -36,11 +37,6 @@ interface Staff {
   role: string
   phone?: string
   avatar_url?: string
-}
-
-interface ServicePackage {
-  name: string
-  price: number
 }
 
 interface Customer {

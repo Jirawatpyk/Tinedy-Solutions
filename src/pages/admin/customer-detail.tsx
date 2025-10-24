@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/error-utils'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import type { ServicePackage } from '@/types'
 import {
   ArrowLeft,
   Mail,
@@ -161,13 +162,6 @@ interface ChartDataPoint {
   cancelled: number
   pending: number
   total: number
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
 }
 
 interface StaffMember {

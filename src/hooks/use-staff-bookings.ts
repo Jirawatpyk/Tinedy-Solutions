@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatFullAddress } from '@/lib/booking-utils'
 
 // Types for realtime payload
 interface RealtimeBookingPayload {
@@ -20,18 +21,6 @@ interface BookingWithPrice {
 
 interface ReviewData {
   rating: number
-}
-
-// Helper function to format full address
-export function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
-  const parts = [
-    booking.address,
-    booking.city,
-    booking.state,
-    booking.zip_code
-  ].filter(part => part && part.trim())
-
-  return parts.join(', ')
 }
 
 export interface StaffBooking {

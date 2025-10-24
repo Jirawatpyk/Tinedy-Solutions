@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-
-interface ServicePackage {
-  name: string
-}
+import type { ServicePackage } from '@/types'
 
 interface Customer {
   full_name: string

@@ -16,6 +16,10 @@ export * from './booking'
 // Customer management types including records, relations, forms, filters, metrics, and enums
 export * from './customer'
 
+// Service Package Types
+// Service package types including records, relations, forms, and enums
+export * from './service-package'
+
 // Chat System Types
 // Real-time chat messaging types including messages, conversations, and profiles
 export * from './chat'

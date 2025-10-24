@@ -20,6 +20,7 @@ import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { formatTime } from '@/lib/booking-utils'
 import { getErrorMessage } from '@/lib/error-utils'
+import type { ServicePackage } from '@/types'
 
 interface Staff {
   id: string
@@ -31,14 +32,6 @@ interface Staff {
 interface Team {
   id: string
   name: string
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
-  service_type: string
 }
 
 interface BookingFormData {

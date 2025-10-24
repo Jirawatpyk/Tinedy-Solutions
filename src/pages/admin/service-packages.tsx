@@ -24,17 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Package, Plus, Edit, Trash2, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-
-interface ServicePackage {
-  id: string
-  name: string
-  description: string | null
-  service_type: 'cleaning' | 'training'
-  duration_minutes: number
-  price: number
-  is_active: boolean
-  created_at: string
-}
+import { ServicePackage } from '@/types'
 
 export function AdminServicePackages() {
   const [packages, setPackages] = useState<ServicePackage[]>([])

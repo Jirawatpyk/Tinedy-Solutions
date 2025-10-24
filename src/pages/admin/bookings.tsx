@@ -24,13 +24,7 @@ import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { calculateEndTime, formatTime } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
-}
+import type { ServicePackage } from '@/types'
 
 interface StaffMember {
   id: string
