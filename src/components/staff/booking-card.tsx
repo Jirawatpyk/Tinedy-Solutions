@@ -80,7 +80,12 @@ export const BookingCard = memo(function BookingCard({
   )
 
   const fullAddress = useMemo(
-    () => booking.address ? formatFullAddress(booking) : null,
+    () => booking.address ? formatFullAddress({
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code
+    }) : null,
     [booking.address, booking.city, booking.state, booking.zip_code]
   )
 

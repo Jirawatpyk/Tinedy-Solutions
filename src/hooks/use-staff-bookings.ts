@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
-import { formatFullAddress } from '@/lib/booking-utils'
 
 // Types for realtime payload
 interface RealtimeBookingPayload {
