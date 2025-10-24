@@ -223,7 +223,7 @@ export function useStaffAvailabilityCheck({
                 booking.end_time
               )
             })
-            .map((booking: BookingWithRelations) => {
+            .map((booking: any) => {
               const servicePackages = Array.isArray(booking.service_packages)
                 ? booking.service_packages[0]
                 : booking.service_packages
@@ -440,7 +440,7 @@ export function useStaffAvailabilityCheck({
                     booking.end_time
                   )
                 })
-                .map((booking: BookingWithRelations) => {
+                .map((booking: any) => {
                   const servicePackages = Array.isArray(booking.service_packages)
                     ? booking.service_packages[0]
                     : booking.service_packages
