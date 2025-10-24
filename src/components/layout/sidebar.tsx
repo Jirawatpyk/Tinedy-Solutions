@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   ClipboardList,
+  UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -29,6 +30,7 @@ const adminNavItems = [
   { name: 'Chat', href: '/admin/chat', icon: MessageSquare },
   { name: 'Service Packages', href: '/admin/packages', icon: Package },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+  { name: 'My Profile', href: '/admin/profile', icon: UserCircle },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
