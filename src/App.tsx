@@ -10,7 +10,7 @@ import { AdminCustomers } from './pages/admin/customers'
 import { AdminCustomerDetail } from './pages/admin/customer-detail'
 import { AdminStaff } from './pages/admin/staff'
 import { AdminStaffPerformance } from './pages/admin/staff-performance'
-import { AdminStaffAvailability } from './pages/admin/staff-availability'
+import { AdminWeeklySchedule } from './pages/admin/weekly-schedule'
 import { AdminServicePackages } from './pages/admin/service-packages'
 import { AdminReports } from './pages/admin/reports'
 import { AdminCalendar } from './pages/admin/calendar'
@@ -48,7 +48,7 @@ function App() {
             <Route path="customers/:id" element={<AdminCustomerDetail />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="staff/:id" element={<AdminStaffPerformance />} />
-            <Route path="staff-availability" element={<AdminStaffAvailability />} />
+            <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="chat" element={<AdminChat />} />
             <Route path="packages" element={<AdminServicePackages />} />
