@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -48,12 +48,27 @@ export function BookingDetailsModal({
   onAddNotes,
 }: BookingDetailsModalProps) {
   const [notes, setNotes] = useState('')
+  const [currentBooking, setCurrentBooking] = useState(booking)
   const [isSaving, setIsSaving] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
   const { toast } = useToast()
 
-  if (!booking) return null
+  // Update currentBooking when booking prop changes (from optimistic update or real-time)
+  useEffect(() => {
+    if (booking) {
+      setCurrentBooking(booking)
+    }
+  }, [booking])
+
+  // Reset notes field when modal opens or booking changes
+  useEffect(() => {
+    if (open && booking) {
+      setNotes('')
+    }
+  }, [open, booking])
+
+  if (!currentBooking) return null
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -94,13 +109,12 @@ export function BookingDetailsModal({
 
     try {
       setIsSaving(true)
-      await onAddNotes(booking.id, notes.trim())
+      await onAddNotes(currentBooking.id, notes.trim())
       toast({
         title: 'บันทึกสำเร็จ',
         description: 'บันทึกหมายเหตุเรียบร้อยแล้ว',
       })
       setNotes('')
-      onClose()
     } catch {
       toast({
         title: 'เกิดข้อผิดพลาด',
@@ -117,7 +131,7 @@ export function BookingDetailsModal({
 
     try {
       setIsStarting(true)
-      await onStartProgress(booking.id)
+      await onStartProgress(currentBooking.id)
       toast({
         title: 'เริ่มดำเนินการ',
         description: 'เริ่มดำเนินการเรียบร้อยแล้ว',
@@ -139,7 +153,7 @@ export function BookingDetailsModal({
 
     try {
       setIsMarking(true)
-      await onMarkCompleted(booking.id)
+      await onMarkCompleted(currentBooking.id)
       toast({
         title: 'เสร็จสิ้น',
         description: 'ทำเครื่องหมายเสร็จสิ้นเรียบร้อยแล้ว',
@@ -156,8 +170,8 @@ export function BookingDetailsModal({
     }
   }
 
-  const canStartProgress = booking.status === 'confirmed'
-  const canMarkCompleted = booking.status === 'in_progress'
+  const canStartProgress = currentBooking.status === 'confirmed'
+  const canMarkCompleted = currentBooking.status === 'in_progress'
 
   // Format time to remove seconds (HH:MM:SS -> HH:MM)
   const formatTime = (time: string) => {
@@ -170,12 +184,12 @@ export function BookingDetailsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>รายละเอียดการจอง</span>
-            <Badge className={getStatusColor(booking.status)} variant="outline">
-              {getStatusText(booking.status)}
+            <Badge className={getStatusColor(currentBooking.status)} variant="outline">
+              {getStatusText(currentBooking.status)}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            รหัสการจอง: {booking.id.slice(0, 8)}
+            รหัสการจอง: {currentBooking.id.slice(0, 8)}
           </DialogDescription>
         </DialogHeader>
 
@@ -188,7 +202,7 @@ export function BookingDetailsModal({
                 <span>วันที่</span>
               </div>
               <p className="font-medium">
-                {format(new Date(booking.booking_date), 'dd MMMM yyyy', { locale: th })}
+                {format(new Date(currentBooking.booking_date), 'dd MMMM yyyy', { locale: th })}
               </p>
             </div>
             <div className="space-y-2">
@@ -196,7 +210,7 @@ export function BookingDetailsModal({
                 <Clock className="h-4 w-4" />
                 <span>เวลา</span>
               </div>
-              <p className="font-medium">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</p>
+              <p className="font-medium">{formatTime(currentBooking.start_time)} - {formatTime(currentBooking.end_time)}</p>
             </div>
           </div>
 
@@ -212,29 +226,29 @@ export function BookingDetailsModal({
               <div>
                 <p className="text-sm text-muted-foreground">ชื่อ</p>
                 <p className="font-medium">
-                  {booking.customers?.full_name || 'Unknown Customer'}
+                  {currentBooking.customers?.full_name || 'Unknown Customer'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">เบอร์โทร</p>
                 <p className="font-medium flex items-center gap-2">
                   <Phone className="h-3 w-3" />
-                  {booking.customers?.phone || 'ไม่มีข้อมูล'}
+                  {currentBooking.customers?.phone || 'ไม่มีข้อมูล'}
                 </p>
               </div>
-              {booking.address && (
+              {currentBooking.address && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">ที่อยู่</p>
                   <p className="font-medium flex items-start gap-2">
                     <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
-                    <span>{formatFullAddress(booking)}</span>
+                    <span>{formatFullAddress(currentBooking)}</span>
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full"
                     onClick={() => {
-                      const fullAddress = formatFullAddress(booking)
+                      const fullAddress = formatFullAddress(currentBooking)
                       window.open(
                         `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
                         '_blank'
@@ -261,21 +275,21 @@ export function BookingDetailsModal({
               <div>
                 <p className="text-sm text-muted-foreground">ชื่อบริการ</p>
                 <p className="font-medium">
-                  {booking.service_packages?.name || 'Unknown Service'}
+                  {currentBooking.service_packages?.name || 'Unknown Service'}
                 </p>
               </div>
-              {booking.service_packages?.duration_minutes && (
+              {currentBooking.service_packages?.duration_minutes && (
                 <div>
                   <p className="text-sm text-muted-foreground">ระยะเวลา</p>
-                  <p className="font-medium">{booking.service_packages.duration_minutes} นาที</p>
+                  <p className="font-medium">{currentBooking.service_packages.duration_minutes} นาที</p>
                 </div>
               )}
-              {booking.service_packages?.price && (
+              {currentBooking.service_packages?.price && (
                 <div>
                   <p className="text-sm text-muted-foreground">ราคา</p>
                   <p className="font-medium flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    {booking.service_packages.price.toLocaleString()} บาท
+                    {currentBooking.service_packages.price.toLocaleString()} บาท
                   </p>
                 </div>
               )}
@@ -283,7 +297,7 @@ export function BookingDetailsModal({
           </div>
 
           {/* Existing Notes */}
-          {booking.notes && (
+          {currentBooking.notes && (
             <>
               <Separator />
               <div>
@@ -292,7 +306,7 @@ export function BookingDetailsModal({
                   หมายเหตุปัจจุบัน
                 </h3>
                 <div className="ml-6 p-3 bg-muted rounded-md">
-                  <p className="text-sm whitespace-pre-wrap">{booking.notes}</p>
+                  <p className="text-sm whitespace-pre-wrap">{currentBooking.notes}</p>
                 </div>
               </div>
             </>
@@ -300,16 +314,16 @@ export function BookingDetailsModal({
 
           {/* Timeline */}
           <Separator />
-          <BookingTimeline bookingId={booking.id} />
+          <BookingTimeline bookingId={currentBooking.id} />
 
           {/* Add/Update Notes */}
-          {onAddNotes && booking.status !== 'cancelled' && (
+          {onAddNotes && currentBooking.status !== 'cancelled' && (
             <>
               <Separator />
               <div className="space-y-2">
                 <Label htmlFor="notes" className="flex items-center gap-2">
                   <StickyNote className="h-4 w-4" />
-                  {booking.notes ? 'อัปเดตหมายเหตุ' : 'เพิ่มหมายเหตุ'}
+                  {currentBooking.notes ? 'อัปเดตหมายเหตุ' : 'เพิ่มหมายเหตุ'}
                 </Label>
                 <Textarea
                   id="notes"
