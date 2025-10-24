@@ -52,18 +52,26 @@ export function useAdminProfile() {
     full_name?: string
     phone?: string
   }) {
-    if (!user) return
+    if (!user || !adminProfile) return
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id)
+        .select()
+        .single()
 
       if (error) throw error
 
-      // Reload profile
-      await loadProfile()
+      // Update adminProfile state immediately with new data
+      if (data) {
+        setAdminProfile({
+          ...adminProfile,
+          full_name: data.full_name,
+          phone: data.phone,
+        })
+      }
     } catch (err) {
       console.error('Error updating profile:', err)
       throw err
@@ -111,15 +119,22 @@ export function useAdminProfile() {
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
 
       // Update profile with new avatar URL
-      const { error: updateError } = await supabase
+      const { data: updatedData, error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: data.publicUrl })
         .eq('id', user.id)
+        .select()
+        .single()
 
       if (updateError) throw updateError
 
-      // Reload profile
-      await loadProfile()
+      // Update adminProfile state immediately
+      if (updatedData && adminProfile) {
+        setAdminProfile({
+          ...adminProfile,
+          avatar_url: updatedData.avatar_url,
+        })
+      }
 
       return data.publicUrl
     } catch (err) {
