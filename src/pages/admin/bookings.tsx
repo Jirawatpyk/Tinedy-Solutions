@@ -224,10 +224,13 @@ export function AdminBookings() {
   }, [bookings, filters])
 
   useEffect(() => {
-    fetchBookings()
-    fetchServicePackages()
-    fetchStaffMembers()
-    fetchTeams()
+    // OPTIMIZE: Run all queries in parallel for better performance
+    Promise.all([
+      fetchBookings(),
+      fetchServicePackages(),
+      fetchStaffMembers(),
+      fetchTeams()
+    ])
   }, [fetchBookings])
 
   useEffect(() => {
@@ -251,9 +254,46 @@ export function AdminBookings() {
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
-    const state = location.state as { editBookingId?: string; bookingData?: Booking; createBooking?: boolean; bookingDate?: string } | null
+    const state = location.state as {
+      editBookingId?: string;
+      bookingData?: Booking;
+      createBooking?: boolean;
+      bookingDate?: string;
+      prefilledData?: {
+        booking_date: string;
+        start_time: string;
+        end_time: string;
+        service_package_id: string;
+        staff_id: string;
+        team_id: string;
+      }
+    } | null
 
-    // Handle create booking from Calendar
+    // Handle create booking from Quick Availability Check
+    if (state?.createBooking && state?.prefilledData) {
+      // Pre-fill all data from Quick Availability Check
+      createForm.setValues({
+        booking_date: state.prefilledData.booking_date,
+        start_time: state.prefilledData.start_time,
+        end_time: state.prefilledData.end_time,
+        service_package_id: state.prefilledData.service_package_id,
+        staff_id: state.prefilledData.staff_id,
+        team_id: state.prefilledData.team_id,
+      })
+      // Set assignment type
+      if (state.prefilledData.staff_id) {
+        setAssignmentType('staff')
+      } else if (state.prefilledData.team_id) {
+        setAssignmentType('team')
+      }
+      // Open create dialog
+      setIsDialogOpen(true)
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title)
+      return
+    }
+
+    // Handle create booking from Calendar (legacy - only booking_date)
     if (state?.createBooking && state?.bookingDate) {
       // Pre-fill the booking date using hook
       createForm.setValues({ booking_date: state.bookingDate || '' })
@@ -423,6 +463,9 @@ export function AdminBookings() {
   }
 
   const openEditBooking = (booking: Booking) => {
+    // Set selected booking for excludeBookingId in Staff Availability Modal
+    setSelectedBooking(booking)
+
     editForm.setValues({
       customer_id: booking.customers?.id || '',
       service_package_id: booking.service_package_id,

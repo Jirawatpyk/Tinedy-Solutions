@@ -16,6 +16,8 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -45,6 +47,9 @@ export default function StaffDashboard() {
   const [todayLimit, setTodayLimit] = useState(6)
   const [upcomingLimit, setUpcomingLimit] = useState(6)
   const [completedLimit, setCompletedLimit] = useState(6)
+  const [isTodayExpanded, setIsTodayExpanded] = useState(true)
+  const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(true)
+  const [isCompletedExpanded, setIsCompletedExpanded] = useState(false)
   const { toast } = useToast()
 
   const handleRefresh = async () => {
@@ -88,6 +93,13 @@ export default function StaffDashboard() {
       })
     }
   }
+
+  // Get the latest booking data from state arrays for the modal
+  const currentBooking = selectedBooking
+    ? [...todayBookings, ...upcomingBookings, ...completedBookings].find(
+        (b) => b.id === selectedBooking.id
+      ) || selectedBooking
+    : null
 
   if (error) {
     return (
@@ -182,55 +194,69 @@ export default function StaffDashboard() {
 
         {/* Today's Bookings */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              งานวันนี้
-            </h2>
-            {!loading && todayBookings.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                {todayBookings.length} งาน
-              </span>
+          <div
+            className="flex items-center justify-between mb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => setIsTodayExpanded(!isTodayExpanded)}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                งานวันนี้
+              </h2>
+              {!loading && todayBookings.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({todayBookings.length} งาน)
+                </span>
+              )}
+            </div>
+            {isTodayExpanded ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </div>
 
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2].map((i) => (
-                <Skeleton key={i} className="h-48" />
-              ))}
-            </div>
-          ) : todayBookings.length === 0 ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                ไม่มีงานในวันนี้ สนุกกับวันหยุดของคุณ!
-              </AlertDescription>
-            </Alert>
-          ) : (
+          {isTodayExpanded && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {todayBookings.slice(0, todayLimit).map((booking) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    onViewDetails={setSelectedBooking}
-                    onStartProgress={handleStartProgress}
-                    onMarkCompleted={handleMarkCompleted}
-                    showDate={false}
-                  />
-                ))}
-              </div>
-              {todayBookings.length > todayLimit && (
-                <div className="flex justify-center mt-4">
-                  <Button
-                    onClick={() => setTodayLimit(prev => prev + 6)}
-                    variant="outline"
-                    className="transition-all duration-200 hover:scale-105"
-                  >
-                    โหลดเพิ่ม +6 ({todayBookings.length - todayLimit} งานเหลืออยู่)
-                  </Button>
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <Skeleton key={i} className="h-48" />
+                  ))}
                 </div>
+              ) : todayBookings.length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    ไม่มีงานในวันนี้ สนุกกับวันหยุดของคุณ!
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {todayBookings.slice(0, todayLimit).map((booking) => (
+                      <BookingCard
+                        key={booking.id}
+                        booking={booking}
+                        onViewDetails={setSelectedBooking}
+                        onStartProgress={handleStartProgress}
+                        onMarkCompleted={handleMarkCompleted}
+                        showDate={false}
+                      />
+                    ))}
+                  </div>
+                  {todayBookings.length > todayLimit && (
+                    <div className="flex justify-center mt-4">
+                      <Button
+                        onClick={() => setTodayLimit(prev => prev + 6)}
+                        variant="outline"
+                        className="transition-all duration-200 hover:scale-105"
+                      >
+                        โหลดเพิ่ม +6 ({todayBookings.length - todayLimit} งานเหลืออยู่)
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -238,19 +264,29 @@ export default function StaffDashboard() {
 
         {/* Upcoming Bookings */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-primary" />
-              งานที่กำลังจะมาถึง
-            </h2>
-            {!loading && upcomingBookings.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                7 วันถัดไป ({upcomingBookings.length} งาน)
-              </span>
+          <div
+            className="flex items-center justify-between mb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => setIsUpcomingExpanded(!isUpcomingExpanded)}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                งานที่กำลังจะมาถึง
+              </h2>
+              {!loading && upcomingBookings.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  7 วันถัดไป ({upcomingBookings.length} งาน)
+                </span>
+              )}
+            </div>
+            {isUpcomingExpanded ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </div>
 
-          {loading ? (
+          {isUpcomingExpanded && (loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-48" />
@@ -289,24 +325,34 @@ export default function StaffDashboard() {
                 </div>
               )}
             </>
-          )}
+          ))}
         </div>
 
         {/* Past Bookings */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-gray-600" />
-              งานที่ผ่านมา
-            </h2>
-            {!loading && completedBookings.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                30 วันล่าสุด ({completedBookings.length} งาน)
-              </span>
+          <div
+            className="flex items-center justify-between mb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-gray-600" />
+                งานที่ผ่านมา
+              </h2>
+              {!loading && completedBookings.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  30 วันล่าสุด ({completedBookings.length} งาน)
+                </span>
+              )}
+            </div>
+            {isCompletedExpanded ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </div>
 
-          {loading ? (
+          {isCompletedExpanded && (loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-48" />
@@ -345,13 +391,13 @@ export default function StaffDashboard() {
                 </div>
               )}
             </>
-          )}
+          ))}
         </div>
       </div>
 
       {/* Booking Details Modal */}
       <BookingDetailsModal
-        booking={selectedBooking}
+        booking={currentBooking}
         open={!!selectedBooking}
         onClose={() => setSelectedBooking(null)}
         onStartProgress={startProgress}
