@@ -34,6 +34,16 @@ interface BookingData {
     duration_minutes: number
     price: number
   } | null
+  profiles: {
+    full_name: string
+  }[] | {
+    full_name: string
+  } | null
+  teams: {
+    name: string
+  }[] | {
+    name: string
+  } | null
 }
 
 export interface CalendarEvent {
@@ -56,6 +66,8 @@ export interface CalendarEvent {
   zip_code: string
   staff_id: string | null
   team_id: string | null
+  staff_name: string | null
+  team_name: string | null
 }
 
 export function useStaffCalendar() {
@@ -76,7 +88,16 @@ export function useStaffCalendar() {
       const threeMonthsLater = new Date()
       threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3)
 
-      const { data, error: fetchError } = await supabase
+      // First, get teams that this staff member belongs to
+      const { data: teamMemberships } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('staff_id', user.id)
+
+      const teamIds = teamMemberships?.map(tm => tm.team_id) || []
+
+      // Fetch bookings where staff_id matches OR team_id matches
+      let query = supabase
         .from('bookings')
         .select(`
           id,
@@ -92,12 +113,22 @@ export function useStaffCalendar() {
           staff_id,
           team_id,
           customers (full_name, phone, avatar_url),
-          service_packages (name, duration_minutes, price)
+          service_packages (name, duration_minutes, price),
+          profiles (full_name),
+          teams (name)
         `)
-        .eq('staff_id', user.id)
         .gte('booking_date', today.toISOString().split('T')[0])
         .lte('booking_date', threeMonthsLater.toISOString().split('T')[0])
         .order('booking_date', { ascending: true })
+
+      // Filter by staff_id OR team_id using OR condition
+      if (teamIds.length > 0) {
+        query = query.or(`staff_id.eq.${user.id},team_id.in.(${teamIds.join(',')})`)
+      } else {
+        query = query.eq('staff_id', user.id)
+      }
+
+      const { data, error: fetchError } = await query
 
       if (fetchError) throw fetchError
 
@@ -114,6 +145,12 @@ export function useStaffCalendar() {
         const servicePackage = Array.isArray(booking.service_packages)
           ? booking.service_packages[0]
           : booking.service_packages
+
+        // Handle profiles (staff) as array or single object
+        const profile = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
+
+        // Handle teams as array or single object
+        const team = Array.isArray(booking.teams) ? booking.teams[0] : booking.teams
 
         const duration = servicePackage?.duration_minutes || 60
         const endDate = new Date(startDate)
@@ -139,6 +176,8 @@ export function useStaffCalendar() {
           zip_code: booking.zip_code || '',
           staff_id: booking.staff_id || null,
           team_id: booking.team_id || null,
+          staff_name: profile?.full_name || null,
+          team_name: team?.name || null,
         }
       })
 

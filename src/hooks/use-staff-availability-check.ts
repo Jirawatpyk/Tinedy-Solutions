@@ -94,6 +94,7 @@ interface UseStaffAvailabilityParams {
   endTime: string
   servicePackageId: string
   assignmentType: 'individual' | 'team'
+  excludeBookingId?: string
 }
 
 export function useStaffAvailabilityCheck({
@@ -101,7 +102,8 @@ export function useStaffAvailabilityCheck({
   startTime,
   endTime,
   servicePackageId,
-  assignmentType
+  assignmentType,
+  excludeBookingId
 }: UseStaffAvailabilityParams) {
   const [loading, setLoading] = useState(true)
   const [staffResults, setStaffResults] = useState<StaffAvailabilityResult[]>([])
@@ -142,7 +144,7 @@ export function useStaffAvailabilityCheck({
       const results = await Promise.all(
         allStaff.map(async (staff) => {
           // Check booking conflicts
-          const { data: bookingConflicts } = await supabase
+          let query = supabase
             .from('bookings')
             .select(`
               id,
@@ -155,6 +157,13 @@ export function useStaffAvailabilityCheck({
             .eq('staff_id', staff.id)
             .eq('booking_date', date)
             .in('status', ['pending', 'confirmed', 'in_progress'])
+
+          // Exclude current booking when editing
+          if (excludeBookingId) {
+            query = query.neq('id', excludeBookingId)
+          }
+
+          const { data: bookingConflicts } = await query
 
           // Check unavailability periods
           const { data: unavailablePeriods } = await supabase
@@ -251,7 +260,7 @@ export function useStaffAvailabilityCheck({
     } finally {
       setLoading(false)
     }
-  }, [date, startTime, endTime, servicePackageId])
+  }, [date, startTime, endTime, servicePackageId, excludeBookingId])
 
   const checkTeamAvailability = useCallback(async () => {
     try {
@@ -300,7 +309,7 @@ export function useStaffAvailabilityCheck({
               const staff = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles
 
               // Check booking conflicts
-              const { data: bookingConflicts } = await supabase
+              let memberQuery = supabase
                 .from('bookings')
                 .select(`
                   id,
@@ -313,6 +322,13 @@ export function useStaffAvailabilityCheck({
                 .eq('staff_id', staff.id)
                 .eq('booking_date', date)
                 .in('status', ['pending', 'confirmed', 'in_progress'])
+
+              // Exclude current booking when editing
+              if (excludeBookingId) {
+                memberQuery = memberQuery.neq('id', excludeBookingId)
+              }
+
+              const { data: bookingConflicts } = await memberQuery
 
               const conflicts: BookingConflict[] = (bookingConflicts || [])
                 .filter((booking) => {
@@ -385,7 +401,7 @@ export function useStaffAvailabilityCheck({
     } finally {
       setLoading(false)
     }
-  }, [date, startTime, endTime, servicePackageId])
+  }, [date, startTime, endTime, servicePackageId, excludeBookingId])
 
   useEffect(() => {
     if (!date || !startTime || !endTime || !servicePackageId) {

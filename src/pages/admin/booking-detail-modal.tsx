@@ -47,12 +47,13 @@ interface Booking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  notes: string | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
-  customers: { full_name: string; email: string; id: string } | null
+  customers: { id: string; full_name: string; email: string } | null
   service_packages: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
   teams: { name: string } | null

@@ -1,11 +1,11 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useStaffAvailabilityCheck, type StaffAvailabilityResult, type TeamAvailabilityResult } from '@/hooks/use-staff-availability-check'
 import { format } from 'date-fns'
 import { Users, Star, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 interface StaffAvailabilityModalProps {
   isOpen: boolean
@@ -20,6 +20,7 @@ interface StaffAvailabilityModalProps {
   servicePackageName?: string
   currentAssignedStaffId?: string
   currentAssignedTeamId?: string
+  excludeBookingId?: string
 }
 
 export function StaffAvailabilityModal({
@@ -34,22 +35,56 @@ export function StaffAvailabilityModal({
   servicePackageId,
   servicePackageName = '',
   currentAssignedStaffId,
-  currentAssignedTeamId
+  currentAssignedTeamId,
+  excludeBookingId
 }: StaffAvailabilityModalProps) {
   const { loading, staffResults, teamResults, serviceType } = useStaffAvailabilityCheck({
     date,
     startTime,
     endTime,
     servicePackageId,
-    assignmentType
+    assignmentType,
+    excludeBookingId
   })
 
-  const handleSelect = (id: string) => {
+  const [showConflictWarning, setShowConflictWarning] = useState(false)
+  const [pendingSelection, setPendingSelection] = useState<{
+    id: string
+    conflicts: Array<{ bookingDate: string; startTime: string; endTime: string; serviceName: string; customerName: string }>
+    name: string
+  } | null>(null)
+
+  const handleSelect = (
+    id: string,
+    conflicts?: Array<{ bookingDate: string; startTime: string; endTime: string; serviceName: string; customerName: string }>,
+    name?: string
+  ) => {
+    // If has conflicts, show warning dialog
+    if (conflicts && conflicts.length > 0) {
+      setPendingSelection({ id, conflicts, name: name || '' })
+      setShowConflictWarning(true)
+      return
+    }
+
+    // No conflicts, proceed directly
     if (assignmentType === 'individual') {
       onSelectStaff?.(id)
     } else {
       onSelectTeam?.(id)
     }
+    onClose()
+  }
+
+  const confirmSelection = () => {
+    if (!pendingSelection) return
+
+    if (assignmentType === 'individual') {
+      onSelectStaff?.(pendingSelection.id)
+    } else {
+      onSelectTeam?.(pendingSelection.id)
+    }
+    setShowConflictWarning(false)
+    setPendingSelection(null)
     onClose()
   }
 
@@ -76,6 +111,7 @@ export function StaffAvailabilityModal({
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
@@ -157,18 +193,24 @@ export function StaffAvailabilityModal({
                           <StaffCard
                             key={staff.staffId}
                             staff={staff}
-                            onSelect={() => handleSelect(staff.staffId)}
+                            onSelect={() => handleSelect(staff.staffId, staff.conflicts, staff.fullName)}
                             isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                           />
                         ))
-                      : (partiallyAvailable as TeamAvailabilityResult[]).map((team) => (
-                          <TeamCard
-                            key={team.teamId}
-                            team={team}
-                            onSelect={() => handleSelect(team.teamId)}
-                            isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
-                          />
-                        ))
+                      : (partiallyAvailable as TeamAvailabilityResult[]).map((team) => {
+                          // Collect all conflicts from team members
+                          const teamConflicts = team.members
+                            .flatMap(m => m.conflicts)
+                            .filter((c, i, arr) => arr.findIndex(c2 => c2.id === c.id) === i) // Remove duplicates
+                          return (
+                            <TeamCard
+                              key={team.teamId}
+                              team={team}
+                              onSelect={() => handleSelect(team.teamId, teamConflicts, team.teamName)}
+                              isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
+                            />
+                          )
+                        })
                     }
                   </div>
                 </div>
@@ -217,6 +259,60 @@ export function StaffAvailabilityModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Conflict Warning Dialog */}
+    <Dialog open={showConflictWarning} onOpenChange={(open) => {
+      if (!open) {
+        setShowConflictWarning(false)
+        setPendingSelection(null)
+      }
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-orange-600">
+            <AlertCircle className="h-5 w-5" />
+            Scheduling Conflict Detected
+          </DialogTitle>
+          <DialogDescription>
+            <strong>{pendingSelection?.name}</strong> has {pendingSelection?.conflicts.length || 0} conflicting booking(s) at this time.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2 max-h-60 overflow-y-auto bg-muted/50 p-3 rounded-md">
+          {pendingSelection?.conflicts.map((conflict, index) => (
+            <div key={index} className="text-sm border-l-2 border-orange-500 pl-2 py-1">
+              <p className="font-medium text-foreground">{conflict.serviceName} - {conflict.customerName}</p>
+              <p className="text-muted-foreground text-xs">
+                {format(new Date(conflict.bookingDate), 'PP')} • {conflict.startTime.substring(0, 5)} - {conflict.endTime.substring(0, 5)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-sm text-orange-600">
+          Assigning this {assignmentType === 'individual' ? 'staff member' : 'team'} may result in double-booking. Do you want to continue anyway?
+        </p>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowConflictWarning(false)
+              setPendingSelection(null)
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmSelection}
+            className="bg-yellow-600 text-white hover:bg-yellow-600/90"
+          >
+            Continue Anyway
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 

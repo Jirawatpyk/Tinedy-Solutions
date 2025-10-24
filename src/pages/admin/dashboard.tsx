@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +22,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { BookingDetailModal } from './booking-detail-modal'
+import { BookingEditModal } from '@/components/booking'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { useToast } from '@/hooks/use-toast'
 
 interface Stats {
@@ -60,6 +61,7 @@ interface TodayBooking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  notes: string | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number
@@ -88,8 +90,46 @@ interface DailyRevenue {
   revenue: number
 }
 
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
+
+interface StaffMember {
+  id: string
+  full_name: string
+  email: string
+  role: string
+}
+
+interface Team {
+  id: string
+  name: string
+}
+
+interface BookingFormData {
+  customer_id?: string
+  full_name?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  service_package_id?: string
+  booking_date?: string
+  start_time?: string
+  end_time?: string
+  total_price?: number
+  staff_id?: string
+  team_id?: string
+  notes?: string
+  status?: string
+}
+
 export function AdminDashboard() {
-  const navigate = useNavigate()
   const [stats, setStats] = useState<Stats>({
     totalBookings: 0,
     totalRevenue: 0,
@@ -110,11 +150,71 @@ export function AdminDashboard() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [appointmentsPage, setAppointmentsPage] = useState(1)
   const appointmentsPerPage = 5
+
+  // Edit Modal State
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [editFormData, setEditFormData] = useState<BookingFormData>({})
+  const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
+
+  // Data for modals
+  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+
   const { toast } = useToast()
 
   useEffect(() => {
     fetchDashboardData()
+    fetchServicePackages()
+    fetchStaffMembers()
+    fetchTeams()
   }, [])
+
+  const fetchServicePackages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) throw error
+      setServicePackages(data || [])
+    } catch (error) {
+      console.error('Error fetching service packages:', error)
+    }
+  }
+
+  const fetchStaffMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .eq('role', 'staff')
+        .order('full_name')
+
+      if (error) throw error
+      setStaffMembers(data || [])
+    } catch (error) {
+      console.error('Error fetching staff members:', error)
+    }
+  }
+
+  const fetchTeams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) throw error
+      setTeams(data || [])
+    } catch (error) {
+      console.error('Error fetching teams:', error)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -464,14 +564,61 @@ export function AdminDashboard() {
     setIsDetailOpen(true)
   }
 
+  // Helper function: Calculate end time from start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    if (!startTime) return ''
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const totalMinutes = hours * 60 + minutes + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMinutes = totalMinutes % 60
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
+  }
+
+  // Edit Booking Form Helpers
+  const editForm = {
+    formData: editFormData,
+    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
+      setEditFormData(prev => ({ ...prev, [field]: value }))
+    },
+    setValues: (values: Partial<BookingFormData>) => {
+      setEditFormData(prev => ({ ...prev, ...values }))
+    },
+    reset: () => {
+      setEditFormData({})
+      setEditAssignmentType('none')
+    }
+  }
+
   const handleEditBooking = (booking: TodayBooking) => {
-    // Navigate to bookings page with booking ID in state
-    navigate('/admin/bookings', {
-      state: {
-        editBookingId: booking.id,
-        bookingData: booking
-      }
+    // Populate edit form with booking data
+    setEditFormData({
+      service_package_id: booking.service_package_id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code,
+      notes: booking.notes || undefined,
+      total_price: booking.total_price,
+      staff_id: booking.staff_id || '',
+      team_id: booking.team_id || '',
+      status: booking.status,
     })
+
+    // Set assignment type based on booking data
+    if (booking.staff_id) {
+      setEditAssignmentType('staff')
+    } else if (booking.team_id) {
+      setEditAssignmentType('team')
+    } else {
+      setEditAssignmentType('none')
+    }
+
+    setSelectedBooking(booking)
+    setIsEditOpen(true)
+    setIsDetailOpen(false)
   }
 
 
@@ -882,6 +1029,74 @@ export function AdminDashboard() {
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
       />
+
+      {/* Edit Booking Modal */}
+      {selectedBooking && (
+        <BookingEditModal
+          isOpen={isEditOpen && !isEditAvailabilityOpen}
+          onClose={() => {
+            setIsEditOpen(false)
+            editForm.reset()
+          }}
+          booking={selectedBooking}
+          onSuccess={() => {
+            fetchDashboardData()
+          }}
+          servicePackages={servicePackages}
+          staffMembers={staffMembers}
+          teams={teams}
+          onOpenAvailabilityModal={() => {
+            setIsEditAvailabilityOpen(true)
+          }}
+          editForm={editForm}
+          assignmentType={editAssignmentType}
+          onAssignmentTypeChange={setEditAssignmentType}
+          calculateEndTime={calculateEndTime}
+        />
+      )}
+
+      {/* Staff Availability Modal - Edit */}
+      {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isEditAvailabilityOpen}
+          onClose={() => {
+            setIsEditAvailabilityOpen(false)
+          }}
+          assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            editForm.handleChange('staff_id', staffId)
+            setIsEditAvailabilityOpen(false)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            editForm.handleChange('team_id', teamId)
+            setIsEditAvailabilityOpen(false)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={editFormData.booking_date || ''}
+          startTime={editFormData.start_time || ''}
+          endTime={
+            editFormData.service_package_id && editFormData.start_time
+              ? calculateEndTime(
+                  editFormData.start_time,
+                  servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                )
+              : (editFormData.end_time || '')
+          }
+          servicePackageId={editFormData.service_package_id || ''}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+          }
+          currentAssignedStaffId={editFormData.staff_id}
+          currentAssignedTeamId={editFormData.team_id}
+        />
+      )}
     </div>
   )
 }
