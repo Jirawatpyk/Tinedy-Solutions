@@ -276,8 +276,8 @@ export function AdminBookings() {
     // Skip if already processed this specific state
     if (hasProcessedState.current) return
 
-    // Wait for service packages to load before processing create booking
-    if (state?.createBooking && servicePackages.length === 0) {
+    // Wait for data to load before processing create booking
+    if (loading || servicePackages.length === 0) {
       return
     }
 
@@ -359,7 +359,7 @@ export function AdminBookings() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, bookings, servicePackages])
+  }, [location.state, bookings, servicePackages, loading])
 
   const fetchServicePackages = async () => {
     try {
