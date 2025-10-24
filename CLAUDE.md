@@ -12,10 +12,21 @@ npm run lint       # Run ESLint
 npm run preview    # Preview production build locally
 ```
 
+### Testing
+No testing framework is currently configured. To add tests, consider:
+- Vitest for unit/integration tests
+- React Testing Library for component tests
+- Playwright or Cypress for E2E tests
+
 ### Build Issues
 If you encounter Vite cache issues during development:
 ```bash
 rm -rf node_modules/.vite && npm run dev
+```
+
+On Windows:
+```cmd
+rmdir /s /q node_modules\.vite && npm run dev
 ```
 
 ## Architecture Overview
@@ -45,6 +56,14 @@ The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()
 - Manages `user` (Supabase auth) and `profile` (custom profiles table)
 - Profile includes: `role`, `staff_number`, `skills`, etc.
 - Protected routes use `ProtectedRoute` component with `allowedRoles` prop
+
+**Auth Flow:**
+1. User logs in → `signIn()` authenticates with Supabase
+2. On success → Fetches profile from `profiles` table
+3. Profile role determines route access (admin vs staff)
+4. `ProtectedRoute` checks `profile.role` against `allowedRoles`
+5. Unauthorized users redirected to `/unauthorized` or `/login`
+6. Auth state persists via Supabase session (localStorage)
 
 **Route Structure** (defined in `src/App.tsx`):
 
@@ -101,8 +120,28 @@ Bookings support two assignment modes:
 1. **Individual**: Assigned to specific `staff_id`
 2. **Team**: Assigned to `team_id`, visible to all team members
 
+**Critical Constraint:** A booking CANNOT be assigned to both `staff_id` AND `team_id` simultaneously. One must be NULL.
+
 **Status Flow:**
 `pending` � `confirmed` � `in_progress` � `completed`/`cancelled`
+
+**Key Data Flows:**
+
+1. **Booking Creation:**
+   - Customer selects service package → Duration and price auto-filled
+   - Admin enters start time → End time auto-calculated based on duration
+   - Address defaults to customer's address but can be overridden
+   - Assign to individual staff OR team (not both)
+
+2. **Staff Viewing Their Bookings:**
+   - Query includes: `staff_id.eq.userId` OR `team_id.in.(userTeamIds)`
+   - Realtime subscription updates automatically via Supabase channels
+   - Stats calculated in parallel: today's jobs, upcoming, completed, earnings
+
+3. **Team Bookings:**
+   - All team members see team-assigned bookings
+   - Team lead designation stored in `teams.team_lead_id`
+   - Team membership tracked in `team_members` junction table
 
 **Time Format:**
 - Database stores `HH:MM:SS`
@@ -246,6 +285,17 @@ DO $$ ... $$;
 - Extract reusable logic to custom hooks (`src/hooks/`)
 - Use `useCallback` for functions passed to dependencies
 
+**Component Organization:**
+- `src/components/ui/` - Shadcn UI primitives (Button, Dialog, Input, etc.)
+- `src/components/auth/` - Authentication components (ProtectedRoute, etc.)
+- `src/components/layout/` - Layout components (MainLayout, Sidebar, Header)
+- `src/components/booking/` - Booking-related components
+- `src/components/customers/` - Customer-related components
+- `src/components/staff/` - Staff-related components
+- `src/components/chat/` - Chat system components
+- `src/components/notifications/` - Notification components
+- `src/components/common/` - Shared components (ConfirmDialog, EmptyState, StatCard, StatusBadge)
+
 **State Management:**
 - Global auth state via Context
 - Feature state via custom hooks (e.g., `useStaffBookings`)
@@ -349,6 +399,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - SMS/Email Notifications (Edge function exists but not fully integrated)
 - Advanced reporting features
 
+### Platform Notes
+
+**Windows Development:**
+This project is developed on Windows. Be aware of:
+- Use forward slashes `/` in import paths (TypeScript/Vite requirement)
+- Git Bash or WSL recommended for Unix-like commands
+- PowerShell alternatives: `dir` instead of `ls`, `del` instead of `rm`
+- Line endings: Git should handle CRLF conversion automatically
+
 ### Environment Setup
 
 Required `.env` variables:
@@ -358,6 +417,13 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.
+
+**Additional Documentation:**
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Initial setup instructions
+- [DATABASE_MIGRATION_GUIDE.md](DATABASE_MIGRATION_GUIDE.md) - Database migration procedures
+- [EPIC_*.md](.) - Feature epic documentation (Booking, Customer, Staff, Chat)
+- [SMART_BOOKING_IMPLEMENTATION.md](SMART_BOOKING_IMPLEMENTATION.md) - Smart booking features
+- [BOOKING_FORM_IMPROVEMENTS.md](BOOKING_FORM_IMPROVEMENTS.md) - Booking form enhancements
 
 ### Deployment
 

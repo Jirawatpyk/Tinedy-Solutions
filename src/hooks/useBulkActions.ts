@@ -3,29 +3,7 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { formatFullAddress } from '@/lib/booking-utils'
 import { getErrorMessage } from '@/lib/error-utils'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  staff_id: string | null
-  team_id: string | null
-  service_package_id: string
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  customers: { id: string; full_name: string; email: string } | null
-  service_packages: { name: string; service_type: string } | null
-  profiles: { full_name: string } | null
-  teams: { name: string } | null
-}
+import type { Booking } from '@/types/booking'
 
 interface UseBulkActionsProps {
   bookings: Booking[]

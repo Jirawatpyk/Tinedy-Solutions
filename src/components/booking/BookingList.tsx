@@ -6,33 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { User, Users, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-
-// Booking type definition (matches the parent component)
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  staff_id: string | null
-  team_id: string | null
-  service_package_id: string
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  customers: { id: string; full_name: string; email: string } | null
-  service_packages: { name: string; service_type: string } | null
-  profiles: { full_name: string } | null
-  teams: { name: string } | null
-}
+import type { Booking } from '@/types/booking'
 
 interface PaginationMetadata {
   startIndex: number

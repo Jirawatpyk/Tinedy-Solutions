@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,6 +13,8 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { BookingDetailModal } from './booking-detail-modal'
+import { BookingCreateModal, BookingEditModal } from '@/components/booking'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import {
   ChevronLeft,
@@ -92,6 +93,13 @@ interface Staff {
   role: string
 }
 
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
+
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -109,12 +117,12 @@ const STATUS_DOTS = {
 }
 
 export function AdminCalendar() {
-  const navigate = useNavigate()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
+  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
@@ -123,6 +131,19 @@ export function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  // Create Booking Modal State
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [createFormData, setCreateFormData] = useState<Record<string, any>>({})
+  const [isCreateAvailabilityOpen, setIsCreateAvailabilityOpen] = useState(false)
+
+  // Edit Booking Modal State
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({})
+  const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
+
   const { toast } = useToast()
 
   const fetchTeams = useCallback(async () => {
@@ -152,6 +173,21 @@ export function AdminCalendar() {
       setStaffMembers(data || [])
     } catch (error) {
       console.error('Error fetching staff members:', error)
+    }
+  }, [])
+
+  const fetchServicePackages = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) throw error
+      setServicePackages(data || [])
+    } catch (error) {
+      console.error('Error fetching service packages:', error)
     }
   }, [])
 
@@ -237,7 +273,8 @@ export function AdminCalendar() {
     fetchBookings()
     fetchTeams()
     fetchStaffMembers()
-  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers])
+    fetchServicePackages()
+  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers, fetchServicePackages])
 
   useEffect(() => {
     filterBookings()
@@ -273,22 +310,82 @@ export function AdminCalendar() {
     }
   }
 
-  const handleEditBooking = (booking: Booking) => {
-    navigate('/admin/bookings', {
-      state: {
-        editBookingId: booking.id,
-        bookingData: booking
-      }
-    })
+  // Helper function: Calculate end time from start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    if (!startTime) return ''
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const totalMinutes = hours * 60 + minutes + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMinutes = totalMinutes % 60
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
+  }
+
+  // Create Booking Form Helpers
+  const createForm = {
+    formData: createFormData,
+    handleChange: (field: string, value: any) => {
+      setCreateFormData(prev => ({ ...prev, [field]: value }))
+    },
+    setValues: (values: Record<string, any>) => {
+      setCreateFormData(prev => ({ ...prev, ...values }))
+    },
+    reset: () => {
+      setCreateFormData({})
+      setCreateAssignmentType('none')
+    }
+  }
+
+  // Edit Booking Form Helpers
+  const editForm = {
+    formData: editFormData,
+    handleChange: (field: string, value: any) => {
+      setEditFormData(prev => ({ ...prev, [field]: value }))
+    },
+    setValues: (values: Record<string, any>) => {
+      setEditFormData(prev => ({ ...prev, ...values }))
+    },
+    reset: () => {
+      setEditFormData({})
+      setEditAssignmentType('none')
+    }
   }
 
   const handleCreateBooking = (date: Date) => {
-    navigate('/admin/bookings', {
-      state: {
-        createBooking: true,
-        bookingDate: format(date, 'yyyy-MM-dd')
-      }
+    // Pre-fill booking date
+    setCreateFormData({ booking_date: format(date, 'yyyy-MM-dd') })
+    setIsCreateOpen(true)
+  }
+
+  const handleEditBooking = (booking: Booking) => {
+    // Populate edit form with booking data
+    setEditFormData({
+      service_package_id: booking.service_package_id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code,
+      notes: booking.notes,
+      total_price: booking.total_price,
+      staff_id: booking.staff_id || '',
+      team_id: booking.team_id || '',
+      status: booking.status,
     })
+
+    // Set assignment type based on booking data
+    if (booking.staff_id) {
+      setEditAssignmentType('staff')
+    } else if (booking.team_id) {
+      setEditAssignmentType('team')
+    } else {
+      setEditAssignmentType('none')
+    }
+
+    setSelectedBooking(booking)
+    setIsEditOpen(true)
+    setIsDetailOpen(false)
   }
 
   const goToPreviousMonth = () => {
@@ -928,6 +1025,145 @@ export function AdminCalendar() {
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
       />
+
+      {/* Create Booking Modal */}
+      <BookingCreateModal
+        isOpen={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false)
+          createForm.reset()
+        }}
+        onSuccess={() => {
+          fetchBookings()
+        }}
+        servicePackages={servicePackages}
+        staffMembers={staffMembers}
+        teams={teams}
+        onOpenAvailabilityModal={() => {
+          setIsCreateOpen(false)
+          setIsCreateAvailabilityOpen(true)
+        }}
+        createForm={createForm}
+        assignmentType={createAssignmentType}
+        setAssignmentType={setCreateAssignmentType}
+        calculateEndTime={calculateEndTime}
+      />
+
+      {/* Edit Booking Modal */}
+      {selectedBooking && (
+        <BookingEditModal
+          isOpen={isEditOpen}
+          onClose={() => {
+            setIsEditOpen(false)
+            editForm.reset()
+          }}
+          booking={selectedBooking}
+          onSuccess={() => {
+            fetchBookings()
+          }}
+          servicePackages={servicePackages}
+          staffMembers={staffMembers}
+          teams={teams}
+          onOpenAvailabilityModal={() => {
+            setIsEditOpen(false)
+            setIsEditAvailabilityOpen(true)
+          }}
+          editForm={editForm}
+          assignmentType={editAssignmentType}
+          onAssignmentTypeChange={setEditAssignmentType}
+          calculateEndTime={calculateEndTime}
+        />
+      )}
+
+      {/* Staff Availability Modal - Create */}
+      {createFormData.service_package_id && createFormData.booking_date && createFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isCreateAvailabilityOpen}
+          onClose={() => {
+            setIsCreateAvailabilityOpen(false)
+            setIsCreateOpen(true)
+          }}
+          assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            createForm.handleChange('staff_id', staffId)
+            setIsCreateAvailabilityOpen(false)
+            setIsCreateOpen(true)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            createForm.handleChange('team_id', teamId)
+            setIsCreateAvailabilityOpen(false)
+            setIsCreateOpen(true)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={createFormData.booking_date}
+          startTime={createFormData.start_time}
+          endTime={
+            createFormData.service_package_id
+              ? calculateEndTime(
+                  createFormData.start_time,
+                  servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.duration_minutes || 0
+                )
+              : createFormData.end_time
+          }
+          servicePackageId={createFormData.service_package_id}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.name
+          }
+        />
+      )}
+
+      {/* Staff Availability Modal - Edit */}
+      {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isEditAvailabilityOpen}
+          onClose={() => {
+            setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
+          }}
+          assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            editForm.handleChange('staff_id', staffId)
+            setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            editForm.handleChange('team_id', teamId)
+            setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={editFormData.booking_date}
+          startTime={editFormData.start_time}
+          endTime={
+            editFormData.service_package_id
+              ? calculateEndTime(
+                  editFormData.start_time,
+                  servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                )
+              : editFormData.end_time
+          }
+          servicePackageId={editFormData.service_package_id}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+          }
+          currentAssignedStaffId={editFormData.staff_id}
+          currentAssignedTeamId={editFormData.team_id}
+        />
+      )}
     </div>
   )
 }

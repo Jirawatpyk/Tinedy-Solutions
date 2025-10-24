@@ -179,6 +179,59 @@ export interface BookingWithRelations extends BookingRecord {
 }
 
 /**
+ * Booking with UI-specific relation names
+ *
+ * This interface represents a booking as used in the UI layer,
+ * with slightly different relation naming (customers vs customer, profiles vs staff).
+ * Used throughout the booking management pages and components.
+ *
+ * @interface Booking
+ */
+export interface Booking {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  total_price: number
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  staff_id: string | null
+  team_id: string | null
+  service_package_id: string
+  notes: string | null
+  payment_status?: string
+  payment_method?: string
+  amount_paid?: number
+  payment_date?: string
+  payment_notes?: string
+  customers: { id: string; full_name: string; email: string } | null
+  service_packages: { name: string; service_type: string } | null
+  profiles: { full_name: string } | null
+  teams: { name: string } | null
+}
+
+/**
+ * Minimal booking interface for status management
+ *
+ * Used by components that only need basic booking information
+ * for status and payment operations.
+ *
+ * @interface BookingBase
+ */
+export interface BookingBase {
+  id: string
+  status: string
+  payment_status?: string
+  payment_method?: string
+  total_price?: number
+  amount_paid?: number
+  payment_date?: string
+}
+
+/**
  * Data structure for creating or updating a booking
  *
  * This interface represents the data required when submitting a booking form.
