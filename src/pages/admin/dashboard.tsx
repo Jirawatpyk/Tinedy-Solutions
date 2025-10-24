@@ -60,6 +60,7 @@ interface TodayBooking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  notes: string | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number

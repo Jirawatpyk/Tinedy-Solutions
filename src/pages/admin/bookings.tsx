@@ -277,9 +277,19 @@ export function AdminBookings() {
   }, [filterBookings])
 
   // Reset to page 1 when filters change
+  // Using primitive dependencies to prevent unnecessary re-renders
   useEffect(() => {
     goToPage(1)
-  }, [filters, goToPage])
+  }, [
+    filters.searchQuery,
+    filters.status,
+    filters.staffId,
+    filters.teamId,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.serviceType,
+    goToPage
+  ])
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
@@ -1576,12 +1586,11 @@ export function AdminBookings() {
       />
 
       {/* Booking Detail Modal */}
-      {/* eslint-disable @typescript-eslint/no-explicit-any */}
       <BookingDetailModal
-        booking={selectedBooking as any}
+        booking={selectedBooking}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onEdit={openEditBooking as any}
+        onEdit={openEditBooking}
         onDelete={deleteBooking}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={markAsPaid}
@@ -1590,7 +1599,6 @@ export function AdminBookings() {
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
       />
-      {/* eslint-enable @typescript-eslint/no-explicit-any */}
 
       {/* Edit Booking Modal */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

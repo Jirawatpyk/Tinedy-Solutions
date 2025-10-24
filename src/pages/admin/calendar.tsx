@@ -52,6 +52,7 @@ interface Booking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  notes: string | null
   address: string
   city: string
   state: string
