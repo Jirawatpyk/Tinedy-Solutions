@@ -5,6 +5,7 @@ import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
 import { MainLayout } from './components/layout/main-layout'
 import { Toaster } from './components/ui/toaster'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Eager load: Login page (first page users see)
 import { LoginPage } from './pages/auth/login'
@@ -45,9 +46,10 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="tinedy-crm-theme">
       <AuthProvider>
-        <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
 
@@ -132,10 +134,11 @@ function App() {
               </div>
             }
           />
-          </Routes>
-        </Suspense>
-        <Toaster />
-      </BrowserRouter>
+              </Routes>
+            </Suspense>
+            <Toaster />
+          </BrowserRouter>
+        </ErrorBoundary>
       </AuthProvider>
     </ThemeProvider>
   )

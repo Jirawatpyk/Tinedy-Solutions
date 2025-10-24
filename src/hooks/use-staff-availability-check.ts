@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { ServicePackage } from '@/types'
+import { getSupabaseErrorMessage } from '@/lib/error-utils'
 
 interface Customer {
   full_name: string
@@ -107,6 +108,7 @@ export function useStaffAvailabilityCheck({
   const [staffResults, setStaffResults] = useState<StaffAvailabilityResult[]>([])
   const [teamResults, setTeamResults] = useState<TeamAvailabilityResult[]>([])
   const [serviceType, setServiceType] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
 
   const checkStaffAvailability = useCallback(async () => {
     try {
@@ -311,8 +313,11 @@ export function useStaffAvailabilityCheck({
       // Sort by score (highest first)
       const sortedResults = results.sort((a, b) => b.score - a.score)
       setStaffResults(sortedResults)
-    } catch (error) {
-      console.error('Error checking staff availability:', error)
+    } catch (err) {
+      const errorMsg = getSupabaseErrorMessage(err)
+      console.error('Error checking staff availability:', err)
+      setError(errorMsg)
+      setStaffResults([]) // Clear results on error
     } finally {
       setLoading(false)
     }
@@ -542,8 +547,11 @@ export function useStaffAvailabilityCheck({
       // Sort by score (highest first)
       const sortedResults = results.sort((a, b) => b.score - a.score)
       setTeamResults(sortedResults)
-    } catch (error) {
-      console.error('Error checking team availability:', error)
+    } catch (err) {
+      const errorMsg = getSupabaseErrorMessage(err)
+      console.error('Error checking team availability:', err)
+      setError(errorMsg)
+      setTeamResults([]) // Clear results on error
     } finally {
       setLoading(false)
     }
@@ -566,7 +574,8 @@ export function useStaffAvailabilityCheck({
     loading,
     staffResults,
     teamResults,
-    serviceType
+    serviceType,
+    error
   }
 }
 
