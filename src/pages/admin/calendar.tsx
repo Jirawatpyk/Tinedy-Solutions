@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { BookingDetailModal } from './booking-detail-modal'
+import { CreateBookingModal } from './create-booking-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import {
   ChevronLeft,
@@ -122,6 +123,8 @@ export function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createBookingDate, setCreateBookingDate] = useState<Date | null>(null)
   const { toast } = useToast()
 
   const fetchTeams = useCallback(async () => {
@@ -733,16 +736,16 @@ export function AdminCalendar() {
                 const isTodayDate = isToday(day)
 
                 return (
-                  <button
+                  <div
                     key={index}
-                    onClick={() => setSelectedDate(day)}
                     className={`
-                      relative min-h-20 p-2 text-left border rounded-lg transition-all
+                      relative min-h-20 p-2 border rounded-lg transition-all group
                       ${!isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-background'}
                       ${isSelected ? 'ring-2 ring-tinedy-blue bg-blue-50' : ''}
                       ${isTodayDate && !isSelected ? 'ring-2 ring-tinedy-yellow' : ''}
                       hover:bg-accent/50
                     `}
+                    onClick={() => setSelectedDate(day)}
                   >
                     <div className="flex items-start justify-between">
                       <span
@@ -752,11 +755,27 @@ export function AdminCalendar() {
                       >
                         {format(day, 'd')}
                       </span>
-                      {dayBookings.length > 0 && (
-                        <span className="text-xs bg-tinedy-blue text-white rounded-full px-1.5">
-                          {dayBookings.length}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {dayBookings.length > 0 && (
+                          <span className="text-xs bg-tinedy-blue text-white rounded-full px-1.5">
+                            {dayBookings.length}
+                          </span>
+                        )}
+                        {/* Add Booking Button */}
+                        {isCurrentMonth && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setCreateBookingDate(day)
+                              setIsCreateOpen(true)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-green-600"
+                            title="Create booking"
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Booking dots */}
@@ -778,7 +797,7 @@ export function AdminCalendar() {
                         )}
                       </div>
                     )}
-                  </button>
+                  </div>
                 )
               })}
             </div>
@@ -888,6 +907,17 @@ export function AdminCalendar() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Booking Modal */}
+      <CreateBookingModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        selectedDate={createBookingDate}
+        onSuccess={() => {
+          fetchBookings()
+          setIsCreateOpen(false)
+        }}
+      />
 
       {/* Booking Detail Modal */}
       <BookingDetailModal
