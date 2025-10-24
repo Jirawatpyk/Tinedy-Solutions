@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { BookingDetailModal } from './booking-detail-modal'
-import { CreateBookingModal } from './create-booking-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import {
   ChevronLeft,
@@ -123,8 +122,6 @@ export function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createBookingDate, setCreateBookingDate] = useState<Date | null>(null)
   const { toast } = useToast()
 
   const fetchTeams = useCallback(async () => {
@@ -280,6 +277,15 @@ export function AdminCalendar() {
       state: {
         editBookingId: booking.id,
         bookingData: booking
+      }
+    })
+  }
+
+  const handleCreateBooking = (date: Date) => {
+    navigate('/admin/bookings', {
+      state: {
+        createBooking: true,
+        bookingDate: format(date, 'yyyy-MM-dd')
       }
     })
   }
@@ -766,8 +772,7 @@ export function AdminCalendar() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              setCreateBookingDate(day)
-                              setIsCreateOpen(true)
+                              handleCreateBooking(day)
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-green-600"
                             title="Create booking"
@@ -907,17 +912,6 @@ export function AdminCalendar() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Create Booking Modal */}
-      <CreateBookingModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        selectedDate={createBookingDate}
-        onSuccess={() => {
-          fetchBookings()
-          setIsCreateOpen(false)
-        }}
-      />
 
       {/* Booking Detail Modal */}
       <BookingDetailModal

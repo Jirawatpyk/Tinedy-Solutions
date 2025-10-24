@@ -279,7 +279,20 @@ export function AdminBookings() {
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
-    const state = location.state as { editBookingId?: string; bookingData?: Booking } | null
+    const state = location.state as { editBookingId?: string; bookingData?: Booking; createBooking?: boolean; bookingDate?: string } | null
+
+    // Handle create booking from Calendar
+    if (state?.createBooking && state?.bookingDate) {
+      // Pre-fill the booking date
+      setFormData(prev => ({ ...prev, booking_date: state.bookingDate || '' }))
+      // Open create dialog
+      setIsDialogOpen(true)
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title)
+      return
+    }
+
+    // Handle edit booking from Dashboard/Calendar
     if (state?.editBookingId && bookings.length > 0) {
       const booking = bookings.find(b => b.id === state.editBookingId)
       if (booking) {

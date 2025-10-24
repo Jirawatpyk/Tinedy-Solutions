@@ -34,26 +34,57 @@ rm -rf node_modules/.vite && npm run dev
 ### Currency Format
 The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()` in `src/lib/utils.ts`. Never use USD ($).
 
-### Role-Based Access Control
-Two primary roles with separate portals:
+### Role-Based Access Control & Routing
+
+**Two Roles with Separate Portals:**
 - **Admin**: Full system access at `/admin/*` routes
 - **Staff**: Limited access at `/staff/*` routes
 
-Authentication flows through `AuthContext` (`src/contexts/auth-context.tsx`):
+**Authentication:**
+- Flows through `AuthContext` (`src/contexts/auth-context.tsx`)
 - Manages `user` (Supabase auth) and `profile` (custom profiles table)
 - Profile includes: `role`, `staff_number`, `skills`, etc.
 - Protected routes use `ProtectedRoute` component with `allowedRoles` prop
+
+**Route Structure** (defined in `src/App.tsx`):
+
+*Admin Routes* (`/admin/*`):
+- `/admin` - Dashboard
+- `/admin/bookings` - Booking management
+- `/admin/customers` - Customer list
+- `/admin/customers/:id` - Customer detail
+- `/admin/staff` - Staff management
+- `/admin/staff/:id` - Staff performance
+- `/admin/weekly-schedule` - Weekly schedule view
+- `/admin/calendar` - Calendar view
+- `/admin/chat` - Chat system
+- `/admin/packages` - Service packages
+- `/admin/reports` - Reports & analytics
+- `/admin/teams` - Team management
+- `/admin/profile` - Admin profile
+- `/admin/settings` - Settings
+
+*Staff Routes* (`/staff/*`):
+- `/staff` - Dashboard
+- `/staff/calendar` - Calendar view
+- `/staff/chat` - Chat system
+- `/staff/profile` - Staff profile
+
+*Public Routes:*
+- `/login` - Login page
+- `/` - Redirects to `/admin`
 
 ### Database Architecture
 
 **Core Tables:**
 - `profiles` - User profiles (extends Supabase auth.users)
-- `customers` - Customer records
+- `customers` - Customer records with tags and analytics
 - `service_packages` - Service offerings (cleaning, training, etc.)
 - `bookings` - Main booking records with team/staff assignment
-- `teams` - Staff team organization
+- `teams` - Staff team organization with team leads
 - `team_members` - Many-to-many team membership
 - `messages` - Internal chat system
+- `settings` - Application settings (notifications, business hours)
 - `reviews` - Customer ratings for staff (may not exist in all deployments)
 
 **Key Patterns:**
@@ -71,11 +102,11 @@ Bookings support two assignment modes:
 2. **Team**: Assigned to `team_id`, visible to all team members
 
 **Status Flow:**
-`pending` ’ `confirmed` ’ `in_progress` ’ `completed`/`cancelled`
+`pending` ï¿½ `confirmed` ï¿½ `in_progress` ï¿½ `completed`/`cancelled`
 
 **Time Format:**
 - Database stores `HH:MM:SS`
-- UI displays `HH:MM` via `formatTime()` helper
+- UI displays `HH:MM` - inline `formatTime()` implementation: `time.split(':').slice(0, 2).join(':')`
 - Always remove seconds when displaying to users
 
 ### Performance Patterns
@@ -117,6 +148,18 @@ Always show full address format:
 - Previous attempts failed: `preventDefault()`, `stopPropagation()`, `modal={false}`, scroll position saving
 - Accept default Dialog behavior unless user explicitly requests a fix
 
+### Utility Libraries
+
+**Core Utilities** (`src/lib/`):
+- `utils.ts` - Common helpers: `cn()` (classname merge), `formatCurrency()`, `formatDate()`, `formatDateTime()`
+- `error-utils.ts` - Error handling: `getErrorMessage()`
+- `analytics.ts` - Analytics and metrics calculations
+- `export.ts` - Data export utilities (CSV, PDF)
+- `email.ts` - Email templates and sending (via Resend)
+- `notifications.ts` - Notification system utilities
+- `chat-storage.ts` - Chat file storage helpers
+- `tag-utils.ts` - Tag management for customers
+
 ### Supabase Integration
 
 **Client Initialization:**
@@ -127,6 +170,7 @@ Located in `src/lib/supabase.ts` using environment variables:
 **Edge Functions:**
 Located in `supabase/functions/`:
 - `create-staff` - Creates staff users with proper auth and profile setup
+- `send-booking-reminder` - Sends booking reminder notifications
 - Call via: `supabase.functions.invoke('function-name', { body: {...} })`
 
 **Realtime Subscriptions:**
@@ -168,9 +212,11 @@ return () => supabase.removeChannel(channel)
 
 Migration files in `supabase/migrations/` are manually run in Supabase Dashboard SQL Editor.
 
-**Recent migrations:**
-- `20250122_create_reviews_table.sql` - Reviews system
-- `20250122_add_staff_number_and_skills.sql` - Staff fields with auto-generation
+**Recent migrations in `supabase/migrations/`:**
+- `add_team_lead.sql` - Team leadership functionality
+- `create_settings_table.sql` - Application settings
+- `customer_analytics_views.sql` - Customer analytics views
+- `enhance_customers_table.sql` - Enhanced customer fields
 
 **Migration Pattern:**
 ```sql
@@ -190,6 +236,10 @@ DO $$ ... $$;
 
 ### Code Style
 
+**Import Aliases:**
+- Use `@/` for absolute imports (e.g., `import { supabase } from '@/lib/supabase'`)
+- Configured in `vite.config.ts` as alias to `./src`
+
 **Component Patterns:**
 - Functional components with hooks
 - TypeScript interfaces for all props/data
@@ -201,6 +251,18 @@ DO $$ ... $$;
 - Feature state via custom hooks (e.g., `useStaffBookings`)
 - Local component state for UI-only concerns
 
+**Custom Hooks** (`src/hooks/`):
+- `use-staff-bookings.ts` - Staff booking data with realtime updates
+- `use-staff-calendar.ts` - Calendar view for staff
+- `use-staff-profile.ts` - Staff profile management
+- `use-admin-profile.ts` - Admin profile management
+- `use-chat.ts` - Chat functionality with realtime
+- `use-notifications.ts` - Notification system
+- `use-in-app-notifications.ts` - In-app notification UI
+- `use-staff-availability-check.ts` - Staff availability validation
+- `use-settings.ts` - Application settings management
+- `use-toast.ts` - Toast notification hook
+
 **Error Boundaries:**
 - Try-catch blocks for async operations
 - Toast notifications for user-facing errors
@@ -208,9 +270,15 @@ DO $$ ... $$;
 
 **TypeScript:**
 - Strict mode enabled
-- No implicit any
+- No implicit any (`@typescript-eslint/no-explicit-any` set to warn)
 - Proper typing for Supabase queries
 - Use `any` with type assertions only when necessary
+
+**Linting:**
+- ESLint with flat config format (`eslint.config.js`)
+- Unused vars with underscore prefix ignored (e.g., `_event`)
+- React hooks exhaustive-deps set to warn
+- Run `npm run lint` before committing
 
 ### Common Pitfalls
 
@@ -228,13 +296,15 @@ DO $$ ... $$;
    .or(`staff_id.eq.${userId},team_id.in.(${teamIds})`)
    ```
 
-3. **Time Display**: Always format time to remove seconds before showing to users
+3. **Time Display**: Always format time to remove seconds: `time.split(':').slice(0, 2).join(':')`
 
-4. **Currency**: Always use `formatCurrency()` from utils, never hardcode $ symbol
+4. **Currency**: Always use `formatCurrency()` from `@/lib/utils`, never hardcode $ symbol
 
-5. **Full Address**: Always join all address components (address, city, state, zip_code)
+5. **Full Address**: Use `formatFullAddress()` from `use-staff-bookings.ts` or join manually: `[address, city, state, zip_code].filter(Boolean).join(', ')`
 
-6. **Build Errors**: Always run `npm run build` before committing to catch TypeScript errors
+6. **Import Paths**: Always use `@/` alias for imports from src directory
+
+7. **Build Errors**: Always run `npm run build` before committing to catch TypeScript errors
 
 ### Git Workflow
 
@@ -260,22 +330,23 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ### Feature Status
 
 **Implemented:**
-- Admin Dashboard with stats and charts
-- Booking Management (CRUD)
-- Customer Management
-- Staff Management with auto-generated staff numbers
-- Team Management
-- Calendar views (admin and staff)
-- Chat system with realtime updates
-- Staff Availability management
-- Service Packages
-- Reports with analytics
+- Admin Dashboard with stats and charts ([dashboard.tsx](src/pages/admin/dashboard.tsx))
+- Booking Management with calendar ([bookings.tsx](src/pages/admin/bookings.tsx), [calendar.tsx](src/pages/admin/calendar.tsx))
+- Customer Management with detailed profiles ([customers.tsx](src/pages/admin/customers.tsx), [customer-detail.tsx](src/pages/admin/customer-detail.tsx))
+- Staff Management with auto-generated staff numbers ([staff.tsx](src/pages/admin/staff.tsx))
+- Team Management ([teams.tsx](src/pages/admin/teams.tsx))
+- Chat system with realtime updates ([chat.tsx](src/pages/admin/chat.tsx))
+- Staff Portal (dashboard, calendar, profile) ([src/pages/staff/](src/pages/staff/))
+- Staff Availability and performance tracking
+- Service Packages ([service-packages.tsx](src/pages/admin/service-packages.tsx))
+- Reports & analytics with export ([reports.tsx](src/pages/admin/reports.tsx))
+- Weekly schedule view ([weekly-schedule.tsx](src/pages/admin/weekly-schedule.tsx))
+- Settings & notifications ([settings.tsx](src/pages/admin/settings.tsx))
 
 **Not Implemented:**
 - Customer Portal (customers cannot self-service)
 - Payment Integration (Stripe/Omise)
-- SMS/Email Notifications
-- Audit Log (removed - not needed for current scope)
+- SMS/Email Notifications (Edge function exists but not fully integrated)
 - Advanced reporting features
 
 ### Environment Setup
@@ -287,3 +358,15 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.
+
+### Deployment
+
+**Vercel (Configured):**
+- `vercel.json` includes SPA routing configuration
+- Rewrites all routes to `/index.html` for React Router
+- Deploy: `vercel` or connect GitHub repo
+
+**Build Output:**
+- Production build creates `dist/` directory
+- Run `npm run build` to create optimized production bundle
+- Run `npm run preview` to test production build locally
