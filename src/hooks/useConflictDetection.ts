@@ -13,6 +13,17 @@ import { supabase } from '@/lib/supabase'
 import type { BookingRecord } from '@/types/booking'
 
 /**
+ * Extended booking record with relations for conflict display
+ * Includes customer, staff, team, and service package information
+ */
+interface BookingRecordWithRelations extends BookingRecord {
+  customers?: { id: string; full_name: string; email: string } | null
+  service_packages?: { name: string; service_type: string } | null
+  profiles?: { full_name: string } | null
+  teams?: { name: string } | null
+}
+
+/**
  * Parameters for checking booking conflicts
  *
  * @interface ConflictCheckParams
@@ -38,12 +49,12 @@ export interface ConflictCheckParams {
  *
  * @interface BookingConflict
  *
- * @property {BookingRecord} booking - The conflicting booking record
+ * @property {BookingRecordWithRelations} booking - The conflicting booking record with relations
  * @property {'staff' | 'team' | 'both'} conflictType - Type of conflict detected
  * @property {string} message - Human-readable description of the conflict
  */
 export interface BookingConflict {
-  booking: BookingRecord
+  booking: BookingRecordWithRelations
   conflictType: 'staff' | 'team' | 'both'
   message: string
 }
@@ -132,9 +143,16 @@ export function useConflictDetection(params?: ConflictCheckParams) {
 
     try {
       // Build query to find potentially overlapping bookings on the same date
+      // Include related data for display purposes (customer, staff, team, service info)
       let query = supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          customers (id, full_name, email),
+          service_packages (name, service_type),
+          profiles (full_name),
+          teams (name)
+        `)
         .eq('booking_date', bookingDate)
         .not('status', 'in', '(cancelled,no_show)') // Exclude cancelled/no-show bookings
 
@@ -167,7 +185,7 @@ export function useConflictDetection(params?: ConflictCheckParams) {
 
         if (hasOverlap) {
           detectedConflicts.push({
-            booking: booking as BookingRecord,
+            booking: booking as BookingRecordWithRelations,
             conflictType: staffId ? 'staff' : 'team',
             message: `${staffId ? 'Staff' : 'Team'} is already booked at this time`,
           })

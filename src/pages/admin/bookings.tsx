@@ -7,6 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useBookingFilters } from '@/hooks/useBookingFilters'
+import { usePagination } from '@/hooks/useBookingPagination'
+import { useConflictDetection } from '@/hooks/useConflictDetection'
+import { useBookingForm } from '@/hooks/useBookingForm'
 import {
   Dialog,
   DialogContent,
@@ -106,52 +110,60 @@ export function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [staffFilter, setStaffFilter] = useState('all')
-  const [teamFilter, setTeamFilter] = useState('all')
   const [assignmentType, setAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null)
   const [checkingCustomer, setCheckingCustomer] = useState(false)
-  // Advanced Filters
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [serviceTypeFilter, setServiceTypeFilter] = useState('all')
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1)
+  // Booking filters hook
+  const {
+    filters,
+    updateFilter,
+    resetFilters,
+    hasActiveFilters,
+    getActiveFilterCount,
+    setQuickFilter
+  } = useBookingFilters()
+  // Items per page state (for dynamic pagination)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  // Pagination hook
+  const {
+    items: paginatedBookings,
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    goToFirst,
+    goToLast,
+    goToPage,
+    metadata
+  } = usePagination(filteredBookings, {
+    initialPage: 1,
+    itemsPerPage: itemsPerPage
+  })
   // Detail Modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   // Edit Modal
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editFormData, setEditFormData] = useState({
-    booking_id: '',
-    customer_id: '',
-    service_package_id: '',
-    staff_id: '',
-    team_id: '',
-    booking_date: '',
-    start_time: '',
-    end_time: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    notes: '',
-    total_price: 0,
-    status: '',
+  // Edit Booking Form - Using useBookingForm hook
+  const editForm = useBookingForm({
+    onSubmit: async () => {
+      // This will be handled by the existing handleEditSubmit logic
+    }
   })
   // Bulk Actions
   const [selectedBookings, setSelectedBookings] = useState<string[]>([])
   const [bulkStatus, setBulkStatus] = useState('')
-  // Conflict Detection
-  const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([])
+  // Conflict Detection (using hook)
+  const {
+    conflicts,
+    checkConflicts,
+    clearConflicts,
+  } = useConflictDetection()
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingBookingData, setPendingBookingData] = useState<Record<string, unknown> | null>(null)
   const [conflictOverride, setConflictOverride] = useState(false)
@@ -162,28 +174,18 @@ export function AdminBookings() {
     currentStatus: string
     newStatus: string
   } | null>(null)
-  const [formData, setFormData] = useState({
-    customer_id: '',
-    full_name: '',
-    email: '',
-    phone: '',
-    service_package_id: '',
-    staff_id: '',
-    team_id: '',
-    booking_date: '',
-    start_time: '',
-    end_time: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    notes: '',
-    total_price: 0,
-  })
   // Staff Availability Modal
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
   const [isEditAvailabilityModalOpen, setIsEditAvailabilityModalOpen] = useState(false)
   const { toast } = useToast()
+
+  // Create Booking Form - Using useBookingForm hook
+  const createForm = useBookingForm({
+    onSubmit: async () => {
+      // This will be handled by the existing handleSubmit logic
+      // We'll keep the existing submission flow but manage state with hook
+    }
+  })
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -215,52 +217,52 @@ export function AdminBookings() {
   const filterBookings = useCallback(() => {
     let filtered = bookings
 
-    if (searchQuery) {
+    if (filters.searchQuery) {
       filtered = filtered.filter(
         (booking) =>
           booking.customers?.full_name
             .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
+            .includes(filters.searchQuery.toLowerCase()) ||
           booking.service_packages?.name
             .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+            .includes(filters.searchQuery.toLowerCase())
       )
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((booking) => booking.status === statusFilter)
+    if (filters.status !== 'all') {
+      filtered = filtered.filter((booking) => booking.status === filters.status)
     }
 
-    if (staffFilter !== 'all') {
-      if (staffFilter === 'unassigned') {
+    if (filters.staffId !== 'all') {
+      if (filters.staffId === 'unassigned') {
         filtered = filtered.filter((booking) => !booking.staff_id)
       } else {
-        filtered = filtered.filter((booking) => booking.staff_id === staffFilter)
+        filtered = filtered.filter((booking) => booking.staff_id === filters.staffId)
       }
     }
 
-    if (teamFilter !== 'all') {
-      filtered = filtered.filter((booking) => booking.team_id === teamFilter)
+    if (filters.teamId !== 'all') {
+      filtered = filtered.filter((booking) => booking.team_id === filters.teamId)
     }
 
     // Date range filter
-    if (dateFrom) {
-      filtered = filtered.filter((booking) => booking.booking_date >= dateFrom)
+    if (filters.dateFrom) {
+      filtered = filtered.filter((booking) => booking.booking_date >= filters.dateFrom)
     }
 
-    if (dateTo) {
-      filtered = filtered.filter((booking) => booking.booking_date <= dateTo)
+    if (filters.dateTo) {
+      filtered = filtered.filter((booking) => booking.booking_date <= filters.dateTo)
     }
 
     // Service type filter
-    if (serviceTypeFilter !== 'all') {
+    if (filters.serviceType !== 'all') {
       filtered = filtered.filter(
-        (booking) => booking.service_packages?.service_type === serviceTypeFilter
+        (booking) => booking.service_packages?.service_type === filters.serviceType
       )
     }
 
     setFilteredBookings(filtered)
-  }, [bookings, searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter])
+  }, [bookings, filters])
 
   useEffect(() => {
     fetchBookings()
@@ -273,10 +275,10 @@ export function AdminBookings() {
     filterBookings()
   }, [filterBookings])
 
-  // Reset to page 1 only when filters change (not when bookings data changes)
+  // Reset to page 1 when filters change
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter])
+    goToPage(1)
+  }, [filters, goToPage])
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
@@ -284,8 +286,8 @@ export function AdminBookings() {
 
     // Handle create booking from Calendar
     if (state?.createBooking && state?.bookingDate) {
-      // Pre-fill the booking date
-      setFormData(prev => ({ ...prev, booking_date: state.bookingDate || '' }))
+      // Pre-fill the booking date using hook
+      createForm.setValues({ booking_date: state.bookingDate || '' })
       // Open create dialog
       setIsDialogOpen(true)
       // Clear the state to prevent reopening on refresh
@@ -297,10 +299,9 @@ export function AdminBookings() {
     if (state?.editBookingId && bookings.length > 0) {
       const booking = bookings.find(b => b.id === state.editBookingId)
       if (booking) {
-        // Open edit modal
-        setEditFormData({
-          booking_id: booking.id,
-          customer_id: booking.customers?.email || '',
+        // Open edit modal - populate form using hook
+        editForm.setValues({
+          customer_id: booking.customers?.id || '',
           service_package_id: booking.service_package_id,
           staff_id: booking.staff_id || '',
           team_id: booking.team_id || '',
@@ -332,7 +333,7 @@ export function AdminBookings() {
         window.history.replaceState({}, document.title)
       }
     }
-  }, [location.state, bookings])
+  }, [location.state, bookings, createForm, editForm])
 
   const fetchServicePackages = async () => {
     try {
@@ -395,7 +396,7 @@ export function AdminBookings() {
 
   // Check existing customer by email
   const handleEmailBlur = async () => {
-    if (!formData.email || formData.email.trim() === '') return
+    if (!createForm.formData.email || createForm.formData.email.trim() === '') return
 
     setCheckingCustomer(true)
 
@@ -403,13 +404,13 @@ export function AdminBookings() {
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('email', formData.email.trim())
+        .eq('email', createForm.formData.email.trim())
         .single()
 
       if (data && !error) {
         setExistingCustomer(data)
         toast({
-          title: '✅ Customer Found!',
+          title: 'Customer Found!',
           description: `${data.full_name} (${data.phone})`,
           duration: 10000,
         })
@@ -425,7 +426,7 @@ export function AdminBookings() {
 
   // Check existing customer by phone
   const handlePhoneBlur = async () => {
-    if (!formData.phone || formData.phone.trim() === '' || existingCustomer) return
+    if (!createForm.formData.phone || createForm.formData.phone.trim() === '' || existingCustomer) return
 
     setCheckingCustomer(true)
 
@@ -433,13 +434,13 @@ export function AdminBookings() {
       const { data, error} = await supabase
         .from('customers')
         .select('*')
-        .eq('phone', formData.phone.trim())
+        .eq('phone', createForm.formData.phone.trim())
         .single()
 
       if (data && !error) {
         setExistingCustomer(data)
         toast({
-          title: '✅ Customer Found (by Phone)!',
+          title: 'Customer Found (by Phone)!',
           description: `${data.full_name} (${data.email})`,
           duration: 10000,
         })
@@ -455,8 +456,7 @@ export function AdminBookings() {
   const useExistingCustomer = () => {
     if (!existingCustomer) return
 
-    setFormData({
-      ...formData,
+    createForm.setValues({
       customer_id: existingCustomer.id,
       full_name: existingCustomer.full_name,
       email: existingCustomer.email,
@@ -473,77 +473,25 @@ export function AdminBookings() {
     })
   }
 
-  // Check for booking conflicts
-  const checkBookingConflicts = async (
-    bookingDate: string,
-    startTime: string,
-    endTime: string,
-    staffId: string | null,
-    teamId: string | null,
-    excludeBookingId?: string
-  ): Promise<Booking[]> => {
-    try {
-      // Only check conflicts if staff or team is assigned
-      if (!staffId && !teamId) return []
-
-      let query = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, email),
-          service_packages (name, service_type),
-          profiles (full_name),
-          teams (name)
-        `)
-        .eq('booking_date', bookingDate)
-        .not('status', 'in', '(cancelled,no_show)')
-
-      // Check staff or team conflicts
-      if (staffId) {
-        query = query.eq('staff_id', staffId)
-      } else if (teamId) {
-        query = query.eq('team_id', teamId)
-      }
-
-      // Exclude current booking when editing
-      if (excludeBookingId) {
-        query = query.neq('id', excludeBookingId)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      // Filter for time overlaps: (new_start < existing_end) AND (new_end > existing_start)
-      const conflicts = (data || []).filter((booking) => {
-        return startTime < booking.end_time && endTime > booking.start_time
-      })
-
-      return conflicts
-    } catch (error) {
-      console.error('Error checking conflicts:', error)
-      return []
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
-      let customerId = formData.customer_id
+      let customerId = createForm.formData.customer_id
 
       // If no customer_id, create new customer
       if (!customerId) {
         const { data: newCustomer, error: customerError } = await supabase
           .from('customers')
           .insert({
-            full_name: formData.full_name,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zip_code: formData.zip_code,
+            full_name: createForm.formData.full_name,
+            email: createForm.formData.email,
+            phone: createForm.formData.phone,
+            address: createForm.formData.address,
+            city: createForm.formData.city,
+            state: createForm.formData.state,
+            zip_code: createForm.formData.zip_code,
             relationship_level: 'new',
             preferred_contact_method: 'phone',
           })
@@ -555,41 +503,40 @@ export function AdminBookings() {
       }
 
       // Calculate end_time
-      const selectedPackage = servicePackages.find(pkg => pkg.id === formData.service_package_id)
+      const selectedPackage = servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)
       const endTime = selectedPackage
-        ? calculateEndTime(formData.start_time, selectedPackage.duration_minutes)
-        : formData.end_time
+        ? calculateEndTime(createForm.formData.start_time || '', selectedPackage.duration_minutes)
+        : createForm.formData.end_time || ''
 
       const submitData = {
         customer_id: customerId,
-        service_package_id: formData.service_package_id,
-        booking_date: formData.booking_date,
-        start_time: formData.start_time,
+        service_package_id: createForm.formData.service_package_id,
+        booking_date: createForm.formData.booking_date,
+        start_time: createForm.formData.start_time,
         end_time: endTime,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zip_code: formData.zip_code,
-        notes: formData.notes,
-        total_price: formData.total_price,
-        staff_id: assignmentType === 'staff' ? (formData.staff_id || null) : null,
-        team_id: assignmentType === 'team' ? (formData.team_id || null) : null,
+        address: createForm.formData.address,
+        city: createForm.formData.city,
+        state: createForm.formData.state,
+        zip_code: createForm.formData.zip_code,
+        notes: createForm.formData.notes,
+        total_price: createForm.formData.total_price,
+        staff_id: assignmentType === 'staff' ? (createForm.formData.staff_id || null) : null,
+        team_id: assignmentType === 'team' ? (createForm.formData.team_id || null) : null,
         status: 'pending',
       }
 
       // Check for conflicts (unless user has already confirmed override)
       if (!conflictOverride) {
-        const conflicts = await checkBookingConflicts(
-          submitData.booking_date,
-          submitData.start_time,
-          endTime,
-          submitData.staff_id,
-          submitData.team_id
-        )
+        const detectedConflicts = await checkConflicts({
+          staffId: submitData.staff_id,
+          teamId: submitData.team_id,
+          bookingDate: submitData.booking_date || '',
+          startTime: submitData.start_time || '',
+          endTime: endTime
+        })
 
-        if (conflicts.length > 0) {
+        if (detectedConflicts.length > 0) {
           // Show conflict warning dialog
-          setConflictingBookings(conflicts)
           setPendingBookingData({ ...submitData, customer_id: customerId })
           setShowConflictDialog(true)
           return // Stop submission and show dialog
@@ -636,7 +583,7 @@ export function AdminBookings() {
       resetForm()
       setConflictOverride(false)
       setPendingBookingData(null)
-      setConflictingBookings([])
+      clearConflicts()
       fetchBookings()
     } catch (error) {
       toast({
@@ -651,31 +598,15 @@ export function AdminBookings() {
   const cancelConflictOverride = () => {
     setShowConflictDialog(false)
     setPendingBookingData(null)
-    setConflictingBookings([])
+    clearConflicts()
     setConflictOverride(false)
   }
 
   const resetForm = () => {
-    setFormData({
-      customer_id: '',
-      full_name: '',
-      email: '',
-      phone: '',
-      service_package_id: '',
-      staff_id: '',
-      team_id: '',
-      booking_date: '',
-      start_time: '',
-      end_time: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      notes: '',
-      total_price: 0,
-    })
+    createForm.reset()
     setAssignmentType('none')
     setExistingCustomer(null)
+    clearConflicts()
   }
 
   const getStatusBadge = (status: string) => {
@@ -827,50 +758,6 @@ export function AdminBookings() {
     }
   }
 
-  // Quick filter functions
-  const setQuickFilter = (filter: 'today' | 'week' | 'month') => {
-    const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
-
-    if (filter === 'today') {
-      setDateFrom(todayStr)
-      setDateTo(todayStr)
-    } else if (filter === 'week') {
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - today.getDay())
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekStart.getDate() + 6)
-      setDateFrom(weekStart.toISOString().split('T')[0])
-      setDateTo(weekEnd.toISOString().split('T')[0])
-    } else if (filter === 'month') {
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      setDateFrom(monthStart.toISOString().split('T')[0])
-      setDateTo(monthEnd.toISOString().split('T')[0])
-    }
-  }
-
-  const clearAllFilters = () => {
-    setSearchQuery('')
-    setStatusFilter('all')
-    setStaffFilter('all')
-    setTeamFilter('all')
-    setDateFrom('')
-    setDateTo('')
-    setServiceTypeFilter('all')
-  }
-
-  const getActiveFilterCount = () => {
-    let count = 0
-    if (searchQuery) count++
-    if (statusFilter !== 'all') count++
-    if (staffFilter !== 'all') count++
-    if (teamFilter !== 'all') count++
-    if (dateFrom) count++
-    if (dateTo) count++
-    if (serviceTypeFilter !== 'all') count++
-    return count
-  }
 
   const openBookingDetail = (booking: Booking) => {
     setSelectedBooking(booking)
@@ -878,9 +765,8 @@ export function AdminBookings() {
   }
 
   const openEditBooking = (booking: Booking) => {
-    setEditFormData({
-      booking_id: booking.id,
-      customer_id: booking.customers?.email || '',
+    editForm.setValues({
+      customer_id: booking.customers?.id || '',
       service_package_id: booking.service_package_id,
       staff_id: booking.staff_id || '',
       team_id: booking.team_id || '',
@@ -913,42 +799,44 @@ export function AdminBookings() {
     e.preventDefault()
     try {
       // Calculate end_time
-      const selectedPackage = servicePackages.find(pkg => pkg.id === editFormData.service_package_id)
+      const selectedPackage = servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)
       const endTime = selectedPackage
-        ? calculateEndTime(editFormData.start_time, selectedPackage.duration_minutes)
-        : editFormData.end_time
+        ? calculateEndTime(editForm.formData.start_time || '', selectedPackage.duration_minutes)
+        : editForm.formData.end_time || ''
+
+      // Store booking_id separately (not in editForm.formData)
+      const bookingId = selectedBooking?.id || ''
 
       const updateData = {
-        service_package_id: editFormData.service_package_id,
-        booking_date: editFormData.booking_date,
-        start_time: editFormData.start_time,
+        service_package_id: editForm.formData.service_package_id,
+        booking_date: editForm.formData.booking_date,
+        start_time: editForm.formData.start_time,
         end_time: endTime,
-        address: editFormData.address,
-        city: editFormData.city,
-        state: editFormData.state,
-        zip_code: editFormData.zip_code,
-        notes: editFormData.notes,
-        total_price: editFormData.total_price,
-        staff_id: editFormData.staff_id || null,
-        team_id: editFormData.team_id || null,
-        status: editFormData.status,
+        address: editForm.formData.address,
+        city: editForm.formData.city,
+        state: editForm.formData.state,
+        zip_code: editForm.formData.zip_code,
+        notes: editForm.formData.notes,
+        total_price: editForm.formData.total_price,
+        staff_id: editForm.formData.staff_id || null,
+        team_id: editForm.formData.team_id || null,
+        status: editForm.formData.status,
       }
 
       // Check for conflicts (unless user has already confirmed override)
       if (!conflictOverride) {
-        const conflicts = await checkBookingConflicts(
-          updateData.booking_date,
-          updateData.start_time,
-          endTime,
-          updateData.staff_id,
-          updateData.team_id,
-          editFormData.booking_id // Exclude current booking from conflict check
-        )
+        const detectedConflicts = await checkConflicts({
+          staffId: updateData.staff_id,
+          teamId: updateData.team_id,
+          bookingDate: updateData.booking_date || '',
+          startTime: updateData.start_time || '',
+          endTime: endTime,
+          excludeBookingId: bookingId // Exclude current booking from conflict check
+        })
 
-        if (conflicts.length > 0) {
+        if (detectedConflicts.length > 0) {
           // Show conflict warning dialog
-          setConflictingBookings(conflicts)
-          setPendingBookingData({ ...updateData, booking_id: editFormData.booking_id, isEdit: true })
+          setPendingBookingData({ ...updateData, booking_id: bookingId, isEdit: true })
           setShowConflictDialog(true)
           return // Stop submission and show dialog
         }
@@ -958,7 +846,7 @@ export function AdminBookings() {
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
-        .eq('id', editFormData.booking_id)
+        .eq('id', bookingId)
 
       if (error) throw error
 
@@ -1000,7 +888,7 @@ export function AdminBookings() {
       setShowConflictDialog(false)
       setConflictOverride(false)
       setPendingBookingData(null)
-      setConflictingBookings([])
+      clearConflicts()
       fetchBookings()
     } catch (error) {
       toast({
@@ -1275,9 +1163,9 @@ export function AdminBookings() {
                     <Label htmlFor="full_name">Full Name *</Label>
                     <Input
                       id="full_name"
-                      value={formData.full_name}
+                      value={createForm.formData.full_name || ''}
                       onChange={(e) =>
-                        setFormData({ ...formData, full_name: e.target.value })
+                        createForm.handleChange('full_name', e.target.value)
                       }
                       required
                     />
@@ -1288,9 +1176,9 @@ export function AdminBookings() {
                     <Input
                       id="email"
                       type="email"
-                      value={formData.email}
+                      value={createForm.formData.email || ''}
                       onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
+                        createForm.handleChange('email', e.target.value)
                       }
                       onBlur={handleEmailBlur}
                       required
@@ -1306,9 +1194,9 @@ export function AdminBookings() {
                     <Input
                       id="phone"
                       type="tel"
-                      value={formData.phone}
+                      value={createForm.formData.phone || ''}
                       onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
+                        createForm.handleChange('phone', e.target.value)
                       }
                       onBlur={handlePhoneBlur}
                       required
@@ -1323,11 +1211,10 @@ export function AdminBookings() {
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="service_package_id">Service Package *</Label>
                   <Select
-                    value={formData.service_package_id}
+                    value={createForm.formData.service_package_id || ''}
                     onValueChange={(value) => {
                       const selectedPackage = servicePackages.find(p => p.id === value)
-                      setFormData({
-                        ...formData,
+                      createForm.setValues({
                         service_package_id: value,
                         total_price: selectedPackage?.price || 0
                       })
@@ -1352,9 +1239,9 @@ export function AdminBookings() {
                   <Input
                     id="booking_date"
                     type="date"
-                    value={formData.booking_date}
+                    value={createForm.formData.booking_date || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, booking_date: e.target.value })
+                      createForm.handleChange('booking_date', e.target.value)
                     }
                     required
                   />
@@ -1365,9 +1252,9 @@ export function AdminBookings() {
                   <Input
                     id="start_time"
                     type="time"
-                    value={formData.start_time}
+                    value={createForm.formData.start_time || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, start_time: e.target.value })
+                      createForm.handleChange('start_time', e.target.value)
                     }
                     required
                   />
@@ -1379,10 +1266,10 @@ export function AdminBookings() {
                     id="end_time_display"
                     type="text"
                     value={
-                      formData.start_time && formData.service_package_id
+                      createForm.formData.start_time && createForm.formData.service_package_id
                         ? calculateEndTime(
-                            formData.start_time,
-                            servicePackages.find(pkg => pkg.id === formData.service_package_id)?.duration_minutes || 0
+                            createForm.formData.start_time,
+                            servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.duration_minutes || 0
                           )
                         : '--:--'
                     }
@@ -1397,9 +1284,9 @@ export function AdminBookings() {
                     id="total_price"
                     type="number"
                     step="0.01"
-                    value={formData.total_price}
+                    value={createForm.formData.total_price || 0}
                     onChange={(e) =>
-                      setFormData({ ...formData, total_price: parseFloat(e.target.value) })
+                      createForm.handleChange('total_price', parseFloat(e.target.value))
                     }
                     required
                   />
@@ -1412,7 +1299,7 @@ export function AdminBookings() {
                     value={assignmentType}
                     onValueChange={(value: 'staff' | 'team' | 'none') => {
                       setAssignmentType(value)
-                      setFormData({ ...formData, staff_id: '', team_id: '' })
+                      createForm.setValues({ staff_id: '', team_id: '' })
                     }}
                   >
                     <SelectTrigger>
@@ -1431,9 +1318,9 @@ export function AdminBookings() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="staff_id">Select Staff Member *</Label>
                     <Select
-                      value={formData.staff_id}
+                      value={createForm.formData.staff_id || ''}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, staff_id: value })
+                        createForm.handleChange('staff_id', value)
                       }
                       required
                     >
@@ -1456,9 +1343,9 @@ export function AdminBookings() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="team_id">Select Team *</Label>
                     <Select
-                      value={formData.team_id}
+                      value={createForm.formData.team_id || ''}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, team_id: value })
+                        createForm.handleChange('team_id', value)
                       }
                       required
                     >
@@ -1488,15 +1375,15 @@ export function AdminBookings() {
                         setIsAvailabilityModalOpen(true)
                       }}
                       disabled={
-                        !formData.booking_date ||
-                        !formData.start_time ||
-                        !formData.service_package_id
+                        !createForm.formData.booking_date ||
+                        !createForm.formData.start_time ||
+                        !createForm.formData.service_package_id
                       }
                     >
                       <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
                       Check Staff Availability
                     </Button>
-                    {(!formData.booking_date || !formData.start_time || !formData.service_package_id) && (
+                    {(!createForm.formData.booking_date || !createForm.formData.start_time || !createForm.formData.service_package_id) && (
                       <p className="text-xs text-muted-foreground text-center">
                         Please select date, time, and service package first
                       </p>
@@ -1508,9 +1395,9 @@ export function AdminBookings() {
                   <Label htmlFor="address">Address *</Label>
                   <Input
                     id="address"
-                    value={formData.address}
+                    value={createForm.formData.address || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
+                      createForm.handleChange('address', e.target.value)
                     }
                     required
                   />
@@ -1520,9 +1407,9 @@ export function AdminBookings() {
                   <Label htmlFor="city">City *</Label>
                   <Input
                     id="city"
-                    value={formData.city}
+                    value={createForm.formData.city || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
+                      createForm.handleChange('city', e.target.value)
                     }
                     required
                   />
@@ -1532,9 +1419,9 @@ export function AdminBookings() {
                   <Label htmlFor="state">State *</Label>
                   <Input
                     id="state"
-                    value={formData.state}
+                    value={createForm.formData.state || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
+                      createForm.handleChange('state', e.target.value)
                     }
                     required
                   />
@@ -1544,9 +1431,9 @@ export function AdminBookings() {
                   <Label htmlFor="zip_code">Zip Code *</Label>
                   <Input
                     id="zip_code"
-                    value={formData.zip_code}
+                    value={createForm.formData.zip_code || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, zip_code: e.target.value })
+                      createForm.handleChange('zip_code', e.target.value)
                     }
                     required
                   />
@@ -1556,9 +1443,9 @@ export function AdminBookings() {
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
-                    value={formData.notes}
+                    value={createForm.formData.notes || ''}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                      setFormData({ ...formData, notes: e.target.value })
+                      createForm.handleChange('notes', e.target.value)
                     }
                     rows={3}
                   />
@@ -1569,7 +1456,10 @@ export function AdminBookings() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => {
+                    setIsDialogOpen(false)
+                    clearConflicts()
+                  }}
                 >
                   Cancel
                 </Button>
@@ -1582,7 +1472,7 @@ export function AdminBookings() {
         </Dialog>
 
         {/* Staff Availability Modal - Create Form */}
-        {formData.service_package_id && formData.booking_date && formData.start_time && (
+        {createForm.formData.service_package_id && createForm.formData.booking_date && createForm.formData.start_time && (
           <StaffAvailabilityModal
             isOpen={isAvailabilityModalOpen}
             onClose={() => {
@@ -1591,7 +1481,7 @@ export function AdminBookings() {
             }}
             assignmentType={assignmentType === 'staff' ? 'individual' : 'team'}
             onSelectStaff={(staffId) => {
-              setFormData({ ...formData, staff_id: staffId })
+              createForm.handleChange('staff_id', staffId)
               setIsAvailabilityModalOpen(false)
               setIsDialogOpen(true)
               toast({
@@ -1600,7 +1490,7 @@ export function AdminBookings() {
               })
             }}
             onSelectTeam={(teamId) => {
-              setFormData({ ...formData, team_id: teamId })
+              createForm.handleChange('team_id', teamId)
               setIsAvailabilityModalOpen(false)
               setIsDialogOpen(true)
               toast({
@@ -1608,25 +1498,25 @@ export function AdminBookings() {
                 description: 'Team has been assigned to the booking',
               })
             }}
-            date={formData.booking_date}
-            startTime={formData.start_time}
+            date={createForm.formData.booking_date}
+            startTime={createForm.formData.start_time}
             endTime={
-              formData.service_package_id
+              createForm.formData.service_package_id
                 ? calculateEndTime(
-                    formData.start_time,
-                    servicePackages.find(pkg => pkg.id === formData.service_package_id)?.duration_minutes || 0
+                    createForm.formData.start_time,
+                    servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.duration_minutes || 0
                   )
-                : formData.end_time
+                : createForm.formData.end_time || ''
             }
-            servicePackageId={formData.service_package_id}
+            servicePackageId={createForm.formData.service_package_id}
             servicePackageName={
-              servicePackages.find(pkg => pkg.id === formData.service_package_id)?.name
+              servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.name
             }
           />
         )}
 
         {/* Staff Availability Modal - Edit Form */}
-        {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+        {editForm.formData.service_package_id && editForm.formData.booking_date && editForm.formData.start_time && (
           <StaffAvailabilityModal
             isOpen={isEditAvailabilityModalOpen}
             onClose={() => {
@@ -1635,7 +1525,7 @@ export function AdminBookings() {
             }}
             assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
             onSelectStaff={(staffId) => {
-              setEditFormData({ ...editFormData, staff_id: staffId })
+              editForm.handleChange('staff_id', staffId)
               setIsEditAvailabilityModalOpen(false)
               setIsEditOpen(true)
               toast({
@@ -1644,7 +1534,7 @@ export function AdminBookings() {
               })
             }}
             onSelectTeam={(teamId) => {
-              setEditFormData({ ...editFormData, team_id: teamId })
+              editForm.handleChange('team_id', teamId)
               setIsEditAvailabilityModalOpen(false)
               setIsEditOpen(true)
               toast({
@@ -1652,22 +1542,22 @@ export function AdminBookings() {
                 description: 'Team has been assigned to the booking',
               })
             }}
-            date={editFormData.booking_date}
-            startTime={editFormData.start_time}
+            date={editForm.formData.booking_date}
+            startTime={editForm.formData.start_time}
             endTime={
-              editFormData.service_package_id
+              editForm.formData.service_package_id
                 ? calculateEndTime(
-                    editFormData.start_time,
-                    servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                    editForm.formData.start_time || '',
+                    servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.duration_minutes || 0
                   )
-                : editFormData.end_time
+                : editForm.formData.end_time || ''
             }
-            servicePackageId={editFormData.service_package_id}
+            servicePackageId={editForm.formData.service_package_id}
             servicePackageName={
-              servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+              servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.name
             }
-            currentAssignedStaffId={editFormData.staff_id}
-            currentAssignedTeamId={editFormData.team_id}
+            currentAssignedStaffId={editForm.formData.staff_id}
+            currentAssignedTeamId={editForm.formData.team_id}
           />
         )}
       </div>
@@ -1703,11 +1593,11 @@ export function AdminBookings() {
             >
               This Month
             </Button>
-            {getActiveFilterCount() > 0 && (
+            {hasActiveFilters() && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearAllFilters}
+                onClick={resetFilters}
                 className="h-8 text-destructive hover:text-destructive"
               >
                 <X className="h-3 w-3 mr-1" />
@@ -1722,8 +1612,8 @@ export function AdminBookings() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search customer/service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={filters.searchQuery}
+                onChange={(e) => updateFilter('searchQuery', e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -1732,20 +1622,20 @@ export function AdminBookings() {
               <Input
                 type="date"
                 placeholder="From"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                value={filters.dateFrom}
+                onChange={(e) => updateFilter('dateFrom', e.target.value)}
                 className="flex-1"
               />
               <Input
                 type="date"
                 placeholder="To"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                value={filters.dateTo}
+                onChange={(e) => updateFilter('dateTo', e.target.value)}
                 className="flex-1"
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
@@ -1759,7 +1649,7 @@ export function AdminBookings() {
               </SelectContent>
             </Select>
 
-            <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
+            <Select value={filters.serviceType} onValueChange={(value) => updateFilter('serviceType', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Services" />
               </SelectTrigger>
@@ -1773,7 +1663,7 @@ export function AdminBookings() {
 
           {/* Additional Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select value={staffFilter} onValueChange={setStaffFilter}>
+            <Select value={filters.staffId} onValueChange={(value) => updateFilter('staffId', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Staff" />
               </SelectTrigger>
@@ -1788,7 +1678,7 @@ export function AdminBookings() {
               </SelectContent>
             </Select>
 
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <Select value={filters.teamId} onValueChange={(value) => updateFilter('teamId', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
@@ -1836,9 +1726,9 @@ export function AdminBookings() {
               <div className="space-y-2">
                 <Label htmlFor="edit_service">Service Package *</Label>
                 <Select
-                  value={editFormData.service_package_id}
+                  value={editForm.formData.service_package_id || ''}
                   onValueChange={(value) =>
-                    setEditFormData({ ...editFormData, service_package_id: value })
+                    editForm.handleChange('service_package_id', value)
                   }
                 >
                   <SelectTrigger>
@@ -1859,9 +1749,9 @@ export function AdminBookings() {
                 <Input
                   id="edit_date"
                   type="date"
-                  value={editFormData.booking_date}
+                  value={editForm.formData.booking_date || ''}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, booking_date: e.target.value })
+                    editForm.handleChange('booking_date', e.target.value)
                   }
                   required
                 />
@@ -1872,9 +1762,9 @@ export function AdminBookings() {
                 <Input
                   id="edit_start_time"
                   type="time"
-                  value={editFormData.start_time}
+                  value={editForm.formData.start_time || ''}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, start_time: e.target.value })
+                    editForm.handleChange('start_time', e.target.value)
                   }
                   required
                 />
@@ -1886,10 +1776,10 @@ export function AdminBookings() {
                   id="edit_end_time"
                   type="text"
                   value={
-                    editFormData.start_time && editFormData.service_package_id
+                    editForm.formData.start_time && editForm.formData.service_package_id
                       ? calculateEndTime(
-                          editFormData.start_time,
-                          servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                          editForm.formData.start_time,
+                          servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.duration_minutes || 0
                         )
                       : '--:--'
                   }
@@ -1901,9 +1791,9 @@ export function AdminBookings() {
               <div className="space-y-2">
                 <Label htmlFor="edit_status">Status *</Label>
                 <Select
-                  value={editFormData.status}
+                  value={editForm.formData.status || ''}
                   onValueChange={(value) =>
-                    setEditFormData({ ...editFormData, status: value })
+                    editForm.handleChange('status', value)
                   }
                 >
                   <SelectTrigger>
@@ -1925,9 +1815,9 @@ export function AdminBookings() {
                   id="edit_price"
                   type="number"
                   step="0.01"
-                  value={editFormData.total_price}
+                  value={editForm.formData.total_price || 0}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, total_price: parseFloat(e.target.value) })
+                    editForm.handleChange('total_price', parseFloat(e.target.value))
                   }
                   required
                 />
@@ -1939,7 +1829,7 @@ export function AdminBookings() {
                   value={editAssignmentType}
                   onValueChange={(value: 'staff' | 'team' | 'none') => {
                     setEditAssignmentType(value)
-                    setEditFormData({ ...editFormData, staff_id: '', team_id: '' })
+                    editForm.setValues({ staff_id: '', team_id: '' })
                   }}
                 >
                   <SelectTrigger>
@@ -1958,9 +1848,9 @@ export function AdminBookings() {
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="edit_staff_id">Select Staff Member *</Label>
                   <Select
-                    value={editFormData.staff_id}
+                    value={editForm.formData.staff_id || ''}
                     onValueChange={(value) =>
-                      setEditFormData({ ...editFormData, staff_id: value })
+                      editForm.handleChange('staff_id', value)
                     }
                     required
                   >
@@ -1983,9 +1873,9 @@ export function AdminBookings() {
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="edit_team_id">Select Team *</Label>
                   <Select
-                    value={editFormData.team_id}
+                    value={editForm.formData.team_id || ''}
                     onValueChange={(value) =>
-                      setEditFormData({ ...editFormData, team_id: value })
+                      editForm.handleChange('team_id', value)
                     }
                     required
                   >
@@ -2015,15 +1905,15 @@ export function AdminBookings() {
                       setIsEditAvailabilityModalOpen(true)
                     }}
                     disabled={
-                      !editFormData.booking_date ||
-                      !editFormData.start_time ||
-                      !editFormData.service_package_id
+                      !editForm.formData.booking_date ||
+                      !editForm.formData.start_time ||
+                      !editForm.formData.service_package_id
                     }
                   >
                     <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
                     Check Staff Availability
                   </Button>
-                  {(!editFormData.booking_date || !editFormData.start_time || !editFormData.service_package_id) && (
+                  {(!editForm.formData.booking_date || !editForm.formData.start_time || !editForm.formData.service_package_id) && (
                     <p className="text-xs text-muted-foreground text-center">
                       Please select date, time, and service package first
                     </p>
@@ -2036,9 +1926,9 @@ export function AdminBookings() {
               <Label htmlFor="edit_address">Address *</Label>
               <Input
                 id="edit_address"
-                value={editFormData.address}
+                value={editForm.formData.address || ''}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, address: e.target.value })
+                  editForm.handleChange('address', e.target.value)
                 }
                 required
               />
@@ -2049,9 +1939,9 @@ export function AdminBookings() {
                 <Label htmlFor="edit_city">City *</Label>
                 <Input
                   id="edit_city"
-                  value={editFormData.city}
+                  value={editForm.formData.city || ''}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, city: e.target.value })
+                    editForm.handleChange('city', e.target.value)
                   }
                   required
                 />
@@ -2060,9 +1950,9 @@ export function AdminBookings() {
                 <Label htmlFor="edit_state">State *</Label>
                 <Input
                   id="edit_state"
-                  value={editFormData.state}
+                  value={editForm.formData.state || ''}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, state: e.target.value })
+                    editForm.handleChange('state', e.target.value)
                   }
                   required
                 />
@@ -2071,9 +1961,9 @@ export function AdminBookings() {
                 <Label htmlFor="edit_zip_code">Zip Code *</Label>
                 <Input
                   id="edit_zip_code"
-                  value={editFormData.zip_code}
+                  value={editForm.formData.zip_code || ''}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, zip_code: e.target.value })
+                    editForm.handleChange('zip_code', e.target.value)
                   }
                   required
                 />
@@ -2084,9 +1974,9 @@ export function AdminBookings() {
               <Label htmlFor="edit_notes">Notes</Label>
               <Input
                 id="edit_notes"
-                value={editFormData.notes}
+                value={editForm.formData.notes || ''}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, notes: e.target.value })
+                  editForm.handleChange('notes', e.target.value)
                 }
               />
             </div>
@@ -2095,7 +1985,10 @@ export function AdminBookings() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsEditOpen(false)}
+                onClick={() => {
+                  setIsEditOpen(false)
+                  clearConflicts()
+                }}
               >
                 Cancel
               </Button>
@@ -2140,35 +2033,38 @@ export function AdminBookings() {
             <Alert className="bg-red-50 border-red-200">
               <Info className="h-4 w-4 text-red-600" />
               <AlertDescription>
-                <strong>Warning:</strong> Found {conflictingBookings.length} conflicting booking{conflictingBookings.length > 1 ? 's' : ''} on the same date and time.
+                <strong>Warning:</strong> Found {conflicts.length} conflicting booking{conflicts.length > 1 ? 's' : ''} on the same date and time.
               </AlertDescription>
             </Alert>
 
             <div className="space-y-3 max-h-60 overflow-y-auto">
               <h3 className="font-semibold">Conflicting Bookings:</h3>
-              {conflictingBookings.map((conflict) => (
-                <div key={conflict.id} className="p-3 border border-red-200 rounded-lg bg-red-50">
+              {conflicts.map((conflict) => (
+                <div key={conflict.booking.id} className="p-3 border border-red-200 rounded-lg bg-red-50">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <p className="font-medium text-sm">{conflict.customers?.full_name || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">{conflict.service_packages?.name}</p>
+                      <p className="font-medium text-sm">{conflict.booking.customers?.full_name || 'Unknown'}</p>
+                      <p className="text-xs text-muted-foreground">{conflict.booking.service_packages?.name}</p>
                       <p className="text-xs text-red-600 font-medium">
-                        {formatDate(conflict.booking_date)} • {formatTime(conflict.start_time)} - {formatTime(conflict.end_time)}
+                        {formatDate(conflict.booking.booking_date)} • {formatTime(conflict.booking.start_time)} - {formatTime(conflict.booking.end_time || '')}
                       </p>
-                      {conflict.profiles && (
+                      <p className="text-xs text-red-700 font-semibold">
+                        {conflict.message}
+                      </p>
+                      {conflict.booking.profiles && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          Staff: {conflict.profiles.full_name}
+                          Staff: {conflict.booking.profiles.full_name}
                         </p>
                       )}
-                      {conflict.teams && (
+                      {conflict.booking.teams && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          Team: {conflict.teams.name}
+                          Team: {conflict.booking.teams.name}
                         </p>
                       )}
                     </div>
-                    {getStatusBadge(conflict.status)}
+                    {getStatusBadge(conflict.booking.status)}
                   </div>
                 </div>
               ))}
@@ -2265,7 +2161,7 @@ export function AdminBookings() {
                   value={itemsPerPage.toString()}
                   onValueChange={(value) => {
                     setItemsPerPage(Number(value))
-                    setCurrentPage(1)
+                    goToPage(1)
                   }}
                 >
                   <SelectTrigger className="w-20">
@@ -2284,7 +2180,7 @@ export function AdminBookings() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
-                  Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredBookings.length)} to {Math.min(currentPage * itemsPerPage, filteredBookings.length)} of {filteredBookings.length} bookings
+                  Showing {metadata.startIndex} to {metadata.endIndex} of {metadata.totalItems} bookings
                 </span>
               </div>
             </div>
@@ -2296,13 +2192,7 @@ export function AdminBookings() {
                 No bookings found
               </p>
             ) : (
-              (() => {
-                // Calculate pagination
-                const startIndex = (currentPage - 1) * itemsPerPage
-                const endIndex = startIndex + itemsPerPage
-                const paginatedBookings = filteredBookings.slice(startIndex, endIndex)
-
-                return paginatedBookings.map((booking) => (
+              paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -2393,8 +2283,7 @@ export function AdminBookings() {
                   </div>
                   </div>
                 </div>
-                ))
-              })()
+              ))
             )}
           </div>
 
@@ -2402,22 +2291,22 @@ export function AdminBookings() {
           {filteredBookings.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {Math.ceil(filteredBookings.length / itemsPerPage)}
+                Page {currentPage} of {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
+                  onClick={goToFirst}
+                  disabled={!metadata.hasPrevPage}
                 >
                   First
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  onClick={prevPage}
+                  disabled={!metadata.hasPrevPage}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -2425,8 +2314,8 @@ export function AdminBookings() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(filteredBookings.length / itemsPerPage)}
+                  onClick={nextPage}
+                  disabled={!metadata.hasNextPage}
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />
@@ -2434,8 +2323,8 @@ export function AdminBookings() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.ceil(filteredBookings.length / itemsPerPage))}
-                  disabled={currentPage >= Math.ceil(filteredBookings.length / itemsPerPage)}
+                  onClick={goToLast}
+                  disabled={!metadata.hasNextPage}
                 >
                   Last
                 </Button>
