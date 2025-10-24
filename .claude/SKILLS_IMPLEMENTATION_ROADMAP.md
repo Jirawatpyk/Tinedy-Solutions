@@ -583,22 +583,11 @@ Agent: @refactoring-agent (via Master Orchestrator)
 
 **Note:** Further component extraction (Phase 2.3) can reduce bookings.tsx to target ~400 lines
 
-  return {
-    items: paginatedItems,
-    currentPage,
-    totalPages,
-    setCurrentPage,
-    nextPage: () => setCurrentPage(p => Math.min(p + 1, totalPages)),
-    prevPage: () => setCurrentPage(p => Math.max(p - 1, 1)),
-  }
-}
-```
-
-**Deliverable:** 4 custom hooks extracting complex logic from bookings.tsx
-
 ---
 
-**Day 12-14: Refactor bookings.tsx (20 hours)**
+#### Phase 2.3: Component Extraction from bookings.tsx (In Progress) 🟡
+
+**Day 14-16: Extract UI Components (20 hours)**
 ```bash
 Claude Skill: @code-review-refactoring
 ```
