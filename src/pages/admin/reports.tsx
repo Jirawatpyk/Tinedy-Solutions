@@ -461,10 +461,13 @@ export function AdminReports() {
   }, [bookings, dateRange])
 
   useEffect(() => {
-    fetchBookings()
-    fetchCustomers()
-    fetchStaff()
-    fetchTeams()
+    // OPTIMIZE: Run all queries in parallel for better performance
+    Promise.all([
+      fetchBookings(),
+      fetchCustomers(),
+      fetchStaff(),
+      fetchTeams()
+    ])
   }, [fetchBookings, fetchCustomers, fetchStaff, fetchTeams])
 
   useEffect(() => {

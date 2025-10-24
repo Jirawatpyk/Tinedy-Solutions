@@ -27,6 +27,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Badge } from '@/components/ui/badge'
+import { formatTime } from '@/lib/booking-utils'
 
 interface Staff {
   id: string
@@ -92,9 +93,13 @@ export function AdminStaffPerformance() {
   })
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchStaffData = useCallback(async () => {
-    if (!id) return
+    if (!id) {
+      setError('No staff ID provided')
+      return
+    }
 
     try {
       const { data, error } = await supabase
@@ -104,9 +109,15 @@ export function AdminStaffPerformance() {
         .single()
 
       if (error) throw error
+      if (!data) {
+        setError('Staff member not found')
+        return
+      }
       setStaff(data)
+      setError(null)
     } catch (error) {
       console.error('Error fetching staff:', error)
+      setError('Failed to load staff data')
       toast({
         title: 'Error',
         description: 'Failed to load staff data',
@@ -171,8 +182,6 @@ export function AdminStaffPerformance() {
         description: 'Failed to load bookings',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
   }, [id, toast])
 
@@ -232,8 +241,14 @@ export function AdminStaffPerformance() {
   }
 
   useEffect(() => {
-    fetchStaffData()
-    fetchBookings()
+    setLoading(true)
+    // OPTIMIZE: Run both queries in parallel for better performance
+    Promise.all([
+      fetchStaffData(),
+      fetchBookings()
+    ]).finally(() => {
+      setLoading(false)
+    })
   }, [fetchStaffData, fetchBookings])
 
   if (loading) {
@@ -281,22 +296,18 @@ export function AdminStaffPerformance() {
     )
   }
 
-  if (!staff) {
+  if (error || !staff) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
         <XCircle className="h-16 w-16 text-red-500" />
-        <h2 className="text-2xl font-bold">Staff Not Found</h2>
-        <Button onClick={() => navigate('/admin/staff')}>Back to Staff</Button>
+        <h2 className="text-2xl font-bold">{error || 'Staff Not Found'}</h2>
+        <p className="text-muted-foreground">Unable to load staff member details</p>
+        <Button onClick={() => navigate('/admin/staff')}>Back to Staff List</Button>
       </div>
     )
   }
 
   const recentBookings = bookings.slice(0, 5)
-
-  // Helper to format time without seconds (10:00:00 -> 10:00)
-  const formatTime = (time: string) => {
-    return time.substring(0, 5)
-  }
 
   return (
     <div className="space-y-6">

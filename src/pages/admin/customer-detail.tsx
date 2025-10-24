@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/error-utils'
+import { BookingEditModal } from '@/components/booking'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import {
   ArrowLeft,
   Mail,
@@ -80,8 +82,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import type { Booking } from '@/types/booking'
 
 interface Customer {
   id: string
@@ -118,7 +120,7 @@ interface CustomerStats {
   customer_tenure_days: number
 }
 
-interface Booking {
+interface CustomerBooking {
   id: string
   booking_date: string
   start_time: string
@@ -161,6 +163,45 @@ interface ChartDataPoint {
   total: number
 }
 
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
+
+interface StaffMember {
+  id: string
+  full_name: string
+  email: string
+  role: string
+}
+
+interface Team {
+  id: string
+  name: string
+}
+
+interface BookingFormData {
+  customer_id?: string
+  full_name?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  service_package_id?: string
+  booking_date?: string
+  start_time?: string
+  end_time?: string
+  total_price?: number
+  staff_id?: string
+  team_id?: string
+  notes?: string
+  status?: string
+}
+
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -168,7 +209,7 @@ export function AdminCustomerDetail() {
 
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [stats, setStats] = useState<CustomerStats | null>(null)
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<CustomerBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -182,6 +223,18 @@ export function AdminCustomerDetail() {
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
   const [isBookingDetailModalOpen, setIsBookingDetailModalOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+
+  // Edit Booking Modal State
+  const [isBookingEditOpen, setIsBookingEditOpen] = useState(false)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [editBookingAssignmentType, setEditBookingAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [editBookingFormData, setEditBookingFormData] = useState<BookingFormData>({})
+  const [isEditBookingAvailabilityOpen, setIsEditBookingAvailabilityOpen] = useState(false)
+
+  // Data for modals
+  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
 
   // Form states
   const [noteText, setNoteText] = useState('')
@@ -213,9 +266,6 @@ export function AdminCustomerDetail() {
     notes: '',
   })
   const [assignmentType, setAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
-  const [servicePackages, setServicePackages] = useState<Array<{ id: string; name: string; price: number; service_type: string; duration_minutes: number }>>([])
-  const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string }>>([])
-  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
   const [submitting, setSubmitting] = useState(false)
 
   const refreshBookings = useCallback(async () => {
@@ -406,7 +456,7 @@ export function AdminCustomerDetail() {
       // Fetch staff members
       const { data: staff, error: staffError } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, email, role')
         .eq('role', 'staff')
         .order('full_name')
 
@@ -431,11 +481,35 @@ export function AdminCustomerDetail() {
     }
   }, [toast])
 
+  const fetchModalData = useCallback(async () => {
+    try {
+      const [packagesRes, staffRes, teamsRes] = await Promise.all([
+        supabase.from('service_packages').select('*').eq('is_active', true).order('name'),
+        supabase.from('profiles').select('id, full_name, email, role').eq('role', 'staff').order('full_name'),
+        supabase.from('teams').select('id, name').eq('is_active', true).order('name')
+      ])
+
+      if (packagesRes.error) throw packagesRes.error
+      if (staffRes.error) throw staffRes.error
+      if (teamsRes.error) throw teamsRes.error
+
+      setServicePackages(packagesRes.data || [])
+      setStaffMembers(staffRes.data || [])
+      setTeams(teamsRes.data || [])
+    } catch (error) {
+      console.error('Error fetching modal data:', error)
+    }
+  }, [])
+
   useEffect(() => {
     if (id) {
-      fetchCustomerDetails()
+      // OPTIMIZE: Run both queries in parallel for better performance
+      Promise.all([
+        fetchCustomerDetails(),
+        fetchModalData()
+      ])
     }
-  }, [id, fetchCustomerDetails])
+  }, [id, fetchCustomerDetails, fetchModalData])
 
   useEffect(() => {
     if (isBookingDialogOpen) {
@@ -450,6 +524,80 @@ export function AdminCustomerDetail() {
     const endHours = Math.floor(totalMinutes / 60) % 24
     const endMinutes = totalMinutes % 60
     return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
+  }
+
+  // Edit Booking Form Helpers
+  const editBookingForm = {
+    formData: editBookingFormData,
+    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
+      setEditBookingFormData(prev => ({ ...prev, [field]: value }))
+    },
+    setValues: (values: Partial<BookingFormData>) => {
+      setEditBookingFormData(prev => ({ ...prev, ...values }))
+    },
+    reset: () => {
+      setEditBookingFormData({})
+      setEditBookingAssignmentType('none')
+    }
+  }
+
+  const handleEditBooking = (booking: CustomerBooking | Booking) => {
+    // Populate edit form with booking data
+    setEditBookingFormData({
+      service_package_id: booking.service_package_id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code,
+      notes: booking.notes || undefined,
+      total_price: booking.total_price,
+      staff_id: booking.staff_id || '',
+      team_id: booking.team_id || '',
+      status: booking.status,
+    })
+
+    // Set assignment type based on booking data
+    if (booking.staff_id) {
+      setEditBookingAssignmentType('staff')
+    } else if (booking.team_id) {
+      setEditBookingAssignmentType('team')
+    } else {
+      setEditBookingAssignmentType('none')
+    }
+
+    // Convert to Booking for the modal (works for both CustomerBooking and Booking)
+    const bookingForModal: Booking = {
+      id: booking.id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      status: booking.status,
+      total_price: booking.total_price,
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code,
+      staff_id: booking.staff_id,
+      team_id: booking.team_id,
+      service_package_id: booking.service_package_id,
+      notes: booking.notes,
+      payment_status: booking.payment_status,
+      payment_method: booking.payment_method,
+      amount_paid: booking.amount_paid,
+      payment_date: booking.payment_date,
+      payment_notes: 'payment_notes' in booking ? booking.payment_notes : undefined,
+      customers: booking.customers,
+      service_packages: booking.service_packages,
+      profiles: booking.profiles,
+      teams: booking.teams,
+    }
+
+    setSelectedBooking(bookingForModal)
+    setIsBookingEditOpen(true)
+    setIsBookingDetailModalOpen(false)
   }
 
   const handleCreateBooking = async (e: React.FormEvent) => {
@@ -1113,7 +1261,7 @@ export function AdminCustomerDetail() {
                   <TableRow>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Service</TableHead>
-                    <TableHead>Staff</TableHead>
+                    <TableHead>Staff/Team</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
@@ -1145,7 +1293,13 @@ export function AdminCustomerDetail() {
                             {booking.service?.service_type || ''}
                           </div>
                         </TableCell>
-                        <TableCell>{booking.staff?.full_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          {booking.team_id && booking.teams?.name
+                            ? booking.teams.name
+                            : booking.staff_id && (booking.staff?.full_name || booking.profiles?.full_name)
+                            ? booking.staff?.full_name || booking.profiles?.full_name
+                            : 'N/A'}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={statusInfo.className}>
                             {statusInfo.label}
@@ -1782,7 +1936,7 @@ export function AdminCustomerDetail() {
             refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
           }}
           onEdit={(booking) => {
-            navigate(`/admin/bookings?edit=${booking.id}`)
+            handleEditBooking(booking)
           }}
           onDelete={async (bookingId) => {
             try {
@@ -1901,6 +2055,75 @@ export function AdminCustomerDetail() {
             }
             return labels[status] || status
           }}
+        />
+      )}
+
+      {/* Edit Booking Modal */}
+      {selectedBooking && (
+        <BookingEditModal
+          isOpen={isBookingEditOpen && !isEditBookingAvailabilityOpen}
+          onClose={() => {
+            setIsBookingEditOpen(false)
+            editBookingForm.reset()
+          }}
+          booking={selectedBooking}
+          onSuccess={() => {
+            refreshBookings()
+          }}
+          servicePackages={servicePackages}
+          staffMembers={staffMembers}
+          teams={teams}
+          onOpenAvailabilityModal={() => {
+            setIsEditBookingAvailabilityOpen(true)
+          }}
+          editForm={editBookingForm}
+          assignmentType={editBookingAssignmentType}
+          onAssignmentTypeChange={setEditBookingAssignmentType}
+          calculateEndTime={calculateEndTime}
+        />
+      )}
+
+      {/* Staff Availability Modal - Edit */}
+      {editBookingFormData.service_package_id && editBookingFormData.booking_date && editBookingFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isEditBookingAvailabilityOpen}
+          onClose={() => {
+            setIsEditBookingAvailabilityOpen(false)
+          }}
+          assignmentType={editBookingAssignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            editBookingForm.handleChange('staff_id', staffId)
+            setIsEditBookingAvailabilityOpen(false)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            editBookingForm.handleChange('team_id', teamId)
+            setIsEditBookingAvailabilityOpen(false)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={editBookingFormData.booking_date || ''}
+          startTime={editBookingFormData.start_time || ''}
+          endTime={
+            editBookingFormData.service_package_id && editBookingFormData.start_time
+              ? calculateEndTime(
+                  editBookingFormData.start_time,
+                  servicePackages.find(pkg => pkg.id === editBookingFormData.service_package_id)?.duration_minutes || 0
+                )
+              : (editBookingFormData.end_time || '')
+          }
+          servicePackageId={editBookingFormData.service_package_id || ''}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === editBookingFormData.service_package_id)?.name
+          }
+          currentAssignedStaffId={editBookingFormData.staff_id}
+          currentAssignedTeamId={editBookingFormData.team_id}
+          excludeBookingId={selectedBooking?.id}
         />
       )}
     </div>

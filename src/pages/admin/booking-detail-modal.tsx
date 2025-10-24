@@ -20,6 +20,7 @@ import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star 
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { formatTime } from '@/lib/booking-utils'
 
 // Helper function to format full address
 function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
@@ -209,11 +210,6 @@ export function BookingDetailModal({
     } finally {
       setSavingReview(false)
     }
-  }
-
-  // Format time to remove seconds (HH:MM:SS -> HH:MM)
-  const formatTime = (time: string) => {
-    return time.split(':').slice(0, 2).join(':')
   }
 
   const handleSendReminder = async () => {

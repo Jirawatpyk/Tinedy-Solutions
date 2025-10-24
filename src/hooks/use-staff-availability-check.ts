@@ -52,6 +52,7 @@ export interface StaffAvailabilityResult {
   unavailabilityReasons: UnavailabilityReason[]
   score: number
   skillMatch: number
+  jobsToday: number
 }
 
 export interface TeamAvailabilityResult {
@@ -143,14 +144,25 @@ export function useStaffAvailabilityCheck({
       // 3. Check availability for each staff
       const results = await Promise.all(
         allStaff.map(async (staff) => {
-          // Check booking conflicts
-          let query = supabase
+          // Check booking conflicts (both individual staff bookings AND team bookings)
+          // First, get all teams this staff is a member of
+          const { data: staffTeams } = await supabase
+            .from('team_members')
+            .select('team_id')
+            .eq('staff_id', staff.id)
+
+          const teamIds = (staffTeams || []).map(tm => tm.team_id)
+
+          // Query for bookings where this staff is assigned directly
+          let staffQuery = supabase
             .from('bookings')
             .select(`
               id,
               booking_date,
               start_time,
               end_time,
+              staff_id,
+              team_id,
               service_packages (name),
               customers (full_name)
             `)
@@ -160,10 +172,41 @@ export function useStaffAvailabilityCheck({
 
           // Exclude current booking when editing
           if (excludeBookingId) {
-            query = query.neq('id', excludeBookingId)
+            staffQuery = staffQuery.neq('id', excludeBookingId)
           }
 
-          const { data: bookingConflicts } = await query
+          const { data: staffBookings } = await staffQuery
+
+          // Query for bookings where this staff is assigned via team
+          let teamBookings: BookingWithRelations[] = []
+          if (teamIds.length > 0) {
+            let teamQuery = supabase
+              .from('bookings')
+              .select(`
+                id,
+                booking_date,
+                start_time,
+                end_time,
+                staff_id,
+                team_id,
+                service_packages (name),
+                customers (full_name)
+              `)
+              .in('team_id', teamIds)
+              .eq('booking_date', date)
+              .in('status', ['pending', 'confirmed', 'in_progress'])
+
+            // Exclude current booking when editing
+            if (excludeBookingId) {
+              teamQuery = teamQuery.neq('id', excludeBookingId)
+            }
+
+            const { data } = await teamQuery
+            teamBookings = data || []
+          }
+
+          // Combine both staff and team bookings
+          const bookingConflicts = [...(staffBookings || []), ...teamBookings]
 
           // Check unavailability periods
           const { data: unavailablePeriods } = await supabase
@@ -227,15 +270,28 @@ export function useStaffAvailabilityCheck({
             ? reviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / reviews.length
             : 0
 
-          // Calculate availability score
+          // Query jobs on selected date for this staff
+          const { data: dateBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('booking_date', date)
+            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .or(`staff_id.eq.${staff.id},team_id.in.(${teamIds.join(',')})`)
+
+          const jobsToday = dateBookings?.length || 0
+
+          // Calculate availability (for categorization only, not scoring)
           const isAvailable = conflicts.length === 0 && unavailabilityReasons.length === 0
-          const availabilityScore = isAvailable ? 30 : (conflicts.length === 0 ? 15 : 0)
 
-          // Calculate performance score (based on rating)
-          const performanceScore = (avgRating / 5) * 20
+          // Calculate performance score (0-15 points based on rating)
+          const performanceScore = (avgRating / 5) * 15
 
-          // Calculate total score
-          const score = skillMatch + availabilityScore + performanceScore
+          // Calculate workload score (0-15 points, less jobs = higher score)
+          const workloadScore = Math.max(0, 15 - (jobsToday * 3))
+
+          // Calculate total score (Skill 0-70 + Performance 0-15 + Workload 0-15 = 100 total)
+          // Skill match comes as 0-80, scale to 0-70 by multiplying by 0.875
+          const score = (skillMatch * 0.875) + performanceScore + workloadScore
 
           return {
             staffId: staff.id,
@@ -247,7 +303,8 @@ export function useStaffAvailabilityCheck({
             conflicts,
             unavailabilityReasons,
             score: Math.round(score),
-            skillMatch: Math.round(skillMatch)
+            skillMatch: Math.round(skillMatch),
+            jobsToday
           }
         })
       )
@@ -303,12 +360,53 @@ export function useStaffAvailabilityCheck({
           const members = team.team_members || []
           const totalMembers = members.length
 
+          // First, check if this TEAM itself has conflicting bookings
+          let teamQuery = supabase
+            .from('bookings')
+            .select(`
+              id,
+              booking_date,
+              start_time,
+              end_time,
+              service_packages (name),
+              customers (full_name)
+            `)
+            .eq('team_id', team.id)
+            .eq('booking_date', date)
+            .in('status', ['pending', 'confirmed', 'in_progress'])
+
+          // Exclude current booking when editing
+          if (excludeBookingId) {
+            teamQuery = teamQuery.neq('id', excludeBookingId)
+          }
+
+          const { data: teamBookings } = await teamQuery
+
+          // Check for team-level time conflicts
+          const teamLevelConflicts = (teamBookings || []).filter((booking) => {
+            return hasTimeOverlap(
+              startTime,
+              endTime,
+              booking.start_time,
+              booking.end_time
+            )
+          })
+
           // Check each member's availability
           const memberResults = await Promise.all(
             members.map(async (member: TeamMemberData) => {
               const staff = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles
 
-              // Check booking conflicts
+              // Check booking conflicts (both individual staff bookings AND team bookings)
+              // First, get all teams this staff is a member of
+              const { data: staffTeams } = await supabase
+                .from('team_members')
+                .select('team_id')
+                .eq('staff_id', staff.id)
+
+              const teamIds = (staffTeams || []).map(tm => tm.team_id)
+
+              // Query for both staff_id matches AND team_id matches
               let memberQuery = supabase
                 .from('bookings')
                 .select(`
@@ -316,10 +414,11 @@ export function useStaffAvailabilityCheck({
                   booking_date,
                   start_time,
                   end_time,
+                  staff_id,
+                  team_id,
                   service_packages (name),
                   customers (full_name)
                 `)
-                .eq('staff_id', staff.id)
                 .eq('booking_date', date)
                 .in('status', ['pending', 'confirmed', 'in_progress'])
 
@@ -328,7 +427,12 @@ export function useStaffAvailabilityCheck({
                 memberQuery = memberQuery.neq('id', excludeBookingId)
               }
 
-              const { data: bookingConflicts } = await memberQuery
+              const { data: allBookings } = await memberQuery
+
+              // Filter bookings where this staff is assigned (either directly or via team)
+              const bookingConflicts = (allBookings || []).filter(booking =>
+                booking.staff_id === staff.id || (booking.team_id && teamIds.includes(booking.team_id))
+              )
 
               const conflicts: BookingConflict[] = (bookingConflicts || [])
                 .filter((booking) => {
@@ -357,17 +461,44 @@ export function useStaffAvailabilityCheck({
                   }
                 })
 
+              // Get member's rating
+              const { data: memberReviews } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('staff_id', staff.id)
+
+              const memberAvgRating = memberReviews && memberReviews.length > 0
+                ? memberReviews.reduce((sum, r) => sum + r.rating, 0) / memberReviews.length
+                : 0
+
+              // Get member's jobs on selected date
+              const { data: memberDateBookings } = await supabase
+                .from('bookings')
+                .select('id')
+                .eq('booking_date', date)
+                .in('status', ['pending', 'confirmed', 'in_progress'])
+                .or(`staff_id.eq.${staff.id},team_id.in.(${teamIds.join(',')})`)
+
+              const memberJobsToday = memberDateBookings?.length || 0
+
               return {
                 staffId: staff.id,
                 fullName: staff.full_name,
                 isAvailable: conflicts.length === 0,
-                conflicts
+                conflicts,
+                rating: Math.round(memberAvgRating * 10) / 10,
+                jobsToday: memberJobsToday
               }
             })
           )
 
           const availableMembers = memberResults.filter(m => m.isAvailable).length
-          const isFullyAvailable = availableMembers === totalMembers
+
+          // Team is NOT available if:
+          // 1. The team itself has conflicting bookings (team-level assignment), OR
+          // 2. Not all members are available (some members have individual conflicts)
+          const hasTeamConflict = teamLevelConflicts.length > 0
+          const isFullyAvailable = !hasTeamConflict && availableMembers === totalMembers
 
           // Calculate team skill match
           const teamSkills = members.flatMap((m: TeamMemberData) => {
@@ -376,15 +507,30 @@ export function useStaffAvailabilityCheck({
           })
           const teamMatch = calculateTeamMatch(teamSkills, service.service_type)
 
-          // Calculate team score
-          const availabilityScore = isFullyAvailable ? 40 : (availableMembers / totalMembers) * 40
-          const score = teamMatch + availabilityScore
+          // Calculate average team rating from member results
+          const membersWithRatings = memberResults.filter(m => m.rating > 0)
+          const avgTeamRating = membersWithRatings.length > 0
+            ? membersWithRatings.reduce((sum, m) => sum + m.rating, 0) / membersWithRatings.length
+            : 0
+
+          // Calculate team workload (sum of all members' jobs today)
+          const teamJobsToday = memberResults.reduce((sum, m) => sum + m.jobsToday, 0)
+
+          // Calculate team performance score (0-15 points)
+          const teamPerformanceScore = (avgTeamRating / 5) * 15
+
+          // Calculate team workload score (0-15 points)
+          const teamWorkloadScore = Math.max(0, 15 - (teamJobsToday * 2))
+
+          // Calculate team score (Skill 0-70 + Performance 0-15 + Workload 0-15 = 100 total)
+          // Team match comes as 0-80, scale to 0-70
+          const score = (teamMatch * 0.875) + teamPerformanceScore + teamWorkloadScore
 
           return {
             teamId: team.id,
             teamName: team.name,
             totalMembers,
-            availableMembers,
+            availableMembers: hasTeamConflict ? 0 : availableMembers,
             members: memberResults,
             isFullyAvailable,
             score: Math.round(score),
@@ -434,43 +580,57 @@ function hasTimeOverlap(
   return start1 < end2 && end1 > start2
 }
 
-// Helper function to calculate skill match score (0-40 points)
+// Helper function to calculate skill match score (0-80 points, will be scaled to 70)
 function calculateSkillMatch(staffSkills: string[] | null, requiredService: string): number {
   if (!staffSkills || staffSkills.length === 0) return 0
 
-  // Exact match
-  if (staffSkills.includes(requiredService)) {
-    return 40
+  // Normalize service type to lowercase for comparison
+  const normalizedService = requiredService.toLowerCase()
+  const normalizedSkills = staffSkills.map(s => s.toLowerCase())
+
+  // Exact match (case-insensitive) - 80 points (will be scaled to 70)
+  if (normalizedSkills.includes(normalizedService)) {
+    return 80
   }
 
-  // Partial match (e.g., "Deep Cleaning" includes "Cleaning")
+  // Partial match (e.g., "Deep Cleaning" includes "Cleaning") - 50 points
   const hasPartialMatch = staffSkills.some(skill =>
-    skill.toLowerCase().includes(requiredService.toLowerCase()) ||
-    requiredService.toLowerCase().includes(skill.toLowerCase())
+    skill.toLowerCase().includes(normalizedService) ||
+    normalizedService.includes(skill.toLowerCase())
   )
 
   if (hasPartialMatch) {
-    return 25
+    return 50
   }
 
   return 0
 }
 
-// Helper function to calculate team skill match (0-60 points)
+// Helper function to calculate team skill match (0-80 points, will be scaled to 70)
 function calculateTeamMatch(teamSkills: string[], requiredService: string): number {
   if (teamSkills.length === 0) return 0
 
-  // Count how many team members have the required skill
-  const matchingSkills = teamSkills.filter(skill =>
-    skill === requiredService ||
-    skill.toLowerCase().includes(requiredService.toLowerCase()) ||
-    requiredService.toLowerCase().includes(skill.toLowerCase())
-  )
+  // Normalize for case-insensitive comparison
+  const normalizedService = requiredService.toLowerCase()
+  const normalizedSkills = teamSkills.map(s => s.toLowerCase())
 
-  if (matchingSkills.length >= 2) {
-    return 60 // Multiple members have the skill
-  } else if (matchingSkills.length === 1) {
-    return 40 // At least one member has the skill
+  // Count exact matches
+  const exactMatches = normalizedSkills.filter(skill => skill === normalizedService).length
+
+  // Count partial matches
+  const partialMatches = teamSkills.filter(skill =>
+    !normalizedSkills.includes(normalizedService) && (
+      skill.toLowerCase().includes(normalizedService) ||
+      normalizedService.includes(skill.toLowerCase())
+    )
+  ).length
+
+  if (exactMatches >= 2) {
+    return 80 // Multiple members have exact skill match
+  } else if (exactMatches === 1) {
+    return 60 // One member has exact match
+  } else if (partialMatches >= 1) {
+    return 40 // At least one partial match
   }
 
   return 20 // Team has other skills but not this specific one

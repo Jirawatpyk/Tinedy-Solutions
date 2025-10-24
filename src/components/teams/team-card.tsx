@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,14 +38,28 @@ interface TeamCardProps {
   onToggleMemberStatus: (membershipId: string, currentStatus: boolean) => void
 }
 
-export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
-  const getInitials = (name: string) => {
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return name.slice(0, 2).toUpperCase()
+// Helper function moved outside component
+const getInitials = (name: string) => {
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
   }
+  return name.slice(0, 2).toUpperCase()
+}
+
+export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
+  // Memoize expensive calculations
+  const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])
+
+  const displayedMembers = useMemo(
+    () => team.members?.slice(0, 3) || [],
+    [team.members]
+  )
+
+  const remainingMembersCount = useMemo(
+    () => team.members && team.members.length > 3 ? team.members.length - 3 : 0,
+    [team.members]
+  )
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -52,7 +67,7 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
-              {team.name.charAt(0).toUpperCase()}
+              {teamInitial}
             </div>
             <div>
               <CardTitle className="text-lg font-display">
@@ -136,8 +151,8 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
           </div>
 
           <div className="space-y-2">
-            {team.members && team.members.length > 0 ? (
-              team.members.slice(0, 3).map((member) => (
+            {displayedMembers.length > 0 ? (
+              displayedMembers.map((member) => (
                 <div
                   key={member.id}
                   className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors group"
@@ -191,9 +206,9 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
               </p>
             )}
 
-            {team.members && team.members.length > 3 && (
+            {remainingMembersCount > 0 && (
               <p className="text-xs text-muted-foreground text-center pt-2 border-t">
-                +{team.members.length - 3} more members
+                +{remainingMembersCount} more members
               </p>
             )}
           </div>
@@ -201,4 +216,4 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
       </CardContent>
     </Card>
   )
-}
+})

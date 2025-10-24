@@ -1,77 +1,95 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/auth-context'
 import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
 import { MainLayout } from './components/layout/main-layout'
-import { LoginPage } from './pages/auth/login'
-import { AdminDashboard } from './pages/admin/dashboard'
-import { AdminBookings } from './pages/admin/bookings'
-import { AdminCustomers } from './pages/admin/customers'
-import { AdminCustomerDetail } from './pages/admin/customer-detail'
-import { AdminStaff } from './pages/admin/staff'
-import { AdminStaffPerformance } from './pages/admin/staff-performance'
-import { AdminWeeklySchedule } from './pages/admin/weekly-schedule'
-import { AdminServicePackages } from './pages/admin/service-packages'
-import { AdminReports } from './pages/admin/reports'
-import { AdminCalendar } from './pages/admin/calendar'
-import { AdminChat } from './pages/admin/chat'
-import { AdminTeams } from './pages/admin/teams'
-import AdminProfile from './pages/admin/profile'
-import AdminSettings from './pages/admin/settings'
-import { StaffChat } from './pages/staff/chat'
-import StaffDashboard from './pages/staff/dashboard'
-import StaffCalendar from './pages/staff/calendar'
-import StaffProfile from './pages/staff/profile'
 import { Toaster } from './components/ui/toaster'
+
+// Eager load: Login page (first page users see)
+import { LoginPage } from './pages/auth/login'
+
+// Lazy load: Admin pages (only load when accessed)
+const AdminDashboard = lazy(() => import('./pages/admin/dashboard').then(m => ({ default: m.AdminDashboard })))
+const AdminBookings = lazy(() => import('./pages/admin/bookings').then(m => ({ default: m.AdminBookings })))
+const AdminCustomers = lazy(() => import('./pages/admin/customers').then(m => ({ default: m.AdminCustomers })))
+const AdminCustomerDetail = lazy(() => import('./pages/admin/customer-detail').then(m => ({ default: m.AdminCustomerDetail })))
+const AdminStaff = lazy(() => import('./pages/admin/staff').then(m => ({ default: m.AdminStaff })))
+const AdminStaffPerformance = lazy(() => import('./pages/admin/staff-performance').then(m => ({ default: m.AdminStaffPerformance })))
+const AdminWeeklySchedule = lazy(() => import('./pages/admin/weekly-schedule').then(m => ({ default: m.AdminWeeklySchedule })))
+const AdminServicePackages = lazy(() => import('./pages/admin/service-packages').then(m => ({ default: m.AdminServicePackages })))
+const AdminReports = lazy(() => import('./pages/admin/reports').then(m => ({ default: m.AdminReports })))
+const AdminCalendar = lazy(() => import('./pages/admin/calendar').then(m => ({ default: m.AdminCalendar })))
+const AdminChat = lazy(() => import('./pages/admin/chat').then(m => ({ default: m.AdminChat })))
+const AdminTeams = lazy(() => import('./pages/admin/teams').then(m => ({ default: m.AdminTeams })))
+const AdminProfile = lazy(() => import('./pages/admin/profile'))
+const AdminSettings = lazy(() => import('./pages/admin/settings'))
+
+// Lazy load: Staff pages (only load when accessed)
+const StaffDashboard = lazy(() => import('./pages/staff/dashboard'))
+const StaffCalendar = lazy(() => import('./pages/staff/calendar'))
+const StaffChat = lazy(() => import('./pages/staff/chat').then(m => ({ default: m.StaffChat })))
+const StaffProfile = lazy(() => import('./pages/staff/profile'))
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+)
 
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="tinedy-crm-theme">
       <AuthProvider>
         <BrowserRouter>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected Admin routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="bookings" element={<AdminBookings />} />
-            <Route path="customers" element={<AdminCustomers />} />
-            <Route path="customers/:id" element={<AdminCustomerDetail />} />
-            <Route path="staff" element={<AdminStaff />} />
-            <Route path="staff/:id" element={<AdminStaffPerformance />} />
-            <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
-            <Route path="calendar" element={<AdminCalendar />} />
-            <Route path="chat" element={<AdminChat />} />
-            <Route path="packages" element={<AdminServicePackages />} />
-            <Route path="reports" element={<AdminReports />} />
-            <Route path="teams" element={<AdminTeams />} />
-            <Route path="profile" element={<AdminProfile />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            {/* Protected Admin routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="customers" element={<AdminCustomers />} />
+              <Route path="customers/:id" element={<AdminCustomerDetail />} />
+              <Route path="staff" element={<AdminStaff />} />
+              <Route path="staff/:id" element={<AdminStaffPerformance />} />
+              <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
+              <Route path="calendar" element={<AdminCalendar />} />
+              <Route path="chat" element={<AdminChat />} />
+              <Route path="packages" element={<AdminServicePackages />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="teams" element={<AdminTeams />} />
+              <Route path="profile" element={<AdminProfile />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
-          {/* Protected Staff routes */}
-          <Route
-            path="/staff"
-            element={
-              <ProtectedRoute allowedRoles={['staff']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<StaffDashboard />} />
-            <Route path="calendar" element={<StaffCalendar />} />
-            <Route path="chat" element={<StaffChat />} />
-            <Route path="profile" element={<StaffProfile />} />
-          </Route>
+            {/* Protected Staff routes */}
+            <Route
+              path="/staff"
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<StaffDashboard />} />
+              <Route path="calendar" element={<StaffCalendar />} />
+              <Route path="chat" element={<StaffChat />} />
+              <Route path="profile" element={<StaffProfile />} />
+            </Route>
 
           {/* Redirect root to admin dashboard */}
           <Route path="/" element={<Navigate to="/admin" replace />} />
@@ -114,7 +132,8 @@ function App() {
               </div>
             }
           />
-        </Routes>
+          </Routes>
+        </Suspense>
         <Toaster />
       </BrowserRouter>
       </AuthProvider>

@@ -53,7 +53,7 @@ export function AdminBookings() {
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [assignmentType, setAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   // Booking filters hook
   const {
@@ -282,9 +282,9 @@ export function AdminBookings() {
       })
       // Set assignment type
       if (state.prefilledData.staff_id) {
-        setAssignmentType('staff')
+        setCreateAssignmentType('staff')
       } else if (state.prefilledData.team_id) {
-        setAssignmentType('team')
+        setCreateAssignmentType('team')
       }
       // Open create dialog
       setIsDialogOpen(true)
@@ -426,7 +426,7 @@ export function AdminBookings() {
 
   const resetForm = () => {
     createForm.reset()
-    setAssignmentType('none')
+    setCreateAssignmentType('none')
     clearConflicts()
   }
 
@@ -586,8 +586,8 @@ export function AdminBookings() {
             setIsAvailabilityModalOpen(true)
           }}
           createForm={createForm}
-          assignmentType={assignmentType}
-          setAssignmentType={setAssignmentType}
+          assignmentType={createAssignmentType}
+          setAssignmentType={setCreateAssignmentType}
           calculateEndTime={calculateEndTime}
         />
 
@@ -599,7 +599,7 @@ export function AdminBookings() {
               setIsAvailabilityModalOpen(false)
               setIsDialogOpen(true)
             }}
-            assignmentType={assignmentType === 'staff' ? 'individual' : 'team'}
+            assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
             onSelectStaff={(staffId) => {
               createForm.handleChange('staff_id', staffId)
               setIsAvailabilityModalOpen(false)

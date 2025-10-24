@@ -1,3 +1,4 @@
+import { memo, useState, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -6,7 +7,7 @@ import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
-import { useState } from 'react'
+import { formatTime } from '@/lib/booking-utils'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -16,55 +17,77 @@ interface BookingCardProps {
   showDate?: boolean
 }
 
-export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCompleted, showDate = false }: BookingCardProps) {
+// Helper functions moved outside component (computed once)
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-100 text-green-800 border-green-200'
+    case 'confirmed':
+      return 'bg-blue-100 text-blue-800 border-blue-200'
+    case 'in_progress':
+      return 'bg-purple-100 text-purple-800 border-purple-200'
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200'
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200'
+  }
+}
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'เสร็จสิ้น'
+    case 'confirmed':
+      return 'ยืนยันแล้ว'
+    case 'in_progress':
+      return 'กำลังดำเนินการ'
+    case 'pending':
+      return 'รอยืนยัน'
+    case 'cancelled':
+      return 'ยกเลิก'
+    default:
+      return status
+  }
+}
+
+export const BookingCard = memo(function BookingCard({
+  booking,
+  onViewDetails,
+  onStartProgress,
+  onMarkCompleted,
+  showDate = false
+}: BookingCardProps) {
   const { user } = useAuth()
   const [isStarting, setIsStarting] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
 
-  // Check if this is a team booking (not assigned to current user)
-  const isTeamBooking = booking.staff_id !== user?.id && booking.team_id
+  // Memoize expensive calculations
+  const isTeamBooking = useMemo(
+    () => booking.staff_id !== user?.id && booking.team_id,
+    [booking.staff_id, booking.team_id, user?.id]
+  )
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'in_progress':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
+  const canStartProgress = useMemo(
+    () => booking.status === 'confirmed',
+    [booking.status]
+  )
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'เสร็จสิ้น'
-      case 'confirmed':
-        return 'ยืนยันแล้ว'
-      case 'in_progress':
-        return 'กำลังดำเนินการ'
-      case 'pending':
-        return 'รอยืนยัน'
-      case 'cancelled':
-        return 'ยกเลิก'
-      default:
-        return status
-    }
-  }
+  const canMarkCompleted = useMemo(
+    () => booking.status === 'in_progress',
+    [booking.status]
+  )
 
-  const canStartProgress = booking.status === 'confirmed'
-  const canMarkCompleted = booking.status === 'in_progress'
+  const fullAddress = useMemo(
+    () => booking.address ? formatFullAddress(booking) : null,
+    [booking.address, booking.city, booking.state, booking.zip_code]
+  )
 
-  // Format time to remove seconds (HH:MM:SS -> HH:MM)
-  const formatTime = (time: string) => {
-    return time.split(':').slice(0, 2).join(':')
-  }
+  const formattedDate = useMemo(
+    () => showDate ? format(new Date(booking.booking_date), 'dd MMM yyyy') : null,
+    [showDate, booking.booking_date]
+  )
 
   return (
     <Card
@@ -79,9 +102,9 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="font-semibold text-lg">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
             </div>
-            {showDate && (
+            {formattedDate && (
               <div className="text-sm text-muted-foreground ml-6">
-                {format(new Date(booking.booking_date), 'dd MMM yyyy')}
+                {formattedDate}
               </div>
             )}
           </div>
@@ -134,11 +157,11 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             </div>
           )}
 
-          {booking.address && (
+          {fullAddress && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <span className="text-sm text-muted-foreground break-words">
-                {formatFullAddress(booking)}
+                {fullAddress}
               </span>
             </div>
           )}
@@ -169,17 +192,16 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
             โทร
           </Button>
           <Button
-            onClick={(e) => {
+            onClick={useCallback((e: React.MouseEvent) => {
               e.stopPropagation()
-              if (booking.address) {
-                const fullAddress = formatFullAddress(booking)
+              if (fullAddress) {
                 window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank')
               }
-            }}
+            }, [fullAddress])}
             variant="outline"
             size="sm"
             className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
-            disabled={!booking.address}
+            disabled={!fullAddress}
           >
             <MapPin className="h-3 w-3 mr-1" />
             แผนที่
@@ -256,4 +278,4 @@ export function BookingCard({ booking, onViewDetails, onStartProgress, onMarkCom
       </CardContent>
     </Card>
   )
-}
+})

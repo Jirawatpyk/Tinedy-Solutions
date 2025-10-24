@@ -161,15 +161,29 @@ export function AdminDashboard() {
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [showChartLabels, setShowChartLabels] = useState(false)
 
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchDashboardData()
-    fetchServicePackages()
-    fetchStaffMembers()
-    fetchTeams()
+    // Run all data fetching in parallel for better performance
+    Promise.all([
+      fetchDashboardData(),
+      fetchServicePackages(),
+      fetchStaffMembers(),
+      fetchTeams()
+    ])
   }, [])
+
+  // Show chart labels after animation completes
+  useEffect(() => {
+    if (!loading && bookingsByStatus.length > 0) {
+      const timer = setTimeout(() => {
+        setShowChartLabels(true)
+      }, 400) // Show halfway through animation for smoother appearance
+      return () => clearTimeout(timer)
+    }
+  }, [loading, bookingsByStatus])
 
   const fetchServicePackages = async () => {
     try {
@@ -218,108 +232,91 @@ export function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch total bookings
-      const { count: totalBookings } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch total revenue
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select('total_price')
-        .eq('status', 'completed')
-
-      const totalRevenue = bookingsData?.reduce(
-        (sum, booking) => sum + Number(booking.total_price),
-        0
-      ) || 0
-
-      // Fetch total customers
-      const { count: totalCustomers } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-
-      // Fetch pending bookings
-      const { count: pendingBookings } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-
-      setStats({
-        totalBookings: totalBookings || 0,
-        totalRevenue,
-        totalCustomers: totalCustomers || 0,
-        pendingBookings: pendingBookings || 0,
-      })
-
-      // Fetch today's new data (created today only)
+      // Calculate dates first
       const nowToday = new Date()
       const bangkokOffsetToday = 7 * 60 * 60 * 1000
       const bangkokTimeToday = new Date(nowToday.getTime() + bangkokOffsetToday)
       const todayStr = bangkokTimeToday.toISOString().split('T')[0]
-
-      // Calculate start of day in Bangkok timezone (00:00:00)
       const todayStart = `${todayStr}T00:00:00+07:00`
       const todayEnd = `${todayStr}T23:59:59+07:00`
+      const today = todayStr
 
-      console.log('Today date for stats:', todayStr)
-      console.log('Query range:', todayStart, 'to', todayEnd)
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-      // Today's new bookings count (created today)
-      const { data: todayBookingsData, count: todayBookings } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact' })
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd)
+      // OPTIMIZE: Run ALL queries in parallel using Promise.all
+      const [
+        totalBookingsRes,
+        completedBookingsRes,
+        totalCustomersRes,
+        pendingBookingsRes,
+        todayBookingsRes,
+        todayRevenueRes,
+        todayCustomersRes,
+        todayPendingRes,
+        allBookingsStatusRes,
+        todayBookingsDataRes,
+        revenueDataRes,
+      ] = await Promise.all([
+        // Total stats
+        supabase.from('bookings').select('*', { count: 'exact', head: true }),
+        supabase.from('bookings').select('total_price').eq('status', 'completed'),
+        supabase.from('customers').select('*', { count: 'exact', head: true }),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
 
-      console.log('Today bookings found:', todayBookings, 'records:', todayBookingsData?.length)
+        // Today's stats
+        supabase.from('bookings').select('*', { count: 'exact' }).gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('total_price').eq('status', 'completed').gte('updated_at', todayStart).lte('updated_at', todayEnd),
+        supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending').gte('created_at', todayStart).lte('created_at', todayEnd),
 
-      // Today's new revenue (from bookings completed today)
-      const { data: todayRevenueData } = await supabase
-        .from('bookings')
-        .select('total_price')
-        .eq('status', 'completed')
-        .gte('updated_at', todayStart)
-        .lte('updated_at', todayEnd)
+        // Bookings by status
+        supabase.from('bookings').select('status'),
 
-      const todayRevenue = todayRevenueData?.reduce(
+        // Today's bookings detail
+        supabase.from('bookings').select(`
+          *,
+          customers (id, full_name, phone, email),
+          service_packages (name, service_type),
+          profiles (full_name),
+          teams (name)
+        `).eq('booking_date', today).order('start_time', { ascending: true }),
+
+        // Revenue data
+        supabase.from('bookings').select('booking_date, total_price').eq('status', 'completed').gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
+      ])
+
+      // Process total revenue
+      const totalRevenue = completedBookingsRes.data?.reduce(
         (sum, booking) => sum + Number(booking.total_price),
         0
       ) || 0
 
-      // Today's new customers (created today)
-      const { count: todayCustomers } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd)
+      // Process today's revenue
+      const todayRevenue = todayRevenueRes.data?.reduce(
+        (sum, booking) => sum + Number(booking.total_price),
+        0
+      ) || 0
 
-      // Today's new pending (created today)
-      const { count: todayPending } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd)
-
-      // Set today's changes
-      console.log('=== Today\'s New Stats ===')
-      console.log('New today:', { todayBookings, todayRevenue, todayCustomers, todayPending })
-
-      setStatsChange({
-        bookingsChange: todayBookings || 0,
-        revenueChange: todayRevenue,
-        customersChange: todayCustomers || 0,
-        pendingChange: todayPending || 0,
+      // Set stats
+      setStats({
+        totalBookings: totalBookingsRes.count || 0,
+        totalRevenue,
+        totalCustomers: totalCustomersRes.count || 0,
+        pendingBookings: pendingBookingsRes.count || 0,
       })
 
-      // Fetch bookings by status for pie chart
-      const { data: allBookings } = await supabase
-        .from('bookings')
-        .select('status')
+      setStatsChange({
+        bookingsChange: todayBookingsRes.count || 0,
+        revenueChange: todayRevenue,
+        customersChange: todayCustomersRes.count || 0,
+        pendingChange: todayPendingRes.count || 0,
+      })
 
+      // Process bookings by status
       const statusCounts: Record<string, number> = {}
-      allBookings?.forEach((booking) => {
+      allBookingsStatusRes.data?.forEach((booking) => {
         statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1
       })
 
@@ -339,41 +336,10 @@ export function AdminDashboard() {
 
       setBookingsByStatus(statusData)
 
-      // Fetch today's bookings (using Thailand timezone UTC+7)
-      const now = new Date()
-      // Add 7 hours to UTC to get Bangkok time
-      const bangkokOffset = 7 * 60 * 60 * 1000 // 7 hours in milliseconds
-      const bangkokTime = new Date(now.getTime() + bangkokOffset)
-      const today = bangkokTime.toISOString().split('T')[0]
+      // Set today's bookings
+      setTodayBookings((todayBookingsDataRes.data as TodayBooking[]) || [])
 
-      console.log('Current UTC time:', now.toISOString())
-      console.log('Bangkok time (UTC+7):', bangkokTime.toISOString())
-      console.log('Today date for query:', today)
-
-      const { data: todayData } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, email),
-          service_packages (name, service_type),
-          profiles (full_name),
-          teams (name)
-        `)
-        .eq('booking_date', today)
-        .order('start_time', { ascending: true })
-
-      setTodayBookings((todayData as TodayBooking[]) || [])
-
-      // Fetch daily revenue for last 7 days
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-      const { data: revenueData } = await supabase
-        .from('bookings')
-        .select('booking_date, total_price')
-        .eq('status', 'completed')
-        .gte('booking_date', sevenDaysAgo.toISOString().split('T')[0])
-        .order('booking_date', { ascending: true })
-
+      // Process revenue data
       const revenueByDate: Record<string, number> = {}
       for (let i = 0; i < 7; i++) {
         const date = new Date()
@@ -382,7 +348,7 @@ export function AdminDashboard() {
         revenueByDate[dateStr] = 0
       }
 
-      revenueData?.forEach((item) => {
+      revenueDataRes.data?.forEach((item) => {
         const dateStr = item.booking_date
         revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + Number(item.total_price)
       })
@@ -817,25 +783,32 @@ export function AdminDashboard() {
                       data={bookingsByStatus as Record<string, unknown>[]}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={(props) => {
+                      labelLine={showChartLabels}
+                      label={showChartLabels ? (props) => {
                         const entry = props.payload as BookingStatus
                         const percent = props.percent as number
                         return `${entry.status}: ${(percent * 100).toFixed(0)}%`
-                      }}
+                      } : false}
                       outerRadius={90}
                       innerRadius={60}
                       fill="#8884d8"
                       dataKey="count"
                       paddingAngle={2}
                       nameKey="status"
+                      animationBegin={0}
+                      animationDuration={800}
+                      animationEasing="ease-out"
                     >
                       {bookingsByStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => [`${value} bookings`, '']}
+                      formatter={(value: number, name: string) => {
+                        const total = bookingsByStatus.reduce((sum, item) => sum + item.count, 0)
+                        const percent = ((value / total) * 100).toFixed(0)
+                        return [`${value} bookings (${percent}%)`, name]
+                      }}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
@@ -1095,6 +1068,7 @@ export function AdminDashboard() {
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}
+          excludeBookingId={selectedBooking?.id}
         />
       )}
     </div>
