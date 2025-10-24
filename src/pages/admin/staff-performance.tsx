@@ -154,7 +154,7 @@ export function AdminStaffPerformance() {
         total_price: number
         payment_status: string
         created_at: string
-        service_packages: ServicePackage | ServicePackage[] | null
+        service_packages: { name: string; price: number } | { name: string; price: number }[] | null
         customers: Customer | Customer[] | null
       }
 

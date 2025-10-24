@@ -3,11 +3,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, Play, Users, Loader2 } from 'lucide-react'
-import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
+import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
-import { formatTime } from '@/lib/booking-utils'
+import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 
 interface BookingCardProps {
   booking: StaffBooking

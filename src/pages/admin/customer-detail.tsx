@@ -440,7 +440,7 @@ export function AdminCustomerDetail() {
       // Fetch service packages
       const { data: packages, error: packagesError } = await supabase
         .from('service_packages')
-        .select('id, name, price, service_type, duration_minutes')
+        .select('id, name, description, service_type, duration_minutes, price, is_active, created_at')
         .eq('is_active', true)
         .order('name')
 

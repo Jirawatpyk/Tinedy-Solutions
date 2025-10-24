@@ -24,10 +24,11 @@ import {
   MapPin,
   Play,
 } from 'lucide-react'
-import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
+import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
+import { formatFullAddress } from '@/lib/booking-utils'
 import { formatTime } from '@/lib/booking-utils'
 import { BookingTimeline } from './booking-timeline'
 

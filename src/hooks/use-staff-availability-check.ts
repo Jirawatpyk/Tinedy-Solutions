@@ -199,7 +199,7 @@ export function useStaffAvailabilityCheck({
             }
 
             const { data } = await teamQuery
-            teamBookings = data || []
+            teamBookings = (data || []) as any
           }
 
           // Combine both staff and team bookings
