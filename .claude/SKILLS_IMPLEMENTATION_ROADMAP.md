@@ -629,7 +629,20 @@ Agent: @refactoring-agent (via Master Orchestrator)
 - Lint: PASSING ✅
 - All functionality preserved ✅
 
-**Git Commit:** `257eb0e` - feat(Phase 2.3): Extract 3 major UI components from bookings.tsx
+**Git Commits:**
+- `257eb0e` - feat(Phase 2.3): Extract 3 major UI components from bookings.tsx
+- `11b10ad` - docs: Update roadmap with Phase 2.3 completion
+
+**QA Review Conducted:** ✅
+- Overall Quality Score: 8.7/10
+- Critical Issues: 0
+- Major Issues: 2 (FIXED in commit `e5f52fe`)
+  1. useEffect dependency optimization (performance issue)
+  2. Type safety with BookingDetailModal ('any' casts removed)
+- Minor Issues: 4 (deferred to later phases)
+- Status: 🟢 PRODUCTION READY
+
+**Git Commit (QA Fixes):** `e5f52fe` - fix(Phase 2 QA): Resolve 2 major issues from QA review
 
 **Note:** Further extraction of form modals and dialogs (~1,000+ lines) can reduce bookings.tsx to target ~400-500 lines (Phase 2.4)
 
@@ -660,6 +673,87 @@ export default function BookingsPage() {
 ```
 
 **Deliverable:** bookings.tsx reduced from 2,400 to ~400 lines, 5 new components, 4 new hooks
+
+---
+
+#### Phase 2.4: Extract Form Modals from bookings.tsx ✅ **COMPLETE**
+
+**Day 17-18: Modal Component Extraction (12 hours actual)**
+
+```bash
+Claude Skill: @code-review-refactoring
+Agent: @refactoring-agent (via Master Orchestrator)
+```
+
+**Goal:** Extract all Dialog/Modal components from bookings.tsx to reduce complexity and improve maintainability
+
+**Modals Extracted:**
+
+1. **BookingStatusConfirmDialog** ✅ (33 lines)
+   - [x] Created `src/components/booking/BookingStatusConfirmDialog.tsx`
+   - [x] Simple confirmation dialog for status workflow transitions
+   - [x] Props: isOpen, onClose, onConfirm, message
+   - Lines removed: 12
+
+2. **BookingConflictDialog** ✅ (131 lines)
+   - [x] Created `src/components/booking/BookingConflictDialog.tsx`
+   - [x] Displays scheduling conflicts with override capability
+   - [x] Lists conflicting bookings with full details
+   - [x] Visual warning with status badges
+   - [x] Reusable by both create and edit flows
+   - Props: 7 (isOpen, onClose, onProceed, conflicts, isEdit, getStatusBadge, formatTime)
+   - Lines removed: 58
+
+3. **BookingCreateModal** ✅ (616 lines)
+   - [x] Created `src/components/booking/BookingCreateModal.tsx`
+   - [x] Complete booking creation form with customer lookup
+   - [x] Email/phone-based existing customer detection
+   - [x] Inline new customer creation
+   - [x] Service package selection with auto-calculated end time
+   - [x] Staff/Team assignment with conflict detection
+   - [x] Address information collection
+   - [x] Integration with StaffAvailabilityModal
+   - [x] Props-based architecture (shares form state with parent)
+   - Props: 9 (isOpen, onClose, onSuccess, data arrays, handlers, form state)
+   - Lines removed: 410
+
+4. **BookingEditModal** ✅ (501 lines)
+   - [x] Created `src/components/booking/BookingEditModal.tsx`
+   - [x] Complete booking edit form with pre-population
+   - [x] Service, date/time, status, assignment modification
+   - [x] Conflict detection for changes
+   - [x] Address updates
+   - [x] Integration with StaffAvailabilityModal
+   - [x] Props-based architecture (shares form state with parent)
+   - Props: 10 (isOpen, onClose, booking, onSuccess, data arrays, handlers, form state)
+   - Lines removed: 510
+
+**Results:**
+- bookings.tsx reduced: 2,020 → 1,040 lines (980 lines removed, 48.5% reduction)
+- Modals created: 4 components (1,281 lines of modular code)
+- Build: PASSING ✅
+- Lint: PASSING ✅
+- TypeScript: 0 errors ✅
+- All functionality preserved ✅
+
+**Architecture:**
+- Props-based design for create/edit modals
+- Shared form state with parent component
+- Coordination with StaffAvailabilityModal
+- Proper TypeScript interfaces for all props
+- Reusable dialog components
+
+**Git Commit:** `[pending]` - feat(Phase 2.4A): Extract 4 form modals from bookings.tsx
+
+**Barrel Export Updated:**
+- `src/components/booking/index.ts` exports all 4 new modal components
+
+**Progress Toward Target:**
+- Current: 1,040 lines
+- Target: ~400-500 lines
+- Remaining: ~540-640 lines to extract (Phase 2.4B/2.5)
+
+**Next Phase:** Phase 2.4B - Extract additional hooks and utilities, or Phase 3 - Performance optimization
 
 ---
 
