@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
 import { getErrorMessage } from '@/lib/error-utils'
 
 export default function AdminProfile() {
@@ -60,13 +59,13 @@ export default function AdminProfile() {
         phone: phone || undefined,
       })
       toast({
-        title: 'บันทึกสำเร็จ',
-        description: 'ข้อมูลโปรไฟล์ของคุณได้รับการอัปเดตแล้ว',
+        title: 'Success',
+        description: 'Your profile has been updated successfully',
       })
       setEditing(false)
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
+        title: 'Error',
         description: getErrorMessage(error),
         variant: 'destructive',
       })
@@ -78,8 +77,8 @@ export default function AdminProfile() {
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({
-        title: 'รหัสผ่านไม่ตรงกัน',
-        description: 'กรุณากรอกรหัสผ่านใหม่ให้ตรงกันทั้งสองช่อง',
+        title: 'Passwords do not match',
+        description: 'Please ensure both password fields match',
         variant: 'destructive',
       })
       return
@@ -87,8 +86,8 @@ export default function AdminProfile() {
 
     if (newPassword.length < 6) {
       toast({
-        title: 'รหัสผ่านสั้นเกินไป',
-        description: 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร',
+        title: 'Password too short',
+        description: 'Password must be at least 6 characters long',
         variant: 'destructive',
       })
       return
@@ -98,14 +97,14 @@ export default function AdminProfile() {
       setChangingPassword(true)
       await changePassword(newPassword)
       toast({
-        title: 'เปลี่ยนรหัสผ่านสำเร็จ',
-        description: 'รหัสผ่านของคุณได้รับการอัปเดตแล้ว',
+        title: 'Password changed successfully',
+        description: 'Your password has been updated',
       })
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
+        title: 'Error',
         description: getErrorMessage(error),
         variant: 'destructive',
       })
@@ -119,7 +118,7 @@ export default function AdminProfile() {
       <div className="p-4 sm:p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>เกิดข้อผิดพลาด: {error}</AlertDescription>
+          <AlertDescription>Error: {error}</AlertDescription>
         </Alert>
       </div>
     )
@@ -148,7 +147,7 @@ export default function AdminProfile() {
         <div className="px-4 sm:px-6 py-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Profile</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            จัดการข้อมูลส่วนตัวและการตั้งค่าบัญชี
+            Manage your personal information and account settings
           </p>
         </div>
       </div>
@@ -159,21 +158,21 @@ export default function AdminProfile() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>ข้อมูลส่วนตัว</CardTitle>
-                <CardDescription>จัดการข้อมูลโปรไฟล์ของคุณ</CardDescription>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Manage your profile information</CardDescription>
               </div>
               {!editing ? (
                 <Button onClick={handleEditToggle} variant="outline" size="sm">
-                  แก้ไข
+                  Edit
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button onClick={handleEditToggle} variant="outline" size="sm">
-                    ยกเลิก
+                    Cancel
                   </Button>
                   <Button onClick={handleSaveProfile} disabled={saving} size="sm">
                     <Save className="h-4 w-4 mr-1" />
-                    {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                    {saving ? 'Saving...' : 'Save'}
                   </Button>
                 </div>
               )}
@@ -195,13 +194,13 @@ export default function AdminProfile() {
             {/* Personal Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="fullName">ชื่อ-นามสกุล</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 {editing ? (
                   <Input
                     id="fullName"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="กรอกชื่อ-นามสกุล"
+                    placeholder="Enter full name"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
@@ -212,48 +211,48 @@ export default function AdminProfile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">อีเมล</Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span>{adminProfile.email}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">ไม่สามารถเปลี่ยนอีเมลได้</p>
+                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 {editing ? (
                   <Input
                     id="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="กรอกเบอร์โทรศัพท์"
+                    placeholder="Enter phone number"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{adminProfile.phone || 'ไม่ได้ระบุ'}</span>
+                    <span>{adminProfile.phone || 'Not specified'}</span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>วันที่สมัคร</Label>
+                <Label>Join Date</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {format(new Date(adminProfile.created_at), 'dd MMMM yyyy', { locale: th })}
+                    {format(new Date(adminProfile.created_at), 'MMMM dd, yyyy')}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>บทบาท</Label>
+                <Label>Role</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <span className="font-semibold text-tinedy-blue">
-                    {adminProfile.role === 'admin' ? 'ผู้ดูแลระบบ' : adminProfile.role}
+                    {adminProfile.role === 'admin' ? 'Administrator' : adminProfile.role}
                   </span>
                 </div>
               </div>
@@ -266,30 +265,30 @@ export default function AdminProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              เปลี่ยนรหัสผ่าน
+              Change Password
             </CardTitle>
-            <CardDescription>อัปเดตรหัสผ่านของคุณเพื่อความปลอดภัย</CardDescription>
+            <CardDescription>Update your password for security</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="newPassword">รหัสผ่านใหม่</Label>
+                <Label htmlFor="newPassword">New Password</Label>
                 <Input
                   id="newPassword"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านใหม่"
+                  placeholder="Enter new password"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</Label>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="ยืนยันรหัสผ่านใหม่"
+                  placeholder="Confirm new password"
                 />
               </div>
             </div>
@@ -298,7 +297,7 @@ export default function AdminProfile() {
               disabled={!newPassword || !confirmPassword || changingPassword}
               className="mt-4"
             >
-              {changingPassword ? 'กำลังเปลี่ยนรหัสผ่าน...' : 'เปลี่ยนรหัสผ่าน'}
+              {changingPassword ? 'Changing Password...' : 'Change Password'}
             </Button>
           </CardContent>
         </Card>
