@@ -18,6 +18,8 @@ interface StaffAvailabilityModalProps {
   endTime: string
   servicePackageId: string
   servicePackageName?: string
+  currentAssignedStaffId?: string
+  currentAssignedTeamId?: string
 }
 
 export function StaffAvailabilityModal({
@@ -30,7 +32,9 @@ export function StaffAvailabilityModal({
   startTime,
   endTime,
   servicePackageId,
-  servicePackageName = ''
+  servicePackageName = '',
+  currentAssignedStaffId,
+  currentAssignedTeamId
 }: StaffAvailabilityModalProps) {
   const { loading, staffResults, teamResults, serviceType } = useStaffAvailabilityCheck({
     date,
@@ -124,6 +128,7 @@ export function StaffAvailabilityModal({
                             staff={staff}
                             rank={index + 1}
                             onSelect={() => handleSelect(staff.staffId)}
+                            isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                           />
                         ))
                       : (recommended as TeamAvailabilityResult[]).map((team, index) => (
@@ -132,6 +137,7 @@ export function StaffAvailabilityModal({
                             team={team}
                             rank={index + 1}
                             onSelect={() => handleSelect(team.teamId)}
+                            isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
                           />
                         ))
                     }
@@ -152,6 +158,7 @@ export function StaffAvailabilityModal({
                             key={staff.staffId}
                             staff={staff}
                             onSelect={() => handleSelect(staff.staffId)}
+                            isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                           />
                         ))
                       : (partiallyAvailable as TeamAvailabilityResult[]).map((team) => (
@@ -159,6 +166,7 @@ export function StaffAvailabilityModal({
                             key={team.teamId}
                             team={team}
                             onSelect={() => handleSelect(team.teamId)}
+                            isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
                           />
                         ))
                     }
@@ -180,6 +188,7 @@ export function StaffAvailabilityModal({
                             staff={staff}
                             onSelect={() => handleSelect(staff.staffId)}
                             isUnavailable
+                            isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                           />
                         ))
                       : (unavailable as TeamAvailabilityResult[]).map((team) => (
@@ -188,6 +197,7 @@ export function StaffAvailabilityModal({
                             team={team}
                             onSelect={() => handleSelect(team.teamId)}
                             isUnavailable
+                            isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
                           />
                         ))
                     }
@@ -215,25 +225,32 @@ function StaffCard({
   staff,
   rank,
   onSelect,
-  isUnavailable = false
+  isUnavailable = false,
+  isCurrentlyAssigned = false
 }: {
   staff: StaffAvailabilityResult
   rank?: number
   onSelect: () => void
   isUnavailable?: boolean
+  isCurrentlyAssigned?: boolean
 }) {
   const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👤'
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${
-      isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
+      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {rank && <span className="text-2xl">{rankEmoji}</span>}
-            <div>
-              <h4 className="font-semibold text-lg">{staff.fullName}</h4>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold text-lg">{staff.fullName}</h4>
+                {isCurrentlyAssigned && (
+                  <Badge className="bg-tinedy-blue text-white">Currently Assigned</Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{staff.staffNumber}</p>
             </div>
           </div>
@@ -322,25 +339,32 @@ function TeamCard({
   team,
   rank,
   onSelect,
-  isUnavailable = false
+  isUnavailable = false,
+  isCurrentlyAssigned = false
 }: {
   team: TeamAvailabilityResult
   rank?: number
   onSelect: () => void
   isUnavailable?: boolean
+  isCurrentlyAssigned?: boolean
 }) {
   const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👥'
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${
-      isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
+      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {rank && <span className="text-2xl">{rankEmoji}</span>}
-            <div>
-              <h4 className="font-semibold text-lg">{team.teamName}</h4>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold text-lg">{team.teamName}</h4>
+                {isCurrentlyAssigned && (
+                  <Badge className="bg-tinedy-blue text-white">Currently Assigned</Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" />
                 {team.totalMembers} members

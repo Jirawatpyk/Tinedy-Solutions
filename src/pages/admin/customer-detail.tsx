@@ -30,6 +30,8 @@ import {
   ChevronRight,
   Download,
   Sparkles,
+  Tag,
+  X,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import {
@@ -183,6 +185,7 @@ export function AdminCustomerDetail() {
 
   // Form states
   const [noteText, setNoteText] = useState('')
+  const [tagInput, setTagInput] = useState('')
   const [editForm, setEditForm] = useState({
     full_name: '',
     email: '',
@@ -1535,41 +1538,154 @@ export function AdminCustomerDetail() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_relationship_level">Relationship Level *</Label>
-                <Select
-                  value={editForm.relationship_level}
-                  onValueChange={(value: 'new' | 'regular' | 'vip' | 'inactive') => setEditForm({ ...editForm, relationship_level: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Relationship & Contact Section */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">Relationship & Contact Preferences</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_relationship_level">Relationship Level *</Label>
+                  <Select
+                    value={editForm.relationship_level}
+                    onValueChange={(value: 'new' | 'regular' | 'vip' | 'inactive') => setEditForm({ ...editForm, relationship_level: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">🆕 New Customer</SelectItem>
+                      <SelectItem value="regular">💚 Regular Customer</SelectItem>
+                      <SelectItem value="vip">👑 VIP Customer</SelectItem>
+                      <SelectItem value="inactive">💤 Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_preferred_contact_method">Preferred Contact *</Label>
+                  <Select
+                    value={editForm.preferred_contact_method}
+                    onValueChange={(value: 'phone' | 'email' | 'line' | 'sms') => setEditForm({ ...editForm, preferred_contact_method: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="phone">📱 Phone</SelectItem>
+                      <SelectItem value="email">✉️ Email</SelectItem>
+                      <SelectItem value="line">💬 LINE</SelectItem>
+                      <SelectItem value="sms">💌 SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_preferred_contact_method">Preferred Contact *</Label>
-                <Select
-                  value={editForm.preferred_contact_method}
-                  onValueChange={(value: 'phone' | 'email' | 'line' | 'sms') => setEditForm({ ...editForm, preferred_contact_method: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="line">LINE</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_source">How did they find us?</Label>
+                  <Select
+                    value={editForm.source || undefined}
+                    onValueChange={(value) => setEditForm({ ...editForm, source: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="google">Google Search</SelectItem>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="walk-in">Walk-in</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_birthday">Birthday</Label>
+                  <Input
+                    id="edit_birthday"
+                    type="date"
+                    value={editForm.birthday}
+                    onChange={(e) => setEditForm({ ...editForm, birthday: e.target.value })}
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-tinedy-blue" />
+                <Label htmlFor="edit_tags">Customer Tags</Label>
+              </div>
+              <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px]">
+                {editForm.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="gap-1">
+                    {tag}
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive"
+                      onClick={() => {
+                        const newTags = editForm.tags.filter((_, i) => i !== index)
+                        setEditForm({ ...editForm, tags: newTags })
+                      }}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <Input
+                id="edit_tags"
+                placeholder="Type to add tags or select from suggestions..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const trimmedTag = tagInput.trim()
+                    if (trimmedTag && !editForm.tags.includes(trimmedTag)) {
+                      setEditForm({ ...editForm, tags: [...editForm.tags, trimmedTag] })
+                      setTagInput('')
+                    }
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Press Enter or click + to add tags. Click × to remove.
+              </p>
+            </div>
+
+            {/* Corporate Information */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">Corporate Information (Optional)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_company_name">Company Name</Label>
+                  <Input
+                    id="edit_company_name"
+                    value={editForm.company_name}
+                    onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+                    placeholder="ABC Company Ltd."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_tax_id">Tax ID</Label>
+                  <Input
+                    id="edit_tax_id"
+                    value={editForm.tax_id}
+                    onChange={(e) => setEditForm({ ...editForm, tax_id: e.target.value })}
+                    placeholder="0-0000-00000-00-0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="border-t pt-4 space-y-2">
+              <Label htmlFor="edit_notes">Notes</Label>
+              <Textarea
+                id="edit_notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                placeholder="Additional notes about this customer..."
+                rows={3}
+              />
             </div>
 
             <DialogFooter>

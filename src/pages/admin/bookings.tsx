@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
@@ -56,6 +57,7 @@ interface Booking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  notes: string | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number
@@ -110,6 +112,7 @@ export function AdminBookings() {
   const [staffFilter, setStaffFilter] = useState('all')
   const [teamFilter, setTeamFilter] = useState('all')
   const [assignmentType, setAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null)
   const [checkingCustomer, setCheckingCustomer] = useState(false)
   // Advanced Filters
@@ -176,6 +179,7 @@ export function AdminBookings() {
   })
   // Staff Availability Modal
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
+  const [isEditAvailabilityModalOpen, setIsEditAvailabilityModalOpen] = useState(false)
   const { toast } = useToast()
 
   const fetchBookings = useCallback(async () => {
@@ -835,13 +839,23 @@ export function AdminBookings() {
       start_time: booking.start_time,
       end_time: booking.end_time,
       address: booking.address,
-      city: '',
-      state: '',
-      zip_code: '',
-      notes: '',
+      city: booking.city || '',
+      state: booking.state || '',
+      zip_code: booking.zip_code || '',
+      notes: booking.notes || '',
       total_price: Number(booking.total_price),
       status: booking.status,
     })
+
+    // Set assignment type based on booking data
+    if (booking.staff_id) {
+      setEditAssignmentType('staff')
+    } else if (booking.team_id) {
+      setEditAssignmentType('team')
+    } else {
+      setEditAssignmentType('none')
+    }
+
     setIsEditOpen(true)
     setIsDetailOpen(false)
   }
@@ -861,6 +875,9 @@ export function AdminBookings() {
         start_time: editFormData.start_time,
         end_time: endTime,
         address: editFormData.address,
+        city: editFormData.city,
+        state: editFormData.state,
+        zip_code: editFormData.zip_code,
         notes: editFormData.notes,
         total_price: editFormData.total_price,
         staff_id: editFormData.staff_id || null,
@@ -1492,13 +1509,13 @@ export function AdminBookings() {
 
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="notes">Notes</Label>
-                  <textarea
+                  <Textarea
                     id="notes"
                     value={formData.notes}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    rows={3}
                   />
                 </div>
               </div>
@@ -1519,7 +1536,7 @@ export function AdminBookings() {
           </DialogContent>
         </Dialog>
 
-        {/* Staff Availability Modal */}
+        {/* Staff Availability Modal - Create Form */}
         {formData.service_package_id && formData.booking_date && formData.start_time && (
           <StaffAvailabilityModal
             isOpen={isAvailabilityModalOpen}
@@ -1560,6 +1577,52 @@ export function AdminBookings() {
             servicePackageName={
               servicePackages.find(pkg => pkg.id === formData.service_package_id)?.name
             }
+          />
+        )}
+
+        {/* Staff Availability Modal - Edit Form */}
+        {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+          <StaffAvailabilityModal
+            isOpen={isEditAvailabilityModalOpen}
+            onClose={() => {
+              setIsEditAvailabilityModalOpen(false)
+              setIsEditOpen(true)
+            }}
+            assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
+            onSelectStaff={(staffId) => {
+              setEditFormData({ ...editFormData, staff_id: staffId })
+              setIsEditAvailabilityModalOpen(false)
+              setIsEditOpen(true)
+              toast({
+                title: 'Staff Selected',
+                description: 'Staff member has been assigned to the booking',
+              })
+            }}
+            onSelectTeam={(teamId) => {
+              setEditFormData({ ...editFormData, team_id: teamId })
+              setIsEditAvailabilityModalOpen(false)
+              setIsEditOpen(true)
+              toast({
+                title: 'Team Selected',
+                description: 'Team has been assigned to the booking',
+              })
+            }}
+            date={editFormData.booking_date}
+            startTime={editFormData.start_time}
+            endTime={
+              editFormData.service_package_id
+                ? calculateEndTime(
+                    editFormData.start_time,
+                    servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                  )
+                : editFormData.end_time
+            }
+            servicePackageId={editFormData.service_package_id}
+            servicePackageName={
+              servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+            }
+            currentAssignedStaffId={editFormData.staff_id}
+            currentAssignedTeamId={editFormData.team_id}
           />
         )}
       </div>
@@ -1698,11 +1761,12 @@ export function AdminBookings() {
       </Card>
 
       {/* Booking Detail Modal */}
+      {/* eslint-disable @typescript-eslint/no-explicit-any */}
       <BookingDetailModal
-        booking={selectedBooking}
+        booking={selectedBooking as any}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onEdit={openEditBooking}
+        onEdit={openEditBooking as any}
         onDelete={deleteBooking}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={markAsPaid}
@@ -1711,6 +1775,7 @@ export function AdminBookings() {
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
       />
+      {/* eslint-enable @typescript-eslint/no-explicit-any */}
 
       {/* Edit Booking Modal */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -1823,49 +1888,103 @@ export function AdminBookings() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit_staff">Assigned Staff</Label>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="edit_assign_to">Assign to</Label>
                 <Select
-                  value={editFormData.staff_id || 'none'}
-                  onValueChange={(value) =>
-                    setEditFormData({ ...editFormData, staff_id: value === 'none' ? '' : value })
-                  }
+                  value={editAssignmentType}
+                  onValueChange={(value: 'staff' | 'team' | 'none') => {
+                    setEditAssignmentType(value)
+                    setEditFormData({ ...editFormData, staff_id: '', team_id: '' })
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select staff" />
+                    <SelectValue placeholder="Select assignment type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {staffMembers.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id}>
-                        {staff.full_name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    <SelectItem value="staff">Individual Staff</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit_team">Assigned Team</Label>
-                <Select
-                  value={editFormData.team_id || 'none'}
-                  onValueChange={(value) =>
-                    setEditFormData({ ...editFormData, team_id: value === 'none' ? '' : value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Staff Selector - Conditional */}
+              {editAssignmentType === 'staff' && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="edit_staff_id">Select Staff Member *</Label>
+                  <Select
+                    value={editFormData.staff_id}
+                    onValueChange={(value) =>
+                      setEditFormData({ ...editFormData, staff_id: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select staff member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffMembers.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.full_name} ({staff.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Team Selector - Conditional */}
+              {editAssignmentType === 'team' && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="edit_team_id">Select Team *</Label>
+                  <Select
+                    value={editFormData.team_id}
+                    onValueChange={(value) =>
+                      setEditFormData({ ...editFormData, team_id: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Check Availability Button */}
+              {editAssignmentType !== 'none' && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
+                    onClick={() => {
+                      setIsEditOpen(false)
+                      setIsEditAvailabilityModalOpen(true)
+                    }}
+                    disabled={
+                      !editFormData.booking_date ||
+                      !editFormData.start_time ||
+                      !editFormData.service_package_id
+                    }
+                  >
+                    <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
+                    Check Staff Availability
+                  </Button>
+                  {(!editFormData.booking_date || !editFormData.start_time || !editFormData.service_package_id) && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Please select date, time, and service package first
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -1878,6 +1997,42 @@ export function AdminBookings() {
                 }
                 required
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_city">City *</Label>
+                <Input
+                  id="edit_city"
+                  value={editFormData.city}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, city: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_state">State *</Label>
+                <Input
+                  id="edit_state"
+                  value={editFormData.state}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, state: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_zip_code">Zip Code *</Label>
+                <Input
+                  id="edit_zip_code"
+                  value={editFormData.zip_code}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, zip_code: e.target.value })
+                  }
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
