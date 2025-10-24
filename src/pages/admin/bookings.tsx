@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,13 +27,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Trash2, Users, User, Info, X, Calendar, Download, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Plus, Users, User, Info, Sparkles } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
+import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
+import { BookingList } from '@/components/booking/BookingList'
 import { StatusBadge, getBookingStatusVariant, getPaymentStatusVariant, getBookingStatusLabel, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
 // Helper function to format full address
@@ -1563,137 +1564,16 @@ export function AdminBookings() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground font-medium">Quick filters:</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickFilter('today')}
-              className="h-8"
-            >
-              <Calendar className="h-3 w-3 mr-1" />
-              Today
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickFilter('week')}
-              className="h-8"
-            >
-              This Week
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickFilter('month')}
-              className="h-8"
-            >
-              This Month
-            </Button>
-            {hasActiveFilters() && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-8 text-destructive hover:text-destructive"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear All ({getActiveFilterCount()})
-              </Button>
-            )}
-          </div>
-
-          {/* Main Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customer/service..."
-                value={filters.searchQuery}
-                onChange={(e) => updateFilter('searchQuery', e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                placeholder="From"
-                value={filters.dateFrom}
-                onChange={(e) => updateFilter('dateFrom', e.target.value)}
-                className="flex-1"
-              />
-              <Input
-                type="date"
-                placeholder="To"
-                value={filters.dateTo}
-                onChange={(e) => updateFilter('dateTo', e.target.value)}
-                className="flex-1"
-              />
-            </div>
-
-            <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.serviceType} onValueChange={(value) => updateFilter('serviceType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Services" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
-                <SelectItem value="training">Training</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Additional Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select value={filters.staffId} onValueChange={(value) => updateFilter('staffId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {staffMembers.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.teamId} onValueChange={(value) => updateFilter('teamId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Teams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teams</SelectItem>
-                {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <BookingFiltersPanel
+        filters={filters}
+        updateFilter={updateFilter}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        getActiveFilterCount={getActiveFilterCount}
+        setQuickFilter={setQuickFilter}
+        staffMembers={staffMembers}
+        teams={teams}
+      />
 
       {/* Booking Detail Modal */}
       {/* eslint-disable @typescript-eslint/no-explicit-any */}
@@ -2097,240 +1977,42 @@ export function AdminBookings() {
       {/* Bookings list */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                checked={selectedBookings.length === filteredBookings.length && filteredBookings.length > 0}
-                onCheckedChange={toggleSelectAll}
-              />
-              <CardTitle className="font-display">
-                All Bookings ({filteredBookings.length})
-              </CardTitle>
-            </div>
-            {selectedBookings.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{selectedBookings.length} selected</Badge>
-                <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Change status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="sm"
-                  onClick={handleBulkStatusUpdate}
-                  disabled={!bulkStatus}
-                >
-                  Update
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleBulkExport}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Export
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleBulkDelete}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            )}
-          </div>
+          <BulkActionsToolbar
+            selectedBookings={selectedBookings}
+            totalBookings={filteredBookings.length}
+            bulkStatus={bulkStatus}
+            onBulkStatusChange={setBulkStatus}
+            onToggleSelectAll={toggleSelectAll}
+            onBulkStatusUpdate={handleBulkStatusUpdate}
+            onBulkExport={handleBulkExport}
+            onBulkDelete={handleBulkDelete}
+          />
         </CardHeader>
         <CardContent>
-          {/* Pagination Controls - Top */}
-          {filteredBookings.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
-                  Show:
-                </Label>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value) => {
-                    setItemsPerPage(Number(value))
-                    goToPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">
-                  per page
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Showing {metadata.startIndex} to {metadata.endIndex} of {metadata.totalItems} bookings
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {filteredBookings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No bookings found
-              </p>
-            ) : (
-              paginatedBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedBookings.includes(booking.id)}
-                    onCheckedChange={() => toggleSelectBooking(booking.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-1"
-                  />
-                  <div
-                    className="flex flex-col sm:flex-row sm:items-center justify-between flex-1 gap-4 cursor-pointer"
-                    onClick={() => openBookingDetail(booking)}
-                  >
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-tinedy-dark">
-                          {booking.customers?.full_name || 'Unknown Customer'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {booking.customers?.email}
-                        </p>
-                      </div>
-                      <div className="sm:hidden">
-                        {getStatusBadge(booking.status)}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                      <span className="inline-flex items-center">
-                        <Badge variant="outline" className="mr-2">
-                          {booking.service_packages?.service_type}
-                        </Badge>
-                        {booking.service_packages?.name}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                    </div>
-                    {booking.profiles && (
-                      <p className="text-sm text-tinedy-blue flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Staff: {booking.profiles.full_name}
-                      </p>
-                    )}
-                    {booking.teams && (
-                      <p className="text-sm text-tinedy-green flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        Team: {booking.teams.name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
-                    <div className="flex-1 sm:flex-none">
-                      <p className="font-semibold text-tinedy-dark text-lg">
-                        {formatCurrency(Number(booking.total_price))}
-                      </p>
-                    </div>
-                    <div className="hidden sm:block">
-                      {getStatusBadge(booking.status)}
-                    </div>
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={booking.status}
-                        onValueChange={(value) =>
-                          handleStatusChange(booking.id, booking.status, value)
-                        }
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableStatuses(booking.status).map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {getStatusLabel(status)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteBooking(booking.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Pagination Controls - Bottom */}
-          {filteredBookings.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToFirst}
-                  disabled={!metadata.hasPrevPage}
-                >
-                  First
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={prevPage}
-                  disabled={!metadata.hasPrevPage}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={nextPage}
-                  disabled={!metadata.hasNextPage}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToLast}
-                  disabled={!metadata.hasNextPage}
-                >
-                  Last
-                </Button>
-              </div>
-            </div>
-          )}
+          <BookingList
+            bookings={paginatedBookings}
+            selectedBookings={selectedBookings}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            metadata={metadata}
+            onToggleSelect={toggleSelectBooking}
+            onBookingClick={openBookingDetail}
+            onItemsPerPageChange={(value) => {
+              setItemsPerPage(value)
+              goToPage(1)
+            }}
+            onFirstPage={goToFirst}
+            onPreviousPage={prevPage}
+            onNextPage={nextPage}
+            onLastPage={goToLast}
+            onDeleteBooking={deleteBooking}
+            onStatusChange={handleStatusChange}
+            formatTime={formatTime}
+            getStatusBadge={getStatusBadge}
+            getAvailableStatuses={getAvailableStatuses}
+            getStatusLabel={getStatusLabel}
+          />
         </CardContent>
       </Card>
     </div>
