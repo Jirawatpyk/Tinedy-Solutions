@@ -199,6 +199,7 @@ export function useStaffAvailabilityCheck({
             }
 
             const { data } = await teamQuery
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             teamBookings = (data || []) as any
           }
 
@@ -223,6 +224,7 @@ export function useStaffAvailabilityCheck({
                 booking.end_time
               )
             })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .map((booking: any) => {
               const servicePackages = Array.isArray(booking.service_packages)
                 ? booking.service_packages[0]
@@ -440,6 +442,7 @@ export function useStaffAvailabilityCheck({
                     booking.end_time
                   )
                 })
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map((booking: any) => {
                   const servicePackages = Array.isArray(booking.service_packages)
                     ? booking.service_packages[0]
