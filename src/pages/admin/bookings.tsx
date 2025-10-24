@@ -250,9 +250,6 @@ export function AdminBookings() {
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
-    // Skip if already processed
-    if (hasProcessedState.current) return
-
     const state = location.state as {
       editBookingId?: string;
       bookingData?: Booking;
@@ -270,7 +267,14 @@ export function AdminBookings() {
     } | null
 
     // Skip if no state
-    if (!state) return
+    if (!state) {
+      // Reset flag when there's no state
+      hasProcessedState.current = false
+      return
+    }
+
+    // Skip if already processed this specific state
+    if (hasProcessedState.current) return
 
     // Mark as processed
     hasProcessedState.current = true
