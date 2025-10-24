@@ -1,9 +1,13 @@
 import { useState, useCallback } from 'react'
 
 /**
- * Interface defining all booking filter options
+ * Interface defining UI state for booking filter options
+ *
+ * Note: This is distinct from the BookingFilters type in src/types/booking.ts
+ * which is used for API queries. This interface represents the UI state using
+ * single string values (including 'all' for unselected) rather than arrays.
  */
-export interface BookingFilters {
+export interface BookingFilterState {
   /** Search query for customer name or service name */
   searchQuery: string
   /** Filter by booking status (pending, confirmed, in_progress, completed, cancelled) */
@@ -23,7 +27,7 @@ export interface BookingFilters {
 /**
  * Default filter values - represents "show all" state
  */
-const DEFAULT_FILTERS: BookingFilters = {
+const DEFAULT_FILTERS: BookingFilterState = {
   searchQuery: '',
   status: 'all',
   dateFrom: '',
@@ -74,8 +78,8 @@ const DEFAULT_FILTERS: BookingFilters = {
  * resetFilters()
  * ```
  */
-export function useBookingFilters(initialFilters?: Partial<BookingFilters>) {
-  const [filters, setFilters] = useState<BookingFilters>({
+export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) {
+  const [filters, setFilters] = useState<BookingFilterState>({
     ...DEFAULT_FILTERS,
     ...initialFilters,
   })
@@ -86,9 +90,9 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilters>) {
    * @param key - The filter key to update
    * @param value - The new value for the filter
    */
-  const updateFilter = useCallback(<K extends keyof BookingFilters>(
+  const updateFilter = useCallback(<K extends keyof BookingFilterState>(
     key: K,
-    value: BookingFilters[K]
+    value: BookingFilterState[K]
   ) => {
     setFilters((prev) => ({
       ...prev,
@@ -101,7 +105,7 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilters>) {
    *
    * @param updates - Partial filter object with updates
    */
-  const updateFilters = useCallback((updates: Partial<BookingFilters>) => {
+  const updateFilters = useCallback((updates: Partial<BookingFilterState>) => {
     setFilters((prev) => ({
       ...prev,
       ...updates,

@@ -230,13 +230,23 @@ export function useConflictDetection(params?: ConflictCheckParams) {
    * Auto-check when params change
    *
    * If params are provided to the hook, automatically run conflict check
-   * whenever the params change.
+   * whenever the params change. We destructure params into primitive values
+   * to prevent infinite re-renders from object reference changes.
    */
   useEffect(() => {
     if (params) {
       checkConflicts(params)
     }
-  }, [params, checkConflicts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    params?.staffId,
+    params?.teamId,
+    params?.bookingDate,
+    params?.startTime,
+    params?.endTime,
+    params?.excludeBookingId,
+    checkConflicts
+  ])
 
   /**
    * Clear all conflicts and errors

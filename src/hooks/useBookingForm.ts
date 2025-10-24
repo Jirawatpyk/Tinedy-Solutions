@@ -37,6 +37,7 @@
 
 import { useState, useCallback } from 'react'
 import type { BookingFormData } from '@/types/booking'
+import { BookingStatus } from '@/types/booking'
 
 /**
  * Form data structure for booking creation
@@ -225,24 +226,29 @@ export function useBookingForm(
     }
 
     // Location validation
+    // Note: address and city are required, but state and zip_code are optional
+    // to support international bookings where these fields may not apply
     if (!formData.address) {
       newErrors.address = 'Address is required'
     }
     if (!formData.city) {
       newErrors.city = 'City is required'
     }
-    if (!formData.state) {
-      newErrors.state = 'State is required'
-    }
-    if (!formData.zip_code) {
-      newErrors.zip_code = 'Zip code is required'
-    }
+    // State and zip_code are optional - no validation required
 
     // Price validation
     if (formData.total_price === undefined || formData.total_price === null) {
       newErrors.total_price = 'Total price is required'
-    } else if (formData.total_price < 0) {
-      newErrors.total_price = 'Total price must be a positive number'
+    } else if (formData.total_price <= 0) {
+      newErrors.total_price = 'Total price must be greater than zero'
+    }
+
+    // Status validation - if status is provided, ensure it's valid
+    if (formData.status) {
+      const validStatuses = Object.values(BookingStatus)
+      if (!validStatuses.includes(formData.status as typeof BookingStatus[keyof typeof BookingStatus])) {
+        newErrors.status = 'Invalid booking status'
+      }
     }
 
     setErrors(newErrors)
