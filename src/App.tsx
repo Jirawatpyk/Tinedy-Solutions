@@ -17,6 +17,7 @@ import { AdminCalendar } from './pages/admin/calendar'
 import { AdminChat } from './pages/admin/chat'
 import { AdminTeams } from './pages/admin/teams'
 import AdminProfile from './pages/admin/profile'
+import AdminSettings from './pages/admin/settings'
 import { StaffChat } from './pages/staff/chat'
 import StaffDashboard from './pages/staff/dashboard'
 import StaffCalendar from './pages/staff/calendar'
@@ -54,17 +55,7 @@ function App() {
             <Route path="reports" element={<AdminReports />} />
             <Route path="teams" element={<AdminTeams />} />
             <Route path="profile" element={<AdminProfile />} />
-            <Route
-              path="settings"
-              element={
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-display font-bold text-tinedy-dark">
-                    Settings
-                  </h2>
-                  <p className="text-muted-foreground mt-2">Coming soon...</p>
-                </div>
-              }
-            />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           {/* Protected Staff routes */}
