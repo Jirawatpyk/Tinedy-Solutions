@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -80,6 +80,8 @@ export function AdminBookings() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   // Edit Modal
   const [isEditOpen, setIsEditOpen] = useState(false)
+  // Flag to prevent processing location.state multiple times
+  const hasProcessedState = useRef(false)
   // Edit Booking Form - Using useBookingForm hook (shared with edit modal and availability modal)
   const editForm = useBookingForm({
     onSubmit: async () => {
@@ -248,6 +250,9 @@ export function AdminBookings() {
 
   // Handle navigation from Dashboard - open Edit modal
   useEffect(() => {
+    // Skip if already processed
+    if (hasProcessedState.current) return
+
     const state = location.state as {
       editBookingId?: string;
       bookingData?: Booking;
@@ -262,6 +267,12 @@ export function AdminBookings() {
         team_id: string;
       }
     } | null
+
+    // Skip if no state
+    if (!state) return
+
+    // Mark as processed
+    hasProcessedState.current = true
 
     // Handle create booking from Quick Availability Check
     if (state?.createBooking && state?.prefilledData) {
@@ -336,7 +347,8 @@ export function AdminBookings() {
         window.history.replaceState({}, document.title)
       }
     }
-  }, [location.state, bookings, createForm, editForm])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, bookings])
 
   const fetchServicePackages = async () => {
     try {
