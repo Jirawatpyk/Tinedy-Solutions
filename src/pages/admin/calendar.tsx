@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,9 @@ import {
   User,
   Briefcase,
   Users,
+  CheckCircle,
+  TrendingUp,
+  DollarSign,
 } from 'lucide-react'
 import {
   startOfMonth,
@@ -80,6 +84,13 @@ interface Team {
   name: string
 }
 
+interface Staff {
+  id: string
+  full_name: string
+  email: string
+  role: string
+}
+
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -97,11 +108,16 @@ const STATUS_DOTS = {
 }
 
 export function AdminCalendar() {
+  const navigate = useNavigate()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [staffMembers, setStaffMembers] = useState<Staff[]>([])
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
+  const [selectedStaff, setSelectedStaff] = useState<string>('all')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<'staff' | 'team'>('staff')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -120,6 +136,21 @@ export function AdminCalendar() {
       setTeams(data || [])
     } catch (error) {
       console.error('Error fetching teams:', error)
+    }
+  }, [])
+
+  const fetchStaffMembers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .eq('role', 'staff')
+        .order('full_name')
+
+      if (error) throw error
+      setStaffMembers(data || [])
+    } catch (error) {
+      console.error('Error fetching staff members:', error)
     }
   }, [])
 
@@ -177,17 +208,35 @@ export function AdminCalendar() {
   }, [currentDate, toast])
 
   const filterBookings = useCallback(() => {
-    if (selectedTeam === 'all') {
-      setFilteredBookings(bookings)
+    let filtered = bookings
+
+    // Filter by view mode
+    if (viewMode === 'staff') {
+      // Staff view - filter by staff
+      if (selectedStaff !== 'all') {
+        filtered = filtered.filter(b => b.staff_id === selectedStaff)
+      }
     } else {
-      setFilteredBookings(bookings.filter(b => b.team_id === selectedTeam))
+      // Team view - only show bookings with teams
+      filtered = filtered.filter(b => b.team_id !== null)
+      if (selectedTeam !== 'all') {
+        filtered = filtered.filter(b => b.team_id === selectedTeam)
+      }
     }
-  }, [bookings, selectedTeam])
+
+    // Filter by status
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(b => b.status === selectedStatus)
+    }
+
+    setFilteredBookings(filtered)
+  }, [bookings, selectedTeam, selectedStaff, selectedStatus, viewMode])
 
   useEffect(() => {
     fetchBookings()
     fetchTeams()
-  }, [currentDate, fetchBookings, fetchTeams])
+    fetchStaffMembers()
+  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers])
 
   useEffect(() => {
     filterBookings()
@@ -197,6 +246,39 @@ export function AdminCalendar() {
     return filteredBookings.filter((booking) =>
       isSameDay(new Date(booking.booking_date), date)
     )
+  }
+
+  // Helper function to format time without seconds
+  const formatTimeWithoutSeconds = (time: string) => {
+    return time.substring(0, 5) // Takes only HH:MM from HH:MM:SS
+  }
+
+  // Calculate month stats
+  const getMonthStats = () => {
+    const totalBookings = filteredBookings.length
+    const confirmedBookings = filteredBookings.filter(
+      b => b.status === 'confirmed' || b.status === 'in_progress'
+    ).length
+    const completedBookings = filteredBookings.filter(b => b.status === 'completed').length
+    const totalRevenue = filteredBookings
+      .filter(b => b.payment_status === 'paid')
+      .reduce((sum, b) => sum + b.total_price, 0)
+
+    return {
+      totalBookings,
+      confirmedBookings,
+      completedBookings,
+      totalRevenue
+    }
+  }
+
+  const handleEditBooking = (booking: Booking) => {
+    navigate('/admin/bookings', {
+      state: {
+        editBookingId: booking.id,
+        bookingData: booking
+      }
+    })
   }
 
   const goToPreviousMonth = () => {
@@ -444,6 +526,8 @@ export function AdminCalendar() {
     )
   }
 
+  const monthStats = getMonthStats()
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -452,27 +536,153 @@ export function AdminCalendar() {
           <h1 className="text-3xl font-display font-bold text-tinedy-dark">Calendar</h1>
           <p className="text-muted-foreground mt-1">View and manage your bookings</p>
         </div>
-        <div className="flex gap-2">
-          {/* Team Filter */}
-          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {teams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={goToToday} variant="outline">
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Today
-          </Button>
-        </div>
+        <Button onClick={goToToday} variant="outline">
+          <CalendarIcon className="h-4 w-4 mr-2" />
+          Today
+        </Button>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{monthStats.totalBookings}</div>
+            <p className="text-xs text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{monthStats.confirmedBookings}</div>
+            <p className="text-xs text-muted-foreground">Active bookings</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{monthStats.completedBookings}</div>
+            <p className="text-xs text-muted-foreground">Jobs done</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${monthStats.totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Paid bookings</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters and View Mode */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Staff Filter */}
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <label className="text-sm font-medium whitespace-nowrap">Staff:</label>
+              <Select
+                value={selectedStaff}
+                onValueChange={setSelectedStaff}
+                disabled={viewMode === 'team'}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Team Filter */}
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <label className="text-sm font-medium whitespace-nowrap">Team:</label>
+              <Select
+                value={selectedTeam}
+                onValueChange={setSelectedTeam}
+                disabled={viewMode === 'staff'}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <label className="text-sm font-medium whitespace-nowrap">Status:</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Divider */}
+            <div className="h-8 w-px bg-border mx-2"></div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
+              <div className="inline-flex rounded-md shadow-sm w-full max-w-[250px]" role="group">
+                <Button
+                  variant={viewMode === 'staff' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('staff')}
+                  className="rounded-r-none flex-1"
+                >
+                  Staff View
+                </Button>
+                <Button
+                  variant={viewMode === 'team' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('team')}
+                  className="rounded-l-none border-l-0 flex-1"
+                >
+                  Team View
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
@@ -641,7 +851,7 @@ export function AdminCalendar() {
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         <span className="font-semibold">
-                          {booking.start_time} - {booking.end_time}
+                          {formatTimeWithoutSeconds(booking.start_time)} - {formatTimeWithoutSeconds(booking.end_time)}
                         </span>
                       </div>
                       <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">
@@ -684,13 +894,7 @@ export function AdminCalendar() {
         booking={selectedBooking}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onEdit={() => {
-          // Edit functionality can be added later if needed
-          toast({
-            title: 'Edit Booking',
-            description: 'Please use the Bookings page to edit this booking',
-          })
-        }}
+        onEdit={() => selectedBooking && handleEditBooking(selectedBooking)}
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={handleMarkAsPaid}
