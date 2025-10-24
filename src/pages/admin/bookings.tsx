@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { StatusBadge, getBookingStatusVariant, getPaymentStatusVariant, getBookingStatusLabel, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
 // Helper function to format full address
 function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
@@ -678,21 +679,11 @@ export function AdminBookings() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { variant: 'warning' as const, label: 'Pending' },
-      confirmed: { variant: 'info' as const, label: 'Confirmed' },
-      in_progress: { variant: 'default' as const, label: 'In Progress' },
-      completed: { variant: 'success' as const, label: 'Completed' },
-      cancelled: { variant: 'destructive' as const, label: 'Cancelled' },
-      no_show: { variant: 'destructive' as const, label: 'No Show' },
-    }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      variant: 'default' as const,
-      label: status,
-    }
-
-    return <Badge variant={config.variant}>{config.label}</Badge>
+    return (
+      <StatusBadge variant={getBookingStatusVariant(status)}>
+        {getBookingStatusLabel(status)}
+      </StatusBadge>
+    )
   }
 
   // Status Transition Rules
@@ -1161,16 +1152,12 @@ export function AdminBookings() {
   }
 
   const getPaymentStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
-      case 'refunded':
-        return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
-      default:
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Unpaid</Badge>
-    }
+    const paymentStatus = status || 'unpaid'
+    return (
+      <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
+        {getPaymentStatusLabel(paymentStatus)}
+      </StatusBadge>
+    )
   }
 
   if (loading) {
