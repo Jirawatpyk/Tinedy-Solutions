@@ -8,6 +8,8 @@ import { useBookingFilters } from '@/hooks/useBookingFilters'
 import { usePagination } from '@/hooks/useBookingPagination'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { useBookingForm } from '@/hooks/useBookingForm'
+import { useBulkActions } from '@/hooks/useBulkActions'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { useToast } from '@/hooks/use-toast'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -20,19 +22,7 @@ import { BookingStatusConfirmDialog } from '@/components/booking/BookingStatusCo
 import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
 import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
-import { StatusBadge, getBookingStatusVariant, getPaymentStatusVariant, getBookingStatusLabel, getPaymentStatusLabel } from '@/components/common/StatusBadge'
-
-// Helper function to format full address
-function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
-  const parts = [
-    booking.address,
-    booking.city,
-    booking.state,
-    booking.zip_code
-  ].filter(part => part && part.trim())
-
-  return parts.join(', ')
-}
+import { calculateEndTime, formatTime } from '@/lib/booking-utils'
 
 interface Booking {
   id: string
@@ -127,9 +117,6 @@ export function AdminBookings() {
       // This is handled by the BookingEditModal component
     }
   })
-  // Bulk Actions
-  const [selectedBookings, setSelectedBookings] = useState<string[]>([])
-  const [bulkStatus, setBulkStatus] = useState('')
   // Conflict Detection (using hook) - for create modal conflict override handling
   const {
     conflicts,
@@ -137,13 +124,6 @@ export function AdminBookings() {
   } = useConflictDetection()
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingBookingData, setPendingBookingData] = useState<Record<string, unknown> | null>(null)
-  // Status Workflow
-  const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
-  const [pendingStatusChange, setPendingStatusChange] = useState<{
-    bookingId: string
-    currentStatus: string
-    newStatus: string
-  } | null>(null)
   // Staff Availability Modal
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
   const [isEditAvailabilityModalOpen, setIsEditAvailabilityModalOpen] = useState(false)
@@ -182,6 +162,41 @@ export function AdminBookings() {
       setLoading(false)
     }
   }, [toast])
+
+  // Bulk Actions (using hook)
+  const {
+    selectedBookings,
+    bulkStatus,
+    setBulkStatus,
+    toggleSelectAll,
+    toggleSelectBooking,
+    handleBulkStatusUpdate,
+    handleBulkDelete,
+    handleBulkExport,
+  } = useBulkActions({
+    bookings,
+    filteredBookings,
+    onSuccess: fetchBookings,
+  })
+
+  // Status Manager (using hook)
+  const {
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+    handleStatusChange,
+    confirmStatusChange,
+    cancelStatusChange,
+    markAsPaid,
+  } = useBookingStatusManager({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: fetchBookings,
+  })
 
   const filterBookings = useCallback(() => {
     let filtered = bookings
@@ -359,22 +374,6 @@ export function AdminBookings() {
   }
 
   // Calculate end_time from start_time and duration
-  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-    if (!startTime) return ''
-    const [hours, minutes] = startTime.split(':').map(Number)
-    const totalMinutes = hours * 60 + minutes + durationMinutes
-    const endHours = Math.floor(totalMinutes / 60) % 24
-    const endMinutes = totalMinutes % 60
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
-  }
-
-  // Format time to remove seconds (HH:MM:SS -> HH:MM)
-  const formatTime = (time: string) => {
-    return time.split(':').slice(0, 2).join(':')
-  }
-
-
-
   // Proceed with booking after conflict override (for create modal)
   const proceedWithConflictOverride = async () => {
     if (!pendingBookingData) return
@@ -416,123 +415,6 @@ export function AdminBookings() {
     clearConflicts()
   }
 
-  const getStatusBadge = (status: string) => {
-    return (
-      <StatusBadge variant={getBookingStatusVariant(status)}>
-        {getBookingStatusLabel(status)}
-      </StatusBadge>
-    )
-  }
-
-  // Status Transition Rules
-  const getValidTransitions = (currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['in_progress', 'cancelled', 'no_show'],
-      in_progress: ['completed', 'cancelled'],
-      completed: [], // Final state
-      cancelled: [], // Final state
-      no_show: [], // Final state
-    }
-    return transitions[currentStatus] || []
-  }
-
-  // Get available status options for dropdown (current + valid transitions)
-  const getAvailableStatuses = (currentStatus: string): string[] => {
-    const validTransitions = getValidTransitions(currentStatus)
-    return [currentStatus, ...validTransitions]
-  }
-
-  // Get status label
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    }
-    return labels[status] || status
-  }
-
-  const isValidTransition = (currentStatus: string, newStatus: string): boolean => {
-    const validTransitions = getValidTransitions(currentStatus)
-    return validTransitions.includes(newStatus)
-  }
-
-  const getStatusTransitionMessage = (currentStatus: string, newStatus: string): string => {
-    const messages: Record<string, Record<string, string>> = {
-      pending: {
-        confirmed: 'Confirm this booking?',
-        cancelled: 'Cancel this booking? This action cannot be undone.',
-      },
-      confirmed: {
-        in_progress: 'Mark this booking as in progress?',
-        cancelled: 'Cancel this booking? This action cannot be undone.',
-        no_show: 'Mark this booking as no-show? This action cannot be undone.',
-      },
-      in_progress: {
-        completed: 'Mark this booking as completed?',
-        cancelled: 'Cancel this booking? This action cannot be undone.',
-      },
-    }
-    return messages[currentStatus]?.[newStatus] || `Change status to ${newStatus}?`
-  }
-
-  // Handle status change with validation
-  const handleStatusChange = (bookingId: string, currentStatus: string, newStatus: string) => {
-    // Same status - ignore
-    if (currentStatus === newStatus) return
-
-    // Check if transition is valid
-    if (!isValidTransition(currentStatus, newStatus)) {
-      toast({
-        title: 'Invalid Status Transition',
-        description: `Cannot change from "${currentStatus}" to "${newStatus}". Please follow the workflow: ${getValidTransitions(currentStatus).join(', ')}`,
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Show confirmation dialog
-    setPendingStatusChange({ bookingId, currentStatus, newStatus })
-    setShowStatusConfirmDialog(true)
-  }
-
-  // Confirm and execute status change
-  const confirmStatusChange = async () => {
-    if (!pendingStatusChange) return
-
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: pendingStatusChange.newStatus })
-        .eq('id', pendingStatusChange.bookingId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Status changed to ${pendingStatusChange.newStatus}`,
-      })
-
-      // Update selected booking if it's the same one
-      if (selectedBooking && selectedBooking.id === pendingStatusChange.bookingId) {
-        setSelectedBooking({ ...selectedBooking, status: pendingStatusChange.newStatus })
-      }
-
-      setShowStatusConfirmDialog(false)
-      setPendingStatusChange(null)
-      fetchBookings()
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      })
-    }
-  }
 
   const deleteBooking = async (bookingId: string) => {
     if (!confirm('Are you sure you want to delete this booking?')) return
@@ -597,154 +479,6 @@ export function AdminBookings() {
   }
 
 
-  // Bulk Actions Functions
-  const toggleSelectAll = () => {
-    if (selectedBookings.length === filteredBookings.length) {
-      setSelectedBookings([])
-    } else {
-      setSelectedBookings(filteredBookings.map(b => b.id))
-    }
-  }
-
-  const toggleSelectBooking = (bookingId: string) => {
-    if (selectedBookings.includes(bookingId)) {
-      setSelectedBookings(selectedBookings.filter(id => id !== bookingId))
-    } else {
-      setSelectedBookings([...selectedBookings, bookingId])
-    }
-  }
-
-  const handleBulkStatusUpdate = async () => {
-    if (!bulkStatus || selectedBookings.length === 0) return
-
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: bulkStatus })
-        .in('id', selectedBookings)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Updated ${selectedBookings.length} bookings to ${bulkStatus}`,
-      })
-      setSelectedBookings([])
-      setBulkStatus('')
-      fetchBookings()
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedBookings.length === 0) return
-    if (!confirm(`Are you sure you want to delete ${selectedBookings.length} bookings?`)) return
-
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .in('id', selectedBookings)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Deleted ${selectedBookings.length} bookings`,
-      })
-      setSelectedBookings([])
-      fetchBookings()
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleBulkExport = () => {
-    if (selectedBookings.length === 0) return
-
-    const bookingsToExport = bookings.filter(b => selectedBookings.includes(b.id))
-    const csv = [
-      ['Customer', 'Service', 'Date', 'Time', 'Status', 'Price', 'Address'].join(','),
-      ...bookingsToExport.map(b => [
-        b.customers?.full_name || '',
-        b.service_packages?.name || '',
-        b.booking_date,
-        `${b.start_time}-${b.end_time}`,
-        b.status,
-        b.total_price,
-        formatFullAddress(b)
-      ].join(','))
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `bookings-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-
-    toast({
-      title: 'Success',
-      description: `Exported ${selectedBookings.length} bookings to CSV`,
-    })
-  }
-
-  const markAsPaid = async (bookingId: string, method: string = 'cash') => {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking?.total_price || 0,
-          payment_date: new Date().toISOString().split('T')[0],
-        })
-        .eq('id', bookingId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Booking marked as paid',
-      })
-
-      if (selectedBooking) {
-        setSelectedBooking({
-          ...selectedBooking,
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking.total_price,
-          payment_date: new Date().toISOString().split('T')[0],
-        })
-      }
-
-      fetchBookings()
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const getPaymentStatusBadge = (status?: string) => {
-    const paymentStatus = status || 'unpaid'
-    return (
-      <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
-        {getPaymentStatusLabel(paymentStatus)}
-      </StatusBadge>
-    )
-  }
 
   if (loading) {
     return (
@@ -979,7 +713,7 @@ export function AdminBookings() {
       {/* Status Change Confirmation Dialog */}
       <BookingStatusConfirmDialog
         isOpen={showStatusConfirmDialog}
-        onClose={() => setShowStatusConfirmDialog(false)}
+        onClose={cancelStatusChange}
         onConfirm={confirmStatusChange}
         message={pendingStatusChange ? getStatusTransitionMessage(pendingStatusChange.currentStatus, pendingStatusChange.newStatus) : ''}
       />

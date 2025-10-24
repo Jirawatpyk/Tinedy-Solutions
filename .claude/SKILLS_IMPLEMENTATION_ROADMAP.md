@@ -757,6 +757,88 @@ Agent: @refactoring-agent (via Master Orchestrator)
 
 ---
 
+#### Phase 2.4B: Extract Additional Hooks & Utilities ✅ **COMPLETE**
+
+**Day 19-20: Hook & Utility Extraction (6 hours actual)**
+
+```bash
+Claude Skill: @code-review-refactoring
+Agent: @refactoring-agent (via Master Orchestrator)
+```
+
+**Goal:** Further reduce bookings.tsx complexity by extracting reusable hooks and utility functions
+
+**Extractions Completed:**
+
+1. **booking-utils.ts** ✅ (71 lines utility file)
+   - [x] Created `src/lib/booking-utils.ts`
+   - [x] Pure utility functions with zero dependencies
+   - [x] `formatFullAddress` - Format booking address to string
+   - [x] `calculateEndTime` - Calculate end time from start + duration
+   - [x] `formatTime` - Remove seconds from time (HH:MM:SS → HH:MM)
+   - [x] Complete JSDoc documentation with examples
+   - [x] TypeScript interfaces for type safety
+   - Reusability: VERY HIGH (used in reports, exports, scheduling)
+   - Lines removed: 27
+
+2. **useBulkActions Hook** ✅ (176 lines)
+   - [x] Created `src/hooks/useBulkActions.ts`
+   - [x] Bulk selection management (toggleSelectAll, toggleSelectBooking)
+   - [x] Bulk status updates for multiple bookings
+   - [x] Bulk delete with confirmation
+   - [x] Bulk export to CSV with proper formatting
+   - [x] State: selectedBookings, bulkStatus
+   - Props: bookings, filteredBookings, onSuccess
+   - Reusability: HIGH (customer list, staff list, team list)
+   - Lines removed: 88
+
+3. **useBookingStatusManager Hook** ✅ (249 lines)
+   - [x] Created `src/hooks/useBookingStatusManager.tsx`
+   - [x] Status badge rendering (getStatusBadge, getPaymentStatusBadge)
+   - [x] Status workflow validation (getValidTransitions, isValidTransition)
+   - [x] Status transition helpers (getAvailableStatuses, getStatusLabel)
+   - [x] Confirmation dialog management (handleStatusChange, confirmStatusChange)
+   - [x] Payment status updates (markAsPaid)
+   - [x] State: showStatusConfirmDialog, pendingStatusChange
+   - [x] Generic type support for reusability
+   - Props: selectedBooking, setSelectedBooking, onSuccess
+   - Reusability: VERY HIGH (calendar, dashboard, reports)
+   - Lines removed: 151
+
+**Results:**
+- bookings.tsx reduced: 1,040 → 774 lines (266 lines removed, 25.6% reduction)
+- Utility functions: 3 pure functions (highly reusable)
+- Hooks created: 2 custom hooks (496 lines of modular code)
+- Build: PASSING ✅
+- Lint: PASSING ✅
+- TypeScript: 0 errors ✅
+- All functionality preserved ✅
+
+**Architecture Benefits:**
+- Pure utility functions for time/address formatting
+- Reusable bulk actions for any entity list
+- Centralized status management workflow
+- Generic type support for flexibility
+- Clean separation of concerns
+- Improved testability
+
+**Git Commit:** `[pending]` - feat(Phase 2.4B): Extract hooks and utilities from bookings.tsx
+
+**Barrel Exports Updated:**
+- `src/hooks/index.ts` exports useBulkActions and useBookingStatusManager
+
+**Cumulative Phase 2 Progress:**
+- Phase 2.1: 4 hooks created (919 lines)
+- Phase 2.2: Hooks integrated (111 lines reduced)
+- Phase 2.3: 3 UI components extracted (318 lines reduced)
+- Phase 2.4A: 4 modals extracted (980 lines reduced)
+- **Phase 2.4B: 2 hooks + utils extracted (266 lines reduced)**
+- **Total bookings.tsx reduction: 2,449 → 774 lines (68.4% reduction)**
+
+**Next Steps:** Phase 2.5 (Optional) - Extract remaining utilities, or Phase 3 - Performance optimization
+
+---
+
 **Day 15-16: Refactor customer-detail.tsx (10 hours)**
 ```bash
 Claude Skill: @code-review-refactoring
