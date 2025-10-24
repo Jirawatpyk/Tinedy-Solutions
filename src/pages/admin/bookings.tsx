@@ -635,6 +635,7 @@ export function AdminBookings() {
             }
             currentAssignedStaffId={editForm.formData.staff_id}
             currentAssignedTeamId={editForm.formData.team_id}
+            excludeBookingId={selectedBooking?.id}
           />
         )}
       </div>

@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useStaffAvailabilityCheck, type StaffAvailabilityResult, type TeamAvailabilityResult } from '@/hooks/use-staff-availability-check'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { format } from 'date-fns'
 import { Users, Star, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 interface StaffAvailabilityModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ interface StaffAvailabilityModalProps {
   servicePackageName?: string
   currentAssignedStaffId?: string
   currentAssignedTeamId?: string
+  excludeBookingId?: string
 }
 
 export function StaffAvailabilityModal({
@@ -34,14 +36,16 @@ export function StaffAvailabilityModal({
   servicePackageId,
   servicePackageName = '',
   currentAssignedStaffId,
-  currentAssignedTeamId
+  currentAssignedTeamId,
+  excludeBookingId
 }: StaffAvailabilityModalProps) {
   const { loading, staffResults, teamResults, serviceType } = useStaffAvailabilityCheck({
     date,
     startTime,
     endTime,
     servicePackageId,
-    assignmentType
+    assignmentType,
+    excludeBookingId
   })
 
   const handleSelect = (id: string) => {

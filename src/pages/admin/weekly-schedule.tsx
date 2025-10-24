@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,6 +16,8 @@ import { Calendar, ChevronLeft, ChevronRight, TrendingUp, Download, Clock, Check
 import { Badge } from '@/components/ui/badge'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
+import { BookingEditModal } from '@/components/booking'
+import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 
 interface Staff {
@@ -32,7 +33,10 @@ interface Team {
 }
 
 interface ServicePackage {
+  id: string
   name: string
+  price: number
+  duration_minutes: number
   service_type: string
 }
 
@@ -114,9 +118,9 @@ const TIME_SLOTS = [
 ]
 
 export function AdminWeeklySchedule() {
-  const navigate = useNavigate()
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'staff' | 'team'>('staff')
@@ -126,6 +130,13 @@ export function AdminWeeklySchedule() {
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+
+  // Edit Modal State
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({})
+  const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
+
   const { toast } = useToast()
 
   // Calculate week dates based on currentWeekStart
@@ -262,10 +273,26 @@ export function AdminWeeklySchedule() {
     }
   }, [selectedStaff, selectedTeam, weekDates, viewMode, toast])
 
+  const fetchServicePackages = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) throw error
+      setServicePackages(data || [])
+    } catch (error) {
+      console.error('Error fetching service packages:', error)
+    }
+  }, [])
+
   useEffect(() => {
     fetchStaffMembers()
     fetchTeams()
-  }, [fetchStaffMembers, fetchTeams])
+    fetchServicePackages()
+  }, [fetchStaffMembers, fetchTeams, fetchServicePackages])
 
   useEffect(() => {
     fetchBookings()
@@ -383,13 +410,61 @@ export function AdminWeeklySchedule() {
     setIsDetailModalOpen(true)
   }
 
+  // Helper function: Calculate end time from start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    if (!startTime) return ''
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const totalMinutes = hours * 60 + minutes + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMinutes = totalMinutes % 60
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
+  }
+
+  // Edit Booking Form Helpers
+  const editForm = {
+    formData: editFormData,
+    handleChange: (field: string, value: any) => {
+      setEditFormData(prev => ({ ...prev, [field]: value }))
+    },
+    setValues: (values: Record<string, any>) => {
+      setEditFormData(prev => ({ ...prev, ...values }))
+    },
+    reset: () => {
+      setEditFormData({})
+      setEditAssignmentType('none')
+    }
+  }
+
   const handleEditBooking = (booking: Booking) => {
-    navigate('/admin/bookings', {
-      state: {
-        editBookingId: booking.id,
-        bookingData: booking
-      }
+    // Populate edit form with booking data
+    setEditFormData({
+      service_package_id: booking.service_package_id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      address: booking.address,
+      city: booking.city,
+      state: booking.state,
+      zip_code: booking.zip_code,
+      notes: booking.notes,
+      total_price: booking.total_price,
+      staff_id: booking.staff_id || '',
+      team_id: booking.team_id || '',
+      status: booking.status,
     })
+
+    // Set assignment type based on booking data
+    if (booking.staff_id) {
+      setEditAssignmentType('staff')
+    } else if (booking.team_id) {
+      setEditAssignmentType('team')
+    } else {
+      setEditAssignmentType('none')
+    }
+
+    setSelectedBooking(booking)
+    setIsEditOpen(true)
+    setIsDetailModalOpen(false)
   }
 
   const handleStatusChange = async (bookingId: string, _currentStatus: string, newStatus: string) => {
@@ -914,6 +989,74 @@ export function AdminWeeklySchedule() {
           getPaymentStatusBadge={getPaymentStatusBadge}
           getAvailableStatuses={getAvailableStatuses}
           getStatusLabel={getStatusLabel}
+        />
+      )}
+
+      {/* Edit Booking Modal */}
+      {selectedBooking && (
+        <BookingEditModal
+          isOpen={isEditOpen && !isEditAvailabilityOpen}
+          onClose={() => {
+            setIsEditOpen(false)
+            editForm.reset()
+          }}
+          booking={selectedBooking}
+          onSuccess={() => {
+            fetchBookings()
+          }}
+          servicePackages={servicePackages}
+          staffMembers={staffMembers}
+          teams={teams}
+          onOpenAvailabilityModal={() => {
+            setIsEditAvailabilityOpen(true)
+          }}
+          editForm={editForm}
+          assignmentType={editAssignmentType}
+          onAssignmentTypeChange={setEditAssignmentType}
+          calculateEndTime={calculateEndTime}
+        />
+      )}
+
+      {/* Staff Availability Modal - Edit */}
+      {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isEditAvailabilityOpen}
+          onClose={() => {
+            setIsEditAvailabilityOpen(false)
+          }}
+          assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
+          onSelectStaff={(staffId) => {
+            editForm.handleChange('staff_id', staffId)
+            setIsEditAvailabilityOpen(false)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            editForm.handleChange('team_id', teamId)
+            setIsEditAvailabilityOpen(false)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+          date={editFormData.booking_date}
+          startTime={editFormData.start_time}
+          endTime={
+            editFormData.service_package_id
+              ? calculateEndTime(
+                  editFormData.start_time,
+                  servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                )
+              : editFormData.end_time
+          }
+          servicePackageId={editFormData.service_package_id}
+          servicePackageName={
+            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+          }
+          currentAssignedStaffId={editFormData.staff_id}
+          currentAssignedTeamId={editFormData.team_id}
         />
       )}
     </div>
