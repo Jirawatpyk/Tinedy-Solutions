@@ -208,7 +208,8 @@ export function QuickAvailabilityCheck() {
                   end_time: endTime,
                   service_package_id: servicePackageId,
                   staff_id: staffId,
-                  team_id: ''
+                  team_id: '',
+                  total_price: selectedService?.price || 0
                 }
               }
             })
@@ -234,7 +235,8 @@ export function QuickAvailabilityCheck() {
                   end_time: endTime,
                   service_package_id: servicePackageId,
                   staff_id: '',
-                  team_id: teamId
+                  team_id: teamId,
+                  total_price: selectedService?.price || 0
                 }
               }
             })

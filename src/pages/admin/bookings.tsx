@@ -265,6 +265,7 @@ export function AdminBookings() {
         service_package_id: string;
         staff_id: string;
         team_id: string;
+        total_price?: number;
       }
     } | null
 
@@ -284,6 +285,7 @@ export function AdminBookings() {
         service_package_id: state.prefilledData.service_package_id,
         staff_id: state.prefilledData.staff_id,
         team_id: state.prefilledData.team_id,
+        total_price: state.prefilledData.total_price || 0,
       })
       // Set assignment type
       if (state.prefilledData.staff_id) {
