@@ -40,6 +40,26 @@ interface ServicePackage {
   service_type: string
 }
 
+interface BookingFormData {
+  customer_id?: string
+  full_name?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  service_package_id?: string
+  booking_date?: string
+  start_time?: string
+  end_time?: string
+  total_price?: number
+  staff_id?: string
+  team_id?: string
+  notes?: string
+  status?: string
+}
+
 interface Customer {
   id: string
   full_name: string
@@ -134,7 +154,7 @@ export function AdminWeeklySchedule() {
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editFormData, setEditFormData] = useState<Record<string, any>>({})
+  const [editFormData, setEditFormData] = useState<BookingFormData>({})
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
 
   const { toast } = useToast()
@@ -423,10 +443,10 @@ export function AdminWeeklySchedule() {
   // Edit Booking Form Helpers
   const editForm = {
     formData: editFormData,
-    handleChange: (field: string, value: any) => {
+    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
       setEditFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Record<string, any>) => {
+    setValues: (values: Partial<BookingFormData>) => {
       setEditFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -446,7 +466,7 @@ export function AdminWeeklySchedule() {
       city: booking.city,
       state: booking.state,
       zip_code: booking.zip_code,
-      notes: booking.notes,
+      notes: booking.notes || undefined,
       total_price: booking.total_price,
       staff_id: booking.staff_id || '',
       team_id: booking.team_id || '',
@@ -1041,17 +1061,17 @@ export function AdminWeeklySchedule() {
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={editFormData.booking_date}
-          startTime={editFormData.start_time}
+          date={editFormData.booking_date || ''}
+          startTime={editFormData.start_time || ''}
           endTime={
-            editFormData.service_package_id
+            editFormData.service_package_id && editFormData.start_time
               ? calculateEndTime(
                   editFormData.start_time,
                   servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
                 )
-              : editFormData.end_time
+              : (editFormData.end_time || '')
           }
-          servicePackageId={editFormData.service_package_id}
+          servicePackageId={editFormData.service_package_id || ''}
           servicePackageName={
             servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
           }

@@ -100,6 +100,26 @@ interface ServicePackage {
   duration_minutes: number
 }
 
+interface BookingFormData {
+  customer_id?: string
+  full_name?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  service_package_id?: string
+  booking_date?: string
+  start_time?: string
+  end_time?: string
+  total_price?: number
+  staff_id?: string
+  team_id?: string
+  notes?: string
+  status?: string
+}
+
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -135,13 +155,13 @@ export function AdminCalendar() {
   // Create Booking Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [createFormData, setCreateFormData] = useState<Record<string, any>>({})
+  const [createFormData, setCreateFormData] = useState<BookingFormData>({})
   const [isCreateAvailabilityOpen, setIsCreateAvailabilityOpen] = useState(false)
 
   // Edit Booking Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editFormData, setEditFormData] = useState<Record<string, any>>({})
+  const [editFormData, setEditFormData] = useState<BookingFormData>({})
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
 
   const { toast } = useToast()
@@ -323,10 +343,10 @@ export function AdminCalendar() {
   // Create Booking Form Helpers
   const createForm = {
     formData: createFormData,
-    handleChange: (field: string, value: any) => {
+    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
       setCreateFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Record<string, any>) => {
+    setValues: (values: Partial<BookingFormData>) => {
       setCreateFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -338,10 +358,10 @@ export function AdminCalendar() {
   // Edit Booking Form Helpers
   const editForm = {
     formData: editFormData,
-    handleChange: (field: string, value: any) => {
+    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
       setEditFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Record<string, any>) => {
+    setValues: (values: Partial<BookingFormData>) => {
       setEditFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -367,7 +387,7 @@ export function AdminCalendar() {
       city: booking.city,
       state: booking.state,
       zip_code: booking.zip_code,
-      notes: booking.notes,
+      notes: booking.notes || undefined,
       total_price: booking.total_price,
       staff_id: booking.staff_id || '',
       team_id: booking.team_id || '',
@@ -1100,17 +1120,17 @@ export function AdminCalendar() {
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={createFormData.booking_date}
-          startTime={createFormData.start_time}
+          date={createFormData.booking_date || ''}
+          startTime={createFormData.start_time || ''}
           endTime={
-            createFormData.service_package_id
+            createFormData.service_package_id && createFormData.start_time
               ? calculateEndTime(
                   createFormData.start_time,
                   servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.duration_minutes || 0
                 )
-              : createFormData.end_time
+              : (createFormData.end_time || '')
           }
-          servicePackageId={createFormData.service_package_id}
+          servicePackageId={createFormData.service_package_id || ''}
           servicePackageName={
             servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.name
           }
@@ -1144,17 +1164,17 @@ export function AdminCalendar() {
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={editFormData.booking_date}
-          startTime={editFormData.start_time}
+          date={editFormData.booking_date || ''}
+          startTime={editFormData.start_time || ''}
           endTime={
-            editFormData.service_package_id
+            editFormData.service_package_id && editFormData.start_time
               ? calculateEndTime(
                   editFormData.start_time,
                   servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
                 )
-              : editFormData.end_time
+              : (editFormData.end_time || '')
           }
-          servicePackageId={editFormData.service_package_id}
+          servicePackageId={editFormData.service_package_id || ''}
           servicePackageName={
             servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
           }
