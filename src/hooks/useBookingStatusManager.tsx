@@ -4,17 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 import { getErrorMessage } from '@/lib/error-utils'
-
-// Minimum required fields for a booking
-interface BookingBase {
-  id: string
-  status: string
-  payment_status?: string
-  payment_method?: string
-  total_price?: number
-  amount_paid?: number
-  payment_date?: string
-}
+import type { BookingBase } from '@/types/booking'
 
 interface PendingStatusChange {
   bookingId: string
