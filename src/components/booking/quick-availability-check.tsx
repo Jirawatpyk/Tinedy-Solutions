@@ -21,9 +21,11 @@ import {
 import { StaffAvailabilityModal } from './staff-availability-modal'
 import { useServicePackages } from '@/hooks/use-service-packages'
 import { format } from 'date-fns'
+import { useToast } from '@/hooks/use-toast'
 
 export function QuickAvailabilityCheck() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [showResults, setShowResults] = useState(false)
 
@@ -186,7 +188,17 @@ export function QuickAvailabilityCheck() {
           onClose={() => setShowResults(false)}
           assignmentType={assignmentType}
           onSelectStaff={(staffId) => {
-            // Navigate to bookings page with pre-filled data
+            // Navigate to bookings page and trigger create modal with prefilled data
+            setShowResults(false)
+            setIsOpen(false)
+
+            // Show success message
+            toast({
+              title: 'Staff Selected',
+              description: 'Redirecting to create booking...',
+            })
+
+            // Navigate with state
             navigate('/admin/bookings', {
               state: {
                 createBooking: true,
@@ -200,11 +212,19 @@ export function QuickAvailabilityCheck() {
                 }
               }
             })
-            setShowResults(false)
-            setIsOpen(false)
           }}
           onSelectTeam={(teamId) => {
-            // Navigate to bookings page with pre-filled data
+            // Navigate to bookings page and trigger create modal with prefilled data
+            setShowResults(false)
+            setIsOpen(false)
+
+            // Show success message
+            toast({
+              title: 'Team Selected',
+              description: 'Redirecting to create booking...',
+            })
+
+            // Navigate with state
             navigate('/admin/bookings', {
               state: {
                 createBooking: true,
@@ -218,8 +238,6 @@ export function QuickAvailabilityCheck() {
                 }
               }
             })
-            setShowResults(false)
-            setIsOpen(false)
           }}
           date={date}
           startTime={startTime}
