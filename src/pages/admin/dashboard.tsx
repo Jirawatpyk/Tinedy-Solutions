@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -88,6 +89,7 @@ interface DailyRevenue {
 }
 
 export function AdminDashboard() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState<Stats>({
     totalBookings: 0,
     totalRevenue: 0,
@@ -460,6 +462,16 @@ export function AdminDashboard() {
   const openBookingDetail = (booking: TodayBooking) => {
     setSelectedBooking(booking)
     setIsDetailOpen(true)
+  }
+
+  const handleEditBooking = (booking: TodayBooking) => {
+    // Navigate to bookings page with booking ID in state
+    navigate('/admin/bookings', {
+      state: {
+        editBookingId: booking.id,
+        bookingData: booking
+      }
+    })
   }
 
 
@@ -861,7 +873,7 @@ export function AdminDashboard() {
         booking={selectedBooking}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onEdit={() => {}}
+        onEdit={() => selectedBooking && handleEditBooking(selectedBooking)}
         onDelete={deleteBooking}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={markAsPaid}

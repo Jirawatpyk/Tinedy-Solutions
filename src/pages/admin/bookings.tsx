@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -100,6 +101,7 @@ interface Team {
 }
 
 export function AdminBookings() {
+  const location = useLocation()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -274,6 +276,49 @@ export function AdminBookings() {
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, statusFilter, staffFilter, teamFilter, dateFrom, dateTo, serviceTypeFilter])
+
+  // Handle navigation from Dashboard - open Edit modal
+  useEffect(() => {
+    const state = location.state as { editBookingId?: string; bookingData?: Booking } | null
+    if (state?.editBookingId && bookings.length > 0) {
+      const booking = bookings.find(b => b.id === state.editBookingId)
+      if (booking) {
+        // Open edit modal
+        setEditFormData({
+          booking_id: booking.id,
+          customer_id: booking.customers?.email || '',
+          service_package_id: booking.service_package_id,
+          staff_id: booking.staff_id || '',
+          team_id: booking.team_id || '',
+          booking_date: booking.booking_date,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          address: booking.address,
+          city: booking.city || '',
+          state: booking.state || '',
+          zip_code: booking.zip_code || '',
+          notes: booking.notes || '',
+          total_price: Number(booking.total_price),
+          status: booking.status,
+        })
+
+        // Set assignment type based on booking data
+        if (booking.staff_id) {
+          setEditAssignmentType('staff')
+        } else if (booking.team_id) {
+          setEditAssignmentType('team')
+        } else {
+          setEditAssignmentType('none')
+        }
+
+        setIsEditOpen(true)
+        setIsDetailOpen(false)
+
+        // Clear the state to prevent reopening on refresh
+        window.history.replaceState({}, document.title)
+      }
+    }
+  }, [location.state, bookings])
 
   const fetchServicePackages = async () => {
     try {
