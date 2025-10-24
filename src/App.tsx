@@ -16,6 +16,7 @@ import { AdminReports } from './pages/admin/reports'
 import { AdminCalendar } from './pages/admin/calendar'
 import { AdminChat } from './pages/admin/chat'
 import { AdminTeams } from './pages/admin/teams'
+import AdminProfile from './pages/admin/profile'
 import { StaffChat } from './pages/staff/chat'
 import StaffDashboard from './pages/staff/dashboard'
 import StaffCalendar from './pages/staff/calendar'
@@ -52,6 +53,7 @@ function App() {
             <Route path="packages" element={<AdminServicePackages />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="teams" element={<AdminTeams />} />
+            <Route path="profile" element={<AdminProfile />} />
             <Route
               path="settings"
               element={
