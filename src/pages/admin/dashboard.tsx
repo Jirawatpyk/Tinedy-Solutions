@@ -396,7 +396,7 @@ export function AdminDashboard() {
       // Calculate Mini Stats
       // 1. Top Service
       const serviceCount: Record<string, { name: string; count: number }> = {}
-      allBookingsStatusRes.data?.forEach((booking: { service_packages?: { name: string } | null }) => {
+      allBookingsStatusRes.data?.forEach((booking: Record<string, unknown>) => {
         const serviceName = booking.service_packages?.name
         if (serviceName) {
           if (!serviceCount[serviceName]) {
@@ -413,7 +413,7 @@ export function AdminDashboard() {
 
       // Recalculate service count from full data
       const fullServiceCount: Record<string, { name: string; count: number }> = {}
-      allBookingsWithServices?.forEach((booking) => {
+      allBookingsWithServices?.forEach((booking: Record<string, unknown>) => {
         const serviceName = booking.service_packages?.name
         if (serviceName) {
           if (!fullServiceCount[serviceName]) {

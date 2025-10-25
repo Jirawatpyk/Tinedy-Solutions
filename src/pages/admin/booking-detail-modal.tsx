@@ -43,7 +43,7 @@ interface Booking {
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
-  customers: { id: string; full_name: string; email: string } | null
+  customers: { id: string; full_name: string; email: string; phone?: string } | null
   service_packages: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
   teams: { name: string } | null
