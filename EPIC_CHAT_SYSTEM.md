@@ -1,10 +1,9 @@
 6# Epic: Chat System Development
 
-**Status**: ✅ Completed
+**Status**: 🟡 In Progress
 **Priority**: High
 **Start Date**: October 21, 2025
-**Completion Date**: October 25, 2025
-**Actual Time**: ~8 hours
+**Estimated Completion**: 7-10 hours
 
 ---
 
@@ -20,14 +19,14 @@ Developing a real-time 1-to-1 chat system for Tinedy CRM that allows Admin and S
 - ✅ Provide unread message notifications
 - ✅ Create intuitive WhatsApp-style UI
 - ✅ Support message history and search
-- ✅ Add file/image attachments (DONE!)
-- ⏳ (Future) Add typing indicators and online status
+- ⏳ (Phase 2) Add file/image attachments
+- ⏳ (Phase 3) Add typing indicators and online status
 
 ---
 
 ## 📊 Progress Tracker
 
-### Phase 1: MVP - Core Messaging ✅ COMPLETED
+### Phase 1: MVP - Core Messaging (In Progress)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -35,41 +34,32 @@ Developing a real-time 1-to-1 chat system for Tinedy CRM that allows Admin and S
 | Create TypeScript types | ✅ Done | `src/types/chat.ts` |
 | Create useChat hook | ✅ Done | `src/hooks/use-chat.ts` with real-time |
 | Create UserList component | ✅ Done | `src/components/chat/user-list.tsx` |
-| Create ChatArea component | ✅ Done | Message display + input |
-| Create MessageBubble component | ✅ Done | Individual message styling |
-| Create Chat page (Admin) | ✅ Done | `src/pages/admin/chat.tsx` |
-| Create Chat page (Staff) | ✅ Done | Reuses admin page |
-| Add routes to App.tsx | ✅ Done | Routes active |
-| Implement unread badge in sidebar | ✅ Done | Real-time count update |
-| Test with multiple users | ✅ Done | TypeScript compile passed |
-| Fix bugs and polish UI | ✅ Done | UX polished |
+| Create ChatArea component | ⏳ TODO | Message display + input |
+| Create MessageBubble component | ⏳ TODO | Individual message styling |
+| Create Chat page (Admin) | ⏳ TODO | `src/pages/admin/chat.tsx` |
+| Create Chat page (Staff) | ⏳ TODO | Can reuse admin page |
+| Add routes to App.tsx | ⏳ TODO | Replace "Coming soon" |
+| Implement unread badge in sidebar | ⏳ TODO | Real-time count update |
+| Test with multiple users | ⏳ TODO | End-to-end testing |
+| Fix bugs and polish UI | ⏳ TODO | UX refinement |
 
-### Phase 2: File Attachments ✅ COMPLETED
-
-| Task | Status | Notes |
-|------|--------|-------|
-| File attachments (images) | ✅ Done | Images, PDF support |
-| FileAttachment component | ✅ Done | Display images inline |
-| ImageLightbox component | ✅ Done | View images fullscreen |
-| Supabase Storage integration | ✅ Done | Upload/delete files |
-| File validation | ✅ Done | 10MB limit, type checking |
-
-### Phase 3: Additional Features (Future)
+### Phase 2: Enhancements (Planned)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Toast notifications | 📝 Future | In-app alerts |
-| Search messages | 📝 Future | Find specific conversation |
-| Delete individual messages | 📝 Future | User control |
+| File attachments (images) | 📝 Planned | Critical for cleaning service |
+| Toast notifications | 📝 Planned | In-app alerts |
+| Search messages | 📝 Planned | Find specific conversation |
+| Delete messages | 📝 Planned | User control |
 
-### Phase 4: Advanced Features (Future)
+### Phase 3: Advanced Features (Future)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Typing indicator | 📝 Future | "User is typing..." |
-| Online/Offline status | 📝 Future | Green/gray dots |
-| Browser push notifications | 📝 Future | Desktop alerts |
-| Group chat | 📝 Future | Team channels |
+| Typing indicator | 📝 Planned | "User is typing..." |
+| Online/Offline status | 📝 Planned | Green/gray dots |
+| Browser push notifications | 📝 Planned | Desktop alerts |
+| Group chat | 📝 Planned | Team channels |
 
 ---
 
@@ -465,20 +455,18 @@ If you encounter issues or have questions:
 
 ## ✅ Definition of Done
 
-Phase 1 & 2 are COMPLETE:
+Phase 1 MVP is complete when:
 
 - [x] All components created and working
-- [x] Messages send and receive in real-time
-- [x] Unread counts update correctly
-- [x] Sidebar badge shows total unread
-- [x] UI is responsive on mobile
-- [x] No TypeScript errors
-- [x] File attachments working
-- [x] Code is clean and documented
-
-### Ready for production! 🚀
+- [ ] Messages send and receive in real-time
+- [ ] Unread counts update correctly
+- [ ] Sidebar badge shows total unread
+- [ ] UI is responsive on mobile
+- [ ] No TypeScript errors
+- [ ] All manual tests pass
+- [ ] Code is clean and documented
 
 ---
 
-**Last Updated**: October 25, 2025
-**Status**: Phase 1 & 2 Complete ✅
+**Last Updated**: October 21, 2025
+**Next Review**: After Phase 1 completion

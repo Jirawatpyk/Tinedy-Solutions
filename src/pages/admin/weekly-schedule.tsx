@@ -1,4 +1,3 @@
-import type { CustomerRecord, Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,9 +18,7 @@ import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import { formatTime } from '@/lib/booking-utils'
 import { getErrorMessage } from '@/lib/error-utils'
-import type { ServicePackage , UserProfile } from '@/types'
 
 interface Staff {
   id: string
@@ -33,6 +30,14 @@ interface Staff {
 interface Team {
   id: string
   name: string
+}
+
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+  service_type: string
 }
 
 interface BookingFormData {
@@ -53,6 +58,16 @@ interface BookingFormData {
   team_id?: string
   notes?: string
   status?: string
+}
+
+interface Customer {
+  id: string
+  full_name: string
+  email: string
+}
+
+interface Profile {
+  full_name: string
 }
 
 interface BookingRaw {
@@ -76,19 +91,45 @@ interface BookingRaw {
   payment_date?: string
   payment_notes?: string
   service_packages: ServicePackage[] | ServicePackage | null
-  customers: CustomerRecord[] | CustomerRecord | null
-  profiles: UserProfile[] | UserProfile | null
+  customers: Customer[] | Customer | null
+  profiles: Profile[] | Profile | null
   teams: { name: string }[] | { name: string } | null
 }
 
+interface Booking {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  staff_id: string | null
+  team_id: string | null
+  total_price: number
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  service_package_id: string
+  notes: string | null
+  payment_status?: string
+  payment_method?: string
+  amount_paid?: number
+  payment_date?: string
+  payment_notes?: string
+  service_packages: ServicePackage | null
+  customers: Customer | null
+  profiles: Profile | null
+  teams: { name: string } | null
+}
+
 const DAYS_OF_WEEK = [
+  'Sunday',
   'Monday',
   'Tuesday',
   'Wednesday',
   'Thursday',
   'Friday',
   'Saturday',
-  'Sunday',
 ]
 
 const TIME_SLOTS = [
@@ -102,10 +143,10 @@ export function AdminWeeklySchedule() {
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('staff')
+  const [viewMode, setViewMode] = useState<'staff' | 'team'>('staff')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }))
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -122,8 +163,8 @@ export function AdminWeeklySchedule() {
   const calculateWeekDates = useCallback((weekStart: Date) => {
     const dates = []
     for (let i = 0; i < 7; i++) {
-      // Create new date in local timezone to avoid timezone issues
-      const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)
+      const date = new Date(weekStart)
+      date.setDate(weekStart.getDate() + i)
       dates.push(date)
     }
     return dates
@@ -142,7 +183,7 @@ export function AdminWeeklySchedule() {
   }
 
   const goToCurrentWeek = () => {
-    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
+    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))
   }
 
   const fetchStaffMembers = useCallback(async () => {
@@ -190,16 +231,8 @@ export function AdminWeeklySchedule() {
     if (weekDates.length === 0) return
 
     try {
-      // Format dates in local timezone YYYY-MM-DD
-      const formatLocalDate = (date: Date) => {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
-      }
-
-      const startDate = formatLocalDate(weekDates[0])
-      const endDate = formatLocalDate(weekDates[6])
+      const startDate = weekDates[0].toISOString().split('T')[0]
+      const endDate = weekDates[6].toISOString().split('T')[0]
 
       let query = supabase
         .from('bookings')
@@ -217,13 +250,10 @@ export function AdminWeeklySchedule() {
 
       // Filter based on view mode
       if (viewMode === 'staff') {
-        // Staff view - only show bookings with staff_id (exclude team bookings)
-        query = query.not('staff_id', 'is', null)
-
         if (selectedStaff && selectedStaff !== 'all') {
           query = query.eq('staff_id', selectedStaff)
         }
-      } else if (viewMode === 'team') {
+      } else {
         // Team view mode - only show bookings that have a team
         query = query.not('team_id', 'is', null)
 
@@ -231,7 +261,6 @@ export function AdminWeeklySchedule() {
           query = query.eq('team_id', selectedTeam)
         }
       }
-      // If viewMode === 'all', no filter - show everything
 
       const { data, error } = await query
 
@@ -293,12 +322,7 @@ export function AdminWeeklySchedule() {
     const date = weekDates[dayIndex]
     if (!date) return []
 
-    // Format date in local timezone YYYY-MM-DD
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const dateStr = `${year}-${month}-${day}`
-
+    const dateStr = date.toISOString().split('T')[0]
     return bookings.filter((booking) => booking.booking_date === dateStr)
   }
 
@@ -317,6 +341,11 @@ export function AdminWeeklySchedule() {
     const height = ((endMinutes - startMinutes) / totalMinutes) * 100
 
     return { top: `${Math.max(0, top)}%`, height: `${height}%` }
+  }
+
+  // Helper function to format time without seconds
+  const formatTimeWithoutSeconds = (time: string) => {
+    return time.substring(0, 5) // Takes only HH:MM from HH:MM:SS
   }
 
   const doBookingsOverlap = (booking1: Booking, booking2: Booking) => {
@@ -724,7 +753,7 @@ export function AdminWeeklySchedule() {
               <Select
                 value={selectedStaff}
                 onValueChange={setSelectedStaff}
-                disabled={viewMode !== 'staff'}
+                disabled={viewMode === 'team'}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose staff" />
@@ -748,7 +777,7 @@ export function AdminWeeklySchedule() {
               <Select
                 value={selectedTeam}
                 onValueChange={setSelectedTeam}
-                disabled={viewMode !== 'team'}
+                disabled={viewMode === 'staff'}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose team" />
@@ -770,7 +799,7 @@ export function AdminWeeklySchedule() {
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2">
               <Label className="whitespace-nowrap">View Mode:</Label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[400px]" role="group">
+              <div className="inline-flex rounded-md shadow-sm w-full max-w-[300px]" role="group">
                 <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
@@ -783,17 +812,9 @@ export function AdminWeeklySchedule() {
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('team')}
-                  className="rounded-none border-l-0 flex-1"
-                >
-                  Team View
-                </Button>
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
                   className="rounded-l-none border-l-0 flex-1"
                 >
-                  All Bookings
+                  Team View
                 </Button>
               </div>
             </div>
@@ -812,10 +833,8 @@ export function AdminWeeklySchedule() {
                 -
                 {viewMode === 'staff' ? (
                   selectedStaff === 'all' ? ' All Staff' : selectedStaffData ? ` ${selectedStaffData.full_name}` : ' Staff'
-                ) : viewMode === 'team' ? (
-                  selectedTeam === 'all' ? ' All Teams' : selectedTeamData ? ` ${selectedTeamData.name}` : ' Team'
                 ) : (
-                  ' All Bookings (Staff & Team)'
+                  selectedTeam === 'all' ? ' All Teams' : selectedTeamData ? ` ${selectedTeamData.name}` : ' Team'
                 )}
               </span>
             </CardTitle>
@@ -923,11 +942,11 @@ export function AdminWeeklySchedule() {
                                 width: `${widthPercent}%`,
                               }}
                               onClick={() => handleBookingClick(booking)}
-                              title={`${booking.service_packages?.name} - ${viewMode === 'staff' ? booking.customers?.full_name : booking.teams?.name || 'No Team'}\n${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`}
+                              title={`${booking.service_packages?.name} - ${viewMode === 'staff' ? booking.customers?.full_name : booking.teams?.name || 'No Team'}\n${formatTimeWithoutSeconds(booking.start_time)} - ${formatTimeWithoutSeconds(booking.end_time)}`}
                             >
                               <div className="px-2 py-1 h-full flex flex-col items-center justify-center text-xs">
                                 <div className="font-semibold truncate text-center w-full">
-                                  {formatTime(booking.start_time)}
+                                  {formatTimeWithoutSeconds(booking.start_time)}
                                 </div>
                                 <div className="text-[10px] truncate text-center w-full opacity-90">
                                   {viewMode === 'staff' ? booking.customers?.full_name : booking.teams?.name || 'No Team'}
@@ -1058,7 +1077,6 @@ export function AdminWeeklySchedule() {
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}
-          excludeBookingId={selectedBooking?.id}
         />
       )}
     </div>

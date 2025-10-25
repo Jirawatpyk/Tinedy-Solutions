@@ -22,30 +22,13 @@ interface BookingTimelineProps {
   bookingId: string
 }
 
-// Simple cache: { bookingId: { data: history[], timestamp: number } }
-const timelineCache = new Map<string, { data: StatusHistoryItem[], timestamp: number }>()
-const CACHE_DURATION = 30000 // 30 seconds
-
 export function BookingTimeline({ bookingId }: BookingTimelineProps) {
   const [history, setHistory] = useState<StatusHistoryItem[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchStatusHistory = useCallback(async () => {
     try {
-      // Check cache first
-      const cached = timelineCache.get(bookingId)
-      const now = Date.now()
-
-      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-        console.log('[Timeline] Using cached data for', bookingId)
-        setHistory(cached.data)
-        setLoading(false)
-        return
-      }
-
-      console.log('[Timeline] Fetching fresh data for', bookingId)
       setLoading(true)
-
       const { data, error } = await supabase
         .from('booking_status_history')
         .select(`
@@ -62,15 +45,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-
-      const historyData = (data as StatusHistoryItem[]) || []
-      setHistory(historyData)
-
-      // Update cache
-      timelineCache.set(bookingId, {
-        data: historyData,
-        timestamp: now
-      })
+      setHistory((data as StatusHistoryItem[]) || [])
     } catch (error) {
       console.error('Error fetching status history:', error)
     } finally {
@@ -80,33 +55,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
 
   useEffect(() => {
     fetchStatusHistory()
-
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel(`booking-status-history:${bookingId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'booking_status_history',
-          filter: `booking_id=eq.${bookingId}`,
-        },
-        (payload) => {
-          console.log('[Timeline] Real-time update received:', payload)
-          // Clear cache and refetch
-          timelineCache.delete(bookingId)
-          setTimeout(() => {
-            fetchStatusHistory()
-          }, 1000)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchStatusHistory, bookingId])
+  }, [fetchStatusHistory])
 
   const getStatusIcon = (status: string) => {
     switch (status) {

@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { type LucideIcon } from 'lucide-react'
 
@@ -14,7 +13,7 @@ interface StatsCardProps {
   className?: string
 }
 
-export const StatsCard = memo(function StatsCard({ title, value, icon: Icon, description, trend, className = '' }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, description, trend, className = '' }: StatsCardProps) {
   return (
     <Card className={`hover:shadow-lg transition-all hover:scale-105 cursor-pointer ${className}`}>
       <CardContent className="p-6">
@@ -47,4 +46,4 @@ export const StatsCard = memo(function StatsCard({ title, value, icon: Icon, des
       </CardContent>
     </Card>
   )
-})
+}

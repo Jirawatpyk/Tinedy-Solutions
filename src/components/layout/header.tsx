@@ -4,8 +4,6 @@ import { Menu, Search, User, Users, Calendar, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { NotificationBell } from '@/components/notifications/notification-bell'
-import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
-import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import {
   CommandDialog,
@@ -28,7 +26,6 @@ interface SearchResult {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
-  const { profile } = useAuth()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -212,13 +209,6 @@ export function Header({ onMenuClick }: HeaderProps) {
               </kbd>
             </Button>
           </div>
-
-          {/* Quick Availability Check - Admin only, hidden on mobile */}
-          {profile?.role === 'admin' && (
-            <div className="hidden lg:block">
-              <QuickAvailabilityCheck />
-            </div>
-          )}
         </div>
 
         {/* Right side - Notifications and Theme Toggle */}

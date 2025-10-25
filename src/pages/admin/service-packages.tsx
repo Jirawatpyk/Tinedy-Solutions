@@ -22,10 +22,19 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Package, Plus, Edit, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { Package, Plus, Edit, Trash2, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import type { ServicePackage } from '@/types'
+
+interface ServicePackage {
+  id: string
+  name: string
+  description: string | null
+  service_type: 'cleaning' | 'training'
+  duration_minutes: number
+  price: number
+  is_active: boolean
+  created_at: string
+}
 
 export function AdminServicePackages() {
   const [packages, setPackages] = useState<ServicePackage[]>([])
@@ -201,6 +210,8 @@ export function AdminServicePackages() {
   }
 
   const deletePackage = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this package?')) return
+
     try {
       const { error } = await supabase
         .from('service_packages')
@@ -215,7 +226,6 @@ export function AdminServicePackages() {
       })
       fetchPackages()
     } catch (error) {
-      console.error('Delete package error:', error)
       const dbError = error as { code?: string }
       if (dbError.code === '23503') {
         toast({
@@ -226,7 +236,7 @@ export function AdminServicePackages() {
       } else {
         toast({
           title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to delete package',
+          description: 'Failed to delete package',
           variant: 'destructive',
         })
       }
@@ -601,11 +611,13 @@ export function AdminServicePackages() {
                     >
                       {pkg.is_active ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
                     </Button>
-                    <DeleteButton
-                      itemName={pkg.name}
-                      onDelete={() => deletePackage(pkg.id)}
+                    <Button
+                      variant="outline"
                       size="sm"
-                    />
+                      onClick={() => deletePackage(pkg.id)}
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

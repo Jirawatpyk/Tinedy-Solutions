@@ -1,4 +1,3 @@
-import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -18,13 +17,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useDebounce } from '@/hooks/use-debounce'
-import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
-import { DeleteButton } from '@/components/common/DeleteButton'
 import {
   Select,
   SelectContent,
@@ -33,18 +30,36 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+interface Customer {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  line_id: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  zip_code: string | null
+  relationship_level: 'new' | 'regular' | 'vip' | 'inactive'
+  preferred_contact_method: 'phone' | 'email' | 'line' | 'sms'
+  tags: string[] | null
+  source: string | null
+  birthday: string | null
+  company_name: string | null
+  tax_id: string | null
+  notes: string | null
+  created_at: string
+}
+
 export function AdminCustomers() {
   const navigate = useNavigate()
-  const [customers, setCustomers] = useState<CustomerRecord[]>([])
-  const [filteredCustomers, setFilteredCustomers] = useState<CustomerRecord[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingCustomer, setEditingCustomer] = useState<CustomerRecord | null>(null)
-
-  // Debounce search query to reduce filtering overhead
-  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
@@ -95,14 +110,13 @@ export function AdminCustomers() {
   const filterCustomers = useCallback(() => {
     let filtered = customers
 
-    // Filter by search query (using debounced value)
-    if (debouncedSearchQuery) {
-      const query = debouncedSearchQuery.toLowerCase()
+    // Filter by search query
+    if (searchQuery) {
       filtered = filtered.filter(
         (customer) =>
-          customer.full_name.toLowerCase().includes(query) ||
-          customer.email.toLowerCase().includes(query) ||
-          customer.phone.includes(debouncedSearchQuery)
+          customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.phone.includes(searchQuery)
       )
     }
 
@@ -116,7 +130,7 @@ export function AdminCustomers() {
     setFilteredCustomers(filtered)
     // Reset display count when filter changes
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [customers, debouncedSearchQuery, relationshipFilter, ITEMS_PER_LOAD])
+  }, [customers, searchQuery, relationshipFilter, ITEMS_PER_LOAD])
 
   useEffect(() => {
     fetchCustomers()
@@ -156,7 +170,7 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'CustomerRecord updated successfully',
+          description: 'Customer updated successfully',
         })
       } else {
         const { error } = await supabase.from('customers').insert(cleanedData)
@@ -165,7 +179,7 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'CustomerRecord created successfully',
+          description: 'Customer created successfully',
         })
       }
 
@@ -183,6 +197,8 @@ export function AdminCustomers() {
   }
 
   const deleteCustomer = async (customerId: string) => {
+    if (!confirm('Are you sure you want to delete this customer?')) return
+
     try {
       const { error } = await supabase
         .from('customers')
@@ -193,7 +209,7 @@ export function AdminCustomers() {
 
       toast({
         title: 'Success',
-        description: 'CustomerRecord deleted successfully',
+        description: 'Customer deleted successfully',
       })
       fetchCustomers()
     } catch {
@@ -205,7 +221,7 @@ export function AdminCustomers() {
     }
   }
 
-  const openEditDialog = (customer: CustomerRecord) => {
+  const openEditDialog = (customer: Customer) => {
     setEditingCustomer(customer)
     setFormData({
       full_name: customer.full_name,
@@ -284,7 +300,7 @@ export function AdminCustomers() {
           </CardContent>
         </Card>
 
-        {/* CustomerRecord cards skeleton */}
+        {/* Customer cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
@@ -330,13 +346,13 @@ export function AdminCustomers() {
               onClick={resetForm}
             >
               <Plus className="h-4 w-4 mr-2" />
-              New CustomerRecord
+              New Customer
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingCustomer ? 'Edit CustomerRecord' : 'New CustomerRecord'}
+                {editingCustomer ? 'Edit Customer' : 'New Customer'}
               </DialogTitle>
               <DialogDescription>
                 {editingCustomer
@@ -412,9 +428,9 @@ export function AdminCustomers() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">🆕 New CustomerRecord</SelectItem>
-                        <SelectItem value="regular">💚 Regular CustomerRecord</SelectItem>
-                        <SelectItem value="vip">👑 VIP CustomerRecord</SelectItem>
+                        <SelectItem value="new">🆕 New Customer</SelectItem>
+                        <SelectItem value="regular">💚 Regular Customer</SelectItem>
+                        <SelectItem value="vip">👑 VIP Customer</SelectItem>
                         <SelectItem value="inactive">💤 Inactive</SelectItem>
                       </SelectContent>
                     </Select>
@@ -480,7 +496,7 @@ export function AdminCustomers() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-tinedy-blue" />
-                  <Label htmlFor="tags">CustomerRecord Tags</Label>
+                  <Label htmlFor="tags">Customer Tags</Label>
                 </div>
                 <TagInput
                   tags={formData.tags}
@@ -770,7 +786,7 @@ export function AdminCustomers() {
                           </Badge>
                         )}
 
-                        {/* CustomerRecord Tags */}
+                        {/* Customer Tags */}
                         {customer.tags && customer.tags.length > 0 && (
                           <>
                             {customer.tags.slice(0, 2).map((tag) => (
@@ -804,11 +820,17 @@ export function AdminCustomers() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <DeleteButton
-                        itemName={customer.full_name}
-                        onDelete={() => deleteCustomer(customer.id)}
-                        className="h-8 w-8"
-                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteCustomer(customer.id)
+                        }}
+                        className="h-8 w-8 hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>

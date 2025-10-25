@@ -23,7 +23,13 @@ import {
 } from '@/components/ui/select'
 import { Sparkles } from 'lucide-react'
 import type { Booking } from '@/types/booking'
-import type { ServicePackage } from '@/types'
+
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
 
 interface StaffMember {
   id: string

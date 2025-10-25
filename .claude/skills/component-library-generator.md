@@ -1,8 +1,3 @@
----
-name: component-library-generator
-description: Generate reusable component library from duplicated UI patterns in Tinedy CRM
----
-
 # Component Library Generator Skill
 
 ## Purpose

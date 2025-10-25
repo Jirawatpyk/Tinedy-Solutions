@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,9 +15,6 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
-  Award,
-  Package,
-  Target,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -26,7 +23,6 @@ import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
-import type { ServicePackage } from '@/types'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { useToast } from '@/hooks/use-toast'
 
@@ -94,6 +90,13 @@ interface DailyRevenue {
   revenue: number
 }
 
+interface ServicePackage {
+  id: string
+  name: string
+  price: number
+  duration_minutes: number
+}
+
 interface StaffMember {
   id: string
   full_name: string
@@ -104,12 +107,6 @@ interface StaffMember {
 interface Team {
   id: string
   name: string
-}
-
-interface MiniStats {
-  topService: { name: string; count: number } | null
-  avgBookingValue: number
-  completionRate: number
 }
 
 interface BookingFormData {
@@ -148,25 +145,11 @@ export function AdminDashboard() {
   const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatus[]>([])
   const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([])
-  const [miniStats, setMiniStats] = useState<MiniStats>({
-    topService: null,
-    avgBookingValue: 0,
-    completionRate: 0,
-  })
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [appointmentsPage, setAppointmentsPage] = useState(1)
   const appointmentsPerPage = 5
-  const [actionLoading, setActionLoading] = useState<{
-    statusChange: boolean
-    delete: boolean
-    markAsPaid: boolean
-  }>({
-    statusChange: false,
-    delete: false,
-    markAsPaid: false,
-  })
 
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -178,45 +161,15 @@ export function AdminDashboard() {
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [showChartLabels, setShowChartLabels] = useState(false)
 
   const { toast } = useToast()
 
-  // Memoize chart data calculations
-  const pieChartTotal = useMemo(() => {
-    return bookingsByStatus.reduce((sum, item) => sum + item.count, 0)
-  }, [bookingsByStatus])
-
-  const paginatedAppointments = useMemo(() => {
-    return todayBookings.slice(
-      (appointmentsPage - 1) * appointmentsPerPage,
-      appointmentsPage * appointmentsPerPage
-    )
-  }, [todayBookings, appointmentsPage, appointmentsPerPage])
-
-  const totalPages = useMemo(() => {
-    return Math.ceil(todayBookings.length / appointmentsPerPage)
-  }, [todayBookings.length, appointmentsPerPage])
-
   useEffect(() => {
-    // Run all data fetching in parallel for better performance
-    Promise.all([
-      fetchDashboardData(),
-      fetchServicePackages(),
-      fetchStaffMembers(),
-      fetchTeams()
-    ])
+    fetchDashboardData()
+    fetchServicePackages()
+    fetchStaffMembers()
+    fetchTeams()
   }, [])
-
-  // Show chart labels after animation completes
-  useEffect(() => {
-    if (!loading && bookingsByStatus.length > 0) {
-      const timer = setTimeout(() => {
-        setShowChartLabels(true)
-      }, 400) // Show halfway through animation for smoother appearance
-      return () => clearTimeout(timer)
-    }
-  }, [loading, bookingsByStatus])
 
   const fetchServicePackages = async () => {
     try {
@@ -265,91 +218,108 @@ export function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Calculate dates first
+      // Fetch total bookings
+      const { count: totalBookings } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+
+      // Fetch total revenue
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select('total_price')
+        .eq('status', 'completed')
+
+      const totalRevenue = bookingsData?.reduce(
+        (sum, booking) => sum + Number(booking.total_price),
+        0
+      ) || 0
+
+      // Fetch total customers
+      const { count: totalCustomers } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+
+      // Fetch pending bookings
+      const { count: pendingBookings } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+
+      setStats({
+        totalBookings: totalBookings || 0,
+        totalRevenue,
+        totalCustomers: totalCustomers || 0,
+        pendingBookings: pendingBookings || 0,
+      })
+
+      // Fetch today's new data (created today only)
       const nowToday = new Date()
       const bangkokOffsetToday = 7 * 60 * 60 * 1000
       const bangkokTimeToday = new Date(nowToday.getTime() + bangkokOffsetToday)
       const todayStr = bangkokTimeToday.toISOString().split('T')[0]
+
+      // Calculate start of day in Bangkok timezone (00:00:00)
       const todayStart = `${todayStr}T00:00:00+07:00`
       const todayEnd = `${todayStr}T23:59:59+07:00`
-      const today = todayStr
 
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+      console.log('Today date for stats:', todayStr)
+      console.log('Query range:', todayStart, 'to', todayEnd)
 
-      // OPTIMIZE: Run ALL queries in parallel using Promise.all
-      const [
-        totalBookingsRes,
-        completedBookingsRes,
-        totalCustomersRes,
-        pendingBookingsRes,
-        todayBookingsRes,
-        todayRevenueRes,
-        todayCustomersRes,
-        todayPendingRes,
-        allBookingsStatusRes,
-        todayBookingsDataRes,
-        revenueDataRes,
-      ] = await Promise.all([
-        // Total stats
-        supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('total_price').eq('status', 'completed'),
-        supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      // Today's new bookings count (created today)
+      const { data: todayBookingsData, count: todayBookings } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact' })
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
 
-        // Today's stats
-        supabase.from('bookings').select('*', { count: 'exact' }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('total_price').eq('status', 'completed').gte('updated_at', todayStart).lte('updated_at', todayEnd),
-        supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending').gte('created_at', todayStart).lte('created_at', todayEnd),
+      console.log('Today bookings found:', todayBookings, 'records:', todayBookingsData?.length)
 
-        // Bookings by status
-        supabase.from('bookings').select('status'),
+      // Today's new revenue (from bookings completed today)
+      const { data: todayRevenueData } = await supabase
+        .from('bookings')
+        .select('total_price')
+        .eq('status', 'completed')
+        .gte('updated_at', todayStart)
+        .lte('updated_at', todayEnd)
 
-        // Today's bookings detail
-        supabase.from('bookings').select(`
-          *,
-          customers (id, full_name, phone, email),
-          service_packages (name, service_type),
-          profiles (full_name),
-          teams (name)
-        `).eq('booking_date', today).order('start_time', { ascending: true }),
-
-        // Revenue data
-        supabase.from('bookings').select('booking_date, total_price').eq('status', 'completed').gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
-      ])
-
-      // Process total revenue
-      const totalRevenue = completedBookingsRes.data?.reduce(
+      const todayRevenue = todayRevenueData?.reduce(
         (sum, booking) => sum + Number(booking.total_price),
         0
       ) || 0
 
-      // Process today's revenue
-      const todayRevenue = todayRevenueRes.data?.reduce(
-        (sum, booking) => sum + Number(booking.total_price),
-        0
-      ) || 0
+      // Today's new customers (created today)
+      const { count: todayCustomers } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
 
-      // Set stats
-      setStats({
-        totalBookings: totalBookingsRes.count || 0,
-        totalRevenue,
-        totalCustomers: totalCustomersRes.count || 0,
-        pendingBookings: pendingBookingsRes.count || 0,
-      })
+      // Today's new pending (created today)
+      const { count: todayPending } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+
+      // Set today's changes
+      console.log('=== Today\'s New Stats ===')
+      console.log('New today:', { todayBookings, todayRevenue, todayCustomers, todayPending })
 
       setStatsChange({
-        bookingsChange: todayBookingsRes.count || 0,
+        bookingsChange: todayBookings || 0,
         revenueChange: todayRevenue,
-        customersChange: todayCustomersRes.count || 0,
-        pendingChange: todayPendingRes.count || 0,
+        customersChange: todayCustomers || 0,
+        pendingChange: todayPending || 0,
       })
 
-      // Process bookings by status
+      // Fetch bookings by status for pie chart
+      const { data: allBookings } = await supabase
+        .from('bookings')
+        .select('status')
+
       const statusCounts: Record<string, number> = {}
-      allBookingsStatusRes.data?.forEach((booking) => {
+      allBookings?.forEach((booking) => {
         statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1
       })
 
@@ -369,10 +339,41 @@ export function AdminDashboard() {
 
       setBookingsByStatus(statusData)
 
-      // Set today's bookings
-      setTodayBookings((todayBookingsDataRes.data as TodayBooking[]) || [])
+      // Fetch today's bookings (using Thailand timezone UTC+7)
+      const now = new Date()
+      // Add 7 hours to UTC to get Bangkok time
+      const bangkokOffset = 7 * 60 * 60 * 1000 // 7 hours in milliseconds
+      const bangkokTime = new Date(now.getTime() + bangkokOffset)
+      const today = bangkokTime.toISOString().split('T')[0]
 
-      // Process revenue data
+      console.log('Current UTC time:', now.toISOString())
+      console.log('Bangkok time (UTC+7):', bangkokTime.toISOString())
+      console.log('Today date for query:', today)
+
+      const { data: todayData } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, phone, email),
+          service_packages (name, service_type),
+          profiles (full_name),
+          teams (name)
+        `)
+        .eq('booking_date', today)
+        .order('start_time', { ascending: true })
+
+      setTodayBookings((todayData as TodayBooking[]) || [])
+
+      // Fetch daily revenue for last 7 days
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+      const { data: revenueData } = await supabase
+        .from('bookings')
+        .select('booking_date, total_price')
+        .eq('status', 'completed')
+        .gte('booking_date', sevenDaysAgo.toISOString().split('T')[0])
+        .order('booking_date', { ascending: true })
+
       const revenueByDate: Record<string, number> = {}
       for (let i = 0; i < 7; i++) {
         const date = new Date()
@@ -381,7 +382,7 @@ export function AdminDashboard() {
         revenueByDate[dateStr] = 0
       }
 
-      revenueDataRes.data?.forEach((item) => {
+      revenueData?.forEach((item) => {
         const dateStr = item.booking_date
         revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + Number(item.total_price)
       })
@@ -392,59 +393,6 @@ export function AdminDashboard() {
       }))
 
       setDailyRevenue(revenueArray)
-
-      // Calculate Mini Stats
-      // 1. Top Service
-      const serviceCount: Record<string, { name: string; count: number }> = {}
-      allBookingsStatusRes.data?.forEach((booking: Record<string, unknown>) => {
-        const serviceName = (booking.service_packages as { name?: string })?.name
-        if (serviceName) {
-          if (!serviceCount[serviceName]) {
-            serviceCount[serviceName] = { name: serviceName, count: 0 }
-          }
-          serviceCount[serviceName].count++
-        }
-      })
-
-      // Get all bookings with service packages for mini stats
-      const { data: allBookingsWithServices } = await supabase
-        .from('bookings')
-        .select('total_price, status, service_packages(name)')
-
-      // Recalculate service count from full data
-      const fullServiceCount: Record<string, { name: string; count: number }> = {}
-      allBookingsWithServices?.forEach((booking: Record<string, unknown>) => {
-        const serviceName = (booking.service_packages as { name?: string })?.name
-        if (serviceName) {
-          if (!fullServiceCount[serviceName]) {
-            fullServiceCount[serviceName] = { name: serviceName, count: 0 }
-          }
-          fullServiceCount[serviceName].count++
-        }
-      })
-
-      const topService = Object.values(fullServiceCount).sort((a, b) => b.count - a.count)[0] || null
-
-      // 2. Average Booking Value
-      const totalBookingValue = allBookingsWithServices?.reduce(
-        (sum, booking) => sum + Number(booking.total_price),
-        0
-      ) || 0
-      const avgBookingValue = allBookingsWithServices && allBookingsWithServices.length > 0
-        ? totalBookingValue / allBookingsWithServices.length
-        : 0
-
-      // 3. Completion Rate
-      const completedCount = allBookingsWithServices?.filter(b => b.status === 'completed').length || 0
-      const completionRate = allBookingsWithServices && allBookingsWithServices.length > 0
-        ? (completedCount / allBookingsWithServices.length) * 100
-        : 0
-
-      setMiniStats({
-        topService,
-        avgBookingValue,
-        completionRate,
-      })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -507,10 +455,9 @@ export function AdminDashboard() {
     return labels[status] || status
   }
 
-  const handleStatusChange = useCallback(async (bookingId: string, currentStatus: string, newStatus: string) => {
+  const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
 
-    setActionLoading(prev => ({ ...prev, statusChange: true }))
     try {
       const { error } = await supabase
         .from('bookings')
@@ -535,15 +482,12 @@ export function AdminDashboard() {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
-    } finally {
-      setActionLoading(prev => ({ ...prev, statusChange: false }))
     }
-  }, [selectedBooking, toast])
+  }
 
-  const deleteBooking = useCallback(async (bookingId: string) => {
+  const deleteBooking = async (bookingId: string) => {
     if (!confirm('Are you sure you want to delete this booking?')) return
 
-    setActionLoading(prev => ({ ...prev, delete: true }))
     try {
       const { error } = await supabase
         .from('bookings')
@@ -564,13 +508,10 @@ export function AdminDashboard() {
         description: 'Failed to delete booking',
         variant: 'destructive',
       })
-    } finally {
-      setActionLoading(prev => ({ ...prev, delete: false }))
     }
-  }, [toast])
+  }
 
-  const markAsPaid = useCallback(async (bookingId: string, method: string = 'cash') => {
-    setActionLoading(prev => ({ ...prev, markAsPaid: true }))
+  const markAsPaid = async (bookingId: string, method: string = 'cash') => {
     try {
       const { error } = await supabase
         .from('bookings')
@@ -615,15 +556,13 @@ export function AdminDashboard() {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
-    } finally {
-      setActionLoading(prev => ({ ...prev, markAsPaid: false }))
     }
-  }, [selectedBooking, toast])
+  }
 
-  const openBookingDetail = useCallback((booking: TodayBooking) => {
+  const openBookingDetail = (booking: TodayBooking) => {
     setSelectedBooking(booking)
     setIsDetailOpen(true)
-  }, [])
+  }
 
   // Helper function: Calculate end time from start time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -855,69 +794,6 @@ export function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Mini Stats - Quick Insights */}
-      <Card className="bg-gradient-to-br from-tinedy-blue/5 to-transparent">
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2 text-tinedy-dark">
-            <Target className="h-5 w-5 text-tinedy-blue" />
-            Quick Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Most Popular Service */}
-            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100">
-                <Package className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Most Popular Service</p>
-                <p className="text-lg font-bold text-tinedy-dark">
-                  {miniStats.topService ? miniStats.topService.name : 'N/A'}
-                </p>
-                {miniStats.topService && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {miniStats.topService.count} bookings
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Average Booking Value */}
-            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Average Booking Value</p>
-                <p className="text-lg font-bold text-tinedy-dark">
-                  {formatCurrency(miniStats.avgBookingValue)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Per booking
-                </p>
-              </div>
-            </div>
-
-            {/* Completion Rate */}
-            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100">
-                <Award className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Completion Rate</p>
-                <p className="text-lg font-bold text-tinedy-dark">
-                  {miniStats.completionRate.toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Success rate
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Bookings Status */}
@@ -941,31 +817,25 @@ export function AdminDashboard() {
                       data={bookingsByStatus as Record<string, unknown>[]}
                       cx="50%"
                       cy="50%"
-                      labelLine={showChartLabels}
-                      label={showChartLabels ? (props) => {
+                      labelLine={false}
+                      label={(props) => {
                         const entry = props.payload as BookingStatus
                         const percent = props.percent as number
                         return `${entry.status}: ${(percent * 100).toFixed(0)}%`
-                      } : false}
+                      }}
                       outerRadius={90}
                       innerRadius={60}
                       fill="#8884d8"
                       dataKey="count"
                       paddingAngle={2}
                       nameKey="status"
-                      animationBegin={0}
-                      animationDuration={800}
-                      animationEasing="ease-out"
                     >
                       {bookingsByStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, name: string) => {
-                        const percent = ((value / pieChartTotal) * 100).toFixed(0)
-                        return [`${value} bookings (${percent}%)`, name]
-                      }}
+                      formatter={(value: number) => [`${value} bookings`, '']}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
@@ -1035,7 +905,9 @@ export function AdminDashboard() {
               </p>
             ) : (
               <>
-                {paginatedAppointments.map((booking) => (
+                {todayBookings
+                  .slice((appointmentsPage - 1) * appointmentsPerPage, appointmentsPage * appointmentsPerPage)
+                  .map((booking) => (
                 <div
                   key={booking.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 cursor-pointer"
@@ -1046,7 +918,6 @@ export function AdminDashboard() {
                       <div>
                         <p className="font-medium text-tinedy-dark">
                           {booking.customers?.full_name || 'Unknown Customer'}
-                          <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {booking.customers?.email || 'No email'}
@@ -1100,13 +971,9 @@ export function AdminDashboard() {
                       <p className="font-semibold text-tinedy-dark text-lg">
                         {formatCurrency(Number(booking.total_price))}
                       </p>
-                      <div className="mt-1 sm:hidden">
-                        {getPaymentStatusBadge(booking.payment_status)}
-                      </div>
                     </div>
-                    <div className="hidden sm:flex sm:flex-col sm:gap-2 sm:items-end">
+                    <div className="hidden sm:block">
                       {getStatusBadge(booking.status)}
-                      {getPaymentStatusBadge(booking.payment_status)}
                     </div>
                   </div>
                 </div>
@@ -1133,8 +1000,8 @@ export function AdminDashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setAppointmentsPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={appointmentsPage >= totalPages}
+                        onClick={() => setAppointmentsPage(prev => Math.min(Math.ceil(todayBookings.length / appointmentsPerPage), prev + 1))}
+                        disabled={appointmentsPage >= Math.ceil(todayBookings.length / appointmentsPerPage)}
                       >
                         Next
                         <ChevronRight className="h-4 w-4" />
@@ -1161,7 +1028,6 @@ export function AdminDashboard() {
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
-        actionLoading={actionLoading}
       />
 
       {/* Edit Booking Modal */}
@@ -1229,7 +1095,6 @@ export function AdminDashboard() {
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}
-          excludeBookingId={selectedBooking?.id}
         />
       )}
     </div>

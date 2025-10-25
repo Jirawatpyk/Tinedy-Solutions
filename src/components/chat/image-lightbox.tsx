@@ -48,15 +48,16 @@ export function ImageLightbox({ imageUrl, imageName, isOpen, onClose }: ImageLig
       </Button>
 
       {/* Download button */}
-      <a
-        href={imageUrl}
-        download={imageName}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute top-4 right-16 p-2 rounded-md text-white hover:bg-white/20 transition-colors"
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute top-4 right-16 text-white hover:bg-white/20"
+        asChild
       >
-        <Download className="h-6 w-6" />
-      </a>
+        <a href={imageUrl} download={imageName} target="_blank" rel="noopener noreferrer">
+          <Download className="h-6 w-6" />
+        </a>
+      </Button>
 
       {/* Image */}
       <div

@@ -1,4 +1,5 @@
 import { Download, File, Image as ImageIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatFileSize, isImageAttachment } from '@/lib/chat-storage'
 import type { Attachment } from '@/types/chat'
@@ -87,16 +88,21 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
         </div>
 
         {/* Download button */}
-        <div
+        <Button
+          size="icon"
+          variant="ghost"
           className={cn(
-            'h-8 w-8 flex items-center justify-center rounded-md transition-colors cursor-pointer',
+            'h-8 w-8',
             isOwnMessage
               ? 'hover:bg-white/20 text-white'
               : 'hover:bg-gray-100 text-tinedy-blue'
           )}
+          asChild
         >
-          <Download className="h-4 w-4" />
-        </div>
+          <div>
+            <Download className="h-4 w-4" />
+          </div>
+        </Button>
       </a>
     </div>
   )

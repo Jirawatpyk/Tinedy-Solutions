@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Calendar as CalendarIcon, Clock, User, Briefcase, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStaffBookings } from '@/hooks/use-staff-bookings'
-import { formatTime } from '@/lib/booking-utils'
 import './calendar.css'
 
 const STATUS_COLORS = {
@@ -50,6 +49,10 @@ export default function StaffCalendar() {
   const goToToday = () => {
     setCurrentDate(new Date())
     setSelectedDate(new Date())
+  }
+
+  const formatTimeWithoutSeconds = (time: string) => {
+    return time.substring(0, 5)
   }
 
   // Generate calendar days
@@ -319,7 +322,7 @@ export default function StaffCalendar() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           <span className="font-semibold">
-                            {formatTime(format(event.start, 'HH:mm:ss'))} - {formatTime(format(event.end, 'HH:mm:ss'))}
+                            {formatTimeWithoutSeconds(format(event.start, 'HH:mm:ss'))} - {formatTimeWithoutSeconds(format(event.end, 'HH:mm:ss'))}
                           </span>
                         </div>
                         <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">

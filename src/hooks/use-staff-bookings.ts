@@ -22,6 +22,18 @@ interface ReviewData {
   rating: number
 }
 
+// Helper function to format full address
+export function formatFullAddress(booking: { address: string; city: string; state: string; zip_code: string }): string {
+  const parts = [
+    booking.address,
+    booking.city,
+    booking.state,
+    booking.zip_code
+  ].filter(part => part && part.trim())
+
+  return parts.join(', ')
+}
+
 export interface StaffBooking {
   id: string
   booking_date: string
@@ -431,14 +443,6 @@ export function useStaffBookings() {
 
   async function startProgress(bookingId: string) {
     try {
-      // Optimistic update - update state immediately without reloading
-      const updateBookingStatus = (bookings: StaffBooking[]) =>
-        bookings.map(b => b.id === bookingId ? { ...b, status: 'in_progress' } : b)
-
-      setTodayBookings(prev => updateBookingStatus(prev))
-      setUpcomingBookings(prev => updateBookingStatus(prev))
-      setCompletedBookings(prev => updateBookingStatus(prev))
-
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'in_progress' })
@@ -446,25 +450,16 @@ export function useStaffBookings() {
 
       if (error) throw error
 
-      // Real-time subscription will handle updating other connected clients
+      // Reload bookings to reflect changes
+      await loadBookings()
     } catch (err) {
       console.error('Error starting progress:', err)
-      // Revert optimistic update on error
-      await loadBookings()
       throw err
     }
   }
 
   async function markAsCompleted(bookingId: string) {
     try {
-      // Optimistic update - update status immediately for all lists
-      const updateBookingStatus = (bookings: StaffBooking[]) =>
-        bookings.map(b => b.id === bookingId ? { ...b, status: 'completed' } : b)
-
-      setTodayBookings(prev => updateBookingStatus(prev))
-      setUpcomingBookings(prev => updateBookingStatus(prev))
-      setCompletedBookings(prev => updateBookingStatus(prev))
-
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'completed' })
@@ -472,25 +467,16 @@ export function useStaffBookings() {
 
       if (error) throw error
 
-      // Real-time subscription will handle updating other connected clients
+      // Reload bookings to reflect changes
+      await loadBookings()
     } catch (err) {
       console.error('Error marking as completed:', err)
-      // Revert optimistic update on error
-      await loadBookings()
       throw err
     }
   }
 
   async function addNotes(bookingId: string, notes: string) {
     try {
-      // Optimistic update - update notes immediately
-      const updateBookingNotes = (bookings: StaffBooking[]) =>
-        bookings.map(b => b.id === bookingId ? { ...b, notes } : b)
-
-      setTodayBookings(prev => updateBookingNotes(prev))
-      setUpcomingBookings(prev => updateBookingNotes(prev))
-      setCompletedBookings(prev => updateBookingNotes(prev))
-
       const { error } = await supabase
         .from('bookings')
         .update({ notes })
@@ -498,11 +484,10 @@ export function useStaffBookings() {
 
       if (error) throw error
 
-      // Real-time subscription will handle updating other connected clients
+      // Reload bookings to reflect changes
+      await loadBookings()
     } catch (err) {
       console.error('Error adding notes:', err)
-      // Revert optimistic update on error
-      await loadBookings()
       throw err
     }
   }

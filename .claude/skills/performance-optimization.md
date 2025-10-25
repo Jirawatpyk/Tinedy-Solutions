@@ -1,8 +1,3 @@
----
-name: performance-optimization
-description: Identify and resolve performance bottlenecks in React application
----
-
 # Performance Optimization Skill
 
 ## Purpose

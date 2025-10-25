@@ -94,7 +94,7 @@ export function UserList({
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            New Chat
+            เริ่มแชทใหม่
           </Button>
 
           {/* Search */}
@@ -102,7 +102,7 @@ export function UserList({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search users..."
+              placeholder="ค้นหาผู้ใช้..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -120,11 +120,11 @@ export function UserList({
         ) : (
           <div className="divide-y">
             {filteredConversations.map((conversation) => (
-              <div
+              <button
                 key={conversation.user.id}
                 onClick={() => onSelectUser(conversation.user.id)}
                 className={cn(
-                  'group w-full p-4 text-left hover:bg-accent/50 transition-colors cursor-pointer',
+                  'group w-full p-4 text-left hover:bg-accent/50 transition-colors',
                   selectedUserId === conversation.user.id && 'bg-accent'
                 )}
               >
@@ -172,7 +172,7 @@ export function UserList({
                         <button
                           onClick={(e) => handleDeleteClick(conversation.user.id, e)}
                           className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-1"
-                          title="Delete chat"
+                          title="ลบแชท"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -193,7 +193,7 @@ export function UserList({
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -204,18 +204,18 @@ export function UserList({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
+            <AlertDialogTitle>ยืนยันการลบแชท</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this conversation? This action cannot be undone.
+              คุณแน่ใจหรือไม่ที่จะลบการสนทนานี้? การกระทำนี้ไม่สามารถย้อนกลับได้
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-500 hover:bg-red-600"
             >
-              Delete
+              ลบแชท
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

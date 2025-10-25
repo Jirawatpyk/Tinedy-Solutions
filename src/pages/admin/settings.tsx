@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { SimpleTabs as Tabs, SimpleTabsContent as TabsContent, SimpleTabsList as TabsList, SimpleTabsTrigger as TabsTrigger } from '@/components/ui/simple-tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
@@ -29,7 +29,6 @@ export default function AdminSettings() {
   const { toast } = useToast()
   const { settings, loading, error, updateGeneralSettings, updateBookingSettings, updateNotificationSettings } = useSettings()
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState('general')
 
   // General Settings State
   const [businessName, setBusinessName] = useState('')
@@ -212,7 +211,7 @@ export default function AdminSettings() {
       </div>
 
       <div className="p-4 sm:p-6">
-        <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto">
             <TabsTrigger value="general" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />

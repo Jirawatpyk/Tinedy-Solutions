@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/auth-context'
 import type { Message, Profile, Conversation, Attachment } from '@/types/chat'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { uploadChatFile } from '@/lib/chat-storage'
-import { getSupabaseErrorMessage } from '@/lib/error-utils'
 
 export function useChat() {
   const { user } = useAuth()
@@ -13,80 +12,53 @@ export function useChat() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Fetch all users for conversation list
   const fetchUsers = useCallback(async () => {
     if (!user) return []
 
-    try {
-      const { data: profiles, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, avatar_url')
-        .neq('id', user.id)
-        .order('full_name')
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, avatar_url')
+      .neq('id', user.id)
+      .order('full_name')
 
-      if (fetchError) {
-        const errorMsg = getSupabaseErrorMessage(fetchError)
-        console.error('Error fetching users:', fetchError)
-        setError(errorMsg)
-        return []
-      }
-
-      setError(null) // Clear error on success
-      return (profiles as Profile[]) || []
-    } catch (err) {
-      const errorMsg = getSupabaseErrorMessage(err)
-      console.error('Unexpected error fetching users:', err)
-      setError(errorMsg)
-      return []
-    }
+    return (profiles as Profile[]) || []
   }, [user])
 
   // Fetch messages for selected user
   const fetchMessages = useCallback(async (otherUserId: string) => {
     if (!user) return []
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          sender_id,
-          recipient_id,
-          message,
-          is_read,
-          created_at,
-          attachments,
-          sender:profiles!sender_id(id, full_name, email, role, avatar_url),
-          recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
-        `)
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
-        .order('created_at', { ascending: true })
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        sender_id,
+        recipient_id,
+        message,
+        is_read,
+        created_at,
+        sender:profiles!sender_id(id, full_name, email, role, avatar_url),
+        recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
+      `)
+      .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
 
-      if (fetchError) {
-        const errorMsg = getSupabaseErrorMessage(fetchError)
-        console.error('Error fetching messages:', fetchError)
-        setError(errorMsg)
-        return []
-      }
-
-      // Handle array response from Supabase join query
-      const fetchedMessages = (data || []).map((msg: { sender: Profile | Profile[]; recipient: Profile | Profile[]; [key: string]: unknown }) => ({
-        ...msg,
-        sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
-        recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
-      })) as Message[]
-
-      setMessages(fetchedMessages)
-      setError(null) // Clear error on success
-      return fetchedMessages
-    } catch (err) {
-      const errorMsg = getSupabaseErrorMessage(err)
-      console.error('Unexpected error fetching messages:', err)
-      setError(errorMsg)
+    if (error) {
+      console.error('Error fetching messages:', error)
       return []
     }
+
+    // Handle array response from Supabase join query
+    const fetchedMessages = (data || []).map((msg: { sender: Profile | Profile[]; recipient: Profile | Profile[]; [key: string]: unknown }) => ({
+      ...msg,
+      sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
+      recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
+    })) as Message[]
+
+    setMessages(fetchedMessages)
+    return fetchedMessages
   }, [user])
 
   // Send message (with optional attachments)
@@ -358,7 +330,6 @@ export function useChat() {
     setSelectedUser,
     isLoading,
     isSending,
-    error,
     sendMessage,
     sendMessageWithFile,
     getTotalUnreadCount,

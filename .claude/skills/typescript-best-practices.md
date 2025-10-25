@@ -1,8 +1,3 @@
----
-name: typescript-best-practices
-description: Improve TypeScript type safety and establish consistent typing patterns
----
-
 # TypeScript Best Practices Skill
 
 ## Purpose

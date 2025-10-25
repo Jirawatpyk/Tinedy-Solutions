@@ -6,7 +6,6 @@ import { useStaffAvailabilityCheck, type StaffAvailabilityResult, type TeamAvail
 import { format } from 'date-fns'
 import { Users, Star, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { formatTime } from '@/lib/booking-utils'
 
 interface StaffAvailabilityModalProps {
   isOpen: boolean
@@ -105,6 +104,11 @@ export function StaffAvailabilityModal({
       return { recommended, partiallyAvailable, unavailable }
     }
   }, [assignmentType, staffResults, teamResults])
+
+  // Format time to HH:MM
+  const formatTime = (time: string) => {
+    return time.split(':').slice(0, 2).join(':')
+  }
 
   return (
     <>
@@ -357,19 +361,6 @@ function StaffCard({
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
             <span>{staff.rating > 0 ? `${staff.rating}/5` : 'No ratings yet'}</span>
-          </div>
-
-          {/* Jobs on Selected Date */}
-          <div className="mt-1 text-sm">
-            <span className="text-muted-foreground">📅 Jobs on Date: </span>
-            <span className={`font-semibold ${
-              staff.jobsToday === 0 ? 'text-green-600' :
-              staff.jobsToday <= 2 ? 'text-blue-600' :
-              staff.jobsToday <= 4 ? 'text-orange-600' :
-              'text-red-600'
-            }`}>
-              {staff.jobsToday}
-            </span>
           </div>
 
           {/* Skills */}

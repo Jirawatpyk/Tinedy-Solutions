@@ -24,10 +24,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Mail, Phone, User, Shield, Hash, Award, Star } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
-import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface StaffMember {
   id: string
@@ -234,26 +233,28 @@ export function AdminStaff() {
     }
   }
 
-  const deleteStaff = async (staffId: string) => {
+  const deleteStaff = async (staffId: string, staffName: string) => {
+    if (!confirm(`Are you sure you want to delete ${staffName}?`)) return
+
     try {
-      // Call Edge Function to delete user from auth.users (will cascade to profiles)
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId: staffId },
-      })
+      // Note: This only deletes from profiles table
+      // For production, you should also delete from auth.users via Supabase admin API
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', staffId)
 
       if (error) throw error
-      if (!data?.success) throw new Error(data?.error || 'Failed to delete user')
 
       toast({
         title: 'Success',
         description: 'Staff member deleted successfully',
       })
       fetchStaff()
-    } catch (error) {
-      console.error('Delete staff error:', error)
+    } catch {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete staff member',
+        description: 'Failed to delete staff member',
         variant: 'destructive',
       })
     }
@@ -650,10 +651,13 @@ export function AdminStaff() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <DeleteButton
-                        itemName={member.full_name}
-                        onDelete={() => deleteStaff(member.id)}
-                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteStaff(member.id, member.full_name)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
