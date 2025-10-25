@@ -230,7 +230,7 @@ export function BookingCreateModal({
           *,
           customers (name, email),
           services:service_packages (name),
-          staff_profiles (full_name)
+          profiles (full_name)
         `)
         .single()
 
@@ -251,7 +251,7 @@ export function BookingCreateModal({
           totalPrice: Number(newBooking.total_price),
           location: newBooking.address || undefined,
           notes: newBooking.notes || undefined,
-          staffName: newBooking.staff_profiles?.full_name || undefined,
+          staffName: newBooking.profiles?.full_name || undefined,
           paymentLink,
         }
 
