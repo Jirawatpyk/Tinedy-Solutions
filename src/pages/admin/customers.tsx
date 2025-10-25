@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useDebounce } from '@/hooks/use-debounce'
 import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
@@ -60,6 +61,9 @@ export function AdminCustomers() {
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+
+  // Debounce search query to reduce filtering overhead
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
@@ -110,13 +114,14 @@ export function AdminCustomers() {
   const filterCustomers = useCallback(() => {
     let filtered = customers
 
-    // Filter by search query
-    if (searchQuery) {
+    // Filter by search query (using debounced value)
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase()
       filtered = filtered.filter(
         (customer) =>
-          customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone.includes(searchQuery)
+          customer.full_name.toLowerCase().includes(query) ||
+          customer.email.toLowerCase().includes(query) ||
+          customer.phone.includes(debouncedSearchQuery)
       )
     }
 
@@ -130,7 +135,7 @@ export function AdminCustomers() {
     setFilteredCustomers(filtered)
     // Reset display count when filter changes
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [customers, searchQuery, relationshipFilter, ITEMS_PER_LOAD])
+  }, [customers, debouncedSearchQuery, relationshipFilter, ITEMS_PER_LOAD])
 
   useEffect(() => {
     fetchCustomers()
