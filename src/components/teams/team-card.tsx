@@ -143,7 +143,10 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onAddMember(team)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddMember(team)
+              }}
               className="h-8"
             >
               <UserPlus className="h-3 w-3 mr-1" />
@@ -182,7 +185,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                     {member.membership_id && (
                       <Switch
                         checked={member.is_active !== false}
