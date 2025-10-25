@@ -205,28 +205,22 @@ export function AdminStaff() {
 
         console.log('Edge Function Response:', { data, error })
 
-        if (error) {
-          console.error('Edge Function Error:', error)
+        // When Edge Function returns non-2xx status, check data for error details
+        if (error || !data?.success) {
+          console.error('Edge Function Error:', { error, data })
+
+          // Get error message from data (Edge Function response body) or error object
+          const errorMsg = data?.error || error?.message || ''
 
           // Check for duplicate email error
-          if (error.message?.includes('User already registered') ||
-              error.message?.includes('already exists') ||
-              error.message?.includes('duplicate')) {
+          if (errorMsg.includes('User already registered') ||
+              errorMsg.includes('already exists') ||
+              errorMsg.includes('duplicate') ||
+              errorMsg.includes('already registered')) {
             throw new Error('This email is already registered. Please use a different email.')
           }
 
-          throw new Error(error.message || 'Failed to create staff member. Please try again.')
-        }
-
-        if (!data?.success) {
-          console.error('Edge Function returned failure:', data)
-
-          // Check for specific error messages from the edge function
-          const errorMsg = data?.error || ''
-          if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
-            throw new Error('This email is already registered. Please use a different email.')
-          }
-
+          // Return specific error message or generic one
           throw new Error(errorMsg || 'Failed to create staff member. Please try again.')
         }
 
