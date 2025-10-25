@@ -1,23 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { ServicePackage } from '@/types'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
-
-interface Customer {
-  full_name: string
-}
 
 interface Review {
   rating: number
 }
 
-interface BookingWithRelations {
+// Type for booking data from availability check query
+interface BookingConflictData {
   id: string
   booking_date: string
   start_time: string
   end_time: string
-  service_packages: ServicePackage[] | ServicePackage | null
-  customers: Customer[] | Customer | null
+  staff_id: string | null
+  team_id: string | null
+  service_packages: { name: string }[] | { name: string } | null
+  customers: { full_name: string }[] | { full_name: string } | null
 }
 
 interface TeamMemberData {
@@ -174,10 +172,10 @@ export function useStaffAvailabilityCheck({
             staffQuery = staffQuery.neq('id', excludeBookingId)
           }
 
-          const { data: staffBookings } = await staffQuery
+          const { data: staffBookings } = await staffQuery as { data: BookingConflictData[] | null }
 
           // Query for bookings where this staff is assigned via team
-          let teamBookings: BookingWithRelations[] = []
+          let teamBookings: BookingConflictData[] = []
           if (teamIds.length > 0) {
             let teamQuery = supabase
               .from('bookings')
@@ -201,8 +199,7 @@ export function useStaffAvailabilityCheck({
             }
 
             const { data } = await teamQuery
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            teamBookings = (data || []) as any
+            teamBookings = (data || []) as BookingConflictData[]
           }
 
           // Combine both staff and team bookings
@@ -226,8 +223,7 @@ export function useStaffAvailabilityCheck({
                 booking.end_time
               )
             })
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .map((booking: any) => {
+            .map((booking: BookingConflictData) => {
               const servicePackages = Array.isArray(booking.service_packages)
                 ? booking.service_packages[0]
                 : booking.service_packages
@@ -447,8 +443,7 @@ export function useStaffAvailabilityCheck({
                     booking.end_time
                   )
                 })
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                .map((booking: any) => {
+                .map((booking: BookingConflictData) => {
                   const servicePackages = Array.isArray(booking.service_packages)
                     ? booking.service_packages[0]
                     : booking.service_packages
