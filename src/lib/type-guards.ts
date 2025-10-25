@@ -77,9 +77,9 @@ export function isBooking(obj: unknown): obj is Booking {
     'status' in obj &&
     'start_time' in obj &&
     'end_time' in obj &&
-    typeof (obj as any).id === 'string' &&
-    typeof (obj as any).booking_date === 'string' &&
-    typeof (obj as any).status === 'string'
+    typeof (obj as Record<string, unknown>).id === 'string' &&
+    typeof (obj as Record<string, unknown>).booking_date === 'string' &&
+    typeof (obj as Record<string, unknown>).status === 'string'
   )
 }
 

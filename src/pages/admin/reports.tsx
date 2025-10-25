@@ -49,6 +49,9 @@ import {
   getStaffPerformance,
   getDateRangePreset,
   type ChartDataPoint,
+  type CustomerWithBookings,
+  type Staff,
+  type StaffWithBookings,
 } from '@/lib/analytics'
 import { RevenueBookingsTab } from '@/components/reports/tabs/RevenueBookingsTab'
 import { CustomersTab } from '@/components/reports/tabs/CustomersTab'
@@ -56,9 +59,6 @@ import { StaffTab } from '@/components/reports/tabs/StaffTab'
 import { TeamsTab } from '@/components/reports/tabs/TeamsTab'
 import type {
   BookingWithService,
-  CustomerWithBookings,
-  Staff,
-  StaffWithBookings,
   Team,
   TeamWithBookings,
 } from '@/types/reports'
@@ -157,7 +157,7 @@ export function AdminReports() {
       setCustomers((customersData || []) as CustomerRecord[])
 
       // Group bookings by customer
-      type CustomerBooking = { id: string; booking_date: string; total_price: number; status: string; created_at: string }
+      type CustomerBooking = { id: string; booking_date: string; total_price: number; status: string; created_at: string; customer_id?: string }
       const customerBookingsMap = new Map<string, CustomerBooking[]>()
       bookingsData?.forEach((booking) => {
         const customerId = booking.customer_id
@@ -167,9 +167,9 @@ export function AdminReports() {
         customerBookingsMap.get(customerId)?.push(booking)
       })
 
-      // Merge customers with their bookings
-      const merged = (customersData || []).map((customer) => ({
-        ...customer,
+      // Merge customers with their bookings - create proper CustomerWithBookings
+      const merged: CustomerWithBookings[] = (customersData || []).map((customer) => ({
+        ...(customer as CustomerRecord),
         bookings: customerBookingsMap.get(customer.id) || [],
       }))
 
@@ -340,7 +340,7 @@ export function AdminReports() {
 
         // Customers exports
         case 'customers-all': {
-          const topCustomersData = getTopCustomers(customersWithBookings as any, 10)
+          const topCustomersData = getTopCustomers(customersWithBookings, 10)
           exportCustomers(customers, topCustomersData, 'all')
           toast({ title: 'Export successful', description: 'Customer data exported to CSV' })
           break
@@ -348,7 +348,7 @@ export function AdminReports() {
 
         // Staff exports
         case 'staff-performance': {
-          const staffPerformanceData = getStaffPerformance(staffWithBookings as any)
+          const staffPerformanceData = getStaffPerformance(staffWithBookings)
           exportStaffPerformance(staffPerformanceData)
           toast({ title: 'Export successful', description: 'Staff performance data exported to CSV' })
           break
@@ -385,7 +385,7 @@ export function AdminReports() {
       staff_id: b.staff_id,
       service_type: b.service_packages?.service_type,
     }))
-    const data = generateChartData(mappedBookings as any, start, end)
+    const data = generateChartData(mappedBookings, start, end)
     setChartData(data)
   }, [bookings, dateRange])
 
@@ -434,18 +434,18 @@ export function AdminReports() {
       .slice(0, 5)
   }, [bookings])
 
-  const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings as any), [mappedBookings])
-  const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings as any), [mappedBookings])
-  const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings as any), [mappedBookings])
-  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(mappedBookings as any), [mappedBookings])
-  const peakHoursData = useMemo(() => getPeakHoursData(mappedBookings as any), [mappedBookings])
+  const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings), [mappedBookings])
+  const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings), [mappedBookings])
+  const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings), [mappedBookings])
+  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(mappedBookings), [mappedBookings])
+  const peakHoursData = useMemo(() => getPeakHoursData(mappedBookings), [mappedBookings])
   const customerMetrics = useMemo(
-    () => calculateCustomerMetrics(customers, mappedBookings as any),
-    [customers, mappedBookings]
+    () => calculateCustomerMetrics(customersWithBookings, mappedBookings),
+    [customersWithBookings, mappedBookings]
   )
-  const topCustomers = useMemo(() => getTopCustomers(customersWithBookings as any, 10), [customersWithBookings])
-  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings as any), [staff, mappedBookings])
-  const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings as any), [staffWithBookings])
+  const topCustomers = useMemo(() => getTopCustomers(customersWithBookings, 10), [customersWithBookings])
+  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings), [staff, mappedBookings])
+  const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings), [staffWithBookings])
 
   const serviceTypePieData = useMemo(
     () => [
@@ -631,7 +631,6 @@ export function AdminReports() {
         <TabsContent value="customers" className="space-y-6">
           <CustomersTab
             customerMetrics={customerMetrics}
-            customers={customers}
             customersWithBookings={customersWithBookings}
             topCustomers={topCustomers}
             dateRange={dateRange}

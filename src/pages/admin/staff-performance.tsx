@@ -1,5 +1,4 @@
-import type { Booking, CustomerRecord } from '@/types'
-import type { Customer } from '@/types'
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -121,7 +120,7 @@ export function AdminStaffPerformance() {
           total_price,
           payment_status,
           created_at,
-          service_packages (name, price),
+          service_packages (name, price, service_type),
           customers (full_name)
         `)
         .eq('staff_id', id)
@@ -129,7 +128,7 @@ export function AdminStaffPerformance() {
 
       if (error) throw error
 
-      interface BookingRaw {
+      interface BookingRawFromDB {
         id: string
         booking_date: string
         start_time: string
@@ -138,20 +137,31 @@ export function AdminStaffPerformance() {
         total_price: number
         payment_status: string
         created_at: string
-        service_packages: { name: string; price: number } | { name: string; price: number }[] | null
-        customers: CustomerRecord | Customer[] | null
+        service_packages: { name: string; price?: number; service_type?: string }[] | { name: string; price?: number; service_type?: string } | null
+        customers: { full_name: string }[] | { full_name: string } | null
       }
 
-      const transformedData = ((data || []) as any[]).map((booking: BookingRaw): Booking => {
+      const transformedData = (data || []).map((booking: BookingRawFromDB): Booking => {
         const pkg = Array.isArray(booking.service_packages)
           ? booking.service_packages[0]
           : booking.service_packages
+
+        const customerData = Array.isArray(booking.customers)
+          ? booking.customers[0] || null
+          : booking.customers
+
         return {
           ...booking,
-          service_packages: pkg ? { name: pkg.name, service_type: 'general' } : null,
-          customers: Array.isArray(booking.customers)
-            ? booking.customers[0] || null
-            : booking.customers,
+          service_packages: pkg ? {
+            name: pkg.name,
+            service_type: pkg.service_type || 'general'
+          } : null,
+          customers: customerData ? {
+            id: '',
+            full_name: customerData.full_name,
+            email: '',
+            phone: null
+          } : null,
         } as Booking
       })
 

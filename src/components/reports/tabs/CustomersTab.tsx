@@ -10,10 +10,8 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
-import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset } from '@/lib/analytics'
+import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset, type CustomerWithBookings } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
-import type { CustomerWithBookings } from '@/types/reports'
-import type { CustomerRecord } from '@/types'
 import {
   LineChart,
   Line,
@@ -50,7 +48,6 @@ interface TopCustomer {
 
 interface CustomersTabProps {
   customerMetrics: CustomerMetrics
-  customers: CustomerRecord[]
   customersWithBookings: CustomerWithBookings[]
   topCustomers: TopCustomer[]
   dateRange: string
@@ -59,7 +56,6 @@ interface CustomersTabProps {
 // OPTIMIZED: Memoize tab component
 function CustomersTabComponent({
   customerMetrics,
-  customers,
   customersWithBookings,
   topCustomers,
   dateRange,
@@ -118,7 +114,7 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={getCustomerAcquisitionTrend(
-                  customers,
+                  customersWithBookings,
                   getDateRangePreset(dateRange).start,
                   getDateRangePreset(dateRange).end
                 )}
@@ -162,7 +158,7 @@ function CustomersTabComponent({
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getCustomerCLVDistribution(customersWithBookings as any)}>
+              <BarChart data={getCustomerCLVDistribution(customersWithBookings)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="range"
@@ -204,7 +200,7 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={getCustomerSegmentation(customersWithBookings as any)}
+                  data={getCustomerSegmentation(customersWithBookings)}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -216,7 +212,7 @@ function CustomersTabComponent({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {getCustomerSegmentation(customersWithBookings as any).map((entry, index) => (
+                  {getCustomerSegmentation(customersWithBookings).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -224,7 +220,7 @@ function CustomersTabComponent({
               </PieChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-1 gap-2 mt-4">
-              {getCustomerSegmentation(customersWithBookings as any).map((item, index) => (
+              {getCustomerSegmentation(customersWithBookings).map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
@@ -252,7 +248,7 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={getRepeatCustomerRateTrend(
-                  customersWithBookings as any,
+                  customersWithBookings,
                   getDateRangePreset(dateRange).start,
                   getDateRangePreset(dateRange).end
                 )}
