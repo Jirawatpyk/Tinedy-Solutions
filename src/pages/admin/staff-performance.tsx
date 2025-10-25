@@ -386,16 +386,24 @@ export function AdminStaffPerformance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="bookings" fill="#4F46E5" name="Bookings" />
-              </BarChart>
-            </ResponsiveContainer>
+            {monthlyData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <Activity className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No booking data available</p>
+                <p className="text-sm text-muted-foreground mt-1">Data will appear here once bookings are created</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="bookings" fill="#4F46E5" name="Bookings" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -408,22 +416,30 @@ export function AdminStaffPerformance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  name="Revenue (฿)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {monthlyData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <TrendingUp className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No revenue data available</p>
+                <p className="text-sm text-muted-foreground mt-1">Revenue trends will appear here once payments are received</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    name="Revenue (฿)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
