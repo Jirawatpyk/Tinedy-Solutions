@@ -185,18 +185,23 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {member.membership_id && (
-                      <Switch
-                        checked={member.is_active !== false}
-                        onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
-                        className="scale-75"
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={member.is_active !== false}
+                          onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
+                          className="scale-75"
+                        />
+                      </div>
                     )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onRemoveMember(team.id, member.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onRemoveMember(team.id, member.id)
+                      }}
                       className="h-8 w-8 p-0"
                     >
                       <Trash2 className="h-3 w-3 text-destructive" />
