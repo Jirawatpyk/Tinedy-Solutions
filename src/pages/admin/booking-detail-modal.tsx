@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star, Copy, Link2, Check } from 'lucide-react'
+import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star, Copy, Link2, Check, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -39,6 +39,7 @@ interface Booking {
   notes: string | null
   payment_status?: string
   payment_method?: string
+  payment_slip_url?: string | null
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
@@ -515,6 +516,45 @@ export function BookingDetailModal({
               </div>
             )}
           </div>
+
+          {/* Payment Slip - Show if uploaded */}
+          {booking.payment_slip_url && (
+            <div className="space-y-3 border-b pb-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-tinedy-blue" />
+                Payment Slip
+              </h3>
+              <div className="space-y-3">
+                <div className="relative border rounded-lg overflow-hidden bg-gray-50">
+                  <img
+                    src={booking.payment_slip_url}
+                    alt="Payment slip"
+                    className="w-full h-auto max-h-96 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="%239ca3af"%3EImage not available%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="flex-1"
+                  >
+                    <a
+                      href={booking.payment_slip_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Full Size
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Payment Link - Show only if unpaid */}
           {booking.payment_status !== 'paid' && (
