@@ -1008,7 +1008,10 @@ export function AdminCalendar() {
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2">
                         <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{booking.customers?.full_name || 'N/A'}</span>
+                        <span>
+                          {booking.customers?.full_name || 'N/A'}
+                          <span className="ml-2 text-xs font-mono text-muted-foreground">#{booking.id.slice(0, 8)}</span>
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
