@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -29,9 +30,24 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const itemsPerPage = 5
 
   const loadRecentBookings = useCallback(async () => {
     try {
+      // Get total count
+      const { count } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+
+      setTotalCount(count || 0)
+
+      // Get paginated data
+      const from = (currentPage - 1) * itemsPerPage
+      const to = from + itemsPerPage - 1
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -45,7 +61,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
         `)
         .eq('team_id', teamId)
         .order('booking_date', { ascending: false })
-        .limit(10)
+        .range(from, to)
 
       if (error) throw error
       setBookings(data as unknown as Booking[] || [])
@@ -54,7 +70,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     } finally {
       setLoading(false)
     }
-  }, [teamId])
+  }, [teamId, currentPage])
 
   useEffect(() => {
     loadRecentBookings()
@@ -77,6 +93,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     )
   }
 
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+
   if (loading) {
     return (
       <Card>
@@ -97,10 +115,35 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-tinedy-blue" />
-          <CardTitle>Recent Bookings</CardTitle>
-          <Badge variant="secondary">{bookings.length}</Badge>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-tinedy-blue" />
+            <CardTitle>Recent Bookings</CardTitle>
+            <Badge variant="secondary">{totalCount}</Badge>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
