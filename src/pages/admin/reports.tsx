@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SimpleTabs as Tabs, SimpleTabsContent as TabsContent, SimpleTabsList as TabsList, SimpleTabsTrigger as TabsTrigger } from '@/components/ui/simple-tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -583,7 +583,7 @@ export function AdminReports() {
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs key={activeTab} defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs defaultValue="revenue" onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="revenue" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />

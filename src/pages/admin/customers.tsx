@@ -18,11 +18,12 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
-import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
+import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
+import { DeleteButton } from '@/components/common/DeleteButton'
 import {
   Select,
   SelectContent,
@@ -202,8 +203,6 @@ export function AdminCustomers() {
   }
 
   const deleteCustomer = async (customerId: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return
-
     try {
       const { error } = await supabase
         .from('customers')
@@ -825,17 +824,11 @@ export function AdminCustomers() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteCustomer(customer.id)
-                        }}
-                        className="h-8 w-8 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <DeleteButton
+                        itemName={customer.full_name}
+                        onDelete={() => deleteCustomer(customer.id)}
+                        className="h-8 w-8"
+                      />
                     </div>
                   </div>
                 </CardHeader>

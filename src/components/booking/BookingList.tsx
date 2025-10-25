@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User, Users, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
+import { User, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { DeleteButton } from '@/components/common/DeleteButton'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 
@@ -185,13 +186,10 @@ export function BookingList({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDeleteBooking(booking.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <DeleteButton
+                      itemName={`Booking #${booking.id.slice(0, 8)}`}
+                      onDelete={() => onDeleteBooking(booking.id)}
+                    />
                   </div>
                 </div>
               </div>

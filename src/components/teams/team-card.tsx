@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { Edit, Trash2, UserPlus, Users, Crown, Star } from 'lucide-react'
+import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface TeamMember {
   id: string
@@ -97,13 +98,10 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
             >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(team.id)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            <DeleteButton
+              itemName={team.name}
+              onDelete={() => onDelete(team.id)}
+            />
           </div>
         </div>
       </CardHeader>

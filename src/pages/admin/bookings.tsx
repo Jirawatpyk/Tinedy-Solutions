@@ -496,8 +496,6 @@ export function AdminBookings() {
 
 
   const deleteBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to delete this booking?')) return
-
     try {
       const { error } = await supabase
         .from('bookings')
@@ -511,10 +509,11 @@ export function AdminBookings() {
         description: 'Booking deleted successfully',
       })
       fetchBookings()
-    } catch {
+    } catch (error) {
+      console.error('Delete booking error:', error)
       toast({
         title: 'Error',
-        description: 'Failed to delete booking',
+        description: error instanceof Error ? error.message : 'Failed to delete booking',
         variant: 'destructive',
       })
     }

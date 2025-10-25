@@ -94,7 +94,7 @@ export function UserList({
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            เริ่มแชทใหม่
+            New Chat
           </Button>
 
           {/* Search */}
@@ -102,7 +102,7 @@ export function UserList({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="ค้นหาผู้ใช้..."
+              placeholder="Search users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -172,7 +172,7 @@ export function UserList({
                         <button
                           onClick={(e) => handleDeleteClick(conversation.user.id, e)}
                           className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-1"
-                          title="ลบแชท"
+                          title="Delete chat"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -204,18 +204,18 @@ export function UserList({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>ยืนยันการลบแชท</AlertDialogTitle>
+            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณแน่ใจหรือไม่ที่จะลบการสนทนานี้? การกระทำนี้ไม่สามารถย้อนกลับได้
+              Are you sure you want to delete this conversation? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-500 hover:bg-red-600"
             >
-              ลบแชท
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

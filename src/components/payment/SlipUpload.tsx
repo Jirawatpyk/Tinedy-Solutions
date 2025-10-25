@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { Upload, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { sendPaymentConfirmation, type BookingEmailData } from '@/lib/email'
 
 interface SlipUploadProps {
   bookingId: string
@@ -115,41 +114,8 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
 
       if (updateError) throw updateError
 
-      // Send payment confirmation email if auto-verified
-      if (autoVerify) {
-        // Fetch full booking data for email
-        const { data: booking } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            customers (full_name, email),
-            service_packages (name),
-            staff_profiles (full_name)
-          `)
-          .eq('id', bookingId)
-          .single()
-
-        if (booking) {
-          const emailData: BookingEmailData = {
-            bookingId: booking.id,
-            customerName: booking.customers?.name || 'Customer',
-            customerEmail: booking.customers?.email || '',
-            serviceName: booking.service_packages?.name || 'Service',
-            bookingDate: booking.booking_date,
-            startTime: booking.start_time,
-            endTime: booking.end_time,
-            totalPrice: Number(booking.total_price),
-            location: booking.location,
-            notes: booking.notes,
-            staffName: booking.staff_profiles?.full_name,
-          }
-
-          // Send email (non-blocking)
-          sendPaymentConfirmation(emailData).catch(err => {
-            console.error('Failed to send payment confirmation email:', err)
-          })
-        }
-      }
+      // Email will be sent automatically by database trigger
+      // when payment_status changes to 'paid'
 
       setUploaded(true)
 

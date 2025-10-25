@@ -342,8 +342,6 @@ export function AdminTeams() {
   }
 
   const handleDeleteTeam = async (teamId: string) => {
-    if (!confirm('Are you sure you want to delete this team?')) return
-
     try {
       const { error } = await supabase
         .from('teams')
