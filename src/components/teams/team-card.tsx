@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -49,6 +50,8 @@ const getInitials = (name: string) => {
 }
 
 export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
+  const navigate = useNavigate()
+
   // Memoize expensive calculations
   const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])
 
@@ -63,7 +66,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
   )
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/admin/teams/${team.id}`)}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -90,7 +93,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"

@@ -23,6 +23,7 @@ const AdminReports = lazy(() => import('./pages/admin/reports').then(m => ({ def
 const AdminCalendar = lazy(() => import('./pages/admin/calendar').then(m => ({ default: m.AdminCalendar })))
 const AdminChat = lazy(() => import('./pages/admin/chat').then(m => ({ default: m.AdminChat })))
 const AdminTeams = lazy(() => import('./pages/admin/teams').then(m => ({ default: m.AdminTeams })))
+const AdminTeamDetail = lazy(() => import('./pages/admin/team-detail').then(m => ({ default: m.AdminTeamDetail })))
 const AdminProfile = lazy(() => import('./pages/admin/profile'))
 const AdminSettings = lazy(() => import('./pages/admin/settings'))
 
@@ -82,6 +83,7 @@ function App() {
               <Route path="packages" element={<AdminServicePackages />} />
               <Route path="reports" element={<AdminReports />} />
               <Route path="teams" element={<AdminTeams />} />
+              <Route path="teams/:teamId" element={<AdminTeamDetail />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
