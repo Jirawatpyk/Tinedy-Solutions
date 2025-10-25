@@ -171,7 +171,7 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
             <div className="space-y-1 text-sm">
               <p><strong>Bank:</strong> ธนาคารกสิกรไทย (KBANK)</p>
               <p><strong>Account Name:</strong> Tinedy Solutions</p>
-              <p><strong>Account Number:</strong> 123-4-56789-0</p>
+              <p><strong>Account Number:</strong> 507-2-69043-7</p>
               <p><strong>Amount:</strong> {formatCurrency(amount)}</p>
             </div>
           </AlertDescription>

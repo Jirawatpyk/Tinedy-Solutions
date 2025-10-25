@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { generatePayload } from 'promptpay-qr'
-import QRCode from 'qrcode'
+import generatePayload from 'promptpay-qr'
+import * as QRCode from 'qrcode'
 
 interface PromptPayQRProps {
   amount: number
@@ -22,7 +22,7 @@ export function PromptPayQR({ amount }: PromptPayQRProps) {
       setError('')
 
       // ใส่ PromptPay ID ของคุณที่นี่ (เบอร์โทรหรือเลขบัตรประชาชน)
-      const promptPayId = '0812345678' // ⚠️ เปลี่ยนเป็นเบอร์จริง
+      const promptPayId = '0982694392' // ⚠️ เปลี่ยนเป็นเบอร์จริง
 
       // Generate PromptPay payload
       const payload = generatePayload(promptPayId, { amount })
