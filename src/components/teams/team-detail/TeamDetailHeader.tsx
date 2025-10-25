@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Edit, Crown, Calendar } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
@@ -42,13 +40,11 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-export function TeamDetailHeader({ team, onUpdate }: TeamDetailHeaderProps) {
+export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
-    setIsDeleting(true)
     try {
       const { error } = await supabase
         .from('teams')
@@ -70,8 +66,6 @@ export function TeamDetailHeader({ team, onUpdate }: TeamDetailHeaderProps) {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
-    } finally {
-      setIsDeleting(false)
     }
   }
 

@@ -48,7 +48,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
         .limit(10)
 
       if (error) throw error
-      setBookings(data || [])
+      setBookings(data as unknown as Booking[] || [])
     } catch (error) {
       console.error('Error loading recent bookings:', error)
     } finally {
