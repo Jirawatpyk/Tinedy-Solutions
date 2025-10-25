@@ -453,6 +453,9 @@ export function AdminStaffPerformance() {
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-4 flex-1">
+                      <div className="text-xs font-mono text-muted-foreground min-w-[90px]">
+                        #{booking.id.slice(0, 8)}
+                      </div>
                       <div className="text-sm">
                         <div className="font-medium text-tinedy-dark">
                           {booking.service_packages?.name || 'Service'}

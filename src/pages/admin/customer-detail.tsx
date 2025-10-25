@@ -1253,6 +1253,7 @@ export function AdminCustomerDetail() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Booking ID</TableHead>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Service</TableHead>
                     <TableHead>Staff/Team</TableHead>
@@ -1275,6 +1276,9 @@ export function AdminCustomerDetail() {
                           setIsBookingDetailModalOpen(true)
                         }}
                       >
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          #{booking.id.slice(0, 8)}
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div>{formatDate(booking.booking_date)}</div>
                           <div className="text-xs text-muted-foreground">
