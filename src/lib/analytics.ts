@@ -190,11 +190,19 @@ export const getRevenueByServiceType = (
   const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
 
   const cleaning = completedBookings
-    .filter((b) => b.service_packages?.service_type === 'cleaning')
+    .filter((b) => {
+      // Support both nested (service_packages.service_type) and flat (service_type) structures
+      const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
+      return serviceType === 'cleaning'
+    })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const training = completedBookings
-    .filter((b) => b.service_packages?.service_type === 'training')
+    .filter((b) => {
+      // Support both nested (service_packages.service_type) and flat (service_type) structures
+      const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
+      return serviceType === 'training'
+    })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   return { cleaning, training }
