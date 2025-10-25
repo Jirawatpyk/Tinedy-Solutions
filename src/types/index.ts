@@ -32,6 +32,10 @@ export * from './staff'
 // Team management types including records, members, relations, stats, and forms
 export * from './team'
 
+// Supabase Relations
+// Type definitions for Supabase queries with nested relations and helper utilities
+export * from './supabase-relations'
+
 // Common Types
 // Shared types, utilities, and common definitions used across the application
 export * from './common'
