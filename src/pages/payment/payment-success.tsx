@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CheckCircle2, Calendar, Clock, MapPin, Home } from 'lucide-react'
+import { CheckCircle2, Calendar, Clock, MapPin, X } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface Booking {
@@ -224,11 +224,13 @@ export function PaymentSuccessPage() {
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <Button asChild className="flex-1">
-                  <Link to="/">
-                    <Home className="h-4 w-4 mr-2" />
-                    Back to Home
-                  </Link>
+                <Button
+                  onClick={() => window.close()}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Close Window
                 </Button>
               </div>
 
