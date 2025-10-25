@@ -536,6 +536,7 @@ export interface StaffMetrics {
 export interface StaffPerformance {
   id: string
   name: string
+  email: string
   totalJobs: number
   completedJobs: number
   revenue: number
@@ -598,6 +599,7 @@ export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPer
     return {
       id: staff.id,
       name: staff.full_name,
+      email: staff.email,
       totalJobs,
       completedJobs,
       revenue,
