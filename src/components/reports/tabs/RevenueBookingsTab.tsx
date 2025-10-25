@@ -232,7 +232,7 @@ export function RevenueBookingsTab({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={statusBreakdown}
+                  data={statusBreakdown as unknown as Record<string, unknown>[]}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
