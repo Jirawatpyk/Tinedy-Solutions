@@ -195,11 +195,13 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                         />
                       </div>
                     )}
-                    <DeleteButton
-                      itemName={member.full_name}
-                      onDelete={() => onRemoveMember(team.id, member.id)}
-                      size="sm"
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DeleteButton
+                        itemName={member.full_name}
+                        onDelete={() => onRemoveMember(team.id, member.id)}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
               ))
