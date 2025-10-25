@@ -103,11 +103,19 @@ export function PaymentSuccessPage() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {isPaid ? 'Payment Confirmed!' : 'Payment Submitted!'}
               </h1>
-              <p className="text-muted-foreground">
-                {isPaid
-                  ? `Thank you, ${booking.customers?.full_name}! Your payment has been received and your booking is confirmed.`
-                  : `Thank you, ${booking.customers?.full_name}! Your payment slip has been submitted. We will verify it within 24 hours.`}
-              </p>
+              <div className="text-muted-foreground">
+                {isPaid ? (
+                  <>
+                    <p className="mb-1">Thank you, {booking.customers?.full_name}!</p>
+                    <p>Your payment has been received and your booking is confirmed.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-1">Thank you, {booking.customers?.full_name}!</p>
+                    <p>Your payment slip has been submitted. We will verify it within 24 hours.</p>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Booking Details */}
