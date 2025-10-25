@@ -27,8 +27,6 @@ import type { ServicePackage } from '@/types'
 import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, type PaymentEmailData } from '@/lib/email'
 
-type Customer = CustomerRecord
-
 interface StaffMember {
   id: string
   full_name: string

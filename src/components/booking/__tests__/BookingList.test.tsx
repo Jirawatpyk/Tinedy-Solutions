@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingList } from '../BookingList'
 import type { Booking } from '@/types/booking'
-import React from 'react'
+// import React from 'react' // Unused
 
 describe('BookingList', () => {
   const mockOnToggleSelect = vi.fn()

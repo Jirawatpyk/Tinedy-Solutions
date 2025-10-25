@@ -6,14 +6,18 @@ import { BookingCreateModal } from '../BookingCreateModal'
 import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage, createMockCustomer } from '@/test/factories'
 import type { ServicePackage } from '@/types'
-import React from 'react'
+// import React from 'react' // Unused
 
 // Mock modules
 vi.mock('@/lib/supabase')
 
 const mockToast = vi.fn()
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+  useToast: () => ({
+    toast: mockToast,
+    dismiss: vi.fn(),
+    toasts: [],
+  }),
 }))
 
 vi.mock('@/lib/email', () => ({
@@ -88,9 +92,13 @@ describe('BookingCreateModal', () => {
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),

@@ -13,6 +13,7 @@ import { MetricCard } from '@/components/reports/MetricCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
 import type { Customer, CustomerWithBookings } from '@/types/reports'
+import type { CustomerRecord } from '@/types'
 import {
   LineChart,
   Line,
@@ -49,7 +50,7 @@ interface TopCustomer {
 
 interface CustomersTabProps {
   customerMetrics: CustomerMetrics
-  customers: Customer[]
+  customers: CustomerRecord[]
   customersWithBookings: CustomerWithBookings[]
   topCustomers: TopCustomer[]
   dateRange: string

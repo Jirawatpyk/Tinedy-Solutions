@@ -7,14 +7,18 @@ import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage } from '@/test/factories'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
-import React from 'react'
+// import React from 'react' // Unused
 
 // Mock modules
 vi.mock('@/lib/supabase')
 
 const mockToast = vi.fn()
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+  useToast: () => ({
+    toast: mockToast,
+    dismiss: vi.fn(),
+    toasts: [],
+  }),
 }))
 
 const mockCheckConflicts = vi.fn()
@@ -132,22 +136,29 @@ describe('BookingEditModal', () => {
 
     // Setup default Supabase mock that works for all tests
     const supabaseMock = await import('@/lib/supabase')
-    const defaultMockQuery = {
+
+    // Create a comprehensive default mock query builder
+    const createDefaultMockQuery = () => ({
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
-    }
+    })
 
-    vi.mocked(supabaseMock.supabase.from).mockReturnValue(defaultMockQuery as any)
+    // Mock supabase.from to return a new mock query for each call
+    vi.mocked(supabaseMock.supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
 
     mockCheckConflicts.mockResolvedValue([]) // No conflicts by default
     vi.clearAllMocks()

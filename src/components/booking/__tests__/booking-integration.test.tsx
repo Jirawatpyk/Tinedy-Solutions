@@ -18,6 +18,8 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
+    dismiss: vi.fn(),
+    toasts: [],
   }),
 }))
 
@@ -100,7 +102,6 @@ describe('Booking Integration Tests', () => {
 
   const mockEditBooking: Booking = {
     id: 'booking-1',
-    customer_id: 'customer-1',
     service_package_id: 'service-1',
     booking_date: '2025-02-15',
     start_time: '10:00:00',
@@ -108,7 +109,7 @@ describe('Booking Integration Tests', () => {
     total_price: 2000,
     status: 'pending',
     payment_status: 'unpaid',
-    payment_method: null,
+    payment_method: undefined,
     staff_id: 'staff-1',
     team_id: null,
     address: '123 Main St',
@@ -116,8 +117,19 @@ describe('Booking Integration Tests', () => {
     state: 'Bangkok',
     zip_code: '10110',
     notes: null,
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
+    customers: {
+      id: 'customer-1',
+      full_name: 'John Doe',
+      email: 'john@test.com',
+    },
+    service_packages: {
+      name: 'Deep Cleaning',
+      service_type: 'cleaning',
+    },
+    profiles: {
+      full_name: 'Jane Staff',
+    },
+    teams: null,
   }
 
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -132,23 +144,28 @@ describe('Booking Integration Tests', () => {
     vi.clearAllMocks()
     mockBookingForm.reset()
 
-    // Setup default Supabase mock with all chainable methods
-    const defaultMockQuery = {
+    // Create a comprehensive default mock query builder
+    const createDefaultMockQuery = () => ({
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
-    }
+    })
 
-    vi.mocked(supabase.from).mockReturnValue(defaultMockQuery as any)
+    // Mock supabase.from to return a new mock query for each call
+    vi.mocked(supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
   })
 
   describe('Booking Creation Flow', () => {

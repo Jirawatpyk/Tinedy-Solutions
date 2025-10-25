@@ -298,7 +298,7 @@ export interface TopCustomer {
 export const calculateCustomerMetrics = (
   customers: CustomerRecord[],
   bookings: Booking[]
-): CustomerRecordMetrics => {
+): CustomerMetrics => {
   const now = new Date()
   const thisMonthStart = startOfMonth(now)
   const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
@@ -342,7 +342,7 @@ export const calculateCustomerMetrics = (
  * Get top customers by revenue
  */
 export const getTopCustomers = (
-  customers: CustomerRecordWithBookings[],
+  customers: CustomerWithBookings[],
   limit: number = 10
 ): TopCustomer[] => {
   const customerStats = customers.map((customer) => {
@@ -364,7 +364,7 @@ export const getTopCustomers = (
   })
 
   return customerStats
-    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
     .slice(0, limit)
 }
 
@@ -398,7 +398,7 @@ export const getCustomerAcquisitionTrend = (
  * Get customer lifetime value distribution
  */
 export const getCustomerCLVDistribution = (
-  customers: CustomerRecordWithBookings[]
+  customers: CustomerWithBookings[]
 ): { range: string; count: number }[] => {
   const ranges = [
     { min: 0, max: 500, label: '฿0-500' },
@@ -428,7 +428,7 @@ export const getCustomerCLVDistribution = (
  * Get customer segmentation by booking frequency
  */
 export const getCustomerSegmentation = (
-  customers: CustomerRecordWithBookings[]
+  customers: CustomerWithBookings[]
 ): { name: string; value: number; color: string }[] => {
   let newCustomers = 0
   let regular = 0
@@ -457,7 +457,7 @@ export const getCustomerSegmentation = (
  * Get repeat customer rate trend (monthly)
  */
 export const getRepeatCustomerRateTrend = (
-  customers: CustomerRecordWithBookings[],
+  customers: CustomerWithBookings[],
   startDate: Date,
   endDate: Date
 ): { date: string; rate: number }[] => {
