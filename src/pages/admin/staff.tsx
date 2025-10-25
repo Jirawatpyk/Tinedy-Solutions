@@ -207,12 +207,27 @@ export function AdminStaff() {
 
         if (error) {
           console.error('Edge Function Error:', error)
-          throw new Error(`Edge Function Error: ${error.message || JSON.stringify(error)}`)
+
+          // Check for duplicate email error
+          if (error.message?.includes('User already registered') ||
+              error.message?.includes('already exists') ||
+              error.message?.includes('duplicate')) {
+            throw new Error('This email is already registered. Please use a different email.')
+          }
+
+          throw new Error(error.message || 'Failed to create staff member. Please try again.')
         }
 
         if (!data?.success) {
           console.error('Edge Function returned failure:', data)
-          throw new Error(data?.error || 'Failed to create staff')
+
+          // Check for specific error messages from the edge function
+          const errorMsg = data?.error || ''
+          if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
+            throw new Error('This email is already registered. Please use a different email.')
+          }
+
+          throw new Error(errorMsg || 'Failed to create staff member. Please try again.')
         }
 
         toast({
