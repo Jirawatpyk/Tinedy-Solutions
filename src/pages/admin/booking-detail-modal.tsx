@@ -483,7 +483,7 @@ export function BookingDetailModal({
               <div>
                 <Label className="text-muted-foreground">Amount Paid</Label>
                 <p className="font-semibold text-green-600 text-lg">
-                  {formatCurrency(Number(booking.amount_paid || 0))}
+                  {formatCurrency(Number(booking.total_price || 0))}
                 </p>
               </div>
               {booking.payment_method && (
