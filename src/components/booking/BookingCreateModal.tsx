@@ -228,7 +228,7 @@ export function BookingCreateModal({
         })
         .select(`
           *,
-          customers (name, email),
+          customers (full_name, email),
           services:service_packages (name),
           profiles (full_name)
         `)
