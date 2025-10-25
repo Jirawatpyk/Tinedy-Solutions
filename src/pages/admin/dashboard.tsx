@@ -1099,8 +1099,11 @@ export function AdminDashboard() {
                       <p className="font-semibold text-tinedy-dark text-lg">
                         {formatCurrency(Number(booking.total_price))}
                       </p>
+                      <div className="mt-1 sm:hidden">
+                        {getPaymentStatusBadge(booking.payment_status)}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 items-center sm:items-end">
+                    <div className="hidden sm:flex sm:flex-col sm:gap-2 sm:items-end">
                       {getStatusBadge(booking.status)}
                       {getPaymentStatusBadge(booking.payment_status)}
                     </div>
