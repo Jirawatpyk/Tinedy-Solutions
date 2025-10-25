@@ -120,11 +120,11 @@ export function UserList({
         ) : (
           <div className="divide-y">
             {filteredConversations.map((conversation) => (
-              <button
+              <div
                 key={conversation.user.id}
                 onClick={() => onSelectUser(conversation.user.id)}
                 className={cn(
-                  'group w-full p-4 text-left hover:bg-accent/50 transition-colors',
+                  'group w-full p-4 text-left hover:bg-accent/50 transition-colors cursor-pointer',
                   selectedUserId === conversation.user.id && 'bg-accent'
                 )}
               >
@@ -193,7 +193,7 @@ export function UserList({
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
