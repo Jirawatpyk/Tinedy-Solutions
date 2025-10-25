@@ -397,7 +397,7 @@ export function AdminDashboard() {
       // 1. Top Service
       const serviceCount: Record<string, { name: string; count: number }> = {}
       allBookingsStatusRes.data?.forEach((booking: Record<string, unknown>) => {
-        const serviceName = booking.service_packages?.name
+        const serviceName = (booking.service_packages as { name?: string })?.name
         if (serviceName) {
           if (!serviceCount[serviceName]) {
             serviceCount[serviceName] = { name: serviceName, count: 0 }
@@ -414,7 +414,7 @@ export function AdminDashboard() {
       // Recalculate service count from full data
       const fullServiceCount: Record<string, { name: string; count: number }> = {}
       allBookingsWithServices?.forEach((booking: Record<string, unknown>) => {
-        const serviceName = booking.service_packages?.name
+        const serviceName = (booking.service_packages as { name?: string })?.name
         if (serviceName) {
           if (!fullServiceCount[serviceName]) {
             fullServiceCount[serviceName] = { name: serviceName, count: 0 }
