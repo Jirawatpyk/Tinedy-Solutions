@@ -103,7 +103,7 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
       const newPaymentStatus = autoVerify ? 'paid' : 'pending_verification'
 
       // Update booking with slip URL
-      const { data: booking, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('bookings')
         .update({
           payment_slip_url: publicUrl,
@@ -111,36 +111,43 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
           payment_method: 'bank_transfer',
         })
         .eq('id', bookingId)
-        .select(`
-          *,
-          customers (name, email),
-          services (name),
-          staff_profiles (full_name)
-        `)
-        .single()
 
       if (updateError) throw updateError
 
       // Send payment confirmation email if auto-verified
-      if (autoVerify && booking) {
-        const emailData: BookingEmailData = {
-          bookingId: booking.id,
-          customerName: booking.customers?.name || 'Customer',
-          customerEmail: booking.customers?.email || '',
-          serviceName: booking.services?.name || 'Service',
-          bookingDate: booking.booking_date,
-          startTime: booking.start_time,
-          endTime: booking.end_time,
-          totalPrice: Number(booking.total_price),
-          location: booking.location,
-          notes: booking.notes,
-          staffName: booking.staff_profiles?.full_name,
-        }
+      if (autoVerify) {
+        // Fetch full booking data for email
+        const { data: booking } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            customers (name, email),
+            service_packages (name),
+            staff_profiles (full_name)
+          `)
+          .eq('id', bookingId)
+          .single()
 
-        // Send email (non-blocking)
-        sendPaymentConfirmation(emailData).catch(err => {
-          console.error('Failed to send payment confirmation email:', err)
-        })
+        if (booking) {
+          const emailData: BookingEmailData = {
+            bookingId: booking.id,
+            customerName: booking.customers?.name || 'Customer',
+            customerEmail: booking.customers?.email || '',
+            serviceName: booking.service_packages?.name || 'Service',
+            bookingDate: booking.booking_date,
+            startTime: booking.start_time,
+            endTime: booking.end_time,
+            totalPrice: Number(booking.total_price),
+            location: booking.location,
+            notes: booking.notes,
+            staffName: booking.staff_profiles?.full_name,
+          }
+
+          // Send email (non-blocking)
+          sendPaymentConfirmation(emailData).catch(err => {
+            console.error('Failed to send payment confirmation email:', err)
+          })
+        }
       }
 
       setUploaded(true)
