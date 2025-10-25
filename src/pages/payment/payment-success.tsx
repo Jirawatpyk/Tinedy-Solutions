@@ -174,7 +174,7 @@ export function PaymentSuccessPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Amount Paid</span>
                     <span className="text-2xl font-bold text-green-600">
-                      {formatCurrency(booking.total_price)}
+                      {formatCurrency(Number(booking.total_price) || 0)}
                     </span>
                   </div>
 

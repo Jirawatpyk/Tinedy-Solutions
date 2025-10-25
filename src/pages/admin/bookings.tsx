@@ -229,6 +229,31 @@ export function AdminBookings() {
     ])
   }, [fetchBookings])
 
+  // Real-time subscription for auto-refresh when bookings change
+  useEffect(() => {
+    const channel = supabase
+      .channel('bookings_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('Booking changed:', payload)
+          // Refresh bookings list automatically
+          fetchBookings()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchBookings])
+
   useEffect(() => {
     filterBookings()
   }, [filterBookings])
