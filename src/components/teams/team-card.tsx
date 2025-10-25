@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { Edit, UserPlus, Users, Crown, Star } from 'lucide-react'
+import { Edit, UserPlus, Users, Crown, Star, ArrowRight } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface TeamMember {
@@ -66,7 +66,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
   )
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/admin/teams/${team.id}`)}>
+    <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -93,7 +93,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
               </div>
             </div>
           </div>
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -143,10 +143,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
             <Button
               variant="outline"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAddMember(team)
-              }}
+              onClick={() => onAddMember(team)}
               className="h-8"
             >
               <UserPlus className="h-3 w-3 mr-1" />
@@ -187,21 +184,17 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {member.membership_id && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Switch
-                          checked={member.is_active !== false}
-                          onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
-                          className="scale-75"
-                        />
-                      </div>
-                    )}
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DeleteButton
-                        itemName={member.full_name}
-                        onDelete={() => onRemoveMember(team.id, member.id)}
-                        size="sm"
+                      <Switch
+                        checked={member.is_active !== false}
+                        onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
+                        className="scale-75"
                       />
-                    </div>
+                    )}
+                    <DeleteButton
+                      itemName={member.full_name}
+                      onDelete={() => onRemoveMember(team.id, member.id)}
+                      size="sm"
+                    />
                   </div>
                 </div>
               ))
@@ -217,6 +210,18 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
               </p>
             )}
           </div>
+        </div>
+
+        {/* View Details Button */}
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate(`/admin/teams/${team.id}`)}
+          >
+            View Details
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       </CardContent>
     </Card>
