@@ -17,6 +17,7 @@ import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatTime } from '@/lib/booking-utils'
+import { formatCurrency } from '@/lib/utils'
 import type { ServicePackage } from '@/types'
 import {
   ChevronLeft,
@@ -705,7 +706,7 @@ export function AdminCalendar() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${monthStats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(monthStats.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">Paid bookings</p>
           </CardContent>
         </Card>
