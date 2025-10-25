@@ -57,6 +57,7 @@ export function useChat() {
           message,
           is_read,
           created_at,
+          attachments,
           sender:profiles!sender_id(id, full_name, email, role, avatar_url),
           recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
         `)
