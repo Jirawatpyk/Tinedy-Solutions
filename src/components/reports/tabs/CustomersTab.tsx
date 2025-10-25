@@ -8,6 +8,7 @@ import {
   Mail,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { MetricCard } from '@/components/reports/MetricCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
 import type { Customer, CustomerWithBookings } from '@/types/reports'
@@ -64,67 +65,40 @@ export function CustomersTab({
     <div className="space-y-6">
       {/* Customer Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Customers
-            </CardTitle>
-            <Users className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {customerMetrics.total}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Total Customers"
+          value={customerMetrics.total}
+          icon={Users}
+          iconClassName="h-4 w-4 text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              New This Month
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {customerMetrics.newThisMonth}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="New This Month"
+          value={customerMetrics.newThisMonth}
+          icon={UserCheck}
+          iconClassName="h-4 w-4 text-green-500"
+          valueClassName="text-2xl font-bold text-green-600"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Returning Customers
-            </CardTitle>
-            <Repeat className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {customerMetrics.returning}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {customerMetrics.retentionRate.toFixed(1)}% retention rate
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Returning Customers"
+          value={customerMetrics.returning}
+          icon={Repeat}
+          iconClassName="h-4 w-4 text-purple-500"
+          valueClassName="text-2xl font-bold text-purple-600"
+          subtitle={`${customerMetrics.retentionRate.toFixed(1)}% retention rate`}
+        />
 
-        <Card className="sm:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Customer Lifetime Value
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(customerMetrics.averageCLV)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Revenue per customer
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Avg Customer Lifetime Value"
+          value={formatCurrency(customerMetrics.averageCLV)}
+          icon={DollarSign}
+          iconClassName="h-4 w-4 text-tinedy-yellow"
+          subtitle="Revenue per customer"
+          className="sm:col-span-2"
+        />
       </div>
 
       {/* Customer Analytics Charts Row 1 */}

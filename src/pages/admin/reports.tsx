@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
@@ -393,6 +393,58 @@ export function AdminReports() {
     updateChartData()
   }, [updateChartData])
 
+  // Calculate all useMemo values BEFORE any conditional returns (Rules of Hooks)
+  const mappedBookings = useMemo(
+    () => bookings.map((b) => ({
+      id: b.id,
+      booking_date: b.booking_date,
+      start_time: b.start_time,
+      total_price: b.total_price,
+      status: b.status,
+      created_at: b.created_at,
+      staff_id: b.staff_id,
+      service_type: b.service_packages?.service_type,
+    })),
+    [bookings]
+  )
+
+  // Calculate top service packages by booking count
+  const topPackages = useMemo(() => {
+    const packageCounts = bookings.reduce((acc, booking) => {
+      const packageName = booking.service_packages?.name
+      if (packageName) {
+        acc[packageName] = (acc[packageName] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(packageCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+  }, [bookings])
+
+  const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings), [mappedBookings])
+  const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings), [mappedBookings])
+  const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings), [mappedBookings])
+  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(mappedBookings), [mappedBookings])
+  const peakHoursData = useMemo(() => getPeakHoursData(mappedBookings), [mappedBookings])
+  const customerMetrics = useMemo(
+    () => calculateCustomerMetrics(customers, mappedBookings),
+    [customers, mappedBookings]
+  )
+  const topCustomers = useMemo(() => getTopCustomers(customersWithBookings, 10), [customersWithBookings])
+  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings), [staff, mappedBookings])
+  const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings), [staffWithBookings])
+
+  const serviceTypePieData = useMemo(
+    () => [
+      { name: 'Cleaning', value: serviceTypeRevenue.cleaning, color: '#2e4057' },
+      { name: 'Training', value: serviceTypeRevenue.training, color: '#8fb996' },
+    ].filter(item => item.value > 0),
+    [serviceTypeRevenue]
+  )
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -453,46 +505,6 @@ export function AdminReports() {
       </div>
     )
   }
-
-  const mappedBookings = bookings.map((b) => ({
-    id: b.id,
-    booking_date: b.booking_date,
-    start_time: b.start_time,
-    total_price: b.total_price,
-    status: b.status,
-    created_at: b.created_at,
-    staff_id: b.staff_id,
-    service_type: b.service_packages?.service_type,
-  }))
-
-  // Calculate top service packages by booking count
-  const packageCounts = bookings.reduce((acc, booking) => {
-    const packageName = booking.service_packages?.name
-    if (packageName) {
-      acc[packageName] = (acc[packageName] || 0) + 1
-    }
-    return acc
-  }, {} as Record<string, number>)
-
-  const topPackages = Object.entries(packageCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-
-  const revenueMetrics = calculateRevenueMetrics(mappedBookings)
-  const bookingMetrics = calculateBookingMetrics(mappedBookings)
-  const serviceTypeRevenue = getRevenueByServiceType(mappedBookings)
-  const statusBreakdown = getBookingStatusBreakdown(mappedBookings)
-  const peakHoursData = getPeakHoursData(mappedBookings)
-  const customerMetrics = calculateCustomerMetrics(customers, mappedBookings)
-  const topCustomers = getTopCustomers(customersWithBookings, 10)
-  const staffMetrics = calculateStaffMetrics(staff, mappedBookings)
-  const staffPerformance = getStaffPerformance(staffWithBookings)
-
-  const serviceTypePieData = [
-    { name: 'Cleaning', value: serviceTypeRevenue.cleaning, color: '#2e4057' },
-    { name: 'Training', value: serviceTypeRevenue.training, color: '#8fb996' },
-  ].filter(item => item.value > 0)
 
   return (
     <div className="space-y-6">

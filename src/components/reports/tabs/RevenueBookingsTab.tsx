@@ -2,14 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BarChart3,
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   Calendar,
   ShoppingCart,
   Package,
+  TrendingUp,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { formatGrowth } from '@/lib/analytics'
+import { MetricCard } from '@/components/reports/MetricCard'
 import type { ChartDataPoint } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
 import {
@@ -94,95 +93,47 @@ export function RevenueBookingsTab({
     <div className="space-y-6">
       {/* Revenue Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(revenueMetrics.total)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">All time</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Total Revenue"
+          value={formatCurrency(revenueMetrics.total)}
+          icon={DollarSign}
+          iconClassName="h-4 w-4 text-tinedy-yellow"
+          subtitle="All time"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              This Month
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(revenueMetrics.thisMonth)}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              {revenueMetrics.monthGrowth >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-500" />
-              )}
-              <p
-                className={`text-xs font-medium ${
-                  revenueMetrics.monthGrowth >= 0 ? 'text-green-500' : 'text-red-500'
-                }`}
-              >
-                {formatGrowth(revenueMetrics.monthGrowth)}
-              </p>
-              <p className="text-xs text-muted-foreground">vs last month</p>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="trend"
+          title="This Month"
+          value={formatCurrency(revenueMetrics.thisMonth)}
+          icon={Calendar}
+          iconClassName="h-4 w-4 text-tinedy-blue"
+          trend={{
+            value: revenueMetrics.monthGrowth,
+            comparisonText: 'vs last month',
+          }}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              This Week
-            </CardTitle>
-            <BarChart3 className="h-4 w-4 text-tinedy-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(revenueMetrics.thisWeek)}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              {revenueMetrics.weekGrowth >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-500" />
-              )}
-              <p
-                className={`text-xs font-medium ${
-                  revenueMetrics.weekGrowth >= 0 ? 'text-green-500' : 'text-red-500'
-                }`}
-              >
-                {formatGrowth(revenueMetrics.weekGrowth)}
-              </p>
-              <p className="text-xs text-muted-foreground">vs last week</p>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="trend"
+          title="This Week"
+          value={formatCurrency(revenueMetrics.thisWeek)}
+          icon={BarChart3}
+          iconClassName="h-4 w-4 text-tinedy-green"
+          trend={{
+            value: revenueMetrics.weekGrowth,
+            comparisonText: 'vs last week',
+          }}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Order Value
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(revenueMetrics.avgOrderValue)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Per booking
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Avg Order Value"
+          value={formatCurrency(revenueMetrics.avgOrderValue)}
+          icon={ShoppingCart}
+          iconClassName="h-4 w-4 text-purple-500"
+          subtitle="Per booking"
+        />
       </div>
 
       {/* Charts Row 1 */}
@@ -281,7 +232,7 @@ export function RevenueBookingsTab({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={statusBreakdown as any}
+                  data={statusBreakdown}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}

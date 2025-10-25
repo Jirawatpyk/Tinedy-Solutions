@@ -8,6 +8,7 @@ import {
   Award,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { MetricCard } from '@/components/reports/MetricCard'
 import { CHART_COLORS } from '@/types/reports'
 import {
   BarChart,
@@ -56,67 +57,39 @@ export function StaffTab({
     <div className="space-y-6">
       {/* Staff Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Staff
-            </CardTitle>
-            <Briefcase className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {staffMetrics.totalStaff}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Total Staff"
+          value={staffMetrics.totalStaff}
+          icon={Briefcase}
+          iconClassName="h-4 w-4 text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Staff
-            </CardTitle>
-            <Activity className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {staffMetrics.activeStaff}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              With assigned bookings
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Active Staff"
+          value={staffMetrics.activeStaff}
+          icon={Activity}
+          iconClassName="h-4 w-4 text-green-500"
+          valueClassName="text-2xl font-bold text-green-600"
+          subtitle="With assigned bookings"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Jobs/Staff
-            </CardTitle>
-            <Package className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {staffMetrics.averageJobsPerStaff.toFixed(1)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Completed jobs
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Avg Jobs/Staff"
+          value={staffMetrics.averageJobsPerStaff.toFixed(1)}
+          icon={Package}
+          iconClassName="h-4 w-4 text-purple-500"
+          valueClassName="text-2xl font-bold text-purple-600"
+          subtitle="Completed jobs"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Revenue/Staff
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(staffMetrics.averageRevenuePerStaff)}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Avg Revenue/Staff"
+          value={formatCurrency(staffMetrics.averageRevenuePerStaff)}
+          icon={DollarSign}
+          iconClassName="h-4 w-4 text-tinedy-yellow"
+        />
       </div>
 
       {/* Staff Charts Row */}

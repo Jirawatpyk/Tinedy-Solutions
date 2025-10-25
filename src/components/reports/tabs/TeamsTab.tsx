@@ -8,6 +8,7 @@ import {
   Award,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { MetricCard } from '@/components/reports/MetricCard'
 import { CHART_COLORS } from '@/types/reports'
 import type { TeamWithBookings } from '@/types/reports'
 import {
@@ -36,74 +37,46 @@ export function TeamsTab({
     <div className="space-y-6">
       {/* Team Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Teams
-            </CardTitle>
-            <BriefcaseBusiness className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {teamsWithBookings.length}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Total Teams"
+          value={teamsWithBookings.length}
+          icon={BriefcaseBusiness}
+          iconClassName="h-4 w-4 text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Teams
-            </CardTitle>
-            <Activity className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {teamsWithBookings.filter(t => t.bookings.length > 0).length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              With assigned jobs
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Active Teams"
+          value={teamsWithBookings.filter(t => t.bookings.length > 0).length}
+          icon={Activity}
+          iconClassName="h-4 w-4 text-green-500"
+          valueClassName="text-2xl font-bold text-green-600"
+          subtitle="With assigned jobs"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Team Jobs
-            </CardTitle>
-            <Package className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {teamsWithBookings.reduce((sum, team) => sum + team.bookings.length, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All team bookings
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          variant="subtitle"
+          title="Total Team Jobs"
+          value={teamsWithBookings.reduce((sum, team) => sum + team.bookings.length, 0)}
+          icon={Package}
+          iconClassName="h-4 w-4 text-purple-500"
+          valueClassName="text-2xl font-bold text-purple-600"
+          subtitle="All team bookings"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Team Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(
-                teamsWithBookings.reduce((sum, team) =>
-                  sum + team.bookings
-                    .filter(b => b.status === 'completed')
-                    .reduce((s, b) => s + Number(b.total_price), 0),
-                  0
-                )
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Team Revenue"
+          value={formatCurrency(
+            teamsWithBookings.reduce((sum, team) =>
+              sum + team.bookings
+                .filter(b => b.status === 'completed')
+                .reduce((s, b) => s + Number(b.total_price), 0),
+              0
+            )
+          )}
+          icon={DollarSign}
+          iconClassName="h-4 w-4 text-tinedy-yellow"
+        />
       </div>
 
       {/* Revenue by Team Chart */}
