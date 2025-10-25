@@ -86,27 +86,6 @@ import {
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 
-interface Customer {
-  id: string
-  full_name: string
-  email: string
-  phone: string
-  line_id: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-  relationship_level: 'new' | 'regular' | 'vip' | 'inactive'
-  preferred_contact_method: 'phone' | 'email' | 'line' | 'sms'
-  tags: string[] | null
-  source: string | null
-  birthday: string | null
-  company_name: string | null
-  tax_id: string | null
-  notes: string | null
-  created_at: string
-}
-
 interface CustomerStats {
   total_bookings: number
   lifetime_value: number

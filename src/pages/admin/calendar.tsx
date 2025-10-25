@@ -45,45 +45,6 @@ import {
   isToday,
 } from 'date-fns'
 
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  customer_id: string
-  staff_id: string | null
-  team_id: string | null
-  service_package_id: string
-  notes: string | null
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  customers: {
-    id: string
-    full_name: string
-    phone: string
-    email: string
-  } | null
-  profiles: {
-    full_name: string
-  } | null
-  teams: {
-    name: string
-  } | null
-  service_packages: {
-    name: string
-    service_type: string
-  } | null
-}
-
 interface Team {
   id: string
   name: string

@@ -1,3 +1,4 @@
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -6,29 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CheckCircle2, Calendar, Clock, MapPin, CheckCheck } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  total_price: number
-  payment_status?: string
-  payment_method?: string
-  payment_date?: string
-  address: string
-  city: string
-  state: string
-  customers: {
-    full_name: string
-    email: string
-    phone: string
-  } | null
-  service_packages: {
-    name: string
-    service_type: string
-  } | null
-}
 
 export function PaymentSuccessPage() {
   const { bookingId } = useParams<{ bookingId: string }>()

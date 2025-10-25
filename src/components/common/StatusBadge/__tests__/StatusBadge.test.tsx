@@ -177,7 +177,7 @@ describe('StatusBadge', () => {
   describe('Content Variations', () => {
     it('should render with empty string', () => {
       // Arrange & Act
-      render(<StatusBadge variant="default"></StatusBadge>)
+      render(<StatusBadge variant="default">{''}</StatusBadge>)
 
       // Assert
       // Component renders but is empty

@@ -1,3 +1,4 @@
+import type { Booking } from '@/types'
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -21,33 +22,6 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  staff_id: string | null
-  team_id: string | null
-  service_package_id: string
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  payment_slip_url?: string | null
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  customers: { id: string; full_name: string; email: string; phone?: string } | null
-  service_packages: { name: string; service_type: string } | null
-  profiles: { full_name: string } | null
-  teams: { name: string } | null
-}
 
 interface Review {
   id: string

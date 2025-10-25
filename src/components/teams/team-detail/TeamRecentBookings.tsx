@@ -1,3 +1,4 @@
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -7,20 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  status: string
-  total_price: number
-  customers: {
-    full_name: string
-  } | null
-  service_packages: {
-    name: string
-  } | null
-}
 
 interface TeamRecentBookingsProps {
   teamId: string

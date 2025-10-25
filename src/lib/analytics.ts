@@ -1,16 +1,5 @@
+import type { Customer } from '@/types'
 import { startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subMonths, subWeeks, subDays, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time?: string
-  total_price: number
-  status: string
-  service_type?: string
-  created_at: string
-  customer_id?: string
-  staff_id?: string | null
-}
 
 export interface RevenueMetrics {
   total: number
@@ -281,14 +270,6 @@ export const getPeakHoursData = (bookings: Booking[]) => {
 // ============================================================================
 // CUSTOMER ANALYTICS
 // ============================================================================
-
-interface Customer {
-  id: string
-  full_name: string
-  email: string
-  phone?: string
-  created_at: string
-}
 
 interface CustomerWithBookings extends Customer {
   bookings: Booking[]

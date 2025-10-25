@@ -26,17 +26,6 @@ import { getErrorMessage } from '@/lib/error-utils'
 import type { ServicePackage } from '@/types'
 import { sendBookingConfirmation, sendBookingReminder, type PaymentEmailData } from '@/lib/email'
 
-interface Customer {
-  id: string
-  full_name: string
-  email: string
-  phone: string
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-}
-
 interface StaffMember {
   id: string
   full_name: string

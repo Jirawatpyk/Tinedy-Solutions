@@ -1,3 +1,4 @@
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -9,29 +10,6 @@ import { PromptPayQR } from '@/components/payment/PromptPayQR'
 import { SlipUpload } from '@/components/payment/SlipUpload'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  total_price: number
-  payment_status?: string
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  customers: {
-    id: string
-    full_name: string
-    email: string
-    phone: string
-  } | null
-  service_packages: {
-    name: string
-    service_type: string
-  } | null
-}
 
 type PaymentMethod = 'promptpay' | 'slip' | null
 

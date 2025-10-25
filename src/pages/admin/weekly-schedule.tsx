@@ -20,7 +20,7 @@ import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { formatTime } from '@/lib/booking-utils'
 import { getErrorMessage } from '@/lib/error-utils'
-import type { ServicePackage } from '@/types'
+import type { ServicePackage , UserProfile } from '@/types'
 
 interface Staff {
   id: string
@@ -54,16 +54,6 @@ interface BookingFormData {
   status?: string
 }
 
-interface Customer {
-  id: string
-  full_name: string
-  email: string
-}
-
-interface Profile {
-  full_name: string
-}
-
 interface BookingRaw {
   id: string
   booking_date: string
@@ -86,34 +76,8 @@ interface BookingRaw {
   payment_notes?: string
   service_packages: ServicePackage[] | ServicePackage | null
   customers: Customer[] | Customer | null
-  profiles: Profile[] | Profile | null
+  profiles: UserProfile[] | UserProfile | null
   teams: { name: string }[] | { name: string } | null
-}
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  staff_id: string | null
-  team_id: string | null
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  service_package_id: string
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  service_packages: ServicePackage | null
-  customers: Customer | null
-  profiles: Profile | null
-  teams: { name: string } | null
 }
 
 const DAYS_OF_WEEK = [

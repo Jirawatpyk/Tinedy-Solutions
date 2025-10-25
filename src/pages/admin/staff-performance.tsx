@@ -1,3 +1,4 @@
+import type { Customer } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -36,23 +37,6 @@ interface Staff {
   role: string
   phone?: string
   avatar_url?: string
-}
-
-interface Customer {
-  full_name: string
-}
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  payment_status: string
-  created_at: string
-  service_packages: { name: string; price: number } | null
-  customers: Customer | null
 }
 
 interface Stats {

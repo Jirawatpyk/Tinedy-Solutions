@@ -23,7 +23,7 @@ export const createMockCustomer = (overrides: Partial<CustomerRecord> = {}): Cus
   id: faker.string.uuid(),
   full_name: faker.person.fullName(),
   email: faker.internet.email(),
-  phone: faker.phone.number('08########'),
+  phone: faker.helpers.fromRegExp(/08[0-9]{8}/),
   line_id: faker.datatype.boolean() ? faker.string.alphanumeric(10) : null,
   address: faker.location.streetAddress(),
   city: faker.location.city(),

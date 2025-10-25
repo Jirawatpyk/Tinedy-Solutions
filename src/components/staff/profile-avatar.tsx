@@ -1,3 +1,4 @@
+import type { UserProfile } from '@/types'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Camera, Upload, User } from 'lucide-react'
