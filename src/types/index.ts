@@ -24,6 +24,23 @@ export * from './service-package'
 // Real-time chat messaging types including messages, conversations, and profiles
 export * from './chat'
 
+// Staff Types
+// Staff management types including records, performance, availability, and forms
+export * from './staff'
+
+// Team Types
+// Team management types including records, members, relations, stats, and forms
+export * from './team'
+
+// Common Types
+// Shared types, utilities, and common definitions used across the application
+export * from './common'
+
+// Reports Types
+// Reporting and analytics type definitions
+export * from './reports'
+
 // Database Types
 // Supabase auto-generated database schema types
 export * from './database.types'
+

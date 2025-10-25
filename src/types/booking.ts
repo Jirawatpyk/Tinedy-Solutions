@@ -300,27 +300,3 @@ export interface BookingFilters {
   searchQuery: string
 }
 
-/**
- * Predefined date range options for quick filtering
- *
- * These preset options allow users to quickly filter bookings by common
- * time periods without manually selecting dates.
- *
- * @typedef {string} DateRangePreset
- *
- * @property {'today'} today - Current day only
- * @property {'yesterday'} yesterday - Previous day only
- * @property {'this-week'} this-week - Current week (Monday to Sunday)
- * @property {'last-week'} last-week - Previous week (Monday to Sunday)
- * @property {'this-month'} this-month - Current calendar month
- * @property {'last-month'} last-month - Previous calendar month
- * @property {'custom'} custom - User-defined custom date range
- */
-export type DateRangePreset =
-  | 'today'
-  | 'yesterday'
-  | 'this-week'
-  | 'last-week'
-  | 'this-month'
-  | 'last-month'
-  | 'custom'
