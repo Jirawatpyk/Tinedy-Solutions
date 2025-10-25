@@ -1,3 +1,8 @@
+---
+name: code-review-refactoring
+description: Review and refactor large React components to improve code quality and maintainability
+---
+
 # Code Review & Refactoring Skill
 
 ## Purpose

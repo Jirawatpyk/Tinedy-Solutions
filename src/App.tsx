@@ -32,6 +32,10 @@ const StaffCalendar = lazy(() => import('./pages/staff/calendar'))
 const StaffChat = lazy(() => import('./pages/staff/chat').then(m => ({ default: m.StaffChat })))
 const StaffProfile = lazy(() => import('./pages/staff/profile'))
 
+// Lazy load: Payment pages (public access)
+const PaymentPage = lazy(() => import('./pages/payment/payment').then(m => ({ default: m.PaymentPage })))
+const PaymentSuccessPage = lazy(() => import('./pages/payment/payment-success').then(m => ({ default: m.PaymentSuccessPage })))
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -52,6 +56,10 @@ function App() {
               <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Payment routes (public - no auth required) */}
+            <Route path="/payment/:bookingId" element={<PaymentPage />} />
+            <Route path="/payment/:bookingId/success" element={<PaymentSuccessPage />} />
 
             {/* Protected Admin routes */}
             <Route
