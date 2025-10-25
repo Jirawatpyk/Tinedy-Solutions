@@ -15,6 +15,9 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  Award,
+  Package,
+  Target,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -103,6 +106,12 @@ interface Team {
   name: string
 }
 
+interface MiniStats {
+  topService: { name: string; count: number } | null
+  avgBookingValue: number
+  completionRate: number
+}
+
 interface BookingFormData {
   customer_id?: string
   full_name?: string
@@ -139,6 +148,11 @@ export function AdminDashboard() {
   const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatus[]>([])
   const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([])
+  const [miniStats, setMiniStats] = useState<MiniStats>({
+    topService: null,
+    avgBookingValue: 0,
+    completionRate: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -158,6 +172,22 @@ export function AdminDashboard() {
   const [showChartLabels, setShowChartLabels] = useState(false)
 
   const { toast } = useToast()
+
+  // Memoize chart data calculations
+  const pieChartTotal = useMemo(() => {
+    return bookingsByStatus.reduce((sum, item) => sum + item.count, 0)
+  }, [bookingsByStatus])
+
+  const paginatedAppointments = useMemo(() => {
+    return todayBookings.slice(
+      (appointmentsPage - 1) * appointmentsPerPage,
+      appointmentsPage * appointmentsPerPage
+    )
+  }, [todayBookings, appointmentsPage, appointmentsPerPage])
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(todayBookings.length / appointmentsPerPage)
+  }, [todayBookings.length, appointmentsPerPage])
 
   useEffect(() => {
     // Run all data fetching in parallel for better performance
@@ -353,6 +383,59 @@ export function AdminDashboard() {
       }))
 
       setDailyRevenue(revenueArray)
+
+      // Calculate Mini Stats
+      // 1. Top Service
+      const serviceCount: Record<string, { name: string; count: number }> = {}
+      allBookingsStatusRes.data?.forEach((booking: { service_packages?: { name: string } | null }) => {
+        const serviceName = booking.service_packages?.name
+        if (serviceName) {
+          if (!serviceCount[serviceName]) {
+            serviceCount[serviceName] = { name: serviceName, count: 0 }
+          }
+          serviceCount[serviceName].count++
+        }
+      })
+
+      // Get all bookings with service packages for mini stats
+      const { data: allBookingsWithServices } = await supabase
+        .from('bookings')
+        .select('total_price, status, service_packages(name)')
+
+      // Recalculate service count from full data
+      const fullServiceCount: Record<string, { name: string; count: number }> = {}
+      allBookingsWithServices?.forEach((booking) => {
+        const serviceName = booking.service_packages?.name
+        if (serviceName) {
+          if (!fullServiceCount[serviceName]) {
+            fullServiceCount[serviceName] = { name: serviceName, count: 0 }
+          }
+          fullServiceCount[serviceName].count++
+        }
+      })
+
+      const topService = Object.values(fullServiceCount).sort((a, b) => b.count - a.count)[0] || null
+
+      // 2. Average Booking Value
+      const totalBookingValue = allBookingsWithServices?.reduce(
+        (sum, booking) => sum + Number(booking.total_price),
+        0
+      ) || 0
+      const avgBookingValue = allBookingsWithServices && allBookingsWithServices.length > 0
+        ? totalBookingValue / allBookingsWithServices.length
+        : 0
+
+      // 3. Completion Rate
+      const completedCount = allBookingsWithServices?.filter(b => b.status === 'completed').length || 0
+      const completionRate = allBookingsWithServices && allBookingsWithServices.length > 0
+        ? (completedCount / allBookingsWithServices.length) * 100
+        : 0
+
+      setMiniStats({
+        topService,
+        avgBookingValue,
+        completionRate,
+      })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -415,7 +498,7 @@ export function AdminDashboard() {
     return labels[status] || status
   }
 
-  const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
+  const handleStatusChange = useCallback(async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
 
     try {
@@ -443,9 +526,9 @@ export function AdminDashboard() {
         variant: 'destructive',
       })
     }
-  }
+  }, [selectedBooking, toast])
 
-  const deleteBooking = async (bookingId: string) => {
+  const deleteBooking = useCallback(async (bookingId: string) => {
     if (!confirm('Are you sure you want to delete this booking?')) return
 
     try {
@@ -469,9 +552,9 @@ export function AdminDashboard() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
 
-  const markAsPaid = async (bookingId: string, method: string = 'cash') => {
+  const markAsPaid = useCallback(async (bookingId: string, method: string = 'cash') => {
     try {
       const { error } = await supabase
         .from('bookings')
@@ -517,12 +600,12 @@ export function AdminDashboard() {
         variant: 'destructive',
       })
     }
-  }
+  }, [selectedBooking, toast])
 
-  const openBookingDetail = (booking: TodayBooking) => {
+  const openBookingDetail = useCallback((booking: TodayBooking) => {
     setSelectedBooking(booking)
     setIsDetailOpen(true)
-  }
+  }, [])
 
   // Helper function: Calculate end time from start time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -754,6 +837,69 @@ export function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Mini Stats - Quick Insights */}
+      <Card className="bg-gradient-to-br from-tinedy-blue/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="font-display flex items-center gap-2 text-tinedy-dark">
+            <Target className="h-5 w-5 text-tinedy-blue" />
+            Quick Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Most Popular Service */}
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100">
+                <Package className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Most Popular Service</p>
+                <p className="text-lg font-bold text-tinedy-dark">
+                  {miniStats.topService ? miniStats.topService.name : 'N/A'}
+                </p>
+                {miniStats.topService && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {miniStats.topService.count} bookings
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Average Booking Value */}
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100">
+                <DollarSign className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Average Booking Value</p>
+                <p className="text-lg font-bold text-tinedy-dark">
+                  {formatCurrency(miniStats.avgBookingValue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Per booking
+                </p>
+              </div>
+            </div>
+
+            {/* Completion Rate */}
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100">
+                <Award className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Completion Rate</p>
+                <p className="text-lg font-bold text-tinedy-dark">
+                  {miniStats.completionRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Success rate
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Bookings Status */}
@@ -799,8 +945,7 @@ export function AdminDashboard() {
                     </Pie>
                     <Tooltip
                       formatter={(value: number, name: string) => {
-                        const total = bookingsByStatus.reduce((sum, item) => sum + item.count, 0)
-                        const percent = ((value / total) * 100).toFixed(0)
+                        const percent = ((value / pieChartTotal) * 100).toFixed(0)
                         return [`${value} bookings (${percent}%)`, name]
                       }}
                       contentStyle={{
@@ -872,9 +1017,7 @@ export function AdminDashboard() {
               </p>
             ) : (
               <>
-                {todayBookings
-                  .slice((appointmentsPage - 1) * appointmentsPerPage, appointmentsPage * appointmentsPerPage)
-                  .map((booking) => (
+                {paginatedAppointments.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 cursor-pointer"
@@ -967,8 +1110,8 @@ export function AdminDashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setAppointmentsPage(prev => Math.min(Math.ceil(todayBookings.length / appointmentsPerPage), prev + 1))}
-                        disabled={appointmentsPage >= Math.ceil(todayBookings.length / appointmentsPerPage)}
+                        onClick={() => setAppointmentsPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={appointmentsPage >= totalPages}
                       >
                         Next
                         <ChevronRight className="h-4 w-4" />
