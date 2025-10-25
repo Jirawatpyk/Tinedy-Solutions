@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { Edit, Trash2, UserPlus, Users, Crown, Star } from 'lucide-react'
+import { Edit, UserPlus, Users, Crown, Star } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface TeamMember {
@@ -195,17 +195,11 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                         />
                       </div>
                     )}
-                    <Button
-                      variant="ghost"
+                    <DeleteButton
+                      itemName={member.full_name}
+                      onDelete={() => onRemoveMember(team.id, member.id)}
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onRemoveMember(team.id, member.id)
-                      }}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                    />
                   </div>
                 </div>
               ))
