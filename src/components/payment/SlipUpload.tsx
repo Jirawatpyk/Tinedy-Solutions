@@ -109,6 +109,7 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
           payment_slip_url: publicUrl,
           payment_status: newPaymentStatus,
           payment_method: 'bank_transfer',
+          ...(autoVerify && { payment_date: new Date().toISOString().split('T')[0] }),
         })
         .eq('id', bookingId)
 
@@ -121,7 +122,7 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
           .from('bookings')
           .select(`
             *,
-            customers (name, email),
+            customers (full_name, email),
             service_packages (name),
             staff_profiles (full_name)
           `)

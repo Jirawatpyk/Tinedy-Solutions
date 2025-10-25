@@ -240,10 +240,30 @@ export function AdminBookings() {
           schema: 'public',
           table: 'bookings'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Booking changed:', payload)
           // Refresh bookings list automatically
           fetchBookings()
+
+          // If the changed booking is currently selected in detail modal, refresh it
+          if (selectedBooking && payload.new && 'id' in payload.new && payload.new.id === selectedBooking.id) {
+            // Fetch updated booking data
+            const { data } = await supabase
+              .from('bookings')
+              .select(`
+                *,
+                customers (id, full_name, email),
+                service_packages (name, service_type),
+                profiles:staff_id (full_name),
+                teams (name)
+              `)
+              .eq('id', selectedBooking.id)
+              .single()
+
+            if (data) {
+              setSelectedBooking(data as Booking)
+            }
+          }
         }
       )
       .subscribe()
@@ -252,7 +272,7 @@ export function AdminBookings() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [fetchBookings])
+  }, [fetchBookings, selectedBooking])
 
   useEffect(() => {
     filterBookings()

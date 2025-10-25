@@ -103,7 +103,7 @@ export function PaymentSuccessPage() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {isPaid ? 'Payment Confirmed!' : 'Payment Submitted!'}
               </h1>
-              <p className="text-muted-foreground max-w-md">
+              <p className="text-muted-foreground">
                 {isPaid
                   ? 'Your payment has been received and your booking is confirmed.'
                   : 'Your payment slip has been submitted. We will verify it within 24 hours.'}

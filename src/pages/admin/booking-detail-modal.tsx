@@ -283,7 +283,7 @@ export function BookingDetailModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Booking Details</DialogTitle>
+          <DialogTitle>Booking Details - #{booking.id.slice(0, 8)}</DialogTitle>
           <DialogDescription>
             View and manage booking information
           </DialogDescription>
@@ -485,6 +485,11 @@ export function BookingDetailModal({
                 <p className="font-semibold text-green-600 text-lg">
                   {formatCurrency(Number(booking.total_price || 0))}
                 </p>
+                {booking.payment_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Paid on {formatDate(booking.payment_date)}
+                  </p>
+                )}
               </div>
               {booking.payment_method && (
                 <div>
@@ -504,12 +509,6 @@ export function BookingDetailModal({
                     <Link2 className="h-4 w-4" />
                     View Payment Slip
                   </a>
-                </div>
-              )}
-              {booking.payment_date && (
-                <div>
-                  <Label className="text-muted-foreground">Payment Date</Label>
-                  <p className="font-medium">{formatDate(booking.payment_date)}</p>
                 </div>
               )}
             </div>
