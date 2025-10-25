@@ -800,6 +800,7 @@ export function AdminBookings() {
             onStatusChange={handleStatusChange}
             formatTime={formatTime}
             getStatusBadge={getStatusBadge}
+            getPaymentStatusBadge={getPaymentStatusBadge}
             getAvailableStatuses={getAvailableStatuses}
             getStatusLabel={getStatusLabel}
           />

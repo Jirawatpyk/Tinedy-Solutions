@@ -34,6 +34,7 @@ interface BookingListProps {
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
   getStatusBadge: (status: string) => React.ReactElement
+  getPaymentStatusBadge: (status?: string) => React.ReactElement
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
 }
@@ -56,6 +57,7 @@ export function BookingList({
   onStatusChange,
   formatTime,
   getStatusBadge,
+  getPaymentStatusBadge,
   getAvailableStatuses,
   getStatusLabel
 }: BookingListProps) {
@@ -159,9 +161,13 @@ export function BookingList({
                     <p className="font-semibold text-tinedy-dark text-lg">
                       {formatCurrency(Number(booking.total_price))}
                     </p>
+                    <div className="mt-1 sm:hidden">
+                      {getPaymentStatusBadge(booking.payment_status)}
+                    </div>
                   </div>
-                  <div className="hidden sm:block">
+                  <div className="hidden sm:flex sm:flex-col sm:gap-2 sm:items-end">
                     {getStatusBadge(booking.status)}
+                    {getPaymentStatusBadge(booking.payment_status)}
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <Select
