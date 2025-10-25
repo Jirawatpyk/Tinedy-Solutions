@@ -2,9 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CheckCircle2, Calendar, Clock, MapPin, X } from 'lucide-react'
+import { CheckCircle2, Calendar, Clock, MapPin } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface Booking {
@@ -222,21 +221,11 @@ export function PaymentSuccessPage() {
                 </ul>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => window.close()}
-                  className="flex-1"
-                  variant="outline"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Close Window
-                </Button>
-              </div>
-
               {/* Contact Info */}
-              <div className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-sm text-muted-foreground pt-4 border-t">
+                <p className="mb-2">Thank you for your payment!</p>
                 <p>Need help? Contact us at support@tinedy.com</p>
+                <p className="mt-2 text-xs">You can safely close this page now.</p>
               </div>
             </div>
           </CardContent>
