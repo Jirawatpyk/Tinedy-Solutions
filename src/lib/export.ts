@@ -1,4 +1,3 @@
-import type { Customer } from '@/types'
 import { format, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns'
 
 // Type definitions
