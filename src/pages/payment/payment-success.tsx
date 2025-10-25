@@ -105,8 +105,8 @@ export function PaymentSuccessPage() {
               </h1>
               <p className="text-muted-foreground">
                 {isPaid
-                  ? 'Your payment has been received and your booking is confirmed.'
-                  : 'Your payment slip has been submitted. We will verify it within 24 hours.'}
+                  ? `Thank you, ${booking.customers?.full_name}! Your payment has been received and your booking is confirmed.`
+                  : `Thank you, ${booking.customers?.full_name}! Your payment slip has been submitted. We will verify it within 24 hours.`}
               </p>
             </div>
 
