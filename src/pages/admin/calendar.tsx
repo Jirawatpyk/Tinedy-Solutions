@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,9 @@ import { BookingDetailModal } from './booking-detail-modal'
 import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatTime } from '@/lib/booking-utils'
+import { formatCurrency } from '@/lib/utils'
+import type { ServicePackage } from '@/types'
 import {
   ChevronLeft,
   ChevronRight,
@@ -42,45 +46,6 @@ import {
   isToday,
 } from 'date-fns'
 
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  customer_id: string
-  staff_id: string | null
-  team_id: string | null
-  service_package_id: string
-  notes: string | null
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  customers: {
-    id: string
-    full_name: string
-    phone: string
-    email: string
-  } | null
-  profiles: {
-    full_name: string
-  } | null
-  teams: {
-    name: string
-  } | null
-  service_packages: {
-    name: string
-    service_type: string
-  } | null
-}
-
 interface Team {
   id: string
   name: string
@@ -91,13 +56,6 @@ interface Staff {
   full_name: string
   email: string
   role: string
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
 }
 
 interface BookingFormData {
@@ -146,7 +104,7 @@ export function AdminCalendar() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'staff' | 'team'>('staff')
+  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('staff')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -269,17 +227,19 @@ export function AdminCalendar() {
 
     // Filter by view mode
     if (viewMode === 'staff') {
-      // Staff view - filter by staff
+      // Staff view - only show bookings with staff_id (exclude team bookings)
+      filtered = filtered.filter(b => b.staff_id !== null)
       if (selectedStaff !== 'all') {
         filtered = filtered.filter(b => b.staff_id === selectedStaff)
       }
-    } else {
+    } else if (viewMode === 'team') {
       // Team view - only show bookings with teams
       filtered = filtered.filter(b => b.team_id !== null)
       if (selectedTeam !== 'all') {
         filtered = filtered.filter(b => b.team_id === selectedTeam)
       }
     }
+    // If viewMode === 'all', no filtering by staff/team (show all bookings)
 
     // Filter by status
     if (selectedStatus !== 'all') {
@@ -290,10 +250,13 @@ export function AdminCalendar() {
   }, [bookings, selectedTeam, selectedStaff, selectedStatus, viewMode])
 
   useEffect(() => {
-    fetchBookings()
-    fetchTeams()
-    fetchStaffMembers()
-    fetchServicePackages()
+    // OPTIMIZE: Run all queries in parallel for better performance
+    Promise.all([
+      fetchBookings(),
+      fetchTeams(),
+      fetchStaffMembers(),
+      fetchServicePackages()
+    ])
   }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers, fetchServicePackages])
 
   useEffect(() => {
@@ -304,11 +267,6 @@ export function AdminCalendar() {
     return filteredBookings.filter((booking) =>
       isSameDay(new Date(booking.booking_date), date)
     )
-  }
-
-  // Helper function to format time without seconds
-  const formatTimeWithoutSeconds = (time: string) => {
-    return time.substring(0, 5) // Takes only HH:MM from HH:MM:SS
   }
 
   // Calculate month stats
@@ -710,7 +668,7 @@ export function AdminCalendar() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${monthStats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(monthStats.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">Paid bookings</p>
           </CardContent>
         </Card>
@@ -726,7 +684,7 @@ export function AdminCalendar() {
               <Select
                 value={selectedStaff}
                 onValueChange={setSelectedStaff}
-                disabled={viewMode === 'team'}
+                disabled={viewMode !== 'staff'}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Staff" />
@@ -748,7 +706,7 @@ export function AdminCalendar() {
               <Select
                 value={selectedTeam}
                 onValueChange={setSelectedTeam}
-                disabled={viewMode === 'staff'}
+                disabled={viewMode !== 'team'}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Teams" />
@@ -788,7 +746,7 @@ export function AdminCalendar() {
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[250px]" role="group">
+              <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
                 <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
@@ -801,9 +759,17 @@ export function AdminCalendar() {
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('team')}
-                  className="rounded-l-none border-l-0 flex-1"
+                  className="rounded-none border-l-0 flex-1"
                 >
                   Team View
+                </Button>
+                <Button
+                  variant={viewMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('all')}
+                  className="rounded-l-none border-l-0 flex-1"
+                >
+                  All Bookings
                 </Button>
               </div>
             </div>
@@ -993,7 +959,7 @@ export function AdminCalendar() {
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         <span className="font-semibold">
-                          {formatTimeWithoutSeconds(booking.start_time)} - {formatTimeWithoutSeconds(booking.end_time)}
+                          {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </span>
                       </div>
                       <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">
@@ -1004,7 +970,10 @@ export function AdminCalendar() {
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2">
                         <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{booking.customers?.full_name || 'N/A'}</span>
+                        <span>
+                          {booking.customers?.full_name || 'N/A'}
+                          <span className="ml-2 text-xs font-mono text-muted-foreground">#{booking.id.slice(0, 8)}</span>
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1180,6 +1149,7 @@ export function AdminCalendar() {
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}
+          excludeBookingId={selectedBooking?.id}
         />
       )}
     </div>

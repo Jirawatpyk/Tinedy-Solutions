@@ -1,9 +1,12 @@
+import { memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { Edit, Trash2, UserPlus, Users, Crown, Star } from 'lucide-react'
+import { Edit, UserPlus, Users, Crown, Star, ArrowRight } from 'lucide-react'
+import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface TeamMember {
   id: string
@@ -37,14 +40,47 @@ interface TeamCardProps {
   onToggleMemberStatus: (membershipId: string, currentStatus: boolean) => void
 }
 
-export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
-  const getInitials = (name: string) => {
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return name.slice(0, 2).toUpperCase()
+// Helper function moved outside component
+const getInitials = (name: string) => {
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
   }
+  return name.slice(0, 2).toUpperCase()
+}
+
+export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
+  const navigate = useNavigate()
+
+  // Memoize expensive calculations
+  const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])
+
+  const displayedMembers = useMemo(() => {
+    if (!team.members) return []
+
+    // Sort members: Team Lead first, then active members, then inactive members
+    const sorted = [...team.members].sort((a, b) => {
+      // Team Lead always first (don't check active status for lead)
+      if (a.id === team.team_lead_id) return -1
+      if (b.id === team.team_lead_id) return 1
+
+      // For non-lead members, sort by active status (active before inactive)
+      const aActive = a.is_active !== false
+      const bActive = b.is_active !== false
+
+      if (aActive && !bActive) return -1
+      if (!aActive && bActive) return 1
+
+      return 0
+    })
+
+    return sorted.slice(0, 3)
+  }, [team.members, team.team_lead_id])
+
+  const remainingMembersCount = useMemo(
+    () => team.members && team.members.length > 3 ? team.members.length - 3 : 0,
+    [team.members]
+  )
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -52,7 +88,7 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
-              {team.name.charAt(0).toUpperCase()}
+              {teamInitial}
             </div>
             <div>
               <CardTitle className="text-lg font-display">
@@ -82,13 +118,10 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
             >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(team.id)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            <DeleteButton
+              itemName={team.name}
+              onDelete={() => onDelete(team.id)}
+            />
           </div>
         </div>
       </CardHeader>
@@ -136,8 +169,8 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
           </div>
 
           <div className="space-y-2">
-            {team.members && team.members.length > 0 ? (
-              team.members.slice(0, 3).map((member) => (
+            {displayedMembers.length > 0 ? (
+              displayedMembers.map((member) => (
                 <div
                   key={member.id}
                   className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors group"
@@ -174,14 +207,11 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
                         className="scale-75"
                       />
                     )}
-                    <Button
-                      variant="ghost"
+                    <DeleteButton
+                      itemName={member.full_name}
+                      onDelete={() => onRemoveMember(team.id, member.id)}
                       size="sm"
-                      onClick={() => onRemoveMember(team.id, member.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                    />
                   </div>
                 </div>
               ))
@@ -191,14 +221,26 @@ export function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, 
               </p>
             )}
 
-            {team.members && team.members.length > 3 && (
+            {remainingMembersCount > 0 && (
               <p className="text-xs text-muted-foreground text-center pt-2 border-t">
-                +{team.members.length - 3} more members
+                +{remainingMembersCount} more members
               </p>
             )}
           </div>
         </div>
+
+        {/* View Details Button */}
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate(`/admin/teams/${team.id}`)}
+          >
+            View Details
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
-}
+})

@@ -23,24 +23,9 @@ import { Info, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getErrorMessage } from '@/lib/error-utils'
-
-interface Customer {
-  id: string
-  full_name: string
-  email: string
-  phone: string
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-}
-
-interface ServicePackage {
-  id: string
-  name: string
-  price: number
-  duration_minutes: number
-}
+import type { ServicePackage } from '@/types'
+import type { CustomerRecord } from '@/types/customer'
+import { sendBookingConfirmation, sendBookingReminder, type PaymentEmailData } from '@/lib/email'
 
 interface StaffMember {
   id: string
@@ -108,7 +93,7 @@ export function BookingCreateModal({
   calculateEndTime,
 }: BookingCreateModalProps) {
   const { toast } = useToast()
-  const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null)
+  const [existingCustomer, setExistingCustomer] = useState<CustomerRecord | null>(null)
   const [checkingCustomer, setCheckingCustomer] = useState(false)
 
   // Check existing customer by email
@@ -222,7 +207,7 @@ export function BookingCreateModal({
       }
 
       // Create booking
-      const { error: bookingError } = await supabase
+      const { data: newBooking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: customerId,
@@ -237,15 +222,65 @@ export function BookingCreateModal({
           zip_code: createForm.formData.zip_code,
           notes: createForm.formData.notes || null,
           status: 'pending',
+          payment_status: 'unpaid',
           staff_id: assignmentType === 'staff' ? (createForm.formData.staff_id || null) : null,
           team_id: assignmentType === 'team' ? (createForm.formData.team_id || null) : null,
         })
+        .select(`
+          *,
+          customers (full_name, email),
+          services:service_packages (name),
+          profiles (full_name)
+        `)
+        .single()
 
       if (bookingError) throw bookingError
 
+      // Send booking confirmation email with payment link
+      if (newBooking && createForm.formData.email) {
+        const paymentLink = `${window.location.origin}/payment/${newBooking.id}`
+
+        const emailData: PaymentEmailData = {
+          bookingId: newBooking.id,
+          customerName: createForm.formData.full_name || 'Customer',
+          customerEmail: createForm.formData.email,
+          serviceName: selectedPackage?.name || 'Service',
+          bookingDate: newBooking.booking_date,
+          startTime: newBooking.start_time,
+          endTime: newBooking.end_time,
+          totalPrice: Number(newBooking.total_price),
+          location: newBooking.address || undefined,
+          notes: newBooking.notes || undefined,
+          staffName: newBooking.profiles?.full_name || undefined,
+          paymentLink,
+        }
+
+        // Send emails (non-blocking)
+        sendBookingConfirmation(emailData).catch(err => {
+          console.error('Failed to send booking confirmation:', err)
+        })
+
+        // Also schedule booking reminder
+        sendBookingReminder({
+          bookingId: newBooking.id,
+          customerName: emailData.customerName,
+          customerEmail: emailData.customerEmail,
+          serviceName: emailData.serviceName,
+          bookingDate: emailData.bookingDate,
+          startTime: emailData.startTime,
+          endTime: emailData.endTime,
+          totalPrice: emailData.totalPrice,
+          location: emailData.location,
+          notes: emailData.notes,
+          staffName: emailData.staffName,
+        }).catch(err => {
+          console.error('Failed to schedule booking reminder:', err)
+        })
+      }
+
       toast({
         title: 'Success',
-        description: 'Booking created successfully',
+        description: 'Booking created successfully. Confirmation email sent!',
       })
 
       // Reset and close

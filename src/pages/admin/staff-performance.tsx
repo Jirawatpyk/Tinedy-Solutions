@@ -1,3 +1,4 @@
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +28,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Badge } from '@/components/ui/badge'
+import { formatTime } from '@/lib/booking-utils'
 
 interface Staff {
   id: string
@@ -35,28 +37,6 @@ interface Staff {
   role: string
   phone?: string
   avatar_url?: string
-}
-
-interface ServicePackage {
-  name: string
-  price: number
-}
-
-interface Customer {
-  full_name: string
-}
-
-interface Booking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  payment_status: string
-  created_at: string
-  service_packages: ServicePackage | null
-  customers: Customer | null
 }
 
 interface Stats {
@@ -92,9 +72,13 @@ export function AdminStaffPerformance() {
   })
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchStaffData = useCallback(async () => {
-    if (!id) return
+    if (!id) {
+      setError('No staff ID provided')
+      return
+    }
 
     try {
       const { data, error } = await supabase
@@ -104,9 +88,15 @@ export function AdminStaffPerformance() {
         .single()
 
       if (error) throw error
+      if (!data) {
+        setError('Staff member not found')
+        return
+      }
       setStaff(data)
+      setError(null)
     } catch (error) {
       console.error('Error fetching staff:', error)
+      setError('Failed to load staff data')
       toast({
         title: 'Error',
         description: 'Failed to load staff data',
@@ -130,7 +120,7 @@ export function AdminStaffPerformance() {
           total_price,
           payment_status,
           created_at,
-          service_packages (name, price),
+          service_packages (name, price, service_type),
           customers (full_name)
         `)
         .eq('staff_id', id)
@@ -138,7 +128,7 @@ export function AdminStaffPerformance() {
 
       if (error) throw error
 
-      interface BookingRaw {
+      interface BookingRawFromDB {
         id: string
         booking_date: string
         start_time: string
@@ -147,19 +137,33 @@ export function AdminStaffPerformance() {
         total_price: number
         payment_status: string
         created_at: string
-        service_packages: ServicePackage | ServicePackage[] | null
-        customers: Customer | Customer[] | null
+        service_packages: { name: string; price?: number; service_type?: string }[] | { name: string; price?: number; service_type?: string } | null
+        customers: { full_name: string }[] | { full_name: string } | null
       }
 
-      const transformedData = (data || []).map((booking: BookingRaw): Booking => ({
-        ...booking,
-        service_packages: Array.isArray(booking.service_packages)
-          ? booking.service_packages[0] || null
-          : booking.service_packages,
-        customers: Array.isArray(booking.customers)
+      const transformedData = (data || []).map((booking: BookingRawFromDB): Booking => {
+        const pkg = Array.isArray(booking.service_packages)
+          ? booking.service_packages[0]
+          : booking.service_packages
+
+        const customerData = Array.isArray(booking.customers)
           ? booking.customers[0] || null
-          : booking.customers,
-      }))
+          : booking.customers
+
+        return {
+          ...booking,
+          service_packages: pkg ? {
+            name: pkg.name,
+            service_type: pkg.service_type || 'general'
+          } : null,
+          customers: customerData ? {
+            id: '',
+            full_name: customerData.full_name,
+            email: '',
+            phone: null
+          } : null,
+        } as Booking
+      })
 
       setBookings(transformedData)
       calculateStats(transformedData)
@@ -171,8 +175,6 @@ export function AdminStaffPerformance() {
         description: 'Failed to load bookings',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
   }, [id, toast])
 
@@ -232,8 +234,14 @@ export function AdminStaffPerformance() {
   }
 
   useEffect(() => {
-    fetchStaffData()
-    fetchBookings()
+    setLoading(true)
+    // OPTIMIZE: Run both queries in parallel for better performance
+    Promise.all([
+      fetchStaffData(),
+      fetchBookings()
+    ]).finally(() => {
+      setLoading(false)
+    })
   }, [fetchStaffData, fetchBookings])
 
   if (loading) {
@@ -281,22 +289,18 @@ export function AdminStaffPerformance() {
     )
   }
 
-  if (!staff) {
+  if (error || !staff) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
         <XCircle className="h-16 w-16 text-red-500" />
-        <h2 className="text-2xl font-bold">Staff Not Found</h2>
-        <Button onClick={() => navigate('/admin/staff')}>Back to Staff</Button>
+        <h2 className="text-2xl font-bold">{error || 'Staff Not Found'}</h2>
+        <p className="text-muted-foreground">Unable to load staff member details</p>
+        <Button onClick={() => navigate('/admin/staff')}>Back to Staff List</Button>
       </div>
     )
   }
 
   const recentBookings = bookings.slice(0, 5)
-
-  // Helper to format time without seconds (10:00:00 -> 10:00)
-  const formatTime = (time: string) => {
-    return time.substring(0, 5)
-  }
 
   return (
     <div className="space-y-6">
@@ -380,16 +384,24 @@ export function AdminStaffPerformance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="bookings" fill="#4F46E5" name="Bookings" />
-              </BarChart>
-            </ResponsiveContainer>
+            {monthlyData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <Activity className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No booking data available</p>
+                <p className="text-sm text-muted-foreground mt-1">Data will appear here once bookings are created</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="bookings" fill="#4F46E5" name="Bookings" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -402,22 +414,30 @@ export function AdminStaffPerformance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  name="Revenue (฿)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {monthlyData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <TrendingUp className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No revenue data available</p>
+                <p className="text-sm text-muted-foreground mt-1">Revenue trends will appear here once payments are received</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    name="Revenue (฿)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -447,6 +467,9 @@ export function AdminStaffPerformance() {
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-4 flex-1">
+                      <div className="text-xs font-mono text-muted-foreground min-w-[90px]">
+                        #{booking.id.slice(0, 8)}
+                      </div>
                       <div className="text-sm">
                         <div className="font-medium text-tinedy-dark">
                           {booking.service_packages?.name || 'Service'}

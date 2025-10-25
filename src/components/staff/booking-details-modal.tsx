@@ -24,10 +24,12 @@ import {
   MapPin,
   Play,
 } from 'lucide-react'
-import { type StaffBooking, formatFullAddress } from '@/hooks/use-staff-bookings'
+import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
+import { formatFullAddress } from '@/lib/booking-utils'
+import { formatTime } from '@/lib/booking-utils'
 import { BookingTimeline } from './booking-timeline'
 
 interface BookingDetailsModalProps {
@@ -173,10 +175,6 @@ export function BookingDetailsModal({
   const canStartProgress = currentBooking.status === 'confirmed'
   const canMarkCompleted = currentBooking.status === 'in_progress'
 
-  // Format time to remove seconds (HH:MM:SS -> HH:MM)
-  const formatTime = (time: string) => {
-    return time.split(':').slice(0, 2).join(':')
-  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

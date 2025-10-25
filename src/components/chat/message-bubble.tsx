@@ -11,25 +11,29 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isOwnMessage, onImageClick }: MessageBubbleProps) {
-  const time = format(new Date(message.created_at), 'h:mm a')
   const hasAttachments = message.attachments && message.attachments.length > 0
 
   return (
-    <div className={cn('flex w-full mb-4', isOwnMessage ? 'justify-end' : 'justify-start')}>
+    <div
+      className={cn(
+        'flex w-full mb-4',
+        isOwnMessage ? 'justify-end' : 'justify-start'
+      )}
+    >
       <div
         className={cn(
-          'max-w-[70%] rounded-lg px-4 py-2',
+          'max-w-[70%] rounded-lg px-4 py-2 break-words',
           isOwnMessage
-            ? 'bg-tinedy-blue text-white'
-            : 'bg-gray-100 text-gray-900'
+            ? 'bg-tinedy-blue text-white rounded-br-none'
+            : 'bg-gray-100 text-gray-900 rounded-bl-none'
         )}
       >
         {/* Message text */}
         {message.message && (
-          <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+          <p className="text-sm whitespace-pre-wrap mb-1">{message.message}</p>
         )}
 
-        {/* Attachments */}
+        {/* File attachments */}
         {hasAttachments && (
           <div className="space-y-2">
             {message.attachments!.map((attachment, index) => (
@@ -44,12 +48,15 @@ export function MessageBubble({ message, isOwnMessage, onImageClick }: MessageBu
         )}
 
         {/* Timestamp and read status */}
-        <div className={cn('flex items-center gap-1 mt-1', isOwnMessage ? 'justify-end' : 'justify-start')}>
-          <span className={cn('text-xs', isOwnMessage ? 'text-white/70' : 'text-gray-500')}>
-            {time}
-          </span>
+        <div
+          className={cn(
+            'flex items-center justify-end gap-1 mt-1 text-xs',
+            isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+          )}
+        >
+          <span>{format(new Date(message.created_at), 'HH:mm')}</span>
           {isOwnMessage && (
-            <span className="text-white/70">
+            <span className="ml-1">
               {message.is_read ? (
                 <CheckCheck className="h-3 w-3" />
               ) : (
