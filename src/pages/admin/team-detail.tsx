@@ -9,6 +9,7 @@ import { TeamDetailHeader } from '@/components/teams/team-detail/TeamDetailHeade
 import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
 import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
 import { TeamRecentBookings } from '@/components/teams/team-detail/TeamRecentBookings'
+import { TeamPerformanceCharts } from '@/components/teams/team-detail/TeamPerformanceCharts'
 import { getErrorMessage } from '@/lib/error-utils'
 
 interface TeamMember {
@@ -243,14 +244,17 @@ export function AdminTeamDetail() {
       {/* Team Stats */}
       {stats && <TeamDetailStats stats={stats} />}
 
-      {/* Team Members & Recent Bookings */}
+      {/* Monthly Bookings & Team Members */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TeamPerformanceCharts teamId={team.id} />
         <TeamMembersList
           team={team}
           onUpdate={loadTeamDetail}
         />
-        <TeamRecentBookings teamId={team.id} />
       </div>
+
+      {/* Recent Bookings */}
+      <TeamRecentBookings teamId={team.id} />
     </div>
   )
 }
