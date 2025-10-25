@@ -13,33 +13,40 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'supabase-vendor': ['@supabase/supabase-js'],
+        manualChunks(id) {
+          // Vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor'
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor'
+            }
+            if (id.includes('recharts')) {
+              return 'charts'
+            }
+          }
 
-          // Charts library (large - ~120kb)
-          'charts': ['recharts'],
+          // Admin pages
+          if (id.includes('src/pages/admin/reports')) {
+            return 'admin-reports'
+          }
+          if (id.includes('src/pages/admin/calendar')) {
+            return 'admin-calendar'
+          }
+          if (id.includes('src/pages/admin/customer-detail')) {
+            return 'admin-customer-detail'
+          }
 
-          // Admin pages - split large pages
-          'admin-reports': ['./src/pages/admin/reports'],
-          'admin-calendar': ['./src/pages/admin/calendar'],
-          'admin-customer-detail': ['./src/pages/admin/customer-detail'],
-
-          // Booking components - frequently used together
-          'booking-components': [
-            './src/components/booking/BookingCreateModal',
-            './src/components/booking/BookingEditModal',
-            './src/components/booking/staff-availability-modal',
-            './src/components/booking/quick-availability-check',
-          ],
+          // Booking components
+          if (id.includes('src/components/booking/')) {
+            return 'booking-components'
+          }
 
           // Dashboard components
-          'dashboard-components': [
-            './src/components/dashboard/RevenueChart',
-            './src/components/dashboard/BookingStatusChart',
-            './src/components/dashboard/TodayAppointments',
-          ],
+          if (id.includes('src/components/dashboard/')) {
+            return 'dashboard-components'
+          }
         },
       },
     },
