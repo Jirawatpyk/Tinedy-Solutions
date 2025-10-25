@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Users,
@@ -54,7 +55,8 @@ interface CustomersTabProps {
   dateRange: string
 }
 
-export function CustomersTab({
+// OPTIMIZED: Memoize tab component
+function CustomersTabComponent({
   customerMetrics,
   customers,
   customersWithBookings,
@@ -360,3 +362,6 @@ export function CustomersTab({
     </div>
   )
 }
+
+// Export memoized component
+export const CustomersTab = React.memo(CustomersTabComponent)

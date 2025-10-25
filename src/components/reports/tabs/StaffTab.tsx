@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Briefcase,
@@ -49,7 +50,8 @@ interface StaffTabProps {
   dateRange: string
 }
 
-export function StaffTab({
+// OPTIMIZED: Memoize tab component
+function StaffTabComponent({
   staffMetrics,
   staffPerformance,
 }: StaffTabProps) {
@@ -354,3 +356,6 @@ export function StaffTab({
     </div>
   )
 }
+
+// Export memoized component
+export const StaffTab = React.memo(StaffTabComponent)

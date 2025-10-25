@@ -48,7 +48,7 @@ export const SimpleTabs = React.forwardRef<HTMLDivElement, TabsProps>(
 )
 SimpleTabs.displayName = 'SimpleTabs'
 
-interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {}
+type TabsListProps = React.HTMLAttributes<HTMLDivElement>
 
 export const SimpleTabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, ...props }, ref) => {

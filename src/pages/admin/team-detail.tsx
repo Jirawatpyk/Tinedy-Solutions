@@ -109,7 +109,7 @@ export function AdminTeamDetail() {
         created_at: teamData.created_at,
         team_lead_id: teamData.team_lead_id,
         team_lead: teamLead,
-        members: teamData.team_members?.map((tm: any) => {
+        members: teamData.team_members?.map((tm: { profiles: unknown; is_active: boolean; id: string }) => {
           const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
           return {
             ...profile,

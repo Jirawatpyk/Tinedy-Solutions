@@ -55,10 +55,27 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
   // Memoize expensive calculations
   const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])
 
-  const displayedMembers = useMemo(
-    () => team.members?.slice(0, 3) || [],
-    [team.members]
-  )
+  const displayedMembers = useMemo(() => {
+    if (!team.members) return []
+
+    // Sort members: Team Lead first, then active members, then inactive members
+    const sorted = [...team.members].sort((a, b) => {
+      // Team Lead always first (don't check active status for lead)
+      if (a.id === team.team_lead_id) return -1
+      if (b.id === team.team_lead_id) return 1
+
+      // For non-lead members, sort by active status (active before inactive)
+      const aActive = a.is_active !== false
+      const bActive = b.is_active !== false
+
+      if (aActive && !bActive) return -1
+      if (!aActive && bActive) return 1
+
+      return 0
+    })
+
+    return sorted.slice(0, 3)
+  }, [team.members, team.team_lead_id])
 
   const remainingMembersCount = useMemo(
     () => team.members && team.members.length > 3 ? team.members.length - 3 : 0,
