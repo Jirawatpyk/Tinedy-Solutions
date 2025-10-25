@@ -7,10 +7,30 @@ import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage } from '@/test/factories'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
-// import React from 'react' // Unused
 
 // Mock modules
-vi.mock('@/lib/supabase')
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    })),
+  },
+}))
 
 const mockToast = vi.fn()
 vi.mock('@/hooks/use-toast', () => ({
@@ -107,7 +127,7 @@ describe('BookingEditModal', () => {
   let mockSetValues: any
   let mockReset: any
 
-  beforeEach(async () => {
+  beforeEach(() => {
     mockFormData = {
       service_package_id: 'service-1',
       booking_date: '2025-10-28',
@@ -134,32 +154,6 @@ describe('BookingEditModal', () => {
       mockFormData = {}
     })
 
-    // Setup default Supabase mock that works for all tests
-    const supabaseMock = await import('@/lib/supabase')
-
-    // Create a comprehensive default mock query builder
-    const createDefaultMockQuery = () => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      not: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      gt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
-    })
-
-    // Mock supabase.from to return a new mock query for each call
-    vi.mocked(supabaseMock.supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
-
     mockCheckConflicts.mockResolvedValue([]) // No conflicts by default
     vi.clearAllMocks()
   })
@@ -175,7 +169,7 @@ describe('BookingEditModal', () => {
     reset: mockReset,
   })
 
-  const defaultProps = {
+  const getDefaultProps = () => ({
     isOpen: true,
     onClose: mockOnClose,
     booking: createMockBooking(),
@@ -188,12 +182,12 @@ describe('BookingEditModal', () => {
     assignmentType: 'staff' as const,
     onAssignmentTypeChange: mockOnAssignmentTypeChange,
     calculateEndTime: mockCalculateEndTime,
-  }
+  })
 
   describe('Rendering', () => {
     it('should render modal when isOpen is true', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByText('Edit Booking')).toBeInTheDocument()
@@ -202,7 +196,7 @@ describe('BookingEditModal', () => {
 
     it('should not render modal when isOpen is false', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} isOpen={false} />)
+      render(<BookingEditModal {...getDefaultProps()} isOpen={false} />)
 
       // Assert
       expect(screen.queryByText('Edit Booking')).not.toBeInTheDocument()
@@ -210,7 +204,7 @@ describe('BookingEditModal', () => {
 
     it('should render all form fields', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Service Package/)).toBeInTheDocument()
@@ -227,7 +221,7 @@ describe('BookingEditModal', () => {
 
     it('should display end time as auto-calculated', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/End Time \(Auto-calculated\)/)).toBeInTheDocument()
@@ -235,7 +229,7 @@ describe('BookingEditModal', () => {
 
     it('should render action buttons', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument()
@@ -244,7 +238,7 @@ describe('BookingEditModal', () => {
 
     it('should render assignment type selector', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Assign to/)).toBeInTheDocument()
@@ -274,7 +268,7 @@ describe('BookingEditModal', () => {
       }
 
       // Act
-      render(<BookingEditModal {...defaultProps} booking={booking} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} booking={booking} editForm={mockEditForm()} />)
 
       // Assert
       expect(screen.getByDisplayValue('2025-11-15')).toBeInTheDocument()
@@ -286,7 +280,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when service package is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Service Package/ })
@@ -299,7 +293,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when booking date is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Booking Date/)
@@ -313,7 +307,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when start time is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Start Time/)
@@ -327,7 +321,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when status is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Status/ })
@@ -340,7 +334,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when total price is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Total Price/)
@@ -354,7 +348,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when address is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/^Address/)
@@ -368,7 +362,7 @@ describe('BookingEditModal', () => {
     it('should call handleChange when notes are changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Notes/)
@@ -385,7 +379,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} />)
 
       // Assert
       expect(mockCalculateEndTime).toHaveBeenCalledWith('10:00:00', 120)
@@ -397,7 +391,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} />)
 
       // Assert
       expect(screen.getByDisplayValue('--:--')).toBeInTheDocument()
@@ -407,7 +401,7 @@ describe('BookingEditModal', () => {
   describe('Assignment Type', () => {
     it('should show staff selector when assignment type is staff', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} assignmentType="staff" />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="staff" />)
 
       // Assert
       expect(screen.getByLabelText(/Select Staff Member/)).toBeInTheDocument()
@@ -415,7 +409,7 @@ describe('BookingEditModal', () => {
 
     it('should show team selector when assignment type is team', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} assignmentType="team" />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="team" />)
 
       // Assert
       expect(screen.getByLabelText(/Select Team/)).toBeInTheDocument()
@@ -423,7 +417,7 @@ describe('BookingEditModal', () => {
 
     it('should not show staff or team selector when assignment type is none', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} assignmentType="none" />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="none" />)
 
       // Assert
       expect(screen.queryByLabelText(/Select Staff Member/)).not.toBeInTheDocument()
@@ -433,7 +427,7 @@ describe('BookingEditModal', () => {
     it('should call onAssignmentTypeChange when assignment type is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Assign to/ })
@@ -445,7 +439,7 @@ describe('BookingEditModal', () => {
 
     it('should show availability check button when assignment type is not none', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} assignmentType="staff" />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="staff" />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Check Staff Availability/i })).toBeInTheDocument()
@@ -453,7 +447,7 @@ describe('BookingEditModal', () => {
 
     it('should not show availability check button when assignment type is none', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} assignmentType="none" />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="none" />)
 
       // Assert
       expect(screen.queryByRole('button', { name: /Check Staff Availability/i })).not.toBeInTheDocument()
@@ -466,7 +460,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = undefined
 
       // Act
-      render(<BookingEditModal {...defaultProps} assignmentType="staff" editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="staff" editForm={mockEditForm()} />)
 
       // Assert
       const button = screen.getByRole('button', { name: /Check Staff Availability/i })
@@ -481,7 +475,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingEditModal {...defaultProps} assignmentType="staff" editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} assignmentType="staff" editForm={mockEditForm()} />)
 
       const button = screen.getByRole('button', { name: /Check Staff Availability/i })
       await user.click(button)
@@ -504,7 +498,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue([]) // No conflicts
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -532,7 +526,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue(conflicts)
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -561,7 +555,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -590,7 +584,7 @@ describe('BookingEditModal', () => {
 
       const booking = createMockBooking({ id: 'booking-456' })
 
-      render(<BookingEditModal {...defaultProps} booking={booking} />)
+      render(<BookingEditModal {...getDefaultProps()} booking={booking} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -623,7 +617,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -658,7 +652,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -686,7 +680,7 @@ describe('BookingEditModal', () => {
 
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -703,7 +697,7 @@ describe('BookingEditModal', () => {
     it('should call onClose when cancel button is clicked', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const cancelButton = screen.getByRole('button', { name: /Cancel/i })
@@ -716,7 +710,7 @@ describe('BookingEditModal', () => {
     it('should clear conflicts when modal is closed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const cancelButton = screen.getByRole('button', { name: /Cancel/i })
@@ -731,7 +725,7 @@ describe('BookingEditModal', () => {
     it('should display all status options', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Act
       const statusSelect = screen.getByRole('combobox', { name: /Status/ })
@@ -751,7 +745,7 @@ describe('BookingEditModal', () => {
   describe('Edge Cases', () => {
     it('should handle null booking gracefully', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} booking={null} />)
+      render(<BookingEditModal {...getDefaultProps()} booking={null} />)
 
       // Assert - Should not crash
       expect(screen.getByText('Edit Booking')).toBeInTheDocument()
@@ -771,7 +765,7 @@ describe('BookingEditModal', () => {
       mockFormData.team_id = 'team-1'
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -800,7 +794,7 @@ describe('BookingEditModal', () => {
       mockFormData.team_id = null
       mockCheckConflicts.mockResolvedValue([])
 
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} assignmentType="none" />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} assignmentType="none" />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Update Booking/i })
@@ -819,7 +813,7 @@ describe('BookingEditModal', () => {
   describe('Accessibility', () => {
     it('should have accessible form labels', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Service Package/)).toHaveAccessibleName()
@@ -830,7 +824,7 @@ describe('BookingEditModal', () => {
 
     it('should mark required fields with asterisk', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByText(/Service Package \*/)).toBeInTheDocument()
@@ -841,7 +835,7 @@ describe('BookingEditModal', () => {
 
     it('should have accessible buttons', () => {
       // Arrange & Act
-      render(<BookingEditModal {...defaultProps} />)
+      render(<BookingEditModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument()
@@ -856,7 +850,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = 'service-2' // 180 minutes
 
       // Act
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} />)
 
       // Assert
       expect(mockCalculateEndTime).toHaveBeenCalledWith('09:00:00', 180)
@@ -868,7 +862,7 @@ describe('BookingEditModal', () => {
       mockFormData.service_package_id = 'service-1' // 120 minutes
 
       // Act
-      render(<BookingEditModal {...defaultProps} editForm={mockEditForm()} />)
+      render(<BookingEditModal {...getDefaultProps()} editForm={mockEditForm()} />)
 
       // Assert
       expect(mockCalculateEndTime).toHaveBeenCalledWith('13:30:00', 120)

@@ -176,11 +176,11 @@ export const getRevenueByServiceType = (
   const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
 
   const cleaning = completedBookings
-    .filter((b) => b.service_type === 'cleaning')
+    .filter((b) => b.service_packages?.service_type === 'cleaning')
     .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const training = completedBookings
-    .filter((b) => b.service_type === 'training')
+    .filter((b) => b.service_packages?.service_type === 'training')
     .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   return { cleaning, training }
@@ -271,7 +271,7 @@ export const getPeakHoursData = (bookings: Booking[]) => {
 // CUSTOMER ANALYTICS
 // ============================================================================
 
-interface CustomerWithBookings extends Customer {
+interface CustomerWithBookings extends CustomerRecord {
   bookings: Booking[]
 }
 
@@ -313,7 +313,7 @@ export const calculateCustomerMetrics = (
 
   // Count customers with more than one booking
   const customerBookingCounts = bookings.reduce((acc, booking) => {
-    const customerId = booking.customer_id
+    const customerId = (booking.customers?.id || booking.customer_id)
     if (customerId) {
       acc[customerId] = (acc[customerId] || 0) + 1
     }

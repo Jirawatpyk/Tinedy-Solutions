@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
-import type { Customer, CustomerWithBookings } from '@/types/reports'
+import type { CustomerWithBookings } from '@/types/reports'
 import type { CustomerRecord } from '@/types'
 import {
   LineChart,
@@ -162,7 +162,7 @@ function CustomersTabComponent({
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getCustomerCLVDistribution(customersWithBookings)}>
+              <BarChart data={getCustomerCLVDistribution(customersWithBookings as any)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="range"
@@ -204,7 +204,7 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={getCustomerSegmentation(customersWithBookings)}
+                  data={getCustomerSegmentation(customersWithBookings as any)}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -216,7 +216,7 @@ function CustomersTabComponent({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {getCustomerSegmentation(customersWithBookings).map((entry, index) => (
+                  {getCustomerSegmentation(customersWithBookings as any).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -224,7 +224,7 @@ function CustomersTabComponent({
               </PieChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-1 gap-2 mt-4">
-              {getCustomerSegmentation(customersWithBookings).map((item, index) => (
+              {getCustomerSegmentation(customersWithBookings as any).map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
@@ -252,7 +252,7 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={getRepeatCustomerRateTrend(
-                  customersWithBookings,
+                  customersWithBookings as any,
                   getDateRangePreset(dateRange).start,
                   getDateRangePreset(dateRange).end
                 )}

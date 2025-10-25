@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { BookingCard } from '../booking-card'
 import { createMockAuthenticatedContext } from '@/test/mocks/auth-context'
 import type { StaffBooking } from '@/hooks/use-staff-bookings'
-// import React from 'react' // Unused
 
 // Mock AuthContext
 const mockAuthContext = createMockAuthenticatedContext()

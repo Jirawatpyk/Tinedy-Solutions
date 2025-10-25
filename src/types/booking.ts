@@ -101,7 +101,7 @@ export interface BookingRecord {
   booking_date: string
   start_time: string
   end_time: string | null
-  customer_id: string
+  customer_id?: string
   staff_id: string | null
   team_id: string | null
   service_package_id: string
@@ -114,7 +114,7 @@ export interface BookingRecord {
   state: string | null
   zip_code: string | null
   notes: string | null
-  created_at: string
+  created_at?: string
   updated_at: string
 }
 
@@ -200,6 +200,7 @@ export interface Booking {
   zip_code: string
   staff_id: string | null
   team_id: string | null
+  customer_id?: string
   service_package_id: string
   notes: string | null
   payment_status?: string
@@ -207,7 +208,9 @@ export interface Booking {
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
-  customers: { id: string; full_name: string; email: string } | null
+  payment_slip_url?: string | null
+  created_at?: string
+  customers: { id: string; full_name: string; email: string; phone?: string | null } | null
   service_packages: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
   teams: { name: string } | null
@@ -259,7 +262,7 @@ export interface BookingFormData {
   booking_date: string
   start_time: string
   end_time?: string
-  customer_id: string
+  customer_id?: string
   staff_id?: string
   team_id?: string
   service_package_id: string

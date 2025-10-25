@@ -11,7 +11,24 @@ import type { ServicePackage } from '@/types'
 // Mock dependencies
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    from: vi.fn(),
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    })),
   },
 }))
 
@@ -143,29 +160,6 @@ describe('Booking Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockBookingForm.reset()
-
-    // Create a comprehensive default mock query builder
-    const createDefaultMockQuery = () => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      not: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      gt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
-    })
-
-    // Mock supabase.from to return a new mock query for each call
-    vi.mocked(supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
   })
 
   describe('Booking Creation Flow', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import type { CustomerRecord } from '@/types'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
@@ -55,7 +56,6 @@ import { StaffTab } from '@/components/reports/tabs/StaffTab'
 import { TeamsTab } from '@/components/reports/tabs/TeamsTab'
 import type {
   BookingWithService,
-  Customer,
   CustomerWithBookings,
   Staff,
   StaffWithBookings,
@@ -65,7 +65,7 @@ import type {
 
 export function AdminReports() {
   const [bookings, setBookings] = useState<BookingWithService[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customers, setCustomers] = useState<CustomerRecord[]>([])
   const [customersWithBookings, setCustomersWithBookings] = useState<CustomerWithBookings[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [staffWithBookings, setStaffWithBookings] = useState<StaffWithBookings[]>([])
@@ -154,7 +154,7 @@ export function AdminReports() {
       const customersData = customersResult.data
       const bookingsData = bookingsResult.data
 
-      setCustomers(customersData || [])
+      setCustomers((customersData || []) as CustomerRecord[])
 
       // Group bookings by customer
       type CustomerBooking = { id: string; booking_date: string; total_price: number; status: string; created_at: string }
@@ -340,7 +340,7 @@ export function AdminReports() {
 
         // Customers exports
         case 'customers-all': {
-          const topCustomersData = getTopCustomers(customersWithBookings, 10)
+          const topCustomersData = getTopCustomers(customersWithBookings as any, 10)
           exportCustomers(customers, topCustomersData, 'all')
           toast({ title: 'Export successful', description: 'Customer data exported to CSV' })
           break
@@ -348,7 +348,7 @@ export function AdminReports() {
 
         // Staff exports
         case 'staff-performance': {
-          const staffPerformanceData = getStaffPerformance(staffWithBookings)
+          const staffPerformanceData = getStaffPerformance(staffWithBookings as any)
           exportStaffPerformance(staffPerformanceData)
           toast({ title: 'Export successful', description: 'Staff performance data exported to CSV' })
           break
@@ -385,7 +385,7 @@ export function AdminReports() {
       staff_id: b.staff_id,
       service_type: b.service_packages?.service_type,
     }))
-    const data = generateChartData(mappedBookings, start, end)
+    const data = generateChartData(mappedBookings as any, start, end)
     setChartData(data)
   }, [bookings, dateRange])
 
@@ -434,18 +434,18 @@ export function AdminReports() {
       .slice(0, 5)
   }, [bookings])
 
-  const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings), [mappedBookings])
-  const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings), [mappedBookings])
-  const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings), [mappedBookings])
-  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(mappedBookings), [mappedBookings])
-  const peakHoursData = useMemo(() => getPeakHoursData(mappedBookings), [mappedBookings])
+  const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings as any), [mappedBookings])
+  const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings as any), [mappedBookings])
+  const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings as any), [mappedBookings])
+  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(mappedBookings as any), [mappedBookings])
+  const peakHoursData = useMemo(() => getPeakHoursData(mappedBookings as any), [mappedBookings])
   const customerMetrics = useMemo(
-    () => calculateCustomerMetrics(customers, mappedBookings),
+    () => calculateCustomerMetrics(customers, mappedBookings as any),
     [customers, mappedBookings]
   )
-  const topCustomers = useMemo(() => getTopCustomers(customersWithBookings, 10), [customersWithBookings])
-  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings), [staff, mappedBookings])
-  const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings), [staffWithBookings])
+  const topCustomers = useMemo(() => getTopCustomers(customersWithBookings as any, 10), [customersWithBookings])
+  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings as any), [staff, mappedBookings])
+  const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings as any), [staffWithBookings])
 
   const serviceTypePieData = useMemo(
     () => [

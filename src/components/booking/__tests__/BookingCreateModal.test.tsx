@@ -6,10 +6,30 @@ import { BookingCreateModal } from '../BookingCreateModal'
 import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage, createMockCustomer } from '@/test/factories'
 import type { ServicePackage } from '@/types'
-// import React from 'react' // Unused
 
 // Mock modules
-vi.mock('@/lib/supabase')
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    })),
+  },
+}))
 
 const mockToast = vi.fn()
 vi.mock('@/hooks/use-toast', () => ({
@@ -70,7 +90,7 @@ describe('BookingCreateModal', () => {
   let mockSetValues: any
   let mockReset: any
 
-  beforeEach(async () => {
+  beforeEach(() => {
     mockFormData = {}
     mockHandleChange = vi.fn((field, value) => {
       mockFormData[field] = value
@@ -81,32 +101,6 @@ describe('BookingCreateModal', () => {
     mockReset = vi.fn(() => {
       mockFormData = {}
     })
-
-    // Setup default Supabase mock that works for all tests
-    const supabaseMock = await import('@/lib/supabase')
-
-    // Create a comprehensive default mock query builder
-    const createDefaultMockQuery = () => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      not: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      gt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
-    })
-
-    // Mock supabase.from to return a new mock query for each call
-    vi.mocked(supabaseMock.supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
 
     vi.clearAllMocks()
   })
@@ -122,7 +116,7 @@ describe('BookingCreateModal', () => {
     reset: mockReset,
   })
 
-  const defaultProps = {
+  const getDefaultProps = () => ({
     isOpen: true,
     onClose: mockOnClose,
     onSuccess: mockOnSuccess,
@@ -134,12 +128,12 @@ describe('BookingCreateModal', () => {
     assignmentType: 'none' as const,
     setAssignmentType: mockSetAssignmentType,
     calculateEndTime: mockCalculateEndTime,
-  }
+  })
 
   describe('Rendering', () => {
     it('should render modal when isOpen is true', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByText('Create New Booking')).toBeInTheDocument()
@@ -148,7 +142,7 @@ describe('BookingCreateModal', () => {
 
     it('should not render modal when isOpen is false', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} isOpen={false} />)
+      render(<BookingCreateModal {...getDefaultProps()} isOpen={false} />)
 
       // Assert
       expect(screen.queryByText('Create New Booking')).not.toBeInTheDocument()
@@ -156,7 +150,7 @@ describe('BookingCreateModal', () => {
 
     it('should render all required form fields', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Full Name/)).toBeInTheDocument()
@@ -174,7 +168,7 @@ describe('BookingCreateModal', () => {
 
     it('should render optional notes field', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Notes/)).toBeInTheDocument()
@@ -182,7 +176,7 @@ describe('BookingCreateModal', () => {
 
     it('should render assignment type selector', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByText(/Assign to/)).toBeInTheDocument()
@@ -190,7 +184,7 @@ describe('BookingCreateModal', () => {
 
     it('should render action buttons', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument()
@@ -202,7 +196,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when full name is entered', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Full Name/)
@@ -215,7 +209,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when email is entered', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Email/)
@@ -228,7 +222,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when phone is entered', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Phone/)
@@ -241,7 +235,7 @@ describe('BookingCreateModal', () => {
     it('should call setValues when service package is selected', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Service Package/ })
@@ -254,7 +248,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when booking date is selected', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Booking Date/)
@@ -267,7 +261,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when start time is selected', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const input = screen.getByLabelText(/Start Time/)
@@ -283,7 +277,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Assert
       expect(mockCalculateEndTime).toHaveBeenCalled()
@@ -292,7 +286,7 @@ describe('BookingCreateModal', () => {
     it('should call handleChange when notes are entered', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const textarea = screen.getByLabelText(/Notes/)
@@ -306,7 +300,7 @@ describe('BookingCreateModal', () => {
   describe('Assignment Type', () => {
     it('should not show staff selector when assignment type is none', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="none" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="none" />)
 
       // Assert
       expect(screen.queryByLabelText(/Select Staff Member/)).not.toBeInTheDocument()
@@ -314,7 +308,7 @@ describe('BookingCreateModal', () => {
 
     it('should show staff selector when assignment type is staff', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="staff" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="staff" />)
 
       // Assert
       expect(screen.getByLabelText(/Select Staff Member/)).toBeInTheDocument()
@@ -322,7 +316,7 @@ describe('BookingCreateModal', () => {
 
     it('should show team selector when assignment type is team', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="team" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="team" />)
 
       // Assert
       expect(screen.getByLabelText(/Select Team/)).toBeInTheDocument()
@@ -331,7 +325,7 @@ describe('BookingCreateModal', () => {
     it('should call setAssignmentType when assignment type is changed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Assign to/ })
@@ -343,7 +337,7 @@ describe('BookingCreateModal', () => {
 
     it('should show availability check button when assignment type is staff', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="staff" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="staff" />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Check Staff Availability/i })).toBeInTheDocument()
@@ -351,7 +345,7 @@ describe('BookingCreateModal', () => {
 
     it('should show availability check button when assignment type is team', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="team" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="team" />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Check Staff Availability/i })).toBeInTheDocument()
@@ -359,7 +353,7 @@ describe('BookingCreateModal', () => {
 
     it('should not show availability check button when assignment type is none', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="none" />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="none" />)
 
       // Assert
       expect(screen.queryByRole('button', { name: /Check Staff Availability/i })).not.toBeInTheDocument()
@@ -372,7 +366,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = undefined
 
       // Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="staff" createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="staff" createForm={mockCreateForm()} />)
 
       // Assert
       const button = screen.getByRole('button', { name: /Check Staff Availability/i })
@@ -386,7 +380,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="staff" createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="staff" createForm={mockCreateForm()} />)
 
       // Assert
       const button = screen.getByRole('button', { name: /Check Staff Availability/i })
@@ -401,7 +395,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingCreateModal {...defaultProps} assignmentType="staff" createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} assignmentType="staff" createForm={mockCreateForm()} />)
 
       const button = screen.getByRole('button', { name: /Check Staff Availability/i })
       await user.click(button)
@@ -424,7 +418,7 @@ describe('BookingCreateModal', () => {
         single: vi.fn().mockResolvedValue({ data: mockCustomer, error: null }),
       } as any)
 
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const emailInput = screen.getByLabelText(/Email/)
@@ -452,7 +446,7 @@ describe('BookingCreateModal', () => {
         single: vi.fn().mockResolvedValue({ data: mockCustomer, error: null }),
       } as any)
 
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const phoneInput = screen.getByLabelText(/Phone/)
@@ -480,7 +474,7 @@ describe('BookingCreateModal', () => {
         single: vi.fn().mockResolvedValue({ data: mockCustomer, error: null }),
       } as any)
 
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const emailInput = screen.getByLabelText(/Email/)
@@ -511,7 +505,7 @@ describe('BookingCreateModal', () => {
         single: vi.fn().mockResolvedValue({ data: mockCustomer, error: null }),
       } as any)
 
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const emailInput = screen.getByLabelText(/Email/)
@@ -602,7 +596,7 @@ describe('BookingCreateModal', () => {
         zip_code: '10110',
       }
 
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Create Booking/i })
@@ -674,7 +668,7 @@ describe('BookingCreateModal', () => {
         zip_code: '10110',
       }
 
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Create Booking/i })
@@ -717,7 +711,7 @@ describe('BookingCreateModal', () => {
         zip_code: '10110',
       }
 
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Create Booking/i })
@@ -770,7 +764,7 @@ describe('BookingCreateModal', () => {
         zip_code: '10110',
       }
 
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Act
       const submitButton = screen.getByRole('button', { name: /Create Booking/i })
@@ -787,7 +781,7 @@ describe('BookingCreateModal', () => {
     it('should call onClose when cancel button is clicked', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const cancelButton = screen.getByRole('button', { name: /Cancel/i })
@@ -800,7 +794,7 @@ describe('BookingCreateModal', () => {
     it('should reset form when modal is closed', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const cancelButton = screen.getByRole('button', { name: /Cancel/i })
@@ -816,7 +810,7 @@ describe('BookingCreateModal', () => {
     it('should handle empty email blur gracefully', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const emailInput = screen.getByLabelText(/Email/)
@@ -830,7 +824,7 @@ describe('BookingCreateModal', () => {
     it('should handle empty phone blur gracefully', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const phoneInput = screen.getByLabelText(/Phone/)
@@ -844,7 +838,7 @@ describe('BookingCreateModal', () => {
     it('should handle service package selection updating total price', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Act
       const select = screen.getByRole('combobox', { name: /Service Package/ })
@@ -860,7 +854,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = 'service-1'
 
       // Act
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Assert
       expect(screen.getByDisplayValue('--:--')).toBeInTheDocument()
@@ -872,7 +866,7 @@ describe('BookingCreateModal', () => {
       mockFormData.service_package_id = undefined
 
       // Act
-      render(<BookingCreateModal {...defaultProps} createForm={mockCreateForm()} />)
+      render(<BookingCreateModal {...getDefaultProps()} createForm={mockCreateForm()} />)
 
       // Assert
       expect(screen.getByDisplayValue('--:--')).toBeInTheDocument()
@@ -882,7 +876,7 @@ describe('BookingCreateModal', () => {
   describe('Accessibility', () => {
     it('should have accessible form labels', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByLabelText(/Full Name/)).toHaveAccessibleName()
@@ -892,7 +886,7 @@ describe('BookingCreateModal', () => {
 
     it('should mark required fields with asterisk', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByText(/Full Name \*/)).toBeInTheDocument()
@@ -902,7 +896,7 @@ describe('BookingCreateModal', () => {
 
     it('should have accessible buttons', () => {
       // Arrange & Act
-      render(<BookingCreateModal {...defaultProps} />)
+      render(<BookingCreateModal {...getDefaultProps()} />)
 
       // Assert
       expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument()

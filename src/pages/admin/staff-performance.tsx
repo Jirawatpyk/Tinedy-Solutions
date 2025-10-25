@@ -142,15 +142,18 @@ export function AdminStaffPerformance() {
         customers: CustomerRecord | Customer[] | null
       }
 
-      const transformedData = (data || []).map((booking: BookingRaw): Booking => ({
-        ...booking,
-        service_packages: Array.isArray(booking.service_packages)
-          ? booking.service_packages[0] || null
-          : booking.service_packages,
-        customers: Array.isArray(booking.customers)
-          ? booking.customers[0] || null
-          : booking.customers,
-      }))
+      const transformedData = ((data || []) as any[]).map((booking: BookingRaw): Booking => {
+        const pkg = Array.isArray(booking.service_packages)
+          ? booking.service_packages[0]
+          : booking.service_packages
+        return {
+          ...booking,
+          service_packages: pkg ? { name: pkg.name, service_type: 'general' } : null,
+          customers: Array.isArray(booking.customers)
+            ? booking.customers[0] || null
+            : booking.customers,
+        } as Booking
+      })
 
       setBookings(transformedData)
       calculateStats(transformedData)
