@@ -47,8 +47,9 @@ CREATE POLICY "Admin full access to email_queue"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM admin_profiles
-      WHERE admin_profiles.id = auth.uid()
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'admin'
     )
   );
 
