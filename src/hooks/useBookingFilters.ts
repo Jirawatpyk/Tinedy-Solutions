@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useDebounce } from './use-debounce'
 
 /**
  * Interface defining UI state for booking filter options
@@ -83,6 +84,9 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
     ...DEFAULT_FILTERS,
     ...initialFilters,
   })
+
+  // Debounce search query to reduce filtering overhead
+  const debouncedSearchQuery = useDebounce(filters.searchQuery, 300)
 
   /**
    * Update a single filter value
@@ -191,6 +195,7 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
 
   return {
     filters,
+    debouncedSearchQuery,
     updateFilter,
     updateFilters,
     resetFilters,

@@ -1,3 +1,8 @@
+---
+name: testing-implementation
+description: Set up testing infrastructure and implement comprehensive test coverage
+---
+
 # Testing Implementation Skill
 
 ## Purpose
