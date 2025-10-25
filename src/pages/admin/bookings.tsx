@@ -173,14 +173,16 @@ export function AdminBookings() {
     let filtered = bookings
 
     if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase()
       filtered = filtered.filter(
         (booking) =>
           booking.customers?.full_name
             .toLowerCase()
-            .includes(filters.searchQuery.toLowerCase()) ||
+            .includes(query) ||
           booking.service_packages?.name
             .toLowerCase()
-            .includes(filters.searchQuery.toLowerCase())
+            .includes(query) ||
+          booking.id.toLowerCase().includes(query)
       )
     }
 
