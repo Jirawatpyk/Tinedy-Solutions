@@ -87,7 +87,6 @@ function TodayAppointmentsComponent({ bookings, onBookingClick, getStatusBadge }
                       <div>
                         <p className="font-medium text-tinedy-dark">
                           {booking.customers?.full_name || 'Unknown Customer'}
-                          <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {booking.customers?.email || 'No email'}
