@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { Upload, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { sendPaymentConfirmation, type BookingEmailData } from '@/lib/email'
 
 interface SlipUploadProps {
   bookingId: string
@@ -69,6 +70,9 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
     try {
       setUploading(true)
 
+      // Check if auto-verify is enabled
+      const autoVerify = import.meta.env.VITE_AUTO_VERIFY_PAYMENT === 'true' || true
+
       // Generate unique filename
       const fileExt = file.name.split('.').pop()
       const fileName = `${bookingId}_${Date.now()}.${fileExt}`
@@ -95,23 +99,57 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
         .from('payment-slips')
         .getPublicUrl(uploadData.path)
 
-      // Update booking with slip URL and mark as pending verification
-      const { error: updateError } = await supabase
+      // Determine payment status based on auto-verify setting
+      const newPaymentStatus = autoVerify ? 'paid' : 'pending_verification'
+
+      // Update booking with slip URL
+      const { data: booking, error: updateError } = await supabase
         .from('bookings')
         .update({
           payment_slip_url: publicUrl,
-          payment_status: 'pending_verification',
+          payment_status: newPaymentStatus,
           payment_method: 'bank_transfer',
         })
         .eq('id', bookingId)
+        .select(`
+          *,
+          customers (name, email),
+          services (name),
+          staff_profiles (full_name)
+        `)
+        .single()
 
       if (updateError) throw updateError
+
+      // Send payment confirmation email if auto-verified
+      if (autoVerify && booking) {
+        const emailData: BookingEmailData = {
+          bookingId: booking.id,
+          customerName: booking.customers?.name || 'Customer',
+          customerEmail: booking.customers?.email || '',
+          serviceName: booking.services?.name || 'Service',
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+          totalPrice: Number(booking.total_price),
+          location: booking.location,
+          notes: booking.notes,
+          staffName: booking.staff_profiles?.full_name,
+        }
+
+        // Send email (non-blocking)
+        sendPaymentConfirmation(emailData).catch(err => {
+          console.error('Failed to send payment confirmation email:', err)
+        })
+      }
 
       setUploaded(true)
 
       toast({
         title: 'Success!',
-        description: 'Payment slip uploaded successfully. We will verify your payment soon.',
+        description: autoVerify
+          ? 'Payment confirmed! You will receive a confirmation email shortly.'
+          : 'Payment slip uploaded successfully. We will verify your payment soon.',
       })
 
       // Call success callback after 2 seconds
