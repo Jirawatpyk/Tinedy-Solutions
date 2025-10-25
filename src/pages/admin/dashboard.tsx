@@ -158,6 +158,15 @@ export function AdminDashboard() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [appointmentsPage, setAppointmentsPage] = useState(1)
   const appointmentsPerPage = 5
+  const [actionLoading, setActionLoading] = useState<{
+    statusChange: boolean
+    delete: boolean
+    markAsPaid: boolean
+  }>({
+    statusChange: false,
+    delete: false,
+    markAsPaid: false,
+  })
 
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -501,6 +510,7 @@ export function AdminDashboard() {
   const handleStatusChange = useCallback(async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
 
+    setActionLoading(prev => ({ ...prev, statusChange: true }))
     try {
       const { error } = await supabase
         .from('bookings')
@@ -525,12 +535,15 @@ export function AdminDashboard() {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
+    } finally {
+      setActionLoading(prev => ({ ...prev, statusChange: false }))
     }
   }, [selectedBooking, toast])
 
   const deleteBooking = useCallback(async (bookingId: string) => {
     if (!confirm('Are you sure you want to delete this booking?')) return
 
+    setActionLoading(prev => ({ ...prev, delete: true }))
     try {
       const { error } = await supabase
         .from('bookings')
@@ -551,10 +564,13 @@ export function AdminDashboard() {
         description: 'Failed to delete booking',
         variant: 'destructive',
       })
+    } finally {
+      setActionLoading(prev => ({ ...prev, delete: false }))
     }
   }, [toast])
 
   const markAsPaid = useCallback(async (bookingId: string, method: string = 'cash') => {
+    setActionLoading(prev => ({ ...prev, markAsPaid: true }))
     try {
       const { error } = await supabase
         .from('bookings')
@@ -599,6 +615,8 @@ export function AdminDashboard() {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
+    } finally {
+      setActionLoading(prev => ({ ...prev, markAsPaid: false }))
     }
   }, [selectedBooking, toast])
 
@@ -1138,6 +1156,7 @@ export function AdminDashboard() {
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
+        actionLoading={actionLoading}
       />
 
       {/* Edit Booking Modal */}

@@ -67,6 +67,11 @@ interface BookingDetailModalProps {
   getPaymentStatusBadge: (status?: string) => React.ReactNode
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
+  actionLoading?: {
+    statusChange: boolean
+    delete: boolean
+    markAsPaid: boolean
+  }
 }
 
 export function BookingDetailModal({
@@ -81,6 +86,7 @@ export function BookingDetailModal({
   getPaymentStatusBadge,
   getAvailableStatuses,
   getStatusLabel,
+  actionLoading,
 }: BookingDetailModalProps) {
   const [sendingReminder, setSendingReminder] = useState(false)
   const [review, setReview] = useState<Review | null>(null)
@@ -468,9 +474,9 @@ export function BookingDetailModal({
             </div>
             {booking.payment_status !== 'paid' && (
               <div className="mt-3">
-                <Select onValueChange={(method) => onMarkAsPaid(booking.id, method)}>
+                <Select onValueChange={(method) => onMarkAsPaid(booking.id, method)} disabled={actionLoading?.markAsPaid}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Mark as Paid" />
+                    <SelectValue placeholder={actionLoading?.markAsPaid ? "Processing..." : "Mark as Paid"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cash">Cash</SelectItem>
@@ -509,9 +515,10 @@ export function BookingDetailModal({
                 onValueChange={(value) => {
                   onStatusChange(booking.id, booking.status, value)
                 }}
+                disabled={actionLoading?.statusChange}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>{actionLoading?.statusChange ? 'Updating...' : getStatusLabel(booking.status)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {getAvailableStatuses(booking.status).map((status) => (
@@ -527,9 +534,10 @@ export function BookingDetailModal({
                   onDelete(booking.id)
                   onClose()
                 }}
+                disabled={actionLoading?.delete}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                {actionLoading?.delete ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
           </div>
