@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingEditModal } from '../BookingEditModal'
-import { createMockSupabaseClient, createMockSupabaseError } from '@/test/mocks/supabase'
+import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage } from '@/test/factories'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
@@ -102,7 +103,7 @@ describe('BookingEditModal', () => {
   let mockSetValues: any
   let mockReset: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockFormData = {
       service_package_id: 'service-1',
       booking_date: '2025-10-28',
@@ -128,6 +129,25 @@ describe('BookingEditModal', () => {
     mockReset = vi.fn(() => {
       mockFormData = {}
     })
+
+    // Setup default Supabase mock that works for all tests
+    const supabaseMock = await import('@/lib/supabase')
+    const defaultMockQuery = {
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    }
+
+    vi.mocked(supabaseMock.supabase.from).mockReturnValue(defaultMockQuery as any)
 
     mockCheckConflicts.mockResolvedValue([]) // No conflicts by default
     vi.clearAllMocks()

@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingList } from '../BookingList'
-import { createMockBookingWithRelations } from '@/test/factories'
 import type { Booking } from '@/types/booking'
 import React from 'react'
 
@@ -19,7 +18,7 @@ describe('BookingList', () => {
   const mockFormatTime = vi.fn((time: string) => time.slice(0, 5)) // HH:MM
   const mockGetStatusBadge = vi.fn((status: string) => <span data-testid="status-badge">{status}</span>)
   const mockGetPaymentStatusBadge = vi.fn((status?: string) => <span data-testid="payment-badge">{status}</span>)
-  const mockGetAvailableStatuses = vi.fn((currentStatus: string) => ['pending', 'confirmed', 'completed'])
+  const mockGetAvailableStatuses = vi.fn((_currentStatus: string) => ['pending', 'confirmed', 'completed'])
   const mockGetStatusLabel = vi.fn((status: string) => status)
 
   const createMockBooking = (overrides: Partial<Booking> = {}): Booking => ({
@@ -426,7 +425,7 @@ describe('BookingList', () => {
 
     it('should call onDeleteBooking when delete button is clicked', async () => {
       // Arrange
-      const user = userEvent.setup()
+      userEvent.setup()
       const bookings = [createMockBooking({ id: 'booking-123' })]
 
       // Act

@@ -1,3 +1,4 @@
+import type { CustomerRecord, Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,7 +76,7 @@ interface BookingRaw {
   payment_date?: string
   payment_notes?: string
   service_packages: ServicePackage[] | ServicePackage | null
-  customers: Customer[] | Customer | null
+  customers: CustomerRecord[] | CustomerRecord | null
   profiles: UserProfile[] | UserProfile | null
   teams: { name: string }[] | { name: string } | null
 }

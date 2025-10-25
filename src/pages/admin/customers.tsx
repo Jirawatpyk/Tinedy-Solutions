@@ -1,4 +1,4 @@
-import type { Customer } from '@/types'
+import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -35,13 +35,13 @@ import {
 
 export function AdminCustomers() {
   const navigate = useNavigate()
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
+  const [customers, setCustomers] = useState<CustomerRecord[]>([])
+  const [filteredCustomers, setFilteredCustomers] = useState<CustomerRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [editingCustomer, setEditingCustomer] = useState<CustomerRecord | null>(null)
 
   // Debounce search query to reduce filtering overhead
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
@@ -156,7 +156,7 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'Customer updated successfully',
+          description: 'CustomerRecord updated successfully',
         })
       } else {
         const { error } = await supabase.from('customers').insert(cleanedData)
@@ -165,7 +165,7 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'Customer created successfully',
+          description: 'CustomerRecord created successfully',
         })
       }
 
@@ -193,7 +193,7 @@ export function AdminCustomers() {
 
       toast({
         title: 'Success',
-        description: 'Customer deleted successfully',
+        description: 'CustomerRecord deleted successfully',
       })
       fetchCustomers()
     } catch {
@@ -205,7 +205,7 @@ export function AdminCustomers() {
     }
   }
 
-  const openEditDialog = (customer: Customer) => {
+  const openEditDialog = (customer: CustomerRecord) => {
     setEditingCustomer(customer)
     setFormData({
       full_name: customer.full_name,
@@ -284,7 +284,7 @@ export function AdminCustomers() {
           </CardContent>
         </Card>
 
-        {/* Customer cards skeleton */}
+        {/* CustomerRecord cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
@@ -330,13 +330,13 @@ export function AdminCustomers() {
               onClick={resetForm}
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Customer
+              New CustomerRecord
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingCustomer ? 'Edit Customer' : 'New Customer'}
+                {editingCustomer ? 'Edit CustomerRecord' : 'New CustomerRecord'}
               </DialogTitle>
               <DialogDescription>
                 {editingCustomer
@@ -412,9 +412,9 @@ export function AdminCustomers() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">🆕 New Customer</SelectItem>
-                        <SelectItem value="regular">💚 Regular Customer</SelectItem>
-                        <SelectItem value="vip">👑 VIP Customer</SelectItem>
+                        <SelectItem value="new">🆕 New CustomerRecord</SelectItem>
+                        <SelectItem value="regular">💚 Regular CustomerRecord</SelectItem>
+                        <SelectItem value="vip">👑 VIP CustomerRecord</SelectItem>
                         <SelectItem value="inactive">💤 Inactive</SelectItem>
                       </SelectContent>
                     </Select>
@@ -480,7 +480,7 @@ export function AdminCustomers() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-tinedy-blue" />
-                  <Label htmlFor="tags">Customer Tags</Label>
+                  <Label htmlFor="tags">CustomerRecord Tags</Label>
                 </div>
                 <TagInput
                   tags={formData.tags}
@@ -770,7 +770,7 @@ export function AdminCustomers() {
                           </Badge>
                         )}
 
-                        {/* Customer Tags */}
+                        {/* CustomerRecord Tags */}
                         {customer.tags && customer.tags.length > 0 && (
                           <>
                             {customer.tags.slice(0, 2).map((tag) => (

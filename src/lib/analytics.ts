@@ -1,4 +1,4 @@
-import type { Customer } from '@/types'
+import type { CustomerRecord, Booking } from '@/types'
 import { startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subMonths, subWeeks, subDays, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
 
 export interface RevenueMetrics {
@@ -51,33 +51,33 @@ export const calculateRevenueMetrics = (bookings: Booking[]): RevenueMetrics => 
   const lastMonthEnd = endOfMonth(subMonths(now, 1))
 
   // Filter completed bookings only
-  const completedBookings = bookings.filter((b) => b.status === 'completed')
+  const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
 
-  const total = completedBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+  const total = completedBookings.reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const today = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: todayStart, end: todayEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const yesterday = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: yesterdayStart, end: yesterdayEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const thisWeek = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisWeekStart, end: thisWeekEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const lastWeek = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastWeekStart, end: lastWeekEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const thisMonth = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisMonthStart, end: thisMonthEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const lastMonth = completedBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastMonthStart, end: lastMonthEnd }))
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const monthGrowth = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : 0
   const weekGrowth = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0
@@ -111,9 +111,9 @@ export const calculateBookingMetrics = (bookings: Booking[]): BookingMetrics => 
   const lastMonthEnd = endOfMonth(subMonths(now, 1))
 
   const total = bookings.length
-  const completed = bookings.filter((b) => b.status === 'completed').length
-  const pending = bookings.filter((b) => b.status === 'pending').length
-  const cancelled = bookings.filter((b) => b.status === 'cancelled').length
+  const completed = bookings.filter((b: Booking) => b.status === 'completed').length
+  const pending = bookings.filter((b: Booking) => b.status === 'pending').length
+  const cancelled = bookings.filter((b: Booking) => b.status === 'cancelled').length
 
   const thisMonth = bookings.filter((b) =>
     isWithinInterval(new Date(b.booking_date), { start: thisMonthStart, end: thisMonthEnd })
@@ -147,7 +147,7 @@ export const generateChartData = (
   endDate: Date
 ): ChartDataPoint[] => {
   const days = eachDayOfInterval({ start: startDate, end: endDate })
-  const completedBookings = bookings.filter((b) => b.status === 'completed')
+  const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
 
   return days.map((day) => {
     const dayStart = startOfDay(day)
@@ -157,7 +157,7 @@ export const generateChartData = (
       isWithinInterval(new Date(b.booking_date), { start: dayStart, end: dayEnd })
     )
 
-    const revenue = dayBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+    const revenue = dayBookings.reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
     return {
       date: format(day, 'MMM dd'),
@@ -173,15 +173,15 @@ export const generateChartData = (
 export const getRevenueByServiceType = (
   bookings: Booking[]
 ): { cleaning: number; training: number } => {
-  const completedBookings = bookings.filter((b) => b.status === 'completed')
+  const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
 
   const cleaning = completedBookings
     .filter((b) => b.service_type === 'cleaning')
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   const training = completedBookings
     .filter((b) => b.service_type === 'training')
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
+    .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   return { cleaning, training }
 }
@@ -296,12 +296,12 @@ export interface TopCustomer {
  * Calculate customer metrics
  */
 export const calculateCustomerMetrics = (
-  customers: Customer[],
+  customers: CustomerRecord[],
   bookings: Booking[]
-): CustomerMetrics => {
+): CustomerRecordMetrics => {
   const now = new Date()
   const thisMonthStart = startOfMonth(now)
-  const completedBookings = bookings.filter((b) => b.status === 'completed')
+  const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
 
   const total = customers.length
   const newThisMonth = customers.filter((c) =>
@@ -323,7 +323,7 @@ export const calculateCustomerMetrics = (
   const returning = Object.values(customerBookingCounts).filter((count) => count > 1).length
 
   // Calculate average CLV (Customer Lifetime Value)
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+  const totalRevenue = completedBookings.reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
   const averageCLV = total > 0 ? totalRevenue / total : 0
 
   // Retention rate: % of customers with more than one booking
@@ -342,12 +342,12 @@ export const calculateCustomerMetrics = (
  * Get top customers by revenue
  */
 export const getTopCustomers = (
-  customers: CustomerWithBookings[],
+  customers: CustomerRecordWithBookings[],
   limit: number = 10
 ): TopCustomer[] => {
   const customerStats = customers.map((customer) => {
-    const completedBookings = customer.bookings.filter((b) => b.status === 'completed')
-    const totalRevenue = completedBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+    const completedBookings = customer.bookings.filter((b: Booking) => b.status === 'completed')
+    const totalRevenue = completedBookings.reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
     const totalBookings = customer.bookings.length
     const lastBooking = customer.bookings.sort(
       (a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
@@ -372,7 +372,7 @@ export const getTopCustomers = (
  * Get customer acquisition trend (monthly new customers)
  */
 export const getCustomerAcquisitionTrend = (
-  customers: Customer[],
+  customers: CustomerRecord[],
   startDate: Date,
   endDate: Date
 ): { date: string; count: number }[] => {
@@ -398,7 +398,7 @@ export const getCustomerAcquisitionTrend = (
  * Get customer lifetime value distribution
  */
 export const getCustomerCLVDistribution = (
-  customers: CustomerWithBookings[]
+  customers: CustomerRecordWithBookings[]
 ): { range: string; count: number }[] => {
   const ranges = [
     { min: 0, max: 500, label: '฿0-500' },
@@ -411,8 +411,8 @@ export const getCustomerCLVDistribution = (
   return ranges.map((range) => {
     const count = customers.filter((customer) => {
       const totalRevenue = customer.bookings
-        .filter((b) => b.status === 'completed')
-        .reduce((sum, b) => sum + Number(b.total_price), 0)
+        .filter((b: Booking) => b.status === 'completed')
+        .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
       return totalRevenue >= range.min && totalRevenue < range.max
     }).length
@@ -428,7 +428,7 @@ export const getCustomerCLVDistribution = (
  * Get customer segmentation by booking frequency
  */
 export const getCustomerSegmentation = (
-  customers: CustomerWithBookings[]
+  customers: CustomerRecordWithBookings[]
 ): { name: string; value: number; color: string }[] => {
   let newCustomers = 0
   let regular = 0
@@ -457,7 +457,7 @@ export const getCustomerSegmentation = (
  * Get repeat customer rate trend (monthly)
  */
 export const getRepeatCustomerRateTrend = (
-  customers: CustomerWithBookings[],
+  customers: CustomerRecordWithBookings[],
   startDate: Date,
   endDate: Date
 ): { date: string; rate: number }[] => {
@@ -533,8 +533,8 @@ export const calculateStaffMetrics = (
   staff: Staff[],
   bookings: Booking[]
 ): StaffMetrics => {
-  const completedBookings = bookings.filter((b) => b.status === 'completed')
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+  const completedBookings = bookings.filter((b: Booking) => b.status === 'completed')
+  const totalRevenue = completedBookings.reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
   // Count staff with at least one booking
   const staffWithBookings = new Set(
@@ -564,10 +564,10 @@ export const calculateStaffMetrics = (
 export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPerformance[] => {
   return staffMembers.map((staff) => {
     const totalJobs = staff.bookings.length
-    const completedJobs = staff.bookings.filter((b) => b.status === 'completed').length
+    const completedJobs = staff.bookings.filter((b: Booking) => b.status === 'completed').length
     const revenue = staff.bookings
-      .filter((b) => b.status === 'completed')
-      .reduce((sum, b) => sum + Number(b.total_price), 0)
+      .filter((b: Booking) => b.status === 'completed')
+      .reduce((sum: number, b: Booking) => sum + Number(b.total_price), 0)
 
     const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
     const avgJobValue = completedJobs > 0 ? revenue / completedJobs : 0

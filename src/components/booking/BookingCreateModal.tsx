@@ -24,7 +24,10 @@ import { formatCurrency } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getErrorMessage } from '@/lib/error-utils'
 import type { ServicePackage } from '@/types'
+import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, type PaymentEmailData } from '@/lib/email'
+
+type Customer = CustomerRecord
 
 interface StaffMember {
   id: string
@@ -92,7 +95,7 @@ export function BookingCreateModal({
   calculateEndTime,
 }: BookingCreateModalProps) {
   const { toast } = useToast()
-  const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null)
+  const [existingCustomer, setExistingCustomer] = useState<CustomerRecord | null>(null)
   const [checkingCustomer, setCheckingCustomer] = useState(false)
 
   // Check existing customer by email

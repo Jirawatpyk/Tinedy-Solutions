@@ -1,3 +1,4 @@
+import type { Booking, CustomerRecord } from '@/types'
 import type { Customer } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -138,7 +139,7 @@ export function AdminStaffPerformance() {
         payment_status: string
         created_at: string
         service_packages: { name: string; price: number } | { name: string; price: number }[] | null
-        customers: Customer | Customer[] | null
+        customers: CustomerRecord | Customer[] | null
       }
 
       const transformedData = (data || []).map((booking: BookingRaw): Booking => ({

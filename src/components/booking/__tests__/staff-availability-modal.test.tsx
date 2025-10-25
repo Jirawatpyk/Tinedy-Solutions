@@ -88,7 +88,7 @@ describe('StaffAvailabilityModal', () => {
   describe('Rendering Tests', () => {
     it('should render modal when isOpen is true', () => {
       render(<StaffAvailabilityModal {...defaultProps} />)
-      expect(screen.getByText('Check Staff Availability')).toBeInTheDocument()
+      expect(screen.getByText(/Check Staff Availability/i)).toBeInTheDocument()
     })
 
     it('should not render modal when isOpen is false', () => {

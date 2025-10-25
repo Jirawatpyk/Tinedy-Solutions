@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -131,16 +132,23 @@ describe('Booking Integration Tests', () => {
     vi.clearAllMocks()
     mockBookingForm.reset()
 
-    // Setup default Supabase mock
-    const mockFrom = vi.fn().mockReturnValue({
+    // Setup default Supabase mock with all chainable methods
+    const defaultMockQuery = {
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    }
 
-    vi.mocked(supabase.from).mockImplementation(mockFrom)
+    vi.mocked(supabase.from).mockReturnValue(defaultMockQuery as any)
   })
 
   describe('Booking Creation Flow', () => {
@@ -170,6 +178,11 @@ describe('Booking Integration Tests', () => {
             start_time: '10:00:00',
             end_time: '12:00:00',
             total_price: 2000,
+            address: '456 Test St',
+            notes: null,
+            staff_profiles: null,
+            customers: null,
+            services: null,
           },
           error: null,
         }),
@@ -259,7 +272,18 @@ describe('Booking Integration Tests', () => {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { id: 'new-booking-2' },
+          data: {
+            id: 'new-booking-2',
+            booking_date: '2025-02-20',
+            start_time: '10:00:00',
+            end_time: '12:00:00',
+            total_price: 2000,
+            address: '789 Old St',
+            notes: null,
+            staff_profiles: null,
+            customers: null,
+            services: null,
+          },
           error: null,
         }),
       }
@@ -297,14 +321,25 @@ describe('Booking Integration Tests', () => {
     })
 
     it('should assign individual staff when selected', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
       const mockSetAssignmentType = vi.fn()
 
       const bookingMock = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { id: 'new-booking-3' },
+          data: {
+            id: 'new-booking-3',
+            booking_date: '2025-02-20',
+            start_time: '10:00:00',
+            end_time: '12:00:00',
+            total_price: 2000,
+            address: '123 Main St',
+            notes: null,
+            staff_profiles: null,
+            customers: null,
+            services: null,
+          },
           error: null,
         }),
       }
@@ -328,11 +363,12 @@ describe('Booking Integration Tests', () => {
       )
 
       // Check that staff selector is visible by text content
-      expect(screen.getByText(/Select Staff Member/i)).toBeInTheDocument()
+      const staffLabels = screen.getAllByText(/Select Staff Member/i)
+      expect(staffLabels.length).toBeGreaterThan(0)
     })
 
     it('should assign team when selected', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
 
       render(
         <BookingCreateModal
@@ -351,7 +387,8 @@ describe('Booking Integration Tests', () => {
       )
 
       // Check that team selector is visible by text content
-      expect(screen.getByText(/Select Team/i)).toBeInTheDocument()
+      const teamLabels = screen.getAllByText(/Select Team/i)
+      expect(teamLabels.length).toBeGreaterThan(0)
     })
 
     it('should calculate end time automatically based on service duration', () => {
@@ -491,7 +528,7 @@ describe('Booking Integration Tests', () => {
     })
 
     it('should update booking with different service package', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
 
       const updateMock = {
         update: vi.fn().mockReturnThis(),
@@ -538,7 +575,7 @@ describe('Booking Integration Tests', () => {
     })
 
     it('should update booking time slot', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
 
       const updateMock = {
         update: vi.fn().mockReturnThis(),
@@ -589,7 +626,7 @@ describe('Booking Integration Tests', () => {
     })
 
     it('should change staff assignment', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
       const mockOnAssignmentTypeChange = vi.fn()
 
       render(
@@ -610,11 +647,12 @@ describe('Booking Integration Tests', () => {
       )
 
       // Verify staff assignment selector is visible
-      expect(screen.getByText(/Select Staff Member/i)).toBeInTheDocument()
+      const staffLabels = screen.getAllByText(/Select Staff Member/i)
+      expect(staffLabels.length).toBeGreaterThan(0)
     })
 
     it('should change from staff to team assignment', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
       const mockOnAssignmentTypeChange = vi.fn()
 
       const editForm = {
@@ -643,7 +681,8 @@ describe('Booking Integration Tests', () => {
       )
 
       // Verify team selector is shown by text content
-      expect(screen.getByText(/Select Team/i)).toBeInTheDocument()
+      const teamLabels = screen.getAllByText(/Select Team/i)
+      expect(teamLabels.length).toBeGreaterThan(0)
     })
 
     it('should handle validation errors gracefully', async () => {

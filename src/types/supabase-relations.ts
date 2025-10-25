@@ -54,7 +54,7 @@ export interface BookingWithCustomer {
  * This is the most common type returned by Supabase queries
  * Used in: availability checks, booking lists, conflict detection
  */
-export interface BookingWithRelations {
+export interface SupabaseBookingWithRelations {
   id: string
   booking_date: string
   start_time: string
@@ -89,7 +89,7 @@ export interface BookingTimeSlot {
 /**
  * Team member profile (minimal version for nested queries)
  */
-export interface TeamMemberProfile {
+export interface SupabaseTeamMemberProfile {
   id: string
   full_name: string
   skills: string[] | null
@@ -108,7 +108,7 @@ export interface TeamMemberData {
   user_id: string
   role: 'leader' | 'member'
   joined_at: string
-  profiles: TeamMemberProfile[] | TeamMemberProfile
+  profiles: SupabaseTeamMemberProfile[] | SupabaseTeamMemberProfile
 }
 
 /**

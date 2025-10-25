@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingCreateModal } from '../BookingCreateModal'
-import { createMockSupabaseClient, createMockSupabaseError } from '@/test/mocks/supabase'
+import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage, createMockCustomer } from '@/test/factories'
 import type { ServicePackage } from '@/types'
 import React from 'react'
@@ -65,7 +66,7 @@ describe('BookingCreateModal', () => {
   let mockSetValues: any
   let mockReset: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockFormData = {}
     mockHandleChange = vi.fn((field, value) => {
       mockFormData[field] = value
@@ -76,6 +77,28 @@ describe('BookingCreateModal', () => {
     mockReset = vi.fn(() => {
       mockFormData = {}
     })
+
+    // Setup default Supabase mock that works for all tests
+    const supabaseMock = await import('@/lib/supabase')
+
+    // Create a comprehensive default mock query builder
+    const createDefaultMockQuery = () => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((resolve) => Promise.resolve({ data: null, error: null }).then(resolve)),
+    })
+
+    // Mock supabase.from to return a new mock query for each call
+    vi.mocked(supabaseMock.supabase.from).mockImplementation(() => createDefaultMockQuery() as any)
 
     vi.clearAllMocks()
   })
@@ -531,12 +554,30 @@ describe('BookingCreateModal', () => {
             insert: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { id: newBookingId, booking_date: '2025-10-28', start_time: '10:00:00' },
+              data: {
+                id: newBookingId,
+                booking_date: '2025-10-28',
+                start_time: '10:00:00',
+                end_time: '12:00:00',
+                total_price: 1500,
+                address: '123 Main St',
+                notes: null,
+                staff_profiles: null,
+                customers: null,
+                services: null,
+              },
               error: null,
             }),
           } as any
         }
-        return {} as any
+        return {
+          select: vi.fn().mockReturnThis(),
+          insert: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        } as any
       })
 
       mockFormData = {
@@ -584,12 +625,30 @@ describe('BookingCreateModal', () => {
             insert: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { id: newBookingId, booking_date: '2025-10-28', start_time: '10:00:00' },
+              data: {
+                id: newBookingId,
+                booking_date: '2025-10-28',
+                start_time: '10:00:00',
+                end_time: '12:00:00',
+                total_price: 1500,
+                address: '123 Main St',
+                notes: null,
+                staff_profiles: null,
+                customers: null,
+                services: null,
+              },
               error: null,
             }),
           } as any
         }
-        return {} as any
+        return {
+          select: vi.fn().mockReturnThis(),
+          insert: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        } as any
       })
 
       mockFormData = {
@@ -675,7 +734,18 @@ describe('BookingCreateModal', () => {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { id: 'booking-id', booking_date: '2025-10-28', start_time: '10:00:00' },
+          data: {
+            id: 'booking-id',
+            booking_date: '2025-10-28',
+            start_time: '10:00:00',
+            end_time: '12:00:00',
+            total_price: 1500,
+            address: '123 Main St',
+            notes: null,
+            staff_profiles: null,
+            customers: null,
+            services: null,
+          },
           error: null,
         }),
       } as any))

@@ -1,3 +1,4 @@
+import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -180,7 +181,7 @@ export function AdminCustomerDetail() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [customer, setCustomer] = useState<CustomerRecord | null>(null)
   const [stats, setStats] = useState<CustomerStats | null>(null)
   const [bookings, setBookings] = useState<CustomerBooking[]>([])
   const [loading, setLoading] = useState(true)
