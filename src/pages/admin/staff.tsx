@@ -362,7 +362,7 @@ export function AdminStaff() {
 
         {/* Staff cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 9 }).map((_, i) => (
+          {Array.from({ length: Math.min(staff.length, 9) || 9 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
                 <div className="flex items-start justify-between">
