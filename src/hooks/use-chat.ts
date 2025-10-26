@@ -282,6 +282,7 @@ export function useChat() {
     const setupRealtimeSubscription = async () => {
       channel = supabase
         .channel('messages')
+        // Listen for incoming messages (sent TO me)
         .on(
           'postgres_changes',
           {
@@ -301,6 +302,33 @@ export function useChat() {
             }
 
             // Reload conversations to update last message and unread count
+            loadConversations()
+          }
+        )
+        // Listen for outgoing messages (sent BY me)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `sender_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newMessage = payload.new as Message
+
+            // If message is for currently selected user, add to messages
+            // (This handles when WE send a message to the selected user)
+            if (selectedUser && newMessage.recipient_id === selectedUser.id) {
+              // Check if message already exists (to avoid duplicates from local state update)
+              setMessages((prev) => {
+                const exists = prev.some(msg => msg.id === newMessage.id)
+                if (exists) return prev
+                return [...prev, newMessage]
+              })
+            }
+
+            // Reload conversations to update last message
             loadConversations()
           }
         )
