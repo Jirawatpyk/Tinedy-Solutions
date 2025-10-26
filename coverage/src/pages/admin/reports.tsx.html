@@ -722,8 +722,7 @@
 <a name='L657'></a><a href='#L657'>657</a>
 <a name='L658'></a><a href='#L658'>658</a>
 <a name='L659'></a><a href='#L659'>659</a>
-<a name='L660'></a><a href='#L660'>660</a>
-<a name='L661'></a><a href='#L661'>661</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L660'></a><a href='#L660'>660</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1309,7 +1308,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1542,7 +1540,7 @@ export function <span class="fstat-no" title="function not covered" >AdminReport
 <span class="cstat-no" title="statement not covered" >      setCustomers((customersData || []) as CustomerRecord[])</span>
 &nbsp;
       // Group bookings by customer
-      type CustomerBooking = { id: string; booking_date: string; total_price: number; status: string; created_at: string }
+      type CustomerBooking = { id: string; booking_date: string; total_price: number; status: string; created_at: string; customer_id?: string }
       const customerBookingsMap = <span class="cstat-no" title="statement not covered" >new Map&lt;string, CustomerBooking[]&gt;()</span>
 <span class="cstat-no" title="statement not covered" >      bookingsData?.forEach(<span class="fstat-no" title="function not covered" >(b</span>ooking) =&gt; {</span>
         const customerId = <span class="cstat-no" title="statement not covered" >booking.customer_id</span>
@@ -1552,9 +1550,9 @@ export function <span class="fstat-no" title="function not covered" >AdminReport
 <span class="cstat-no" title="statement not covered" >        customerBookingsMap.get(customerId)?.push(booking)</span>
       })
 &nbsp;
-      // Merge customers with their bookings
-      const <span class="cstat-no" title="statement not covered" >merged = (customersData || []).map(<span class="fstat-no" title="function not covered" >(c</span>ustomer) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
-        ...customer,
+      // Merge customers with their bookings - create proper CustomerWithBookings
+      const <span class="cstat-no" title="statement not covered" >merged: CustomerWithBookings[] = (customersData || []).map(<span class="fstat-no" title="function not covered" >(c</span>ustomer) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
+        ...(customer as CustomerRecord),
         bookings: customerBookingsMap.get(customer.id) || [],
       }))
 &nbsp;
@@ -1825,8 +1823,8 @@ export function <span class="fstat-no" title="function not covered" >AdminReport
   const <span class="cstat-no" title="statement not covered" >statusBreakdown = useMemo(<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; g</span>etBookingStatusBreakdown(mappedBookings), [</span>mappedBookings])</span>
   const <span class="cstat-no" title="statement not covered" >peakHoursData = useMemo(<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; g</span>etPeakHoursData(mappedBookings), [</span>mappedBookings])</span>
   const <span class="cstat-no" title="statement not covered" >customerMetrics = useMemo(</span>
-<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    () =&gt; c</span>alculateCustomerMetrics(customers, mappedBookings),</span>
-    [customers, mappedBookings]
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    () =&gt; c</span>alculateCustomerMetrics(customersWithBookings, mappedBookings),</span>
+    [customersWithBookings, mappedBookings]
   )
   const <span class="cstat-no" title="statement not covered" >topCustomers = useMemo(<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; g</span>etTopCustomers(customersWithBookings, 10), [</span>customersWithBookings])</span>
   const <span class="cstat-no" title="statement not covered" >staffMetrics = useMemo(<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; c</span>alculateStaffMetrics(staff, mappedBookings), [</span>staff, mappedBookings])</span>
@@ -2016,7 +2014,6 @@ export function <span class="fstat-no" title="function not covered" >AdminReport
         &lt;TabsContent value="customers" className="space-y-6"&gt;
           &lt;CustomersTab
             customerMetrics={customerMetrics}
-            customers={customers}
             customersWithBookings={customersWithBookings}
             topCustomers={topCustomers}
             dateRange={dateRange}
@@ -2050,7 +2047,7 @@ export function <span class="fstat-no" title="function not covered" >AdminReport
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-25T20:17:34.333Z
+                at 2025-10-26T03:24:16.124Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

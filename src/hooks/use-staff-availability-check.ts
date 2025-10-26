@@ -18,6 +18,7 @@ interface BookingConflictData {
   customers: { full_name: string }[] | { full_name: string } | null
 }
 
+// Type for team member data from Supabase query (profiles can be array or object)
 interface TeamMemberData {
   staff_id: string
   profiles: {
@@ -31,7 +32,8 @@ interface TeamMemberData {
   }
 }
 
-interface TeamWithMembers {
+// Type for team with members from Supabase query
+interface TeamWithMemberProfiles {
   id: string
   name: string
   team_members: TeamMemberData[]
@@ -356,7 +358,7 @@ export function useStaffAvailabilityCheck({
 
       // 3. Check availability for each team
       const results = await Promise.all(
-        (teams || []).map(async (team: TeamWithMembers) => {
+        (teams || []).map(async (team: TeamWithMemberProfiles) => {
           const members = team.team_members || []
           const totalMembers = members.length
 
@@ -492,7 +494,7 @@ export function useStaffAvailabilityCheck({
             })
           )
 
-          const availableMembers = memberResults.filter(m => m.isAvailable).length
+          const availableMembers = memberResults.filter((m) => m.isAvailable).length
 
           // Team is NOT available if:
           // 1. The team itself has conflicting bookings (team-level assignment), OR
@@ -508,13 +510,13 @@ export function useStaffAvailabilityCheck({
           const teamMatch = calculateTeamMatch(teamSkills, service.service_type)
 
           // Calculate average team rating from member results
-          const membersWithRatings = memberResults.filter(m => m.rating > 0)
+          const membersWithRatings = memberResults.filter((m) => m.rating > 0)
           const avgTeamRating = membersWithRatings.length > 0
-            ? membersWithRatings.reduce((sum, m) => sum + m.rating, 0) / membersWithRatings.length
+            ? membersWithRatings.reduce((sum: number, m) => sum + m.rating, 0) / membersWithRatings.length
             : 0
 
           // Calculate team workload (sum of all members' jobs today)
-          const teamJobsToday = memberResults.reduce((sum, m) => sum + m.jobsToday, 0)
+          const teamJobsToday = memberResults.reduce((sum: number, m) => sum + m.jobsToday, 0)
 
           // Calculate team performance score (0-15 points)
           const teamPerformanceScore = (avgTeamRating / 5) * 15
