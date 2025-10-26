@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/auth-context'
 import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
+import { RoleBasedRedirect } from './components/auth/role-based-redirect'
 import { MainLayout } from './components/layout/main-layout'
 import { Toaster } from './components/ui/toaster'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -103,8 +104,8 @@ function App() {
               <Route path="profile" element={<StaffProfile />} />
             </Route>
 
-          {/* Redirect root to admin dashboard */}
-          <Route path="/" element={<Navigate to="/admin" replace />} />
+          {/* Redirect root based on user role */}
+          <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Unauthorized */}
           <Route

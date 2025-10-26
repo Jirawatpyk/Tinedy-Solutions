@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { CheckCircle2, Clock, XCircle, AlertCircle, Play } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -128,15 +128,15 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'เสร็จสิ้น'
+        return 'Completed'
       case 'confirmed':
-        return 'ยืนยันแล้ว'
+        return 'Confirmed'
       case 'in_progress':
-        return 'กำลังดำเนินการ'
+        return 'In Progress'
       case 'pending':
-        return 'รอยืนยัน'
+        return 'Pending'
       case 'cancelled':
-        return 'ยกเลิก'
+        return 'Cancelled'
       default:
         return status
     }
@@ -172,7 +172,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
     return (
       <div className="text-center py-6 text-muted-foreground">
         <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">ยังไม่มีประวัติการเปลี่ยนแปลง</p>
+        <p className="text-sm">No change history yet</p>
       </div>
     )
   }
@@ -181,7 +181,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
     <div className="space-y-4">
       <h3 className="font-semibold flex items-center gap-2">
         <Clock className="h-4 w-4" />
-        ประวัติการเปลี่ยนแปลง
+        Change History
       </h3>
 
       <div className="space-y-3">
@@ -209,7 +209,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
                       {getStatusText(item.old_status)} → {getStatusText(item.new_status)}
                     </>
                   ) : (
-                    <>สร้างการจอง - {getStatusText(item.new_status)}</>
+                    <>Created Booking - {getStatusText(item.new_status)}</>
                   )}
                 </div>
 
@@ -217,11 +217,11 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
                   <p>
                     <span className="font-medium">
                       {Array.isArray(item.profiles)
-                        ? item.profiles[0]?.full_name || 'ระบบ'
-                        : item.profiles?.full_name || 'ระบบ'}
+                        ? item.profiles[0]?.full_name || 'System'
+                        : item.profiles?.full_name || 'System'}
                     </span>
                     {' • '}
-                    {format(new Date(item.created_at), 'dd MMM yyyy, HH:mm น.', { locale: th })}
+                    {format(new Date(item.created_at), 'dd MMM yyyy, HH:mm', { locale: enUS })}
                   </p>
                   {item.notes && (
                     <p className="text-gray-600 italic">"{item.notes}"</p>

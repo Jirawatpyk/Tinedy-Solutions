@@ -92,15 +92,15 @@ export function BookingDetailsModal({
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'เสร็จสิ้น'
+        return 'Completed'
       case 'confirmed':
-        return 'ยืนยันแล้ว'
+        return 'Confirmed'
       case 'in_progress':
-        return 'กำลังดำเนินการ'
+        return 'In Progress'
       case 'pending':
-        return 'รอยืนยัน'
+        return 'Pending'
       case 'cancelled':
-        return 'ยกเลิก'
+        return 'Cancelled'
       default:
         return status
     }
@@ -113,14 +113,14 @@ export function BookingDetailsModal({
       setIsSaving(true)
       await onAddNotes(currentBooking.id, notes.trim())
       toast({
-        title: 'บันทึกสำเร็จ',
-        description: 'บันทึกหมายเหตุเรียบร้อยแล้ว',
+        title: 'Saved Successfully',
+        description: 'Notes saved successfully',
       })
       setNotes('')
     } catch {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถบันทึกหมายเหตุได้',
+        title: 'Error',
+        description: 'Could not save notes',
         variant: 'destructive',
       })
     } finally {
@@ -135,14 +135,14 @@ export function BookingDetailsModal({
       setIsStarting(true)
       await onStartProgress(currentBooking.id)
       toast({
-        title: 'เริ่มดำเนินการ',
-        description: 'เริ่มดำเนินการเรียบร้อยแล้ว',
+        title: 'Started',
+        description: 'Task started successfully',
       })
       onClose()
     } catch {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถเริ่มดำเนินการได้',
+        title: 'Error',
+        description: 'Could not start task',
         variant: 'destructive',
       })
     } finally {
@@ -157,14 +157,14 @@ export function BookingDetailsModal({
       setIsMarking(true)
       await onMarkCompleted(currentBooking.id)
       toast({
-        title: 'เสร็จสิ้น',
-        description: 'ทำเครื่องหมายเสร็จสิ้นเรียบร้อยแล้ว',
+        title: 'Completed',
+        description: 'Task marked as completed successfully',
       })
       onClose()
     } catch {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถทำเครื่องหมายเสร็จสิ้นได้',
+        title: 'Error',
+        description: 'Could not mark task as completed',
         variant: 'destructive',
       })
     } finally {
@@ -181,13 +181,13 @@ export function BookingDetailsModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>รายละเอียดการจอง</span>
+            <span>Booking Details</span>
             <Badge className={getStatusColor(currentBooking.status)} variant="outline">
               {getStatusText(currentBooking.status)}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            รหัสการจอง: {currentBooking.id.slice(0, 8)}
+            Booking ID: {currentBooking.id.slice(0, 8)}
           </DialogDescription>
         </DialogHeader>
 
@@ -197,7 +197,7 @@ export function BookingDetailsModal({
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                <span>วันที่</span>
+                <span>Date</span>
               </div>
               <p className="font-medium">
                 {format(new Date(currentBooking.booking_date), 'dd MMMM yyyy', { locale: th })}
@@ -206,7 +206,7 @@ export function BookingDetailsModal({
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span>เวลา</span>
+                <span>Time</span>
               </div>
               <p className="font-medium">{formatTime(currentBooking.start_time)} - {formatTime(currentBooking.end_time)}</p>
             </div>
@@ -218,25 +218,25 @@ export function BookingDetailsModal({
           <div>
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <User className="h-4 w-4" />
-              ข้อมูลลูกค้า
+              Customer Information
             </h3>
             <div className="space-y-2 ml-6">
               <div>
-                <p className="text-sm text-muted-foreground">ชื่อ</p>
+                <p className="text-sm text-muted-foreground">Name</p>
                 <p className="font-medium">
                   {currentBooking.customers?.full_name || 'Unknown Customer'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">เบอร์โทร</p>
+                <p className="text-sm text-muted-foreground">Phone</p>
                 <p className="font-medium flex items-center gap-2">
                   <Phone className="h-3 w-3" />
-                  {currentBooking.customers?.phone || 'ไม่มีข้อมูล'}
+                  {currentBooking.customers?.phone || 'No data'}
                 </p>
               </div>
               {currentBooking.address && (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">ที่อยู่</p>
+                  <p className="text-sm text-muted-foreground">Address</p>
                   <p className="font-medium flex items-start gap-2">
                     <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
                     <span>{formatFullAddress(currentBooking)}</span>
@@ -254,7 +254,7 @@ export function BookingDetailsModal({
                     }}
                   >
                     <MapPin className="h-4 w-4 mr-2" />
-                    เปิดแผนที่
+                    Open Map
                   </Button>
                 </div>
               )}
@@ -267,27 +267,27 @@ export function BookingDetailsModal({
           <div>
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Package className="h-4 w-4" />
-              ข้อมูลบริการ
+              Service Information
             </h3>
             <div className="space-y-2 ml-6">
               <div>
-                <p className="text-sm text-muted-foreground">ชื่อบริการ</p>
+                <p className="text-sm text-muted-foreground">Service Name</p>
                 <p className="font-medium">
                   {currentBooking.service_packages?.name || 'Unknown Service'}
                 </p>
               </div>
               {currentBooking.service_packages?.duration_minutes && (
                 <div>
-                  <p className="text-sm text-muted-foreground">ระยะเวลา</p>
-                  <p className="font-medium">{currentBooking.service_packages.duration_minutes} นาที</p>
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="font-medium">{currentBooking.service_packages.duration_minutes} minutes</p>
                 </div>
               )}
               {currentBooking.service_packages?.price && (
                 <div>
-                  <p className="text-sm text-muted-foreground">ราคา</p>
+                  <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    {currentBooking.service_packages.price.toLocaleString()} บาท
+                    ฿{currentBooking.service_packages.price.toLocaleString()}
                   </p>
                 </div>
               )}
@@ -301,7 +301,7 @@ export function BookingDetailsModal({
               <div>
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <StickyNote className="h-4 w-4" />
-                  หมายเหตุปัจจุบัน
+                  Current Notes
                 </h3>
                 <div className="ml-6 p-3 bg-muted rounded-md">
                   <p className="text-sm whitespace-pre-wrap">{currentBooking.notes}</p>
@@ -321,11 +321,11 @@ export function BookingDetailsModal({
               <div className="space-y-2">
                 <Label htmlFor="notes" className="flex items-center gap-2">
                   <StickyNote className="h-4 w-4" />
-                  {currentBooking.notes ? 'อัปเดตหมายเหตุ' : 'เพิ่มหมายเหตุ'}
+                  {currentBooking.notes ? 'Update Notes' : 'Add Notes'}
                 </Label>
                 <Textarea
                   id="notes"
-                  placeholder="เพิ่มหมายเหตุเกี่ยวกับการจองนี้..."
+                  placeholder="Add notes about this booking..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
@@ -338,7 +338,7 @@ export function BookingDetailsModal({
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-2 pt-4">
             <Button onClick={onClose} variant="outline" className="flex-1">
-              ปิด
+              Close
             </Button>
             {notes.trim() && onAddNotes && (
               <Button
@@ -348,7 +348,7 @@ export function BookingDetailsModal({
                 className="flex-1"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSaving ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ'}
+                {isSaving ? 'Saving...' : 'Save Notes'}
               </Button>
             )}
             {canStartProgress && onStartProgress && (
@@ -358,7 +358,7 @@ export function BookingDetailsModal({
                 className="flex-1 bg-purple-600 hover:bg-purple-700"
               >
                 <Play className="h-4 w-4 mr-2" />
-                {isStarting ? 'กำลังบันทึก...' : 'เริ่มดำเนินการ'}
+                {isStarting ? 'Starting...' : 'Start Task'}
               </Button>
             )}
             {canMarkCompleted && onMarkCompleted && (
@@ -368,7 +368,7 @@ export function BookingDetailsModal({
                 className="flex-1 bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isMarking ? 'กำลังบันทึก...' : 'ทำเครื่องหมายเสร็จสิ้น'}
+                {isMarking ? 'Saving...' : 'Mark as Completed'}
               </Button>
             )}
           </div>

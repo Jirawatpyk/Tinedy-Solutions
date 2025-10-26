@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format, startOfMonth, endOfMonth, startOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { useStaffCalendar, type CalendarEvent } from '@/hooks/use-staff-calendar'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -64,71 +64,6 @@ export default function StaffCalendar() {
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
-  if (error) {
-    return (
-      <div className="p-4 sm:p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>เกิดข้อผิดพลาด: {error}</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6 p-4 sm:p-6">
-        {/* Page Header Skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-40" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-24" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar Skeleton */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-8 w-40" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-8 w-8" />
-                  <Skeleton className="h-8 w-8" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-full" />
-                ))}
-                {Array.from({ length: 35 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sidebar Skeleton */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -140,51 +75,98 @@ export default function StaffCalendar() {
                 My Calendar
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                ดูตารางงานและการจองของคุณ
+                View your schedule and bookings
               </p>
             </div>
             <Button onClick={goToToday} variant="outline">
               <CalendarIcon className="h-4 w-4 mr-2" />
-              วันนี้
+              Today
             </Button>
           </div>
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 sm:p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>Error: {error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       <div className="p-4 sm:p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-2xl">
-                  {format(currentDate, 'MMMM yyyy', { locale: th })}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToPreviousMonth}
-                    className="h-8 w-8"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToNextMonth}
-                    className="h-8 w-8"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+        {loading ? (
+          // Loading skeleton
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-8 w-40" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-full" />
+                  ))}
+                  {Array.from({ length: 35 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <Skeleton className="h-6 w-40" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Calendar */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-2xl">
+                    {format(currentDate, 'MMMM yyyy', { locale: enUS })}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={goToPreviousMonth}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={goToNextMonth}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
               {/* Calendar Grid */}
               <div className="grid grid-cols-7 gap-1">
                 {/* Day headers */}
-                {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((day) => (
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                   <div
                     key={day}
                     className="text-center text-xs font-semibold text-muted-foreground py-2"
@@ -253,27 +235,27 @@ export default function StaffCalendar() {
 
               {/* Legend */}
               <div className="mt-6 pt-4 border-t">
-                <p className="text-sm font-semibold mb-2">สถานะ:</p>
+                <p className="text-sm font-semibold mb-2">Status:</p>
                 <div className="flex flex-wrap gap-3 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <span>รอยืนยัน</span>
+                    <span>Pending</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span>ยืนยันแล้ว</span>
+                    <span>Confirmed</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-purple-500" />
-                    <span>กำลังดำเนินการ</span>
+                    <span>In Progress</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span>เสร็จสิ้น</span>
+                    <span>Completed</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span>ยกเลิก</span>
+                    <span>Cancelled</span>
                   </div>
                 </div>
               </div>
@@ -284,11 +266,11 @@ export default function StaffCalendar() {
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>
-                {selectedDate ? format(selectedDate, 'd MMMM yyyy', { locale: th }) : 'เลือกวันที่'}
+                {selectedDate ? format(selectedDate, 'd MMMM yyyy', { locale: enUS }) : 'Select Date'}
               </CardTitle>
               {selectedDateEvents.length > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {selectedDateEvents.length} งาน
+                  {selectedDateEvents.length} {selectedDateEvents.length === 1 ? 'task' : 'tasks'}
                 </p>
               )}
             </CardHeader>
@@ -297,13 +279,13 @@ export default function StaffCalendar() {
                 <div className="text-center py-12">
                   <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">
-                    คลิกที่วันเพื่อดูงาน
+                    Click on a day to view tasks
                   </p>
                 </div>
               ) : selectedDateEvents.length === 0 ? (
                 <div className="text-center py-12">
                   <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">ไม่มีงานในวันนี้</p>
+                  <p className="text-muted-foreground">No tasks on this day</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -323,11 +305,11 @@ export default function StaffCalendar() {
                           </span>
                         </div>
                         <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">
-                          {event.status === 'pending' && 'รอยืนยัน'}
-                          {event.status === 'confirmed' && 'ยืนยันแล้ว'}
-                          {event.status === 'in_progress' && 'ดำเนินการ'}
-                          {event.status === 'completed' && 'เสร็จสิ้น'}
-                          {event.status === 'cancelled' && 'ยกเลิก'}
+                          {event.status === 'pending' && 'Pending'}
+                          {event.status === 'confirmed' && 'Confirmed'}
+                          {event.status === 'in_progress' && 'In Progress'}
+                          {event.status === 'completed' && 'Completed'}
+                          {event.status === 'cancelled' && 'Cancelled'}
                         </span>
                       </div>
 
@@ -343,13 +325,13 @@ export default function StaffCalendar() {
                         {event.staff_id && event.staff_name && (
                           <div className="flex items-center gap-2 text-blue-600">
                             <User className="h-3.5 w-3.5" />
-                            <span>พนักงาน: {event.staff_name}</span>
+                            <span>Staff: {event.staff_name}</span>
                           </div>
                         )}
                         {event.team_id && event.team_name && (
                           <div className="flex items-center gap-2 text-green-600">
                             <Users className="h-3.5 w-3.5" />
-                            <span>ทีม: {event.team_name}</span>
+                            <span>Team: {event.team_name}</span>
                           </div>
                         )}
                       </div>
@@ -359,7 +341,8 @@ export default function StaffCalendar() {
               )}
             </CardContent>
           </Card>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Booking Details Modal */}

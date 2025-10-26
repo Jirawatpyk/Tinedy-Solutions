@@ -35,13 +35,13 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
       setUploading(true)
       await onUpload(file)
       toast({
-        title: 'อัปโหลดสำเร็จ',
-        description: 'รูปโปรไฟล์ของคุณได้รับการอัปเดตแล้ว',
+        title: 'Upload Successful',
+        description: 'Your profile picture has been updated',
       })
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: error instanceof Error ? error.message : 'ไม่สามารถอัปโหลดรูปภาพได้',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not upload image',
         variant: 'destructive',
       })
     } finally {
@@ -105,7 +105,7 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
         className="gap-2"
       >
         <Upload className="h-4 w-4" />
-        {uploading ? 'กำลังอัปโหลด...' : 'เปลี่ยนรูปโปรไฟล์'}
+        {uploading ? 'Uploading...' : 'Change Profile Picture'}
       </Button>
 
       {/* Hidden File Input */}
@@ -119,7 +119,7 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
 
       {/* File Requirements */}
       <p className="text-xs text-muted-foreground text-center">
-        JPG, PNG หรือ WEBP (สูงสุด 2MB)
+        JPG, PNG or WEBP (max 2MB)
       </p>
     </div>
   )

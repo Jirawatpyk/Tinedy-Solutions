@@ -57,8 +57,8 @@ export default function StaffDashboard() {
     await refresh()
     setIsRefreshing(false)
     toast({
-      title: 'รีเฟรชสำเร็จ',
-      description: 'ข้อมูลได้รับการอัปเดตแล้ว',
+      title: 'Refreshed Successfully',
+      description: 'Data has been updated',
     })
   }
 
@@ -66,13 +66,13 @@ export default function StaffDashboard() {
     try {
       await startProgress(bookingId)
       toast({
-        title: 'เริ่มดำเนินการ',
-        description: 'เริ่มดำเนินการเรียบร้อยแล้ว',
+        title: 'Started',
+        description: 'Task has been started successfully',
       })
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถเริ่มดำเนินการได้',
+        title: 'Error',
+        description: 'Could not start the task',
         variant: 'destructive',
       })
     }
@@ -82,13 +82,13 @@ export default function StaffDashboard() {
     try {
       await markAsCompleted(bookingId)
       toast({
-        title: 'เสร็จสิ้น',
-        description: 'ทำเครื่องหมายเสร็จสิ้นเรียบร้อยแล้ว',
+        title: 'Completed',
+        description: 'Task marked as completed successfully',
       })
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถทำเครื่องหมายเสร็จสิ้นได้',
+        title: 'Error',
+        description: 'Could not mark task as completed',
         variant: 'destructive',
       })
     }
@@ -106,7 +106,7 @@ export default function StaffDashboard() {
       <div className="p-4 sm:p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>เกิดข้อผิดพลาด: {error}</AlertDescription>
+          <AlertDescription>Error: {error}</AlertDescription>
         </Alert>
       </div>
     )
@@ -123,7 +123,7 @@ export default function StaffDashboard() {
                 My Bookings
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                จัดการงานและตรวจสอบสถิติของคุณ
+                Manage your tasks and check your statistics
               </p>
             </div>
             <Button
@@ -133,7 +133,7 @@ export default function StaffDashboard() {
               size="sm"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline ml-2">รีเฟรช</span>
+              <span className="hidden sm:inline ml-2">Refresh</span>
             </Button>
           </div>
         </div>
@@ -160,34 +160,34 @@ export default function StaffDashboard() {
             <>
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '0ms' }}>
                 <StatsCard
-                  title="งานวันนี้"
+                  title="Today's Tasks"
                   value={stats.jobsToday}
                   icon={Briefcase}
-                  description="งานที่ต้องทำวันนี้"
+                  description="Tasks to do today"
                 />
               </div>
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '100ms' }}>
                 <StatsCard
-                  title="งานสัปดาห์นี้"
+                  title="This Week's Tasks"
                   value={stats.jobsThisWeek}
                   icon={Calendar}
-                  description="งานทั้งหมดในสัปดาห์"
+                  description="All tasks this week"
                 />
               </div>
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '200ms' }}>
                 <StatsCard
-                  title="อัตราความสำเร็จ"
+                  title="Completion Rate"
                   value={`${stats.completionRate}%`}
                   icon={TrendingUp}
-                  description="30 วันล่าสุด"
+                  description="Last 30 days"
                 />
               </div>
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
                 <StatsCard
-                  title="รายได้เดือนนี้"
+                  title="This Month's Earnings"
                   value={`฿${stats.totalEarnings.toLocaleString()}`}
                   icon={DollarSign}
-                  description="รายได้จากงานที่เสร็จสิ้น"
+                  description="Earnings from completed tasks"
                 />
               </div>
             </>
@@ -203,11 +203,11 @@ export default function StaffDashboard() {
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                งานวันนี้
+                Today's Tasks
               </h2>
               {!loading && todayBookings.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  ({todayBookings.length} งาน)
+                  ({todayBookings.length} {todayBookings.length === 1 ? 'task' : 'tasks'})
                 </span>
               )}
             </div>
@@ -230,7 +230,7 @@ export default function StaffDashboard() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    ไม่มีงานในวันนี้ สนุกกับวันหยุดของคุณ!
+                    No tasks today. Enjoy your day off!
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -254,7 +254,7 @@ export default function StaffDashboard() {
                         variant="outline"
                         className="transition-all duration-200 hover:scale-105"
                       >
-                        โหลดเพิ่ม +6 ({todayBookings.length - todayLimit} งานเหลืออยู่)
+                        Load More +6 ({todayBookings.length - todayLimit} {todayBookings.length - todayLimit === 1 ? 'task' : 'tasks'} remaining)
                       </Button>
                     </div>
                   )}
@@ -273,11 +273,11 @@ export default function StaffDashboard() {
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-primary" />
-                งานที่กำลังจะมาถึง
+                Upcoming Tasks
               </h2>
               {!loading && upcomingBookings.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  7 วันถัดไป ({upcomingBookings.length} งาน)
+                  Next 7 days ({upcomingBookings.length} {upcomingBookings.length === 1 ? 'task' : 'tasks'})
                 </span>
               )}
             </div>
@@ -298,7 +298,7 @@ export default function StaffDashboard() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                ไม่มีงานที่กำลังจะมาถึงในอีก 7 วันข้างหน้า
+                No upcoming tasks in the next 7 days
               </AlertDescription>
             </Alert>
           ) : (
@@ -322,7 +322,7 @@ export default function StaffDashboard() {
                     variant="outline"
                     className="transition-all duration-200 hover:scale-105"
                   >
-                    โหลดเพิ่ม +6 ({upcomingBookings.length - upcomingLimit} งานเหลืออยู่)
+                    Load More +6 ({upcomingBookings.length - upcomingLimit} {upcomingBookings.length - upcomingLimit === 1 ? 'task' : 'tasks'} remaining)
                   </Button>
                 </div>
               )}
@@ -339,11 +339,11 @@ export default function StaffDashboard() {
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-gray-600" />
-                งานที่ผ่านมา
+                Past Tasks
               </h2>
               {!loading && completedBookings.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  30 วันล่าสุด ({completedBookings.length} งาน)
+                  Last 30 days ({completedBookings.length} {completedBookings.length === 1 ? 'task' : 'tasks'})
                 </span>
               )}
             </div>
@@ -364,7 +364,7 @@ export default function StaffDashboard() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                ไม่มีงานในอดีต 30 วันที่ผ่านมา
+                No past tasks in the last 30 days
               </AlertDescription>
             </Alert>
           ) : (
@@ -388,7 +388,7 @@ export default function StaffDashboard() {
                     variant="outline"
                     className="transition-all duration-200 hover:scale-105"
                   >
-                    โหลดเพิ่ม +6 ({completedBookings.length - completedLimit} งานเหลืออยู่)
+                    Load More +6 ({completedBookings.length - completedLimit} {completedBookings.length - completedLimit === 1 ? 'task' : 'tasks'} remaining)
                   </Button>
                 </div>
               )}

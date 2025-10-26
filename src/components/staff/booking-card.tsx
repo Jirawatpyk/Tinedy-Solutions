@@ -38,15 +38,15 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case 'completed':
-      return 'เสร็จสิ้น'
+      return 'Completed'
     case 'confirmed':
-      return 'ยืนยันแล้ว'
+      return 'Confirmed'
     case 'in_progress':
-      return 'กำลังดำเนินการ'
+      return 'In Progress'
     case 'pending':
-      return 'รอยืนยัน'
+      return 'Pending'
     case 'cancelled':
-      return 'ยกเลิก'
+      return 'Cancelled'
     default:
       return status
   }
@@ -120,7 +120,7 @@ export const BookingCard = memo(function BookingCard({
             {isTeamBooking && (
               <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200" variant="outline">
                 <Users className="h-3 w-3 mr-1" />
-                งานทีม
+                Team Task
               </Badge>
             )}
           </div>
@@ -157,7 +157,7 @@ export const BookingCard = memo(function BookingCard({
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm text-muted-foreground">
-                {booking.service_packages.duration_minutes} นาที
+                {booking.service_packages.duration_minutes} minutes
               </span>
             </div>
           )}
@@ -194,7 +194,7 @@ export const BookingCard = memo(function BookingCard({
             disabled={!booking.customers?.phone}
           >
             <Phone className="h-3 w-3 mr-1" />
-            โทร
+            Call
           </Button>
           <Button
             onClick={useCallback((e: React.MouseEvent) => {
@@ -209,7 +209,7 @@ export const BookingCard = memo(function BookingCard({
             disabled={!fullAddress}
           >
             <MapPin className="h-3 w-3 mr-1" />
-            แผนที่
+            Map
           </Button>
         </div>
 
@@ -237,12 +237,12 @@ export const BookingCard = memo(function BookingCard({
                 {isStarting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    กำลังดำเนินการ...
+                    Starting...
                   </>
                 ) : (
                   <>
                     <Play className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:rotate-12" />
-                    เริ่มดำเนินการ
+                    Start Task
                   </>
                 )}
               </Button>
@@ -268,12 +268,12 @@ export const BookingCard = memo(function BookingCard({
                 {isCompleting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    กำลังบันทึก...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-1 transition-transform duration-200 group-hover:scale-110" />
-                    เสร็จสิ้น
+                    Complete
                   </>
                 )}
               </Button>

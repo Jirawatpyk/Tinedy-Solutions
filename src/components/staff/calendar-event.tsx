@@ -24,13 +24,13 @@ export function CalendarEventComponent({ event }: CalendarEventComponentProps) {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'เสร็จสิ้น'
+        return 'Completed'
       case 'confirmed':
-        return 'ยืนยันแล้ว'
+        return 'Confirmed'
       case 'pending':
-        return 'รอยืนยัน'
+        return 'Pending'
       case 'cancelled':
-        return 'ยกเลิก'
+        return 'Cancelled'
       default:
         return status
     }

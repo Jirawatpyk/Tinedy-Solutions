@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 
 interface CalendarToolbarProps {
   date: Date
@@ -13,11 +13,11 @@ interface CalendarToolbarProps {
 export function CalendarToolbar({ date, view, onNavigate, onView }: CalendarToolbarProps) {
   const getDateLabel = () => {
     if (view === 'month') {
-      return format(date, 'MMMM yyyy', { locale: th })
+      return format(date, 'MMMM yyyy', { locale: enUS })
     } else if (view === 'week') {
-      return format(date, 'MMMM yyyy', { locale: th })
+      return format(date, 'MMMM yyyy', { locale: enUS })
     } else {
-      return format(date, 'dd MMMM yyyy', { locale: th })
+      return format(date, 'dd MMMM yyyy', { locale: enUS })
     }
   }
 
@@ -40,7 +40,7 @@ export function CalendarToolbar({ date, view, onNavigate, onView }: CalendarTool
           className="min-w-[80px]"
         >
           <CalendarIcon className="h-4 w-4 mr-1" />
-          วันนี้
+          Today
         </Button>
         <Button
           variant="outline"
@@ -65,7 +65,7 @@ export function CalendarToolbar({ date, view, onNavigate, onView }: CalendarTool
           onClick={() => onView('month')}
           className="h-8"
         >
-          เดือน
+          Month
         </Button>
         <Button
           variant={view === 'week' ? 'default' : 'ghost'}
@@ -73,7 +73,7 @@ export function CalendarToolbar({ date, view, onNavigate, onView }: CalendarTool
           onClick={() => onView('week')}
           className="h-8"
         >
-          สัปดาห์
+          Week
         </Button>
         <Button
           variant={view === 'day' ? 'default' : 'ghost'}
@@ -81,7 +81,7 @@ export function CalendarToolbar({ date, view, onNavigate, onView }: CalendarTool
           onClick={() => onView('day')}
           className="h-8"
         >
-          วัน
+          Day
         </Button>
       </div>
     </div>

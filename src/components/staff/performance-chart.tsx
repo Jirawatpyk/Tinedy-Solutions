@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { type PerformanceStats } from '@/hooks/use-staff-profile'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 
 interface PerformanceChartProps {
   stats: PerformanceStats
@@ -11,9 +11,9 @@ interface PerformanceChartProps {
 export function PerformanceChart({ stats }: PerformanceChartProps) {
   // Format month data for charts
   const chartData = stats.monthlyData.map((item) => ({
-    month: format(new Date(item.month + '-01'), 'MMM yy', { locale: th }),
-    งาน: item.jobs,
-    รายได้: item.revenue,
+    month: format(new Date(item.month + '-01'), 'MMM yy', { locale: enUS }),
+    Jobs: item.jobs,
+    Revenue: item.revenue,
   }))
 
   return (
@@ -21,7 +21,7 @@ export function PerformanceChart({ stats }: PerformanceChartProps) {
       {/* Jobs Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">จำนวนงานรายเดือน</CardTitle>
+          <CardTitle className="text-lg">Monthly Jobs</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -43,7 +43,7 @@ export function PerformanceChart({ stats }: PerformanceChartProps) {
                 }}
               />
               <Legend />
-              <Bar dataKey="งาน" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="Jobs" fill="#3b82f6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -52,7 +52,7 @@ export function PerformanceChart({ stats }: PerformanceChartProps) {
       {/* Revenue Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">รายได้รายเดือน</CardTitle>
+          <CardTitle className="text-lg">Monthly Revenue</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -80,12 +80,12 @@ export function PerformanceChart({ stats }: PerformanceChartProps) {
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => `${value.toLocaleString()} บาท`}
+                formatter={(value: number) => `฿${value.toLocaleString()}`}
               />
               <Legend />
               <Line
                 type="monotone"
-                dataKey="รายได้"
+                dataKey="Revenue"
                 stroke="#22c55e"
                 strokeWidth={2}
                 dot={{ fill: '#22c55e', r: 4 }}
