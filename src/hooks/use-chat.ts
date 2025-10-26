@@ -291,18 +291,24 @@ export function useChat() {
             table: 'messages',
             filter: `recipient_id=eq.${user.id}`,
           },
-          (payload) => {
+          async (payload) => {
             const newMessage = payload.new as Message
-
-            // If message is for currently selected user, add to messages
-            if (selectedUser && newMessage.sender_id === selectedUser.id) {
-              setMessages((prev) => [...prev, newMessage])
-              // Auto mark as read
-              markAsRead([newMessage.id])
-            }
 
             // Reload conversations to update last message and unread count
             loadConversations()
+
+            // If message is for currently selected user, add to messages
+            setMessages((prev) => {
+              // Check if we're viewing the conversation with the sender
+              if (prev.length > 0 &&
+                  (prev[0].sender_id === newMessage.sender_id ||
+                   prev[0].recipient_id === newMessage.sender_id)) {
+                // Auto mark as read
+                markAsRead([newMessage.id])
+                return [...prev, newMessage]
+              }
+              return prev
+            })
           }
         )
         // Listen for outgoing messages (sent BY me)
@@ -317,19 +323,23 @@ export function useChat() {
           (payload) => {
             const newMessage = payload.new as Message
 
-            // If message is for currently selected user, add to messages
-            // (This handles when WE send a message to the selected user)
-            if (selectedUser && newMessage.recipient_id === selectedUser.id) {
-              // Check if message already exists (to avoid duplicates from local state update)
-              setMessages((prev) => {
-                const exists = prev.some(msg => msg.id === newMessage.id)
-                if (exists) return prev
-                return [...prev, newMessage]
-              })
-            }
-
             // Reload conversations to update last message
             loadConversations()
+
+            // If message is for currently selected user, add to messages
+            setMessages((prev) => {
+              // Check if message already exists (from local state update)
+              const exists = prev.some(msg => msg.id === newMessage.id)
+              if (exists) return prev
+
+              // Check if we're viewing the conversation with the recipient
+              if (prev.length > 0 &&
+                  (prev[0].sender_id === newMessage.recipient_id ||
+                   prev[0].recipient_id === newMessage.recipient_id)) {
+                return [...prev, newMessage]
+              }
+              return prev
+            })
           }
         )
         .on(
@@ -354,7 +364,7 @@ export function useChat() {
         supabase.removeChannel(channel)
       }
     }
-  }, [user, selectedUser, markAsRead, loadConversations])
+  }, [user, markAsRead, loadConversations])
 
   // Load conversations on mount
   useEffect(() => {
