@@ -458,13 +458,25 @@ export function AdminReports() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header skeleton */}
+        {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-56" />
-            <Skeleton className="h-4 w-72" />
+          <div>
+            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
+              Reports & Analytics
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Revenue insights and business metrics
+            </p>
           </div>
-          <Skeleton className="h-10 w-48" />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" disabled className="w-full sm:w-48">
+              Select period
+            </Button>
+            <Button variant="outline" disabled className="gap-2">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {/* Tabs skeleton */}

@@ -268,13 +268,20 @@ export function AdminCustomers() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header skeleton */}
+        {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-4 w-56" />
+          <div>
+            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
+              Customers
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your customer database
+            </p>
           </div>
-          <Skeleton className="h-10 w-40" />
+          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            New CustomerRecord
+          </Button>
         </div>
 
         {/* Search skeleton */}

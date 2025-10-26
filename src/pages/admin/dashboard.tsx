@@ -686,10 +686,14 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header skeleton */}
-        <div className="space-y-2">
-          <Skeleton className="h-9 w-40" />
-          <Skeleton className="h-4 w-80" />
+        {/* Page header - Always show */}
+        <div>
+          <h1 className="text-3xl font-display font-bold text-tinedy-dark">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's what's happening today.
+          </p>
         </div>
 
         {/* Stats cards skeleton */}
@@ -708,30 +712,63 @@ export function AdminDashboard() {
           ))}
         </div>
 
+        {/* Quick Insights skeleton */}
+        <Card className="bg-gradient-to-br from-tinedy-blue/5 to-transparent">
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2 text-tinedy-dark">
+              <Target className="h-5 w-5 text-tinedy-blue" />
+              Quick Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-lg border">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Charts skeleton */}
         <div className="grid gap-4 md:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-5 rounded" />
-                  <Skeleton className="h-6 w-40" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-[300px] w-full" />
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-tinedy-blue" />
+                Bookings Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-tinedy-green" />
+                Revenue (Last 7 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Today's Appointments skeleton */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-5 rounded" />
-              <Skeleton className="h-6 w-48" />
-            </div>
+            <CardTitle className="font-display flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-tinedy-blue" />
+              Today's Appointments
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

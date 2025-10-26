@@ -185,10 +185,13 @@ export default function AdminSettings() {
   if (loading || !settings) {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Header - Always show */}
         <div className="bg-white border-b">
           <div className="px-4 sm:px-6 py-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-96 mt-2" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage your business settings and preferences
+            </p>
           </div>
         </div>
         <div className="p-4 sm:p-6 space-y-6">

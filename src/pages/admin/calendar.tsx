@@ -557,24 +557,55 @@ export function AdminCalendar() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page Header Skeleton */}
+        {/* Page Header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-40" />
-            <Skeleton className="h-4 w-64" />
+          <div>
+            <h1 className="text-3xl font-display font-bold text-tinedy-dark">Calendar</h1>
+            <p className="text-muted-foreground mt-1">View and manage your bookings</p>
           </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-10 w-24" />
-          </div>
+          <Button variant="outline" disabled>
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Today
+          </Button>
         </div>
+
+        {/* Stats Cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filters skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <Skeleton className="h-10 flex-1 min-w-[200px]" />
+              <Skeleton className="h-10 flex-1 min-w-[200px]" />
+              <Skeleton className="h-10 flex-1 min-w-[200px]" />
+              <Skeleton className="h-8 w-px" />
+              <Skeleton className="h-10 w-[380px]" />
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar Skeleton */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <Skeleton className="h-8 w-40" />
+                <CardTitle className="font-display text-2xl">
+                  {format(currentDate, 'MMMM yyyy')}
+                </CardTitle>
                 <div className="flex gap-2">
                   <Skeleton className="h-8 w-8" />
                   <Skeleton className="h-8 w-8" />
@@ -596,7 +627,10 @@ export function AdminCalendar() {
           {/* Sidebar Skeleton */}
           <Card className="lg:col-span-1">
             <CardHeader>
-              <Skeleton className="h-6 w-40" />
+              <CardTitle className="font-display">Select a date</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Click on a date to view bookings
+              </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
