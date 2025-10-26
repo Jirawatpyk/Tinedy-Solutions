@@ -213,7 +213,7 @@ export function BookingDetailModal({
     setSendingReminder(true)
 
     try {
-      // Call Edge Function to send email
+      // Call Edge Function to send email (Edge Function will fetch settings from database)
       const { data, error } = await supabase.functions.invoke('send-booking-reminder', {
         body: {
           customerName: booking.customers.full_name,

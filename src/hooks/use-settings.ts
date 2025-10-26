@@ -13,6 +13,12 @@ export interface Settings {
   business_description: string | null
   business_logo_url: string | null
 
+  // Email Settings
+  email_api_key: string | null
+  email_from_address: string
+  email_reply_to: string | null
+  email_provider: string
+
   // Booking Settings
   time_slot_duration: number // minutes
   min_advance_booking: number // hours
@@ -92,6 +98,10 @@ export function useSettings() {
     business_address?: string
     business_description?: string
     business_logo_url?: string
+    email_api_key?: string
+    email_from_address?: string
+    email_reply_to?: string
+    email_provider?: string
   }) => {
     try {
       if (!settings) throw new Error('Settings not loaded')

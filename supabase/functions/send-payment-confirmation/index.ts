@@ -1,9 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 interface BookingData {
   id: string
@@ -11,8 +12,6 @@ interface BookingData {
   start_time: string
   end_time: string
   total_price: number
-  location?: string
-  notes?: string
   customers: {
     full_name: string
     email: string
@@ -20,31 +19,84 @@ interface BookingData {
   service_packages: {
     name: string
   }
-  staff_profiles?: {
-    full_name: string
-  }
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 })
+    console.log('=== send-payment-confirmation started ===')
+
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    console.log('RESEND_API_KEY exists:', !!RESEND_API_KEY)
+
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set')
+      throw new Error('RESEND_API_KEY is not set')
     }
 
     const { bookingId } = await req.json()
+    console.log('Received bookingId:', bookingId)
 
     if (!bookingId) {
       return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     // Initialize Supabase client with service role
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+      throw new Error('Supabase configuration is missing')
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
+    // Fetch business settings from database
+    console.log('Fetching business settings...')
+    let fromName = 'Tinedy CRM'
+    let fromEmail = 'bookings@resend.dev'
+    let businessPhone = ''
+    let businessAddress = ''
+
+    try {
+      const { data: settings, error: settingsError } = await supabase
+        .from('settings')
+        .select('business_name, business_email, business_phone, business_address')
+        .limit(1)
+        .maybeSingle()
+
+      if (settingsError) {
+        console.warn('Settings fetch error:', settingsError)
+      } else {
+        console.log('Settings fetched:', !!settings)
+      }
+
+      if (settings) {
+        fromName = settings.business_name || fromName
+        fromEmail = settings.business_email || fromEmail
+        businessPhone = settings.business_phone || businessPhone
+        businessAddress = settings.business_address || businessAddress
+      }
+    } catch (error) {
+      console.warn('Failed to fetch settings, using defaults:', error)
+      // Continue with default values
+    }
 
     // Fetch booking data
+    console.log('Fetching booking data...')
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
       .select(`
@@ -53,11 +105,8 @@ serve(async (req) => {
         start_time,
         end_time,
         total_price,
-        location,
-        notes,
         customers (full_name, email),
-        service_packages (name),
-        staff_profiles (full_name)
+        service_packages (name)
       `)
       .eq('id', bookingId)
       .single()
@@ -66,10 +115,11 @@ serve(async (req) => {
       console.error('Error fetching booking:', fetchError)
       return new Response(JSON.stringify({ error: 'Booking not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
+    console.log('Booking fetched successfully')
     const bookingData = booking as unknown as BookingData
 
     // Format date
@@ -81,19 +131,23 @@ serve(async (req) => {
       day: 'numeric',
     })
 
-    // Generate email HTML
+    // Generate email HTML (staff info and location not included)
     const emailHtml = generatePaymentConfirmationEmail({
       customerName: bookingData.customers.full_name,
       serviceName: bookingData.service_packages.name,
       formattedDate,
       startTime: bookingData.start_time,
       endTime: bookingData.end_time,
-      staffName: bookingData.staff_profiles?.full_name,
-      location: bookingData.location,
+      staffName: undefined,
+      location: undefined,
       totalPrice: bookingData.total_price,
+      fromName,
+      businessPhone,
+      businessAddress,
     })
 
     // Send email via Resend
+    console.log('Sending email to:', bookingData.customers.email)
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -101,13 +155,14 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Tinedy CRM <noreply@resend.dev>',
+        from: `${fromName} <${fromEmail}>`,
         to: bookingData.customers.email,
         subject: `Payment Confirmed - ${bookingData.service_packages.name}`,
         html: emailHtml,
       }),
     })
 
+    console.log('Email API response status:', emailResponse.status)
     const emailResult = await emailResponse.json()
 
     if (!emailResponse.ok) {
@@ -115,19 +170,7 @@ serve(async (req) => {
       throw new Error(emailResult.message || 'Failed to send email')
     }
 
-    // Queue email in database
-    await supabase.from('email_queue').insert({
-      booking_id: bookingId,
-      email_type: 'payment_confirmation',
-      recipient_email: bookingData.customers.email,
-      recipient_name: bookingData.customers.full_name,
-      subject: `Payment Confirmed - ${bookingData.service_packages.name}`,
-      html_content: emailHtml,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
-    })
-
-    console.log('Payment confirmation email sent:', emailResult)
+    console.log('Payment confirmation email sent successfully:', emailResult.id)
 
     return new Response(
       JSON.stringify({
@@ -137,7 +180,7 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
   } catch (error) {
@@ -148,7 +191,7 @@ serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
   }
@@ -163,6 +206,9 @@ function generatePaymentConfirmationEmail(data: {
   staffName?: string
   location?: string
   totalPrice: number
+  fromName: string
+  businessPhone: string
+  businessAddress: string
 }): string {
   return `
 <!DOCTYPE html>
@@ -236,6 +282,30 @@ function generatePaymentConfirmationEmail(data: {
       font-size: 14px;
       color: #6b7280;
     }
+    .business-info {
+      background-color: #f9fafb;
+      border-radius: 6px;
+      padding: 20px;
+      margin: 20px 0;
+      border: 1px solid #e5e7eb;
+    }
+    .business-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .contact-item span {
+      margin-left: 8px;
+    }
     .footer-note {
       margin-top: 20px;
       font-size: 12px;
@@ -292,7 +362,21 @@ function generatePaymentConfirmationEmail(data: {
     </div>
 
     <div class="footer">
-      <strong>Tinedy CRM</strong>
+      <div class="business-info">
+        <div class="business-name">${data.fromName}</div>
+        ${data.businessPhone ? `
+        <div class="contact-item">
+          <span>📞</span>
+          <span>${data.businessPhone}</span>
+        </div>
+        ` : ''}
+        ${data.businessAddress ? `
+        <div class="contact-item">
+          <span>📍</span>
+          <span>${data.businessAddress}</span>
+        </div>
+        ` : ''}
+      </div>
       <div class="footer-note">
         Looking forward to seeing you!
       </div>

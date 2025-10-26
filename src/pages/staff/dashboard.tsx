@@ -149,48 +149,50 @@ export default function StaffDashboard() {
         )}
 
         {/* Stats Cards */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '0ms' }}>
-              <StatsCard
-                title="งานวันนี้"
-                value={stats.jobsToday}
-                icon={Briefcase}
-                description="งานที่ต้องทำวันนี้"
-              />
-            </div>
-            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '100ms' }}>
-              <StatsCard
-                title="งานสัปดาห์นี้"
-                value={stats.jobsThisWeek}
-                icon={Calendar}
-                description="งานทั้งหมดในสัปดาห์"
-              />
-            </div>
-            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '200ms' }}>
-              <StatsCard
-                title="อัตราความสำเร็จ"
-                value={`${stats.completionRate}%`}
-                icon={TrendingUp}
-                description="30 วันล่าสุด"
-              />
-            </div>
-            <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
-              <StatsCard
-                title="รายได้เดือนนี้"
-                value={`฿${stats.totalEarnings.toLocaleString()}`}
-                icon={DollarSign}
-                description="รายได้จากงานที่เสร็จสิ้น"
-              />
-            </div>
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '0ms' }}>
+                <StatsCard
+                  title="งานวันนี้"
+                  value={stats.jobsToday}
+                  icon={Briefcase}
+                  description="งานที่ต้องทำวันนี้"
+                />
+              </div>
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '100ms' }}>
+                <StatsCard
+                  title="งานสัปดาห์นี้"
+                  value={stats.jobsThisWeek}
+                  icon={Calendar}
+                  description="งานทั้งหมดในสัปดาห์"
+                />
+              </div>
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '200ms' }}>
+                <StatsCard
+                  title="อัตราความสำเร็จ"
+                  value={`${stats.completionRate}%`}
+                  icon={TrendingUp}
+                  description="30 วันล่าสุด"
+                />
+              </div>
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
+                <StatsCard
+                  title="รายได้เดือนนี้"
+                  value={`฿${stats.totalEarnings.toLocaleString()}`}
+                  icon={DollarSign}
+                  description="รายได้จากงานที่เสร็จสิ้น"
+                />
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Today's Bookings */}
         <div>

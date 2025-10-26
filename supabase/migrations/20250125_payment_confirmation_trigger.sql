@@ -15,7 +15,7 @@ BEGIN
 
     -- Call Edge Function asynchronously using pg_net extension
     PERFORM
-      net.http_post(
+      extensions.http_post(
         url := function_url,
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
@@ -43,5 +43,5 @@ CREATE TRIGGER trigger_send_payment_confirmation
   EXECUTE FUNCTION send_payment_confirmation_email();
 
 -- Grant necessary permissions
-GRANT USAGE ON SCHEMA net TO postgres, anon, authenticated, service_role;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA net TO postgres, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA extensions TO postgres, anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions TO postgres, anon, authenticated, service_role;

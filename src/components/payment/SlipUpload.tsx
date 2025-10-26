@@ -114,8 +114,17 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
 
       if (updateError) throw updateError
 
-      // Email will be sent automatically by database trigger
-      // when payment_status changes to 'paid'
+      // Send payment confirmation email if auto-verified
+      if (autoVerify) {
+        try {
+          await supabase.functions.invoke('send-payment-confirmation', {
+            body: { bookingId }
+          })
+        } catch (emailError) {
+          console.warn('Failed to send confirmation email:', emailError)
+          // Don't throw - payment is still successful
+        }
+      }
 
       setUploaded(true)
 
@@ -213,13 +222,16 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
                 accept="image/*"
                 onChange={handleFileSelect}
                 className="hidden"
+                aria-label="Upload payment slip"
               />
             </div>
           ) : (
             <div className="relative border-2 border-gray-200 rounded-lg p-4">
               <button
+                type="button"
                 onClick={handleRemoveFile}
                 className="absolute top-2 right-2 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                aria-label="Remove payment slip"
               >
                 <X className="h-4 w-4 text-red-600" />
               </button>

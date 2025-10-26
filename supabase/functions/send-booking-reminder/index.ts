@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,42 @@ serve(async (req) => {
 
     if (!customerName || !customerEmail || !serviceName || !bookingDate || !startTime || !endTime) {
       throw new Error('Missing required fields')
+    }
+
+    // Fetch business settings from database
+    let fromName = 'Tinedy CRM'
+    let fromEmail = 'bookings@resend.dev'
+    let businessPhone = ''
+    let businessAddress = ''
+
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        })
+
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('business_name, business_email, business_phone, business_address')
+          .limit(1)
+          .maybeSingle()
+
+        if (settings) {
+          fromName = settings.business_name || fromName
+          fromEmail = settings.business_email || fromEmail
+          businessPhone = settings.business_phone || businessPhone
+          businessAddress = settings.business_address || businessAddress
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch settings, using defaults:', error)
+      // Continue with default values
     }
 
     // Format date
@@ -108,6 +145,30 @@ serve(async (req) => {
       font-size: 14px;
       color: #6b7280;
     }
+    .business-info {
+      background-color: #f9fafb;
+      border-radius: 6px;
+      padding: 20px;
+      margin: 20px 0;
+      border: 1px solid #e5e7eb;
+    }
+    .business-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .contact-item span {
+      margin-left: 8px;
+    }
     .footer-note {
       margin-top: 20px;
       font-size: 12px;
@@ -125,7 +186,7 @@ serve(async (req) => {
       Hi ${customerName},
     </div>
 
-    <p>This is a friendly reminder about your upcoming appointment with Tinedy.</p>
+    <p>This is a friendly reminder about your upcoming appointment with ${fromName}.</p>
 
     <div class="booking-details">
       <div class="detail-row">
@@ -159,7 +220,21 @@ serve(async (req) => {
     <p>If you need to reschedule or have any questions, please don't hesitate to contact us.</p>
 
     <div class="footer">
-      <strong>Tinedy CRM</strong>
+      <div class="business-info">
+        <div class="business-name">${fromName}</div>
+        ${businessPhone ? `
+        <div class="contact-item">
+          <span>📞</span>
+          <span>${businessPhone}</span>
+        </div>
+        ` : ''}
+        ${businessAddress ? `
+        <div class="contact-item">
+          <span>📍</span>
+          <span>${businessAddress}</span>
+        </div>
+        ` : ''}
+      </div>
       <div class="footer-note">
         This is an automated reminder email. Please do not reply to this message.
       </div>
@@ -177,7 +252,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Tinedy CRM <bookings@resend.dev>',
+        from: `${fromName} <${fromEmail}>`,
         to: customerEmail,
         subject: `Reminder: Your ${serviceName} Appointment`,
         html: htmlContent,
@@ -206,7 +281,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

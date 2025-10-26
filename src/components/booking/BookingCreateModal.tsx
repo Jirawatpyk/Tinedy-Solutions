@@ -240,6 +240,14 @@ export function BookingCreateModal({
       if (newBooking && createForm.formData.email) {
         const paymentLink = `${window.location.origin}/payment/${newBooking.id}`
 
+        // Format full address for email
+        const fullAddress = [
+          newBooking.address,
+          newBooking.city,
+          newBooking.state,
+          newBooking.zip_code
+        ].filter(part => part && part.trim()).join(', ')
+
         const emailData: PaymentEmailData = {
           bookingId: newBooking.id,
           customerName: createForm.formData.full_name || 'Customer',
@@ -249,7 +257,7 @@ export function BookingCreateModal({
           startTime: newBooking.start_time,
           endTime: newBooking.end_time,
           totalPrice: Number(newBooking.total_price),
-          location: newBooking.address || undefined,
+          location: fullAddress || undefined,
           notes: newBooking.notes || undefined,
           staffName: newBooking.profiles?.full_name || undefined,
           paymentLink,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -74,6 +74,7 @@ export function useStaffBookings() {
   const [error, setError] = useState<string | null>(null)
   const [myTeamIds, setMyTeamIds] = useState<string[]>([])
   const [teamsLoaded, setTeamsLoaded] = useState(false)
+  const isFetchingRef = useRef(false)
 
   const checkTeamLeadStatus = useCallback(async () => {
     if (!user) return
@@ -293,98 +294,109 @@ export function useStaffBookings() {
       nextWeek.setDate(nextWeek.getDate() + 7)
       const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`
 
-      // Fetch today's bookings
-      let todayQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
-
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        todayQuery = todayQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        todayQuery = todayQuery.eq('staff_id', user.id)
-      }
-
-      const { data: todayData, error: todayError } = await todayQuery
-        .eq('booking_date', todayStr)
-        .order('start_time', { ascending: true })
-
-      if (todayError) throw todayError
-
-      console.log('[StaffBookings] Today result:', {
-        count: todayData?.length || 0,
-        bookings: todayData?.map(b => ({ date: b.booking_date, time: b.start_time }))
-      })
-
-      // Fetch upcoming bookings (next 7 days, excluding today)
-      let upcomingQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
-
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        upcomingQuery = upcomingQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        upcomingQuery = upcomingQuery.eq('staff_id', user.id)
-      }
-
-      const { data: upcomingData, error: upcomingError} = await upcomingQuery
-        .gt('booking_date', todayStr)
-        .lte('booking_date', nextWeekStr)
-        .order('booking_date', { ascending: true })
-        .order('start_time', { ascending: true })
-
-      if (upcomingError) throw upcomingError
-
-      // Fetch past bookings (last 30 days) - all statuses
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
 
-      let completedQuery = supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers (id, full_name, phone, avatar_url),
-          service_packages (id, name, duration_minutes, price)
-        `)
+      // Build filter condition for team bookings
+      const filterCondition = myTeamIds.length > 0
+        ? `staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`
+        : null
 
-      // If user belongs to any team, fetch team bookings too
-      if (myTeamIds.length > 0) {
-        completedQuery = completedQuery.or(`staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`)
-      } else {
-        completedQuery = completedQuery.eq('staff_id', user.id)
-      }
+      // ✅ Fetch all bookings in parallel using Promise.all
+      const [todayResult, upcomingResult, completedResult] = await Promise.all([
+        // Today's bookings
+        (async () => {
+          let query = supabase
+            .from('bookings')
+            .select(`
+              *,
+              customers (id, full_name, phone, avatar_url),
+              service_packages (id, name, duration_minutes, price)
+            `)
+            .eq('booking_date', todayStr)
+            .order('start_time', { ascending: true })
 
-      const { data: completedData, error: completedError } = await completedQuery
-        .lt('booking_date', todayStr)
-        .gte('booking_date', thirtyDaysAgoStr)
-        .order('booking_date', { ascending: false })
-        .order('start_time', { ascending: false })
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
 
-      if (completedError) throw completedError
+          return await query
+        })(),
+
+        // Upcoming bookings (next 7 days, excluding today)
+        (async () => {
+          let query = supabase
+            .from('bookings')
+            .select(`
+              *,
+              customers (id, full_name, phone, avatar_url),
+              service_packages (id, name, duration_minutes, price)
+            `)
+            .gt('booking_date', todayStr)
+            .lte('booking_date', nextWeekStr)
+            .order('booking_date', { ascending: true })
+            .order('start_time', { ascending: true })
+
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+
+          return await query
+        })(),
+
+        // Past bookings (last 30 days)
+        (async () => {
+          let query = supabase
+            .from('bookings')
+            .select(`
+              *,
+              customers (id, full_name, phone, avatar_url),
+              service_packages (id, name, duration_minutes, price)
+            `)
+            .lt('booking_date', todayStr)
+            .gte('booking_date', thirtyDaysAgoStr)
+            .order('booking_date', { ascending: false })
+            .order('start_time', { ascending: false })
+
+          if (filterCondition) {
+            query = query.or(filterCondition)
+          } else {
+            query = query.eq('staff_id', user.id)
+          }
+
+          return await query
+        })(),
+      ])
+
+      // Check for errors
+      if (todayResult.error) throw todayResult.error
+      if (upcomingResult.error) throw upcomingResult.error
+      if (completedResult.error) throw completedResult.error
+
+      console.log('[StaffBookings] Today result:', {
+        count: todayResult.data?.length || 0,
+        bookings: todayResult.data?.map(b => ({ date: b.booking_date, time: b.start_time }))
+      })
+
+      const todayData = todayResult.data
+      const upcomingData = upcomingResult.data
+      const completedData = completedResult.data
 
       setTodayBookings((todayData as StaffBooking[]) || [])
       setUpcomingBookings((upcomingData as StaffBooking[]) || [])
       setCompletedBookings((completedData as StaffBooking[]) || [])
-
-      // Calculate stats in background (don't wait for it)
-      calculateStats()
     } catch (err) {
       console.error('Error loading bookings:', err)
       setError(getErrorMessage(err))
-    } finally {
       setLoading(false)
     }
-  }, [user, myTeamIds, calculateStats])
+    // ไม่ setLoading(false) ที่นี่ เพราะยัง calculateStats() ไม่เสร็จ
+  }, [user, myTeamIds])
 
   // Load team membership once on mount
   useEffect(() => {
@@ -394,9 +406,42 @@ export function useStaffBookings() {
 
   // Load bookings when teams are loaded or changed
   useEffect(() => {
+    console.log('[StaffBookings] useEffect triggered:', {
+      user: !!user,
+      teamsLoaded,
+      myTeamIds: myTeamIds.length,
+      isFetching: isFetchingRef.current
+    })
+
     if (!user || !teamsLoaded) return
 
-    loadBookings()
+    const fetchData = async () => {
+      // ป้องกันการโหลดซ้ำ - เช็คและตั้งค่าพร้อมกัน
+      if (isFetchingRef.current) {
+        console.log('[StaffBookings] Already fetching, skipping...')
+        return
+      }
+
+      isFetchingRef.current = true
+      console.log('[StaffBookings] Start fetching bookings and stats...')
+
+      try {
+        await loadBookings()
+        await calculateStats()
+        console.log('[StaffBookings] Fetch complete')
+        setLoading(false)  // ✅ เซ็ต loading = false หลังจากทุกอย่างเสร็จ
+      } catch (error) {
+        console.error('[StaffBookings] Fetch error:', error)
+        setLoading(false)  // เซ็ต false เมื่อเกิด error ด้วย
+      } finally {
+        // รอสักครู่ก่อน reset flag เพื่อให้ useEffect ครั้งที่ 2 เห็น flag = true
+        setTimeout(() => {
+          isFetchingRef.current = false
+        }, 100)
+      }
+    }
+
+    fetchData()
 
     // Real-time subscription for new bookings
     // Note: Supabase realtime filters don't support OR conditions directly
@@ -414,20 +459,29 @@ export function useStaffBookings() {
           const booking = payload.new as RealtimeBookingPayload
 
           // Reload if booking is for current user OR for any team they belong to
-          const isMyBooking = booking.staff_id === user.id
-          const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
+          const isMyBooking = booking?.staff_id === user.id
+          const isMyTeamBooking = booking?.team_id && myTeamIds.includes(booking.team_id)
 
           if (isMyBooking || isMyTeamBooking) {
-            loadBookings()
+            // ถ้าเป็น UPDATE event ให้ข้ามการโหลดใหม่
+            // เพราะเรามี optimistic update ที่จัดการไว้แล้วใน addNotes(), startProgress(), markAsCompleted()
+            if (payload.eventType === 'UPDATE') {
+              return
+            }
+
+            // โหลดใหม่เฉพาะ INSERT และ DELETE เท่านั้น
+            fetchData()
           }
         }
       )
       .subscribe()
 
     return () => {
+      console.log('[StaffBookings] Cleanup')
       supabase.removeChannel(channel)
     }
-  }, [user, teamsLoaded, myTeamIds, loadBookings])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, teamsLoaded, myTeamIds])
 
   async function startProgress(bookingId: string) {
     try {

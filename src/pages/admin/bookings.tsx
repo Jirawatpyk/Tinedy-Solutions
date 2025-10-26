@@ -687,7 +687,10 @@ export function AdminBookings() {
         <BookingCreateModal
           isOpen={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
-          onSuccess={fetchBookings}
+          onSuccess={() => {
+            // Realtime subscription will update the list automatically
+            setIsDialogOpen(false)
+          }}
           servicePackages={servicePackages}
           staffMembers={staffMembers}
           teams={teams}
