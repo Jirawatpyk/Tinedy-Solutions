@@ -19,9 +19,10 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'react-vendor'
             }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor'
-            }
+            // Remove Supabase vendor splitting to avoid initialization issues
+            // if (id.includes('@supabase')) {
+            //   return 'supabase-vendor'
+            // }
             if (id.includes('recharts')) {
               return 'charts'
             }
