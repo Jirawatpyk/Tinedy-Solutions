@@ -6,14 +6,21 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 import { uploadChatFile } from '@/lib/chat-storage'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
 
+const MESSAGES_PER_PAGE = 50
+
 export function useChat() {
   const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const selectedUserRef = useRef<Profile | null>(null)
+  const isLoadingConversationsRef = useRef(false)
+  const prevMessagesLengthRef = useRef(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Keep ref in sync with state
@@ -49,9 +56,13 @@ export function useChat() {
     }
   }, [user])
 
-  // Fetch messages for selected user
-  const fetchMessages = useCallback(async (otherUserId: string) => {
+  // Fetch messages for selected user (initial load - last N messages)
+  const fetchMessages = useCallback(async (otherUserId: string, limit = MESSAGES_PER_PAGE) => {
     if (!user) return []
+
+    // Clear messages and show loading immediately
+    setIsLoadingMessages(true)
+    setMessages([])
 
     try {
       const { data, error: fetchError } = await supabase
@@ -68,12 +79,14 @@ export function useChat() {
           recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
         `)
         .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false }) // Get latest first
+        .limit(limit)
 
       if (fetchError) {
         const errorMsg = getSupabaseErrorMessage(fetchError)
         console.error('Error fetching messages:', fetchError)
         setError(errorMsg)
+        setIsLoadingMessages(false)
         return []
       }
 
@@ -84,16 +97,76 @@ export function useChat() {
         recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
       })) as Message[]
 
-      setMessages(fetchedMessages)
-      setError(null) // Clear error on success
-      return fetchedMessages
+      // Reverse to show oldest to newest (prepare all data before setting state)
+      const messagesInOrder = fetchedMessages.reverse()
+
+      // Set all states together AFTER processing is complete
+      setMessages(messagesInOrder)
+      setHasMoreMessages(fetchedMessages.length === limit)
+      setError(null)
+      setIsLoadingMessages(false)
+
+      return messagesInOrder
     } catch (err) {
       const errorMsg = getSupabaseErrorMessage(err)
       console.error('Unexpected error fetching messages:', err)
       setError(errorMsg)
+      setIsLoadingMessages(false)
       return []
     }
   }, [user])
+
+  // Load more older messages (for pagination)
+  const loadMoreMessages = useCallback(async (otherUserId: string) => {
+    if (!user || !hasMoreMessages || isLoadingMore) return
+
+    setIsLoadingMore(true)
+    try {
+      // Get the oldest message's timestamp
+      const oldestMessage = messages[0]
+      if (!oldestMessage) return
+
+      const { data, error: fetchError } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          sender_id,
+          recipient_id,
+          message,
+          is_read,
+          created_at,
+          attachments,
+          sender:profiles!sender_id(id, full_name, email, role, avatar_url),
+          recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
+        `)
+        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+        .lt('created_at', oldestMessage.created_at)
+        .order('created_at', { ascending: false })
+        .limit(MESSAGES_PER_PAGE)
+
+      if (fetchError) {
+        console.error('Error loading more messages:', fetchError)
+        return
+      }
+
+      // Handle array response
+      const olderMessages = (data || []).map((msg: { sender: Profile | Profile[]; recipient: Profile | Profile[]; [key: string]: unknown }) => ({
+        ...msg,
+        sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
+        recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
+      })) as Message[]
+
+      // Reverse and prepend to existing messages
+      const olderMessagesInOrder = olderMessages.reverse()
+
+      setMessages((prev) => [...olderMessagesInOrder, ...prev])
+      setHasMoreMessages(olderMessages.length === MESSAGES_PER_PAGE)
+    } catch (err) {
+      console.error('Unexpected error loading more messages:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [user, messages, hasMoreMessages, isLoadingMore])
 
   // Send message (with optional attachments)
   const sendMessage = useCallback(async (
@@ -119,8 +192,9 @@ export function useChat() {
 
       if (error) throw error
 
-      // Add message to local state immediately
-      setMessages((prev) => [...prev, data as Message])
+      // Don't add to local state - let realtime subscription handle it
+      // This ensures the message has proper profile data
+      console.log('✅ Message sent, waiting for realtime subscription to add it')
       return data
     } catch (error) {
       console.error('Error sending message:', error)
@@ -199,10 +273,22 @@ export function useChat() {
   }, [user])
 
   // Load conversations with last message and unread counts
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (showLoading = true) => {
     if (!user) return
 
-    setIsLoading(true)
+    // Prevent concurrent loads
+    if (isLoadingConversationsRef.current) {
+      console.log('⏭️ Already loading conversations, skipping')
+      return
+    }
+
+    isLoadingConversationsRef.current = true
+
+    // Only show loading indicator on initial load
+    if (showLoading && conversations.length === 0) {
+      setIsLoading(true)
+    }
+
     try {
       const users = await fetchUsers()
 
@@ -243,8 +329,9 @@ export function useChat() {
       console.error('Error loading conversations:', error)
     } finally {
       setIsLoading(false)
+      isLoadingConversationsRef.current = false
     }
-  }, [user, fetchUsers, getUnreadCount])
+  }, [user, fetchUsers, getUnreadCount, conversations.length])
 
   // Delete conversation (all messages with a specific user)
   const deleteConversation = useCallback(async (otherUserId: string) => {
@@ -279,6 +366,64 @@ export function useChat() {
     setMessages([])
   }, [])
 
+  // Update conversation list locally without full reload
+  const updateConversationLocally = useCallback(async (newMessage: Message) => {
+    const otherUserId = newMessage.sender_id === user?.id
+      ? newMessage.recipient_id
+      : newMessage.sender_id
+
+    setConversations((prevConversations) => {
+      // Find existing conversation
+      const existingConvIndex = prevConversations.findIndex(
+        (conv) => conv.user.id === otherUserId
+      )
+
+      if (existingConvIndex >= 0) {
+        // Update existing conversation
+        const updatedConversations = [...prevConversations]
+        const existingConv = updatedConversations[existingConvIndex]
+
+        // Update last message and timestamp
+        updatedConversations[existingConvIndex] = {
+          ...existingConv,
+          lastMessage: newMessage,
+          // Update unread count only if it's an incoming message and not from selected user
+          unreadCount: newMessage.recipient_id === user?.id &&
+                       selectedUserRef.current?.id !== newMessage.sender_id
+            ? existingConv.unreadCount + 1
+            : existingConv.unreadCount
+        }
+
+        // Sort by last message time
+        updatedConversations.sort((a, b) => {
+          if (!a.lastMessage && !b.lastMessage) return 0
+          if (!a.lastMessage) return 1
+          if (!b.lastMessage) return -1
+          return new Date(b.lastMessage.created_at).getTime() -
+                 new Date(a.lastMessage.created_at).getTime()
+        })
+
+        console.log('✅ Updated conversation locally without reload')
+        return updatedConversations
+      }
+
+      // If conversation doesn't exist, it's a new conversation
+      // We'll reload in the background but return current state immediately
+      console.log('🆕 New conversation detected')
+      return prevConversations
+    })
+
+    // Check if conversation exists, if not reload (but don't block UI)
+    setConversations((prevConversations) => {
+      const exists = prevConversations.some((conv) => conv.user.id === otherUserId)
+      if (!exists) {
+        console.log('🔄 Loading conversations in background for new conversation')
+        setTimeout(() => loadConversations(), 100)
+      }
+      return prevConversations
+    })
+  }, [user, loadConversations])
+
   // Setup real-time subscription
   useEffect(() => {
     if (!user) return
@@ -286,67 +431,111 @@ export function useChat() {
     let channel: RealtimeChannel
 
     const setupRealtimeSubscription = async () => {
+      console.log('🚀 Setting up realtime subscription for user:', user.id)
+
       channel = supabase
-        .channel('messages')
-        // Listen for incoming messages (sent TO me)
+        .channel('messages-channel')
+        // Listen for ALL new messages (both incoming and outgoing)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: `recipient_id=eq.${user.id}`,
           },
           async (payload) => {
             const newMessage = payload.new as Message
-
-            console.log('📨 Incoming message:', newMessage)
-
-            // Reload conversations to update last message and unread count
-            loadConversations()
-
-            // If message is for currently selected user, add to messages
             const currentSelectedUser = selectedUserRef.current
-            if (currentSelectedUser && newMessage.sender_id === currentSelectedUser.id) {
-              console.log('✅ Adding incoming message to current conversation')
-              setMessages((prev) => [...prev, newMessage])
-              // Auto mark as read
-              markAsRead([newMessage.id])
-            } else {
-              console.log('⏭️ Message not for current conversation, skipping')
+
+            console.log('📬 New message received:', {
+              id: newMessage.id,
+              sender_id: newMessage.sender_id,
+              recipient_id: newMessage.recipient_id,
+              message: newMessage.message?.substring(0, 50),
+              currentUserId: user.id,
+              selectedUserId: currentSelectedUser?.id
+            })
+
+            // Check if this message is relevant to me
+            const isIncoming = newMessage.recipient_id === user.id
+            const isOutgoing = newMessage.sender_id === user.id
+
+            if (!isIncoming && !isOutgoing) {
+              console.log('⏭️ Message not related to me, ignoring')
+              return
             }
-          }
-        )
-        // Listen for outgoing messages (sent BY me)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `sender_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newMessage = payload.new as Message
 
-            console.log('📤 Outgoing message:', newMessage)
+            // Fetch full message data first
+            let messageWithProfiles: Message | null = null
+            try {
+              const { data: fullMessage, error } = await supabase
+                .from('messages')
+                .select(`
+                  id,
+                  sender_id,
+                  recipient_id,
+                  message,
+                  is_read,
+                  created_at,
+                  attachments,
+                  sender:profiles!sender_id(id, full_name, email, role, avatar_url),
+                  recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
+                `)
+                .eq('id', newMessage.id)
+                .single()
 
-            // Reload conversations to update last message
-            loadConversations()
+              if (error) {
+                console.error('❌ Error fetching full message:', error)
+                return
+              }
 
-            // If message is for currently selected user, add to messages
-            const currentSelectedUser = selectedUserRef.current
-            if (currentSelectedUser && newMessage.recipient_id === currentSelectedUser.id) {
+              // Handle array response from Supabase join query
+              messageWithProfiles = {
+                ...fullMessage,
+                sender: Array.isArray(fullMessage.sender) ? fullMessage.sender[0] : fullMessage.sender,
+                recipient: Array.isArray(fullMessage.recipient) ? fullMessage.recipient[0] : fullMessage.recipient,
+              } as Message
+            } catch (error) {
+              console.error('❌ Error processing new message:', error)
+              return
+            }
+
+            // Update conversation list locally (without full reload)
+            updateConversationLocally(messageWithProfiles)
+
+            // Determine if message should be added to current conversation
+            let shouldAddToCurrentConversation = false
+            let shouldMarkAsRead = false
+
+            if (currentSelectedUser) {
+              if (isIncoming && newMessage.sender_id === currentSelectedUser.id) {
+                // Incoming message from currently selected user
+                shouldAddToCurrentConversation = true
+                shouldMarkAsRead = true
+                console.log('✅ Incoming message from selected user')
+              } else if (isOutgoing && newMessage.recipient_id === currentSelectedUser.id) {
+                // Outgoing message to currently selected user
+                shouldAddToCurrentConversation = true
+                console.log('✅ Outgoing message to selected user')
+              }
+            }
+
+            if (shouldAddToCurrentConversation && messageWithProfiles) {
               setMessages((prev) => {
-                // Check if message already exists (from local state update)
+                // Check if message already exists
                 const exists = prev.some(msg => msg.id === newMessage.id)
                 if (exists) {
                   console.log('⏭️ Message already exists in state, skipping')
                   return prev
                 }
-                console.log('✅ Adding outgoing message to current conversation')
-                return [...prev, newMessage]
+                console.log('➕ Adding message to conversation')
+                return [...prev, messageWithProfiles!]
               })
+
+              // Auto mark as read if it's an incoming message
+              if (shouldMarkAsRead) {
+                await markAsRead([newMessage.id])
+              }
             } else {
               console.log('⏭️ Message not for current conversation, skipping')
             }
@@ -359,9 +548,28 @@ export function useChat() {
             schema: 'public',
             table: 'messages',
           },
-          () => {
-            // Reload conversations when messages are marked as read
-            loadConversations()
+          (payload) => {
+            const updatedMessage = payload.new as Message
+            console.log('🔄 Message updated:', updatedMessage.id)
+
+            // If message is marked as read, update conversation's unread count
+            if (updatedMessage.is_read) {
+              setConversations((prevConversations) => {
+                const otherUserId = updatedMessage.sender_id === user.id
+                  ? updatedMessage.recipient_id
+                  : updatedMessage.sender_id
+
+                return prevConversations.map((conv) => {
+                  if (conv.user.id === otherUserId && conv.unreadCount > 0) {
+                    return {
+                      ...conv,
+                      unreadCount: Math.max(0, conv.unreadCount - 1)
+                    }
+                  }
+                  return conv
+                })
+              })
+            }
           }
         )
         .subscribe((status) => {
@@ -377,7 +585,7 @@ export function useChat() {
         supabase.removeChannel(channel)
       }
     }
-  }, [user, markAsRead, loadConversations])
+  }, [user, markAsRead, updateConversationLocally])
 
   // Load conversations on mount
   useEffect(() => {
@@ -387,7 +595,19 @@ export function useChat() {
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {
     if (selectedUser) {
-      fetchMessages(selectedUser.id).then(async (fetchedMessages) => {
+      // BEST PRACTICE: Use startTransition for smooth UI
+      // Show loading immediately and clear old messages
+      setIsLoadingMessages(true)
+      setHasMoreMessages(true)
+      prevMessagesLengthRef.current = 0
+
+      // Clear messages in next tick to ensure loading state is rendered first
+      Promise.resolve().then(() => {
+        setMessages([])
+
+        // Fetch messages after clearing
+        return fetchMessages(selectedUser.id)
+      }).then(async (fetchedMessages) => {
         // Mark unread messages from this user as read
         const unreadMessages = fetchedMessages
           .filter((m: Message) => m.sender_id === selectedUser.id && !m.is_read)
@@ -395,12 +615,28 @@ export function useChat() {
 
         if (unreadMessages.length > 0) {
           await markAsRead(unreadMessages)
-          // Force reload conversations to update unread counts immediately
-          loadConversations()
+
+          // Update conversation's unread count locally instead of full reload
+          setConversations((prevConversations) => {
+            return prevConversations.map((conv) => {
+              if (conv.user.id === selectedUser.id) {
+                return {
+                  ...conv,
+                  unreadCount: 0
+                }
+              }
+              return conv
+            })
+          })
         }
       })
+    } else {
+      // Clear messages when no user selected
+      setMessages([])
+      setHasMoreMessages(true)
+      setIsLoadingMessages(false)
     }
-  }, [selectedUser, fetchMessages, markAsRead, loadConversations])
+  }, [selectedUser, fetchMessages, markAsRead])
 
   return {
     messages,
@@ -409,9 +645,13 @@ export function useChat() {
     setSelectedUser,
     isLoading,
     isSending,
+    isLoadingMessages,
+    isLoadingMore,
+    hasMoreMessages,
     error,
     sendMessage,
     sendMessageWithFile,
+    loadMoreMessages,
     getTotalUnreadCount,
     loadConversations,
     deleteConversation,

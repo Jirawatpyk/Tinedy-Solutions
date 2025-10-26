@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, useRef } from 'react'
+import { useState, type KeyboardEvent, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Send, Paperclip, X } from 'lucide-react'
@@ -12,14 +12,26 @@ export function MessageInput({ onSendMessage, disabled = false }: MessageInputPr
   const [message, setMessage] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleSend = () => {
     if ((message.trim() || selectedFile) && !disabled) {
       onSendMessage(message, selectedFile || undefined)
       setMessage('')
       setSelectedFile(null)
+      // Auto focus back to textarea after sending
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 0)
     }
   }
+
+  // Auto focus on mount and when disabled changes
+  useEffect(() => {
+    if (!disabled) {
+      textareaRef.current?.focus()
+    }
+  }, [disabled])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -81,6 +93,7 @@ export function MessageInput({ onSendMessage, disabled = false }: MessageInputPr
         </Button>
 
         <Textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}

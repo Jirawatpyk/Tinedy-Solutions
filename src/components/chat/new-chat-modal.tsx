@@ -57,9 +57,9 @@ export function NewChatModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>เริ่มแชทใหม่</DialogTitle>
+          <DialogTitle>Start New Chat</DialogTitle>
           <DialogDescription>
-            เลือกผู้ใช้ที่ต้องการเริ่มการสนทนา
+            Select a user to start a conversation
           </DialogDescription>
         </DialogHeader>
 
@@ -69,7 +69,7 @@ export function NewChatModal({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="ค้นหาชื่อหรืออีเมล..."
+              placeholder="Search name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -85,7 +85,7 @@ export function NewChatModal({
             ) : filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <p className="text-muted-foreground">
-                  {searchQuery ? 'ไม่พบผู้ใช้ที่ค้นหา' : 'ไม่มีผู้ใช้ที่สามารถเริ่มแชทได้'}
+                  {searchQuery ? 'No users found' : 'No available users to start a chat'}
                 </p>
               </div>
             ) : (
@@ -128,7 +128,7 @@ export function NewChatModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              ยกเลิก
+              Cancel
             </Button>
           </div>
         </div>

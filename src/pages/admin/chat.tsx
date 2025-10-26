@@ -21,8 +21,12 @@ export function AdminChat() {
     setSelectedUser,
     isLoading,
     isSending,
+    isLoadingMessages,
+    isLoadingMore,
+    hasMoreMessages,
     sendMessage,
     sendMessageWithFile,
+    loadMoreMessages,
     deleteConversation,
     startNewChat,
     fetchUsers,
@@ -95,18 +99,22 @@ export function AdminChat() {
     startNewChat(newUser)
   }
 
+  const handleBackToList = () => {
+    setSelectedUser(null)
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      {/* Page Header */}
-      <div className="mb-6">
+      {/* Page Header - Hide on mobile when chat is open */}
+      <div className={`mb-6 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
         <h1 className="text-3xl font-display font-bold text-tinedy-dark">Chat</h1>
         <p className="text-muted-foreground mt-1">Communicate with your team in real-time</p>
       </div>
 
-      {/* Chat Container */}
+      {/* Chat Container - Mobile: Stack, Desktop: Side by side */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-        {/* User List - Sidebar */}
-        <div className="lg:col-span-4 h-full overflow-hidden">
+        {/* User List - Sidebar: Hide on mobile when chat is selected */}
+        <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>
           <UserList
             conversations={conversations}
             selectedUserId={selectedUser?.id || null}
@@ -117,14 +125,19 @@ export function AdminChat() {
           />
         </div>
 
-        {/* Chat Area */}
-        <div className="lg:col-span-8 h-full overflow-hidden">
+        {/* Chat Area: Show fullscreen on mobile when selected, side-by-side on desktop */}
+        <div className={`lg:col-span-8 h-full overflow-hidden ${selectedUser ? 'block' : 'hidden lg:block'}`}>
           <ChatArea
             selectedUser={selectedUser}
             messages={messages}
             currentUserId={user?.id || ''}
             onSendMessage={handleSendMessage}
+            onLoadMore={() => selectedUser && loadMoreMessages(selectedUser.id)}
+            onBack={handleBackToList}
             isSending={isSending}
+            isLoadingMessages={isLoadingMessages}
+            isLoadingMore={isLoadingMore}
+            hasMoreMessages={hasMoreMessages}
           />
         </div>
       </div>

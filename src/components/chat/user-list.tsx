@@ -129,18 +129,13 @@ export function UserList({
                 )}
               >
                 <div className="flex items-start gap-3">
-                  {/* Avatar with Online Status */}
+                  {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <AvatarWithFallback
                       src={conversation.user.avatar_url}
                       alt={conversation.user.full_name}
                       size="md"
                     />
-                    {/* Online Status Indicator - green if online, gray if offline */}
-                    <div className={cn(
-                      "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white",
-                      conversation.user.is_online ? "bg-green-500" : "bg-gray-400"
-                    )} />
                     {/* Unread Count Badge */}
                     {conversation.unreadCount > 0 && (
                       <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
