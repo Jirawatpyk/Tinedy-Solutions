@@ -264,8 +264,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               onClick={handleSignOut}
               disabled={isLoggingOut}
               className={cn(
-                "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50",
-                isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
+                "w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50",
+                isCollapsed ? 'justify-center px-3 py-2.5' : 'px-3 py-2.5'
               )}
                   title={isCollapsed ? 'Sign Out' : undefined}
                 >
