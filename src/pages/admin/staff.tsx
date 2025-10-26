@@ -209,14 +209,27 @@ export function AdminStaff() {
         if (error || !data?.success) {
           console.error('Edge Function Error:', { error, data })
 
-          // Get error message from data (Edge Function response body) or error object
-          const errorMsg = data?.error || error?.message || ''
+          // Try to get error message from response context (for FunctionsHttpError)
+          let errorMsg = ''
+
+          if (error && typeof error === 'object' && 'context' in error) {
+            // FunctionsHttpError has error details in context
+            const context = (error as any).context
+            errorMsg = context?.error || context?.message || ''
+          }
+
+          // Fallback to other error sources
+          if (!errorMsg) {
+            errorMsg = data?.error || error?.message || ''
+          }
+
+          console.log('Parsed error message:', errorMsg)
 
           // Check for duplicate email error
-          if (errorMsg.includes('User already registered') ||
-              errorMsg.includes('already exists') ||
-              errorMsg.includes('duplicate') ||
-              errorMsg.includes('already registered')) {
+          if (errorMsg.toLowerCase().includes('user already registered') ||
+              errorMsg.toLowerCase().includes('already exists') ||
+              errorMsg.toLowerCase().includes('duplicate') ||
+              errorMsg.toLowerCase().includes('already registered')) {
             throw new Error('This email is already registered. Please use a different email.')
           }
 
