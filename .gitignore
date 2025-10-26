@@ -10,7 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist.zip
 *.local
+
+# Test coverage
+coverage
+*.lcov
 
 # Environment variables
 .env
