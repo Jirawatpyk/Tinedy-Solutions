@@ -65,9 +65,9 @@ export default function StaffCalendar() {
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-white border-b flex-shrink-0">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -86,16 +86,18 @@ export default function StaffCalendar() {
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 sm:p-6">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Error: {error}</AlertDescription>
-          </Alert>
-        </div>
-      )}
+      {/* Content Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {error && (
+          <div className="p-4 sm:p-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Error: {error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
-      <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
         {loading ? (
           // Loading skeleton
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -343,6 +345,7 @@ export default function StaffCalendar() {
           </Card>
           </div>
         )}
+        </div>
       </div>
 
       {/* Booking Details Modal */}
