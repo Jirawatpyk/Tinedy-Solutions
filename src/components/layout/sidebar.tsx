@@ -272,20 +272,22 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                 {isLoggingOut ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
-                    {!isCollapsed && (
-                      <span className="transition-all duration-300">
-                        Signing out...
-                      </span>
-                    )}
+                    <span className={cn(
+                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                      isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                    )}>
+                      Signing out...
+                    </span>
                   </>
                 ) : (
                   <>
                     <LogOut className="h-5 w-5 flex-shrink-0" />
-                    {!isCollapsed && (
-                      <span className="transition-all duration-300">
-                        Sign Out
-                      </span>
-                    )}
+                    <span className={cn(
+                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                      isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                    )}>
+                      Sign Out
+                    </span>
                   </>
                 )}
               </button>
