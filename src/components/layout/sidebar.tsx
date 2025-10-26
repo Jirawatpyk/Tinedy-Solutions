@@ -265,7 +265,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               disabled={isLoggingOut}
               className={cn(
                 "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50",
-                isCollapsed ? 'justify-center px-3 py-2.5' : 'gap-2 px-3 py-2.5'
+                isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
               )}
                   title={isCollapsed ? 'Sign Out' : undefined}
                 >
@@ -273,7 +273,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
                     <span className={cn(
-                      "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
+                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
                       isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                     )}>
                       Signing out...
@@ -283,7 +283,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   <>
                     <LogOut className="h-5 w-5 flex-shrink-0" />
                     <span className={cn(
-                      "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
+                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
                       isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                     )}>
                       Sign Out
