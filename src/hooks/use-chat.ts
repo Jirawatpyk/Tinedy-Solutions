@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Message, Profile, Conversation, Attachment } from '@/types/chat'
@@ -11,9 +11,15 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
+  const selectedUserRef = useRef<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedUserRef.current = selectedUser
+  }, [selectedUser])
 
   // Fetch all users for conversation list
   const fetchUsers = useCallback(async () => {
@@ -294,21 +300,21 @@ export function useChat() {
           async (payload) => {
             const newMessage = payload.new as Message
 
+            console.log('📨 Incoming message:', newMessage)
+
             // Reload conversations to update last message and unread count
             loadConversations()
 
             // If message is for currently selected user, add to messages
-            setMessages((prev) => {
-              // Check if we're viewing the conversation with the sender
-              if (prev.length > 0 &&
-                  (prev[0].sender_id === newMessage.sender_id ||
-                   prev[0].recipient_id === newMessage.sender_id)) {
-                // Auto mark as read
-                markAsRead([newMessage.id])
-                return [...prev, newMessage]
-              }
-              return prev
-            })
+            const currentSelectedUser = selectedUserRef.current
+            if (currentSelectedUser && newMessage.sender_id === currentSelectedUser.id) {
+              console.log('✅ Adding incoming message to current conversation')
+              setMessages((prev) => [...prev, newMessage])
+              // Auto mark as read
+              markAsRead([newMessage.id])
+            } else {
+              console.log('⏭️ Message not for current conversation, skipping')
+            }
           }
         )
         // Listen for outgoing messages (sent BY me)
@@ -323,23 +329,27 @@ export function useChat() {
           (payload) => {
             const newMessage = payload.new as Message
 
+            console.log('📤 Outgoing message:', newMessage)
+
             // Reload conversations to update last message
             loadConversations()
 
             // If message is for currently selected user, add to messages
-            setMessages((prev) => {
-              // Check if message already exists (from local state update)
-              const exists = prev.some(msg => msg.id === newMessage.id)
-              if (exists) return prev
-
-              // Check if we're viewing the conversation with the recipient
-              if (prev.length > 0 &&
-                  (prev[0].sender_id === newMessage.recipient_id ||
-                   prev[0].recipient_id === newMessage.recipient_id)) {
+            const currentSelectedUser = selectedUserRef.current
+            if (currentSelectedUser && newMessage.recipient_id === currentSelectedUser.id) {
+              setMessages((prev) => {
+                // Check if message already exists (from local state update)
+                const exists = prev.some(msg => msg.id === newMessage.id)
+                if (exists) {
+                  console.log('⏭️ Message already exists in state, skipping')
+                  return prev
+                }
+                console.log('✅ Adding outgoing message to current conversation')
                 return [...prev, newMessage]
-              }
-              return prev
-            })
+              })
+            } else {
+              console.log('⏭️ Message not for current conversation, skipping')
+            }
           }
         )
         .on(
@@ -354,13 +364,16 @@ export function useChat() {
             loadConversations()
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('📡 Realtime subscription status:', status)
+        })
     }
 
     setupRealtimeSubscription()
 
     return () => {
       if (channel) {
+        console.log('🔌 Unsubscribing from realtime channel')
         supabase.removeChannel(channel)
       }
     }
