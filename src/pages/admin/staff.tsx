@@ -190,40 +190,39 @@ export function AdminStaff() {
           description: 'Staff member updated successfully',
         })
       } else {
-        // Call Edge Function to create staff (production-grade approach)
-        const { data, error } = await supabase.functions.invoke('create-staff', {
-          body: {
-            email: formData.email,
-            password: formData.password,
-            full_name: formData.full_name,
-            phone: formData.phone,
-            role: formData.role,
-            staff_number: formData.staff_number || undefined,
-            skills: skillsArray.length > 0 ? skillsArray : undefined,
-          },
-        })
+        // Get auth token for Edge Function
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          throw new Error('Authentication required')
+        }
 
-        console.log('Edge Function Response:', { data, error })
-
-        // When Edge Function returns non-2xx status, check data for error details
-        if (error || !data?.success) {
-          console.error('Edge Function Error:', { error, data })
-
-          // Try to get error message from response context (for FunctionsHttpError)
-          let errorMsg = ''
-
-          if (error && typeof error === 'object' && 'context' in error) {
-            // FunctionsHttpError has error details in context
-            const context = (error as any).context
-            errorMsg = context?.error || context?.message || ''
+        // Call Edge Function directly with fetch to get proper error responses
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password,
+              full_name: formData.full_name,
+              phone: formData.phone,
+              role: formData.role,
+              staff_number: formData.staff_number || undefined,
+              skills: skillsArray.length > 0 ? skillsArray : undefined,
+            }),
           }
+        )
 
-          // Fallback to other error sources
-          if (!errorMsg) {
-            errorMsg = data?.error || error?.message || ''
-          }
+        const data = await response.json()
+        console.log('Edge Function Response:', { status: response.status, data })
 
-          console.log('Parsed error message:', errorMsg)
+        if (!response.ok || !data?.success) {
+          const errorMsg = data?.error || 'Failed to create staff member'
+          console.log('Error message from Edge Function:', errorMsg)
 
           // Check for duplicate email error
           if (errorMsg.toLowerCase().includes('user already registered') ||
@@ -233,8 +232,7 @@ export function AdminStaff() {
             throw new Error('This email is already registered. Please use a different email.')
           }
 
-          // Return specific error message or generic one
-          throw new Error(errorMsg || 'Failed to create staff member. Please try again.')
+          throw new Error(errorMsg)
         }
 
         toast({
