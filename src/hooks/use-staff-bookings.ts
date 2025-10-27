@@ -131,6 +131,11 @@ export function useStaffBookings() {
       startOfWeek.setDate(diff)
       const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
 
+      // Get end of week (Sunday)
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(endOfWeek.getDate() + 6)
+      const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
+
       const thirtyDaysAgo = new Date(today)
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
@@ -173,7 +178,7 @@ export function useStaffBookings() {
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .gte('booking_date', startOfWeekStr)
-            .lte('booking_date', todayStr)
+            .lte('booking_date', endOfWeekStr)
           if (filterCondition) {
             query = query.or(filterCondition)
           } else {
