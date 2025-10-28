@@ -221,13 +221,15 @@ export default function AdminSettings() {
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">General</span>
             </TabsTrigger>
-            <TabsTrigger value="booking" className="flex items-center gap-2">
+            <TabsTrigger value="booking" className="flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
               <Clock className="h-4 w-4" />
               <span className="hidden sm:inline">Booking</span>
+              <span className="text-xs">(กำลังพัฒนา)</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <TabsTrigger value="notifications" className="flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notifications</span>
+              <span className="text-xs">(กำลังพัฒนา)</span>
             </TabsTrigger>
           </TabsList>
 
