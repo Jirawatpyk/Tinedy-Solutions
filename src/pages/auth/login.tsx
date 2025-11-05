@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { Lock, Mail } from 'lucide-react'
+import logoVertical from '@/assets/logo/logo-vertical.svg'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -66,15 +67,14 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 bg-tinedy-blue rounded-full flex items-center justify-center">
-              <Lock className="h-8 w-8 text-white" />
-            </div>
+          <div className="flex justify-center mb-6">
+            <img
+              src={logoVertical}
+              alt="Tinedy Solutions"
+              className="h-24 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="text-3xl font-display font-bold text-tinedy-blue">
-            Tinedy CRM
-          </CardTitle>
-          <CardDescription className="font-rule">
+          <CardDescription className="font-rule text-base">
             Sign in to your account to continue
           </CardDescription>
         </CardHeader>
