@@ -97,10 +97,10 @@ class NotificationService {
   async notifyNewBooking(customerName: string, time: string, bookingId: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
     const isTeam = notificationType === 'team'
     await this.show({
-      title: isTeam ? '👥 งานทีมใหม่!' : '🔔 งานใหม่!',
+      title: isTeam ? '👥 New Team Booking!' : '🔔 New Booking!',
       body: isTeam
-        ? `มีงานทีมใหม่จาก ${customerName} เวลา ${time}`
-        : `มีงานใหม่จาก ${customerName} เวลา ${time}`,
+        ? `New team booking from ${customerName} at ${time}`
+        : `New booking from ${customerName} at ${time}`,
       tag: `new-booking-${bookingId}`,
       data: {
         type: 'new_booking',
@@ -114,10 +114,10 @@ class NotificationService {
   async notifyBookingReminder(customerName: string, time: string, bookingId: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
     const isTeam = notificationType === 'team'
     await this.show({
-      title: isTeam ? '👥 แจ้งเตือนงานทีม' : '⏰ แจ้งเตือนงาน',
+      title: isTeam ? '👥 Team Booking Reminder' : '⏰ Booking Reminder',
       body: isTeam
-        ? `งานทีมกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`
-        : `งานกับ ${customerName} จะเริ่มในอีก 30 นาที (${time})`,
+        ? `Team booking with ${customerName} starts in 30 minutes (${time})`
+        : `Booking with ${customerName} starts in 30 minutes (${time})`,
       tag: `reminder-${bookingId}`,
       data: {
         type: 'reminder',
@@ -131,10 +131,10 @@ class NotificationService {
   async notifyBookingCancelled(customerName: string, time: string, notificationType: 'personal' | 'team' = 'personal'): Promise<void> {
     const isTeam = notificationType === 'team'
     await this.show({
-      title: isTeam ? '👥 งานทีมถูกยกเลิก' : '❌ งานถูกยกเลิก',
+      title: isTeam ? '👥 Team Booking Cancelled' : '❌ Booking Cancelled',
       body: isTeam
-        ? `งานทีมกับ ${customerName} เวลา ${time} ถูกยกเลิก`
-        : `งานกับ ${customerName} เวลา ${time} ถูกยกเลิก`,
+        ? `Team booking with ${customerName} at ${time} was cancelled`
+        : `Booking with ${customerName} at ${time} was cancelled`,
       tag: 'booking-cancelled',
       data: {
         type: 'cancelled',
@@ -145,7 +145,7 @@ class NotificationService {
 
   async notifyMessage(from: string, message: string): Promise<void> {
     await this.show({
-      title: `💬 ข้อความใหม่จาก ${from}`,
+      title: `💬 New message from ${from}`,
       body: message,
       tag: 'new-message',
       data: {

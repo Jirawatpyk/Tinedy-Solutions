@@ -34,8 +34,10 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Open search with Cmd+K or Ctrl+K
+  // Open search with Cmd+K or Ctrl+K (Admin only)
   useEffect(() => {
+    if (profile?.role !== 'admin') return
+
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -44,7 +46,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [])
+  }, [profile?.role])
 
   const performSearch = useCallback(async (query: string) => {
     console.log('Performing search for:', query)
@@ -198,20 +200,22 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </Button>
 
-          {/* Search bar - hidden on mobile */}
-          <div className="hidden md:flex items-center relative">
-            <Button
-              variant="outline"
-              className="w-64 lg:w-96 justify-start text-muted-foreground"
-              onClick={() => setOpen(true)}
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Search...
-              <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </Button>
-          </div>
+          {/* Search bar - Admin only, hidden on mobile */}
+          {profile?.role === 'admin' && (
+            <div className="hidden md:flex items-center relative">
+              <Button
+                variant="outline"
+                className="w-64 lg:w-96 justify-start text-muted-foreground"
+                onClick={() => setOpen(true)}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search...
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+            </div>
+          )}
 
           {/* Quick Availability Check - Admin only, hidden on mobile */}
           {profile?.role === 'admin' && (

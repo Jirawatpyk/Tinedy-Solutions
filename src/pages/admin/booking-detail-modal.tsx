@@ -22,6 +22,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 
 interface Review {
   id: string
@@ -69,6 +70,7 @@ export function BookingDetailModal({
   const [hoverRating, setHoverRating] = useState(0)
   const [savingReview, setSavingReview] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { toast } = useToast()
 
   const resetReview = useCallback(() => {
@@ -254,6 +256,7 @@ export function BookingDetailModal({
   if (!booking) return null
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
@@ -592,6 +595,8 @@ export function BookingDetailModal({
               <Button
                 variant="outline"
                 onClick={() => onEdit(booking)}
+                disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
+                title={['completed', 'cancelled', 'no_show'].includes(booking.status) ? 'Cannot edit completed, cancelled, or no-show bookings' : undefined}
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -625,10 +630,7 @@ export function BookingDetailModal({
               </Select>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  onDelete(booking.id)
-                  onClose()
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
                 disabled={actionLoading?.delete}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -639,5 +641,21 @@ export function BookingDetailModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      onOpenChange={setShowDeleteConfirm}
+      onConfirm={() => {
+        onDelete(booking.id)
+        setShowDeleteConfirm(false)
+        onClose()
+      }}
+      title="Delete Booking"
+      description={`Are you sure you want to delete the booking for ${booking.customers?.full_name || 'customer'} on ${formatDate(booking.booking_date)} at ${formatTime(booking.start_time)}? This action cannot be undone.`}
+      confirmText="Delete"
+      cancelText="Cancel"
+      variant="destructive"
+    />
+  </>
   )
 }

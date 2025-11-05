@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useInAppNotifications } from '@/hooks/use-in-app-notifications'
 import { formatDistanceToNow } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 export function NotificationBell() {
@@ -62,7 +62,7 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-96 p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="font-semibold">การแจ้งเตือน</h3>
+          <h3 className="font-semibold">Notifications</h3>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <Button
@@ -72,7 +72,7 @@ export function NotificationBell() {
                 className="h-8 text-xs"
               >
                 <CheckCheck className="h-4 w-4 mr-1" />
-                อ่านทั้งหมด
+                Mark all as read
               </Button>
             )}
             {notifications.length > 0 && (
@@ -83,7 +83,7 @@ export function NotificationBell() {
                 className="h-8 text-xs text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                ลบทั้งหมด
+                Clear all
               </Button>
             )}
           </div>
@@ -93,13 +93,13 @@ export function NotificationBell() {
         <ScrollArea className="h-[400px]">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">กำลังโหลด...</div>
+              <div className="text-sm text-muted-foreground">Loading...</div>
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4">
               <Bell className="h-12 w-12 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground text-center">
-                ไม่มีการแจ้งเตือน
+                No notifications
               </p>
             </div>
           ) : (
@@ -136,7 +136,7 @@ export function NotificationBell() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(notification.created_at), {
                               addSuffix: true,
-                              locale: th,
+                              locale: enUS,
                             })}
                           </p>
                         </div>
@@ -149,7 +149,7 @@ export function NotificationBell() {
                               size="icon"
                               className="h-8 w-8"
                               onClick={() => markAsRead(notification.id)}
-                              title="ทำเครื่องหมายว่าอ่านแล้ว"
+                              title="Mark as read"
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -159,7 +159,7 @@ export function NotificationBell() {
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => deleteNotification(notification.id)}
-                            title="ลบการแจ้งเตือน"
+                            title="Delete notification"
                           >
                             <X className="h-4 w-4" />
                           </Button>

@@ -57,20 +57,63 @@ export function useBulkActions({
     }
   }
 
+  // Status Transition Rules (same as useBookingStatusManager)
+  const getValidTransitions = (currentStatus: string): string[] => {
+    const transitions: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['in_progress', 'cancelled', 'no_show'],
+      in_progress: ['completed', 'cancelled'],
+      completed: [], // Final state
+      cancelled: [], // Final state
+      no_show: [], // Final state
+    }
+    return transitions[currentStatus] || []
+  }
+
   const handleBulkStatusUpdate = async () => {
     if (!bulkStatus || selectedBookings.length === 0) return
+
+    // Get selected bookings data
+    const selectedBookingsData = bookings.filter(b => selectedBookings.includes(b.id))
+
+    // Validate transitions for all selected bookings
+    const invalidBookings = selectedBookingsData.filter(booking => {
+      const validTransitions = getValidTransitions(booking.status)
+      return !validTransitions.includes(bulkStatus) && booking.status !== bulkStatus
+    })
+
+    if (invalidBookings.length > 0) {
+      const invalidStatuses = [...new Set(invalidBookings.map(b => b.status))].join(', ')
+      toast({
+        title: 'Invalid Status Transition',
+        description: `Cannot change ${invalidBookings.length} booking(s) with status "${invalidStatuses}" to "${bulkStatus}". Please check the status workflow.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Filter out bookings that are already in the target status
+    const bookingsToUpdate = selectedBookingsData.filter(b => b.status !== bulkStatus)
+
+    if (bookingsToUpdate.length === 0) {
+      toast({
+        title: 'No Changes',
+        description: 'All selected bookings are already in this status.',
+      })
+      return
+    }
 
     try {
       const { error } = await supabase
         .from('bookings')
         .update({ status: bulkStatus })
-        .in('id', selectedBookings)
+        .in('id', bookingsToUpdate.map(b => b.id))
 
       if (error) throw error
 
       toast({
         title: 'Success',
-        description: `Updated ${selectedBookings.length} bookings to ${bulkStatus}`,
+        description: `Updated ${bookingsToUpdate.length} booking(s) to ${bulkStatus}`,
       })
       setSelectedBookings([])
       setBulkStatus('')
