@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-import logoVertical from '@/assets/logo/logo-vertical.png'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -151,21 +150,17 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         <div className="flex flex-col h-full">
           {/* Logo with collapse button */}
           <div className="relative flex items-center h-16 border-b border-tinedy-blue/20 px-4">
-            {/* Logo container */}
-            <div className="flex items-center flex-1 overflow-hidden">
-              {isCollapsed ? (
-                <span className="text-2xl font-display font-bold text-tinedy-yellow flex-shrink-0">
-                  T
-                </span>
-              ) : (
-                <div className="flex items-center justify-center bg-white rounded px-2 py-1">
-                  <img
-                    src={logoVertical}
-                    alt="Tinedy Solutions"
-                    className="h-10 w-auto object-contain"
-                  />
-                </div>
-              )}
+            {/* Logo container - similar to menu items */}
+            <div className="flex items-center flex-1 overflow-hidden space-x-0">
+              <span className="text-2xl font-display font-bold text-tinedy-yellow flex-shrink-0">
+                T
+              </span>
+              <span className={cn(
+                "text-2xl font-display font-bold text-tinedy-yellow flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+              )}>
+                inedy CRM
+              </span>
             </div>
             {/* Collapse button - absolute positioned */}
             <button
