@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-import logoHorizontal from '@/assets/logo/logo-horizontal.png'
+import logoVertical from '@/assets/logo/logo-vertical.png'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -158,11 +158,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   T
                 </span>
               ) : (
-                <div className="flex items-center bg-white rounded px-2 py-1">
+                <div className="flex items-center justify-center bg-white rounded px-2 py-1">
                   <img
-                    src={logoHorizontal}
+                    src={logoVertical}
                     alt="Tinedy Solutions"
-                    className="h-8 w-auto object-contain"
+                    className="h-10 w-auto object-contain"
                   />
                 </div>
               )}
