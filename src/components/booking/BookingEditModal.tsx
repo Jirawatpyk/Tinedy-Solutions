@@ -285,11 +285,10 @@ export function BookingEditModal({
                 id="edit_price"
                 type="number"
                 step="0.01"
-                value={editForm.formData.total_price !== undefined ? Number(editForm.formData.total_price.toFixed(2)) : 0}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value)
-                  editForm.handleChange('total_price', isNaN(value) ? 0 : Number(value.toFixed(2)))
-                }}
+                value={editForm.formData.total_price || 0}
+                onChange={(e) =>
+                  editForm.handleChange('total_price', parseFloat(e.target.value))
+                }
                 required
               />
             </div>
