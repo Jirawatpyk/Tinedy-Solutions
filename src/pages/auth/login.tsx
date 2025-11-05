@@ -71,7 +71,7 @@ export function LoginPage() {
             <img
               src={logoVertical}
               alt="Tinedy Solutions"
-              className="h-24 w-auto object-contain"
+              className="h-32 w-auto object-contain"
             />
           </div>
           <CardDescription className="font-rule text-base">
