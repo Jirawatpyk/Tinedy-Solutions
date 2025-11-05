@@ -750,6 +750,40 @@ export function AdminWeeklySchedule() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Label className="whitespace-nowrap">View Mode:</Label>
+              <div className="inline-flex rounded-md shadow-sm w-full max-w-[400px]" role="group">
+                <Button
+                  variant={viewMode === 'staff' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('staff')}
+                  className="rounded-r-none flex-1"
+                >
+                  Staff View
+                </Button>
+                <Button
+                  variant={viewMode === 'team' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('team')}
+                  className="rounded-none border-l-0 flex-1"
+                >
+                  Team View
+                </Button>
+                <Button
+                  variant={viewMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('all')}
+                  className="rounded-l-none border-l-0 flex-1"
+                >
+                  All Bookings
+                </Button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-8 w-px bg-border mx-2"></div>
+
             {/* Staff Filter */}
             <div className="flex items-center gap-2 flex-1 min-w-[250px]">
               <Label htmlFor="staff_select" className="whitespace-nowrap">
@@ -796,40 +830,6 @@ export function AdminWeeklySchedule() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Divider */}
-            <div className="h-8 w-px bg-border mx-2"></div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <Label className="whitespace-nowrap">View Mode:</Label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[400px]" role="group">
-                <Button
-                  variant={viewMode === 'staff' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('staff')}
-                  className="rounded-r-none flex-1"
-                >
-                  Staff View
-                </Button>
-                <Button
-                  variant={viewMode === 'team' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('team')}
-                  className="rounded-none border-l-0 flex-1"
-                >
-                  Team View
-                </Button>
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
-                  className="rounded-l-none border-l-0 flex-1"
-                >
-                  All Bookings
-                </Button>
-              </div>
             </div>
           </div>
         </CardContent>
