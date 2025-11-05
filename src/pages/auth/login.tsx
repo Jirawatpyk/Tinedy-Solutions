@@ -67,7 +67,7 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4">
             <img
               src={logoVertical}
               alt="Tinedy Solutions"
