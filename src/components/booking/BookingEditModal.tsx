@@ -197,9 +197,13 @@ export function BookingEditModal({
               <Label htmlFor="edit_service">Service Package *</Label>
               <Select
                 value={editForm.formData.service_package_id || ''}
-                onValueChange={(value) =>
-                  editForm.handleChange('service_package_id', value)
-                }
+                onValueChange={(value) => {
+                  const selectedPackage = servicePackages.find(p => p.id === value)
+                  editForm.setValues({
+                    service_package_id: value,
+                    total_price: selectedPackage?.price || 0
+                  })
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select service" />
