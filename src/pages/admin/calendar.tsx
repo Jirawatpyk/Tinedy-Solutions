@@ -712,6 +712,40 @@ export function AdminCalendar() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
+              <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
+                <Button
+                  variant={viewMode === 'staff' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('staff')}
+                  className="rounded-r-none flex-1"
+                >
+                  Staff View
+                </Button>
+                <Button
+                  variant={viewMode === 'team' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('team')}
+                  className="rounded-none border-l-0 flex-1"
+                >
+                  Team View
+                </Button>
+                <Button
+                  variant={viewMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('all')}
+                  className="rounded-l-none border-l-0 flex-1"
+                >
+                  All Bookings
+                </Button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-8 w-px bg-border mx-2"></div>
+
             {/* Staff Filter */}
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
               <label className="text-sm font-medium whitespace-nowrap">Staff:</label>
@@ -772,40 +806,6 @@ export function AdminCalendar() {
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Divider */}
-            <div className="h-8 w-px bg-border mx-2"></div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
-                <Button
-                  variant={viewMode === 'staff' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('staff')}
-                  className="rounded-r-none flex-1"
-                >
-                  Staff View
-                </Button>
-                <Button
-                  variant={viewMode === 'team' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('team')}
-                  className="rounded-none border-l-0 flex-1"
-                >
-                  Team View
-                </Button>
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
-                  className="rounded-l-none border-l-0 flex-1"
-                >
-                  All Bookings
-                </Button>
-              </div>
             </div>
           </div>
         </CardContent>
