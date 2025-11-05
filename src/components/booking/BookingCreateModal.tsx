@@ -408,7 +408,7 @@ export function BookingCreateModal({
                   const selectedPackage = servicePackages.find(p => p.id === value)
                   createForm.setValues({
                     service_package_id: value,
-                    total_price: selectedPackage?.price || 0
+                    total_price: selectedPackage?.price ? Math.round(selectedPackage.price * 100) / 100 : 0
                   })
                 }}
                 required
@@ -477,9 +477,10 @@ export function BookingCreateModal({
                 type="number"
                 step="0.01"
                 value={createForm.formData.total_price || 0}
-                onChange={(e) =>
-                  createForm.handleChange('total_price', parseFloat(e.target.value))
-                }
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value)
+                  createForm.handleChange('total_price', isNaN(value) ? 0 : Math.round(value * 100) / 100)
+                }}
                 required
               />
             </div>
