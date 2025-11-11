@@ -13,10 +13,27 @@ npm run preview    # Preview production build locally
 ```
 
 ### Testing
-No testing framework is currently configured. To add tests, consider:
-- Vitest for unit/integration tests
-- React Testing Library for component tests
-- Playwright or Cypress for E2E tests
+Testing framework: Vitest + React Testing Library + Happy DOM
+
+```bash
+npm test              # Run tests in watch mode
+npm run test:ui       # Run tests with Vitest UI
+npm run test:run      # Run tests once (CI mode)
+npm run test:coverage # Run tests with coverage report
+```
+
+**Test Configuration:**
+- Tests located in: `src/**/__tests__/**/*.{test,spec}.{ts,tsx}`
+- Setup file: `src/test/setup.ts`
+- Environment: happy-dom (lightweight DOM simulation)
+- Coverage target: 75% (lines, functions, branches, statements)
+- Coverage reports: text, json, html, lcov
+
+**Running Specific Tests:**
+```bash
+npm test -- use-staff-bookings  # Run tests matching pattern
+npm test -- --run               # Run once without watch mode
+```
 
 ### Build Issues
 If you encounter Vite cache issues during development:
