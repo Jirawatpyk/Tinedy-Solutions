@@ -9,6 +9,7 @@ import * as QRCode from 'qrcode'
 interface PromptPayQRProps {
   amount: number
   bookingId: string
+  recurringGroupId?: string
 }
 
 export function PromptPayQR({ amount }: PromptPayQRProps) {

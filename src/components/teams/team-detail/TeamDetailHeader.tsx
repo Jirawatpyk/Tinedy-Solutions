@@ -73,7 +73,7 @@ export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4 flex-1">
+          <div className="flex items-start gap-4">
             {/* Team Avatar */}
             <div className="w-16 h-16 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-2xl flex-shrink-0">
               {team.name.charAt(0).toUpperCase()}
@@ -97,29 +97,39 @@ export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
                   <span>Created {formatDate(team.created_at)}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Team Lead */}
-              {team.team_lead && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 inline-block">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Crown className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs font-semibold text-amber-900">Team Lead</span>
+            {/* Divider */}
+            {team.team_lead && (
+              <div className="self-stretch border-l border-gray-300 mx-4"></div>
+            )}
+
+            {/* Team Lead - ข้างขวาของ Team Info */}
+            {team.team_lead && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex-shrink-0">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Crown className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <p className="text-xs font-semibold text-amber-900">Team Lead</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
                       <AvatarImage src={team.team_lead.avatar_url || undefined} />
                       <AvatarFallback className="text-xs bg-amber-600 text-white">
                         {getInitials(team.team_lead.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{team.team_lead.full_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{team.team_lead.email}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate whitespace-nowrap">{team.team_lead.full_name}</p>
+                      <p className="text-xs text-muted-foreground truncate whitespace-nowrap">{team.team_lead.email}</p>
+                      {team.team_lead.phone && (
+                        <p className="text-xs text-muted-foreground truncate whitespace-nowrap">{team.team_lead.phone}</p>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

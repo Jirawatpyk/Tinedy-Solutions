@@ -55,6 +55,14 @@ export interface BookingFormState extends Partial<BookingFormData> {
   phone?: string
   /** Current booking status */
   status?: string
+  /** V2 service package ID (for tiered pricing packages) */
+  package_v2_id?: string
+  /** Area in square meters (for V2 tiered pricing) */
+  area_sqm?: number | null
+  /** Booking frequency/package size (1, 2, 4, 8 times) */
+  frequency?: number | null
+  /** Calculated price from V2 pricing calculation */
+  calculated_price?: number | null
 }
 
 /**
@@ -106,6 +114,47 @@ export interface UseBookingFormReturn {
   setValues: (values: Partial<BookingFormState>) => void
   /** Manually set validation errors */
   setErrors: (errors: BookingFormErrors) => void
+}
+
+/**
+ * Simplified form interface compatible with modal components
+ * This is the subset of UseBookingFormReturn that modal components expect
+ *
+ * @interface BookingForm
+ */
+export interface BookingForm {
+  /** Current form data state */
+  formData: BookingFormState
+  /** Update a single form field value */
+  handleChange: <K extends keyof BookingFormState>(
+    field: K,
+    value: BookingFormState[K]
+  ) => void
+  /** Set multiple form values at once */
+  setValues: (values: Partial<BookingFormState>) => void
+  /** Reset the form to initial state */
+  reset: () => void
+}
+
+/**
+ * Extract only the properties needed for modal components from UseBookingFormReturn
+ * This creates a compatible BookingForm object from the full hook return
+ *
+ * @param {UseBookingFormReturn} form - Full form object from useBookingForm hook
+ * @returns {BookingForm} Simplified form object for modal components
+ *
+ * @example
+ * const fullForm = useBookingForm({ ... })
+ * const modalForm = toBookingForm(fullForm)
+ * <BookingCreateModal createForm={modalForm} ... />
+ */
+export function toBookingForm(form: UseBookingFormReturn): BookingForm {
+  return {
+    formData: form.formData,
+    handleChange: form.handleChange,
+    setValues: form.setValues,
+    reset: form.reset,
+  }
 }
 
 /**
@@ -212,8 +261,8 @@ export function useBookingForm(
       }
     }
 
-    // Service package validation
-    if (!formData.service_package_id) {
+    // Service package validation (V1 or V2)
+    if (!formData.service_package_id && !formData.package_v2_id) {
       newErrors.service_package_id = 'Service package is required'
     }
 

@@ -19,6 +19,7 @@ interface TodayBooking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  package_v2_id?: string | null
   notes: string | null
   payment_status?: string
   payment_method?: string
@@ -32,6 +33,10 @@ interface TodayBooking {
     email: string
   } | null
   service_packages: {
+    name: string
+    service_type: string
+  } | null
+  service_packages_v2?: {
     name: string
     service_type: string
   } | null
@@ -99,9 +104,9 @@ function TodayAppointmentsComponent({ bookings, onBookingClick, getStatusBadge }
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span className="inline-flex items-center">
                         <Badge variant="outline" className="mr-2">
-                          {booking.service_packages?.service_type || 'service'}
+                          {booking.service_packages?.service_type || booking.service_packages_v2?.service_type || 'service'}
                         </Badge>
-                        {booking.service_packages?.name || 'Unknown Service'}
+                        {booking.service_packages?.name || booking.service_packages_v2?.name || 'Unknown Service'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

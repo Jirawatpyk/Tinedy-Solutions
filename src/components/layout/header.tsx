@@ -134,7 +134,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           id: service.id,
           type: 'service',
           title: service.name,
-          subtitle: `฿${service.price.toLocaleString()}`,
+          subtitle: `฿${service.price?.toLocaleString() ?? '0'}`,
           link: `/admin/packages`,
         })
       })

@@ -1,5 +1,5 @@
 import type { CustomerRecord } from '@/types'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,9 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/error-utils'
-import { BookingEditModal } from '@/components/booking'
+import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import type { ServicePackage } from '@/types'
+import { useBookingForm, toBookingForm, type BookingFormState } from '@/hooks/useBookingForm'
+import type { PackageSelectionData } from '@/components/service-packages'
+import { useServicePackages } from '@/hooks/useServicePackages'
+import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
+import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus } from '@/lib/recurring-utils'
+import type { RecurringGroup, RecurringBookingRecord } from '@/types/recurring-booking'
 import {
   ArrowLeft,
   Mail,
@@ -28,24 +33,17 @@ import {
   FileText,
   TrendingUp,
   Users,
+  User,
   Clock,
   DollarSign,
   ChevronLeft,
   ChevronRight,
   Download,
-  Sparkles,
   Tag,
   X,
 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { formatDate, getBangkokDateString } from '@/lib/utils'
+import { formatTime } from '@/lib/booking-utils'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -121,6 +119,9 @@ interface CustomerBooking {
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
+  created_at: string
+  is_recurring: boolean
+  recurring_group_id: string | null
   service: {
     name: string
     service_type: string
@@ -156,25 +157,7 @@ interface Team {
   name: string
 }
 
-interface BookingFormData {
-  customer_id?: string
-  full_name?: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  service_package_id?: string
-  booking_date?: string
-  start_time?: string
-  end_time?: string
-  total_price?: number
-  staff_id?: string
-  team_id?: string
-  notes?: string
-  status?: string
-}
+// BookingFormState imported from @/hooks/useBookingForm
 
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -202,11 +185,13 @@ export function AdminCustomerDetail() {
   const [isBookingEditOpen, setIsBookingEditOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [editBookingAssignmentType, setEditBookingAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editBookingFormData, setEditBookingFormData] = useState<BookingFormData>({})
+  const [editBookingFormState, setEditBookingFormState] = useState<BookingFormState>({})
   const [isEditBookingAvailabilityOpen, setIsEditBookingAvailabilityOpen] = useState(false)
+  const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
   // Data for modals
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
+  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+  const { packages: servicePackages } = useServicePackages()
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
 
@@ -231,22 +216,87 @@ export function AdminCustomerDetail() {
     tax_id: '',
     notes: '',
   })
-  const [bookingForm, setBookingForm] = useState({
-    booking_date: '',
-    start_time: '',
-    service_package_id: '',
-    staff_id: '',
-    team_id: '',
-    notes: '',
+  // Create Booking Form - Using useBookingForm hook with customer data pre-populated
+  const createForm = useBookingForm({
+    initialData: {
+      customer_id: customer?.id,
+      full_name: customer?.full_name || '',
+      email: customer?.email || '',
+      phone: customer?.phone || '',
+      address: customer?.address || '',
+      city: customer?.city || '',
+      state: customer?.state || '',
+      zip_code: customer?.zip_code || '',
+    },
+    onSubmit: async () => {
+      // This is handled by the BookingCreateModal component
+    }
   })
-  const [assignmentType, setAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
+  const [createAssignmentType, setCreateAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
+  const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
+
+  // Custom handler to fix package selection before passing to BookingCreateModal
+  const handlePackageSelectionChange = useCallback((selection: PackageSelectionData | null) => {
+    if (selection) {
+      // ตรวจสอบว่า package เป็น V1 หรือ V2
+      const selectedPkg = servicePackages.find(pkg => pkg.id === selection.packageId)
+      const isV1Package = selectedPkg?._source === 'v1'
+
+      console.log('🔧 [Customer-Detail] Fixing package selection:', {
+        packageId: selection.packageId,
+        version: selectedPkg?._source,
+        pricingModel: selection.pricingModel
+      })
+
+      // ปรับ formData ให้ถูกต้องตาม version
+      if (selection.pricingModel === 'fixed') {
+        if (isV1Package) {
+          // V1 Package: ใช้ service_package_id เท่านั้น
+          createForm.setValues({
+            service_package_id: selection.packageId,
+            package_v2_id: undefined,
+            total_price: selection.price,
+          })
+        } else {
+          // V2 Package (Fixed): ใช้ package_v2_id เท่านั้น
+          createForm.setValues({
+            service_package_id: undefined,
+            package_v2_id: selection.packageId,
+            total_price: selection.price,
+          })
+        }
+      } else {
+        // Tiered Pricing: ต้องเป็น V2 แน่นอน
+        createForm.setValues({
+          service_package_id: undefined,
+          package_v2_id: selection.packageId,
+          area_sqm: selection.areaSqm,
+          frequency: selection.frequency,
+          calculated_price: selection.price,
+          total_price: selection.price,
+        })
+      }
+    }
+
+    setCreatePackageSelection(selection)
+  }, [servicePackages, createForm])
+
+  // Debug: Track createPackageSelection state changes
+  useEffect(() => {
+    console.log('🟠 [Customer-Detail] createPackageSelection state changed:', createPackageSelection)
+  }, [createPackageSelection])
+
+  // Recurring Bookings State (for Create Modal)
+  const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
+  const [createEnableRecurring, setCreateEnableRecurring] = useState(false)
+
   const [submitting, setSubmitting] = useState(false)
 
   const refreshBookings = useCallback(async () => {
     if (!id) return
 
     try {
-      // Fetch booking history with full details
+      // Fetch booking history with full details (V1 + V2 packages)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(
@@ -257,10 +307,18 @@ export function AdminCustomerDetail() {
             service_type,
             price
           ),
+          service_v2:service_packages_v2!bookings_package_v2_id_fkey (
+            name,
+            service_type
+          ),
           staff:profiles!bookings_staff_id_fkey (
             full_name
           ),
           service_packages!bookings_service_package_id_fkey (
+            name,
+            service_type
+          ),
+          service_packages_v2:package_v2_id (
             name,
             service_type
           ),
@@ -284,16 +342,22 @@ export function AdminCustomerDetail() {
         console.warn('Error fetching bookings:', bookingsError)
         setBookings([])
       } else {
-        // Transform array relations to single objects
-        const transformedBookings = (bookingsData || []).map((booking) => ({
-          ...booking,
-          service: Array.isArray(booking.service) ? booking.service[0] : booking.service,
-          staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
-          service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
-          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-          teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
-        }))
+        // Transform array relations to single objects and merge V1/V2 packages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transformedBookings = (bookingsData || []).map((booking: any) => {
+          const service = booking.service || booking.service_v2
+          const servicePackages = booking.service_packages || booking.service_packages_v2
+
+          return {
+            ...booking,
+            service: Array.isArray(service) ? service[0] : service,
+            staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
+            service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
+            customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+            profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+            teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
+          }
+        })
         setBookings(transformedBookings)
       }
 
@@ -353,7 +417,7 @@ export function AdminCustomerDetail() {
         setStats(statsData)
       }
 
-      // Fetch booking history with full details
+      // Fetch booking history with full details (V1 + V2 packages)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(
@@ -364,10 +428,18 @@ export function AdminCustomerDetail() {
             service_type,
             price
           ),
+          service_v2:service_packages_v2!bookings_package_v2_id_fkey (
+            name,
+            service_type
+          ),
           staff:profiles!bookings_staff_id_fkey (
             full_name
           ),
           service_packages!bookings_service_package_id_fkey (
+            name,
+            service_type
+          ),
+          service_packages_v2:package_v2_id (
             name,
             service_type
           ),
@@ -391,16 +463,22 @@ export function AdminCustomerDetail() {
         console.warn('Error fetching bookings:', bookingsError)
         setBookings([])
       } else {
-        // Transform array relations to single objects
-        const transformedBookings = (bookingsData || []).map((booking) => ({
-          ...booking,
-          service: Array.isArray(booking.service) ? booking.service[0] : booking.service,
-          staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
-          service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
-          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-          teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
-        }))
+        // Transform array relations to single objects and merge V1/V2 packages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transformedBookings = (bookingsData || []).map((booking: any) => {
+          const service = booking.service || booking.service_v2
+          const servicePackages = booking.service_packages || booking.service_packages_v2
+
+          return {
+            ...booking,
+            service: Array.isArray(service) ? service[0] : service,
+            staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
+            service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
+            customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+            profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+            teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
+          }
+        })
         setBookings(transformedBookings)
       }
     } catch (error) {
@@ -417,15 +495,7 @@ export function AdminCustomerDetail() {
 
   const fetchServicePackagesAndStaff = useCallback(async () => {
     try {
-      // Fetch service packages
-      const { data: packages, error: packagesError } = await supabase
-        .from('service_packages')
-        .select('id, name, description, service_type, duration_minutes, price, is_active, created_at')
-        .eq('is_active', true)
-        .order('name')
-
-      if (packagesError) throw packagesError
-      setServicePackages(packages || [])
+      // Service packages โหลดผ่าน useServicePackages hook แล้ว
 
       // Fetch staff members
       const { data: staff, error: staffError } = await supabase
@@ -457,17 +527,15 @@ export function AdminCustomerDetail() {
 
   const fetchModalData = useCallback(async () => {
     try {
-      const [packagesRes, staffRes, teamsRes] = await Promise.all([
-        supabase.from('service_packages').select('*').eq('is_active', true).order('name'),
+      const [staffRes, teamsRes] = await Promise.all([
         supabase.from('profiles').select('id, full_name, email, role').eq('role', 'staff').order('full_name'),
         supabase.from('teams').select('id, name').eq('is_active', true).order('name')
       ])
 
-      if (packagesRes.error) throw packagesRes.error
+      // Service packages โหลดผ่าน useServicePackages hook แล้ว
       if (staffRes.error) throw staffRes.error
       if (teamsRes.error) throw teamsRes.error
 
-      setServicePackages(packagesRes.data || [])
       setStaffMembers(staffRes.data || [])
       setTeams(teamsRes.data || [])
     } catch (error) {
@@ -491,6 +559,23 @@ export function AdminCustomerDetail() {
     }
   }, [isBookingDialogOpen, fetchServicePackagesAndStaff])
 
+  // Update createForm when customer data is loaded
+  useEffect(() => {
+    if (customer) {
+      createForm.setValues({
+        customer_id: customer.id,
+        full_name: customer.full_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        address: customer.address || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        zip_code: customer.zip_code || '',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer])
+
   // Calculate end_time from start_time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -502,22 +587,22 @@ export function AdminCustomerDetail() {
 
   // Edit Booking Form Helpers
   const editBookingForm = {
-    formData: editBookingFormData,
-    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
-      setEditBookingFormData(prev => ({ ...prev, [field]: value }))
+    formData: editBookingFormState,
+    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
+      setEditBookingFormState(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Partial<BookingFormData>) => {
-      setEditBookingFormData(prev => ({ ...prev, ...values }))
+    setValues: (values: Partial<BookingFormState>) => {
+      setEditBookingFormState(prev => ({ ...prev, ...values }))
     },
     reset: () => {
-      setEditBookingFormData({})
+      setEditBookingFormState({})
       setEditBookingAssignmentType('none')
     }
   }
 
   const handleEditBooking = (booking: CustomerBooking | Booking) => {
     // Populate edit form with booking data
-    setEditBookingFormData({
+    setEditBookingFormState({
       service_package_id: booking.service_package_id,
       booking_date: booking.booking_date,
       start_time: booking.start_time,
@@ -569,72 +654,45 @@ export function AdminCustomerDetail() {
       teams: booking.teams,
     }
 
+    // Set package selection for PackageSelector component
+    if (booking.service_package_id || ('package_v2_id' in booking && booking.package_v2_id)) {
+      const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+
+      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
+      const pkg = servicePackages.find(p => p.id === packageId)
+
+      if (pkg) {
+        // Check if this is a V2 Tiered Pricing package
+        const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
+
+        if (isTiered && 'area_sqm' in booking && 'frequency' in booking && booking.area_sqm && booking.frequency) {
+          // V2 Tiered Pricing - restore area and frequency
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'tiered',
+            areaSqm: Number(booking.area_sqm) || 0,
+            frequency: (booking.frequency as 1 | 2 | 4 | 8) || 1,
+            price: booking.total_price || 0,
+            requiredStaff: 1, // Will be recalculated by PackageSelector
+            packageName: pkg.name,
+          })
+        } else {
+          // Fixed Pricing (V1 หรือ V2)
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'fixed',
+            price: Number(pkg.base_price || booking.total_price || 0),
+            requiredStaff: 1,
+            packageName: pkg.name,
+            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
+          })
+        }
+      }
+    }
+
     setSelectedBooking(bookingForModal)
     setIsBookingEditOpen(true)
     setIsBookingDetailModalOpen(false)
-  }
-
-  const handleCreateBooking = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!id || !customer) return
-
-    try {
-      setSubmitting(true)
-
-      // Find selected package to get duration
-      const selectedPackage = servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)
-      if (!selectedPackage) {
-        throw new Error('Selected service package not found')
-      }
-
-      // Calculate end_time
-      const endTime = calculateEndTime(bookingForm.start_time, selectedPackage.duration_minutes)
-
-      const { error } = await supabase.from('bookings').insert({
-        customer_id: id,
-        booking_date: bookingForm.booking_date,
-        start_time: bookingForm.start_time,
-        end_time: endTime,
-        service_package_id: bookingForm.service_package_id,
-        staff_id: assignmentType === 'staff' ? (bookingForm.staff_id || null) : null,
-        team_id: assignmentType === 'team' ? (bookingForm.team_id || null) : null,
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        zip_code: customer.zip_code || '',
-        notes: bookingForm.notes || null,
-        total_price: selectedPackage.price,
-        status: 'pending',
-      })
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Booking created successfully',
-      })
-
-      setIsBookingDialogOpen(false)
-      setBookingForm({
-        booking_date: '',
-        start_time: '',
-        service_package_id: '',
-        staff_id: '',
-        team_id: '',
-        notes: '',
-      })
-      setAssignmentType('none')
-      fetchCustomerDetails() // Refresh data
-    } catch (error) {
-      console.error('Error creating booking:', error)
-      toast({
-        title: 'Error',
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      })
-    } finally {
-      setSubmitting(false)
-    }
   }
 
   const openEditDialog = () => {
@@ -667,9 +725,15 @@ export function AdminCustomerDetail() {
     try {
       setSubmitting(true)
 
+      // Prepare update data - convert empty strings to null for date field
+      const updateData = {
+        ...editForm,
+        birthday: editForm.birthday || null, // Convert empty string to null
+      }
+
       const { error } = await supabase
         .from('customers')
-        .update(editForm)
+        .update(updateData)
         .eq('id', id)
 
       if (error) throw error
@@ -767,45 +831,142 @@ export function AdminCustomerDetail() {
     )
   })
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage)
+  // Group bookings by recurring groups (similar to BookingList component)
+  const { combinedItems } = useMemo(() => {
+    const recurring: RecurringGroup[] = []
+    const standalone: typeof filteredBookings = []
+    const processedGroupIds = new Set<string>()
+
+    // Group recurring bookings
+    const groupedMap = groupBookingsByRecurringGroup(filteredBookings as unknown as RecurringBookingRecord[])
+
+    groupedMap.forEach((groupBookings, groupId) => {
+      if (!processedGroupIds.has(groupId)) {
+        const sortedBookings = sortRecurringGroup(groupBookings)
+        const stats = countBookingsByStatus(sortedBookings)
+        const firstBooking = sortedBookings[0]
+
+        recurring.push({
+          groupId,
+          pattern: firstBooking.recurring_pattern!,
+          totalBookings: sortedBookings.length,
+          bookings: sortedBookings,
+          completedCount: stats.completed,
+          cancelledCount: stats.cancelled,
+          upcomingCount: stats.upcoming,
+        })
+
+        processedGroupIds.add(groupId)
+      }
+    })
+
+    // Non-recurring bookings
+    filteredBookings.forEach((booking) => {
+      if (!booking.is_recurring || !booking.recurring_group_id) {
+        standalone.push(booking)
+      }
+    })
+
+    // Combine groups and standalone bookings, sorted by created_at (newest first)
+    type CombinedItem =
+      | { type: 'group'; data: RecurringGroup; createdAt: string }
+      | { type: 'booking'; data: typeof filteredBookings[0]; createdAt: string }
+
+    const combined: CombinedItem[] = [
+      ...recurring.map(group => ({
+        type: 'group' as const,
+        data: group,
+        createdAt: group.bookings[0].created_at || ''
+      })),
+      ...standalone.map(booking => ({
+        type: 'booking' as const,
+        data: booking,
+        createdAt: booking.created_at || ''
+      }))
+    ]
+
+    // Sort by created_at (newest first)
+    combined.sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
+    return { recurringGroups: recurring, standaloneBookings: standalone, combinedItems: combined }
+  }, [filteredBookings])
+
+  // Pagination logic - limit by total number of bookings (not items)
+  // Count total bookings (groups expanded into individual bookings)
+  const totalBookingsCount = combinedItems.reduce((count, item) => {
+    if (item.type === 'group') {
+      return count + item.data.bookings.length
+    }
+    return count + 1
+  }, 0)
+
+  // Paginate by bookings count (not items)
+  const paginatedItems = useMemo(() => {
+    let bookingsSoFar = 0
+    const targetStart = (currentPage - 1) * itemsPerPage
+    const targetEnd = targetStart + itemsPerPage
+    const result: typeof combinedItems = []
+
+    for (const item of combinedItems) {
+      const itemBookingsCount = item.type === 'group' ? item.data.bookings.length : 1
+
+      // Check if this item's bookings fall within the current page range
+      const itemStart = bookingsSoFar
+      const itemEnd = bookingsSoFar + itemBookingsCount
+
+      // If any part of this item overlaps with target range, include it
+      if (itemEnd > targetStart && itemStart < targetEnd) {
+        result.push(item)
+      }
+
+      bookingsSoFar += itemBookingsCount
+
+      // Stop if we've passed the end of the target range
+      if (bookingsSoFar >= targetEnd) break
+    }
+
+    return result
+  }, [combinedItems, currentPage, itemsPerPage])
+
+  const totalPages = Math.ceil(totalBookingsCount / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedBookings = filteredBookings.slice(startIndex, endIndex)
+  const endIndex = Math.min(startIndex + itemsPerPage, totalBookingsCount)
 
   // Reset to page 1 when search query changes
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery])
 
-  // Prepare chart data - bookings by month for last 6 months
+  // Prepare chart data - bookings by month for last 6 months (only months with data, up to current month)
   const getChartData = (): ChartDataPoint[] => {
-    const months: ChartDataPoint[] = []
+    const monthsMap = new Map<string, ChartDataPoint>()
     const now = new Date()
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0) // Last day of current month
 
-    // Generate last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const monthName = date.toLocaleDateString('en-US', { month: 'short' })
-
-      months.push({
-        month: monthName,
-        monthKey,
-        completed: 0,
-        cancelled: 0,
-        pending: 0,
-        total: 0,
-      })
-    }
-
-    // Count bookings by month and status
+    // Count bookings by month and status (only for last 6 months, up to current month)
     bookings.forEach((booking) => {
       const bookingDate = new Date(booking.booking_date)
-      const monthKey = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`
 
-      const monthData = months.find((m) => m.monthKey === monthKey)
-      if (monthData) {
+      // Only include bookings from last 6 months AND not future months
+      if (bookingDate >= sixMonthsAgo && bookingDate <= currentMonthEnd) {
+        const monthKey = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`
+        const monthName = bookingDate.toLocaleDateString('en-US', { month: 'short' })
+
+        if (!monthsMap.has(monthKey)) {
+          monthsMap.set(monthKey, {
+            month: monthName,
+            monthKey,
+            completed: 0,
+            cancelled: 0,
+            pending: 0,
+            total: 0,
+          })
+        }
+
+        const monthData = monthsMap.get(monthKey)!
         monthData.total++
         if (booking.status === 'completed') monthData.completed++
         else if (booking.status === 'cancelled') monthData.cancelled++
@@ -813,7 +974,8 @@ export function AdminCustomerDetail() {
       }
     })
 
-    return months
+    // Convert map to array and sort by monthKey (chronological order)
+    return Array.from(monthsMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey))
   }
 
   const chartData = getChartData()
@@ -831,7 +993,7 @@ export function AdminCustomerDetail() {
       booking.service?.service_type || 'N/A',
       booking.staff?.full_name || 'N/A',
       booking.status,
-      `฿${booking.service?.price || 0}`,
+      `฿${booking.total_price || 0}`,
       booking.notes || '',
     ])
 
@@ -1041,18 +1203,18 @@ export function AdminCustomerDetail() {
                 <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
                 <span className="truncate">New Booking</span>
               </Button>
-              <Button className="w-full justify-start" variant="outline" asChild>
-                <a href={`tel:${customer.phone}`} className="flex items-center">
+              <a href={`tel:${customer.phone}`}>
+                <Button className="w-full justify-start" variant="outline">
                   <PhoneCall className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Call Customer</span>
-                </a>
-              </Button>
-              <Button className="w-full justify-start" variant="outline" asChild>
-                <a href={`mailto:${customer.email}`} className="flex items-center">
+                </Button>
+              </a>
+              <a href={`mailto:${customer.email}`}>
+                <Button className="w-full justify-start" variant="outline">
                   <Send className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Send Email</span>
-                </a>
-              </Button>
+                </Button>
+              </a>
               {customer.line_id && (
                 <Button className="w-full justify-start" variant="outline">
                   <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -1112,17 +1274,17 @@ export function AdminCustomerDetail() {
           <CardContent>
             <div className="text-2xl font-bold text-tinedy-dark">
               {stats?.days_since_last_booking !== null && stats?.days_since_last_booking !== undefined
-                ? Math.abs(stats.days_since_last_booking) === 0
+                ? stats.days_since_last_booking === 0
                   ? 'Today'
-                  : Math.abs(stats.days_since_last_booking) === 1
+                  : stats.days_since_last_booking === 1
                   ? '1 day ago'
-                  : `${Math.abs(stats.days_since_last_booking)} days ago`
-                : 'Never'}
+                  : `${stats.days_since_last_booking} days ago`
+                : 'No service yet'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {stats?.last_booking_date
                 ? formatDate(stats.last_booking_date)
-                : 'No bookings yet'}
+                : 'No completed booking'}
             </p>
           </CardContent>
         </Card>
@@ -1221,7 +1383,7 @@ export function AdminCustomerDetail() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredBookings.length === 0 ? (
+          {combinedItems.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
@@ -1229,316 +1391,187 @@ export function AdminCustomerDetail() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Staff/Team</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedBookings.map((booking) => {
-                    const statusInfo = statusConfig[booking.status] || {
-                      label: booking.status,
-                      className: 'bg-gray-100 text-gray-700 border-gray-300'
-                    }
-                    return (
-                      <TableRow
-                        key={booking.id}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => {
-                          setSelectedBookingId(booking.id)
-                          setIsBookingDetailModalOpen(true)
-                        }}
-                      >
-                        <TableCell className="font-mono text-sm text-muted-foreground">
-                          #{booking.id.slice(0, 8)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div>{formatDate(booking.booking_date)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {booking.start_time}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{booking.service?.name || 'N/A'}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {booking.service?.service_type || ''}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {booking.team_id && booking.teams?.name
-                            ? booking.teams.name
-                            : booking.staff_id && (booking.staff?.full_name || booking.profiles?.full_name)
-                            ? booking.staff?.full_name || booking.profiles?.full_name
-                            : 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={statusInfo.className}>
-                            {statusInfo.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          ฿{booking.service?.price?.toLocaleString() || 0}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+            <div className="space-y-3">
+              {paginatedItems.map((item) => {
+                if (item.type === 'group') {
+                  // Render Recurring Booking Group Card
+                  return (
+                    <RecurringBookingCard
+                      key={`group-${item.data.groupId}`}
+                      group={item.data}
+                      onBookingClick={(bookingId) => {
+                        setSelectedBookingId(bookingId)
+                        setIsBookingDetailModalOpen(true)
+                      }}
+                    />
+                  )
+                } else {
+                  // Render Individual Booking Card
+                  const booking = item.data
+                  const statusInfo = statusConfig[booking.status] || {
+                    label: booking.status,
+                    className: 'bg-gray-100 text-gray-700 border-gray-300'
+                  }
+                  return (
+                    <Card
+                      key={`booking-${booking.id}`}
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        setSelectedBookingId(booking.id)
+                        setIsBookingDetailModalOpen(true)
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            {/* 1. ชื่อลูกค้า + Booking ID */}
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-tinedy-dark">
+                                  {customer.full_name}
+                                  <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">
+                                    #{booking.id.slice(0, 8)}
+                                  </span>
+                                </p>
+                                {/* 2. Email */}
+                                <p className="text-sm text-muted-foreground">
+                                  {customer.email}
+                                </p>
+                              </div>
+                              <div className="sm:hidden">
+                                <Badge variant="outline" className={statusInfo.className}>
+                                  {statusInfo.label}
+                                </Badge>
+                              </div>
+                            </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length} bookings
-                  </div>
-                  <div className="flex items-center gap-2">
+                            {/* 3. Service Type Badge + Package Name */}
+                            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                              <span className="inline-flex items-center">
+                                <Badge variant="outline" className="mr-2">
+                                  {booking.service?.service_type || booking.service_packages?.service_type || 'N/A'}
+                                </Badge>
+                                {booking.service?.name || booking.service_packages?.name || 'N/A'}
+                              </span>
+                            </div>
+
+                            {/* 4. วันที่ • เวลา */}
+                            <div className="text-sm text-muted-foreground">
+                              {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {booking.end_time ? formatTime(booking.end_time) : 'N/A'}
+                            </div>
+
+                            {/* 5. Staff/Team */}
+                            {booking.profiles && (
+                              <p className="text-sm text-tinedy-blue flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                Staff: {booking.profiles.full_name}
+                              </p>
+                            )}
+                            {booking.teams && (
+                              <p className="text-sm text-tinedy-green flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                Team: {booking.teams.name}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* 6. ราคา + Status ด้านขวา */}
+                          <div className="flex flex-col items-end gap-4">
+                            <div>
+                              <p className="font-semibold text-tinedy-dark text-lg">
+                                ฿{booking.total_price?.toLocaleString() || 0}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2 items-end">
+                              <Badge variant="outline" className={statusInfo.className}>
+                                {statusInfo.label}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                }
+              })}
+
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{endIndex} of {totalBookingsCount} bookings
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <Button
-                      variant="outline"
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? 'bg-tinedy-blue' : ''}
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {page}
                     </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className={currentPage === page ? 'bg-tinedy-blue' : ''}
-                        >
-                          {page}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* New Booking Dialog */}
-      <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>New Booking for {customer.full_name}</DialogTitle>
-            <DialogDescription>
-              Create a new booking for this customer
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateBooking} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="booking_date">Booking Date *</Label>
-              <Input
-                id="booking_date"
-                type="date"
-                value={bookingForm.booking_date}
-                onChange={(e) =>
-                  setBookingForm({ ...bookingForm, booking_date: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start_time">Start Time *</Label>
-                <Input
-                  id="start_time"
-                  type="time"
-                  value={bookingForm.start_time}
-                  onChange={(e) =>
-                    setBookingForm({ ...bookingForm, start_time: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_time_display">End Time (Auto)</Label>
-                <Input
-                  id="end_time_display"
-                  type="text"
-                  value={
-                    bookingForm.start_time && bookingForm.service_package_id
-                      ? calculateEndTime(
-                          bookingForm.start_time,
-                          servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.duration_minutes || 0
-                        )
-                      : '--:--'
-                  }
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="service_package_id">Service *</Label>
-              <Select
-                value={bookingForm.service_package_id}
-                onValueChange={(value) =>
-                  setBookingForm({ ...bookingForm, service_package_id: value })
-                }
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servicePackages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} - {pkg.duration_minutes} min - ฿{pkg.price}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assign to */}
-            <div className="space-y-2">
-              <Label htmlFor="assignment_type">Assign to</Label>
-              <Select
-                value={assignmentType}
-                onValueChange={(value: 'none' | 'staff' | 'team') => {
-                  setAssignmentType(value)
-                  setBookingForm({ ...bookingForm, staff_id: '', team_id: '' })
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="staff">Individual Staff</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Staff Selector */}
-            {assignmentType === 'staff' && (
-              <div className="space-y-2">
-                <Label htmlFor="staff_id">Select Staff *</Label>
-                <Select
-                  value={bookingForm.staff_id}
-                  onValueChange={(value) =>
-                    setBookingForm({ ...bookingForm, staff_id: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffMembers.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id}>
-                        {staff.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Team Selector */}
-            {assignmentType === 'team' && (
-              <div className="space-y-2">
-                <Label htmlFor="team_id">Select Team *</Label>
-                <Select
-                  value={bookingForm.team_id}
-                  onValueChange={(value) =>
-                    setBookingForm({ ...bookingForm, team_id: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Check Availability Button */}
-            {assignmentType !== 'none' && (
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
-                  onClick={() => {
-                    setIsBookingDialogOpen(false)
-                    setIsAvailabilityModalOpen(true)
-                  }}
-                  disabled={
-                    !bookingForm.booking_date ||
-                    !bookingForm.start_time ||
-                    !bookingForm.service_package_id
-                  }
-                >
-                  <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
-                  Check Staff Availability
-                </Button>
-                {(!bookingForm.booking_date || !bookingForm.start_time || !bookingForm.service_package_id) && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Please select date, time, and service first
-                  </p>
-                )}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="booking_notes">Notes (Optional)</Label>
-              <Textarea
-                id="booking_notes"
-                value={bookingForm.notes}
-                onChange={(e) =>
-                  setBookingForm({ ...bookingForm, notes: e.target.value })
-                }
-                rows={3}
-                placeholder="Add any special notes for this booking..."
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsBookingDialogOpen(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting} className="bg-tinedy-blue">
-                {submitting ? 'Creating...' : 'Create Booking'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* New Booking Modal */}
+      <BookingCreateModal
+        isOpen={isBookingDialogOpen}
+        onClose={() => {
+          setIsBookingDialogOpen(false)
+          setCreatePackageSelection(null)
+        }}
+        onSuccess={() => {
+          setIsBookingDialogOpen(false)
+          setCreatePackageSelection(null)
+          fetchCustomerDetails()
+        }}
+        servicePackages={servicePackages}
+        staffMembers={staffMembers}
+        teams={teams}
+        onOpenAvailabilityModal={() => {
+          // Keep BookingCreateModal open and just open Availability Modal on top
+          setIsAvailabilityModalOpen(true)
+        }}
+        createForm={toBookingForm(createForm)}
+        assignmentType={createAssignmentType}
+        setAssignmentType={setCreateAssignmentType}
+        calculateEndTime={calculateEndTime}
+        packageSelection={createPackageSelection}
+        setPackageSelection={handlePackageSelectionChange}
+        recurringDates={createRecurringDates}
+        setRecurringDates={setCreateRecurringDates}
+        enableRecurring={createEnableRecurring}
+        setEnableRecurring={setCreateEnableRecurring}
+      />
 
       {/* Add Note Dialog */}
       <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
@@ -1860,45 +1893,48 @@ export function AdminCustomerDetail() {
       </AlertDialog>
 
       {/* Staff Availability Modal */}
-      {bookingForm.service_package_id && bookingForm.booking_date && bookingForm.start_time && (
+      {(createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
+       (createForm.formData.booking_date || createRecurringDates.length > 0) &&
+       createForm.formData.start_time && (
         <StaffAvailabilityModal
           isOpen={isAvailabilityModalOpen}
           onClose={() => {
             setIsAvailabilityModalOpen(false)
-            setIsBookingDialogOpen(true)
+            // BookingCreateModal is still open, no need to reopen
           }}
-          assignmentType={assignmentType === 'staff' ? 'individual' : 'team'}
+          assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
-            setBookingForm({ ...bookingForm, staff_id: staffId })
+            createForm.handleChange('staff_id', staffId)
             setIsAvailabilityModalOpen(false)
-            setIsBookingDialogOpen(true)
+            // BookingCreateModal is still open, no need to reopen
             toast({
               title: 'Staff Selected',
               description: 'Staff member has been assigned to the booking',
             })
           }}
           onSelectTeam={(teamId) => {
-            setBookingForm({ ...bookingForm, team_id: teamId })
+            createForm.handleChange('team_id', teamId)
             setIsAvailabilityModalOpen(false)
-            setIsBookingDialogOpen(true)
+            // BookingCreateModal is still open, no need to reopen
             toast({
               title: 'Team Selected',
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={bookingForm.booking_date}
-          startTime={bookingForm.start_time}
+          date={createForm.formData.booking_date}
+          dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
+          startTime={createForm.formData.start_time}
           endTime={
-            bookingForm.service_package_id
+            (createForm.formData.service_package_id || createForm.formData.package_v2_id
               ? calculateEndTime(
-                  bookingForm.start_time,
-                  servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.duration_minutes || 0
+                  createForm.formData.start_time,
+                  servicePackages.find(pkg => pkg.id === (createForm.formData.service_package_id || createForm.formData.package_v2_id))?.duration_minutes || 0
                 )
-              : ''
+              : '') || ''
           }
-          servicePackageId={bookingForm.service_package_id}
+          servicePackageId={(createForm.formData.service_package_id || createForm.formData.package_v2_id) || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === bookingForm.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === (createForm.formData.service_package_id || createForm.formData.package_v2_id))?.name || ''
           }
         />
       )}
@@ -1972,7 +2008,7 @@ export function AdminCustomerDetail() {
                 .update({
                   payment_status: 'paid',
                   payment_method: method,
-                  payment_date: new Date().toISOString(),
+                  payment_date: getBangkokDateString(),
                   amount_paid: booking?.total_price || 0,
                 })
                 .eq('id', bookingId)
@@ -2058,11 +2094,13 @@ export function AdminCustomerDetail() {
           assignmentType={editBookingAssignmentType}
           onAssignmentTypeChange={setEditBookingAssignmentType}
           calculateEndTime={calculateEndTime}
+          packageSelection={editPackageSelection}
+          setPackageSelection={setEditPackageSelection}
         />
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {editBookingFormData.service_package_id && editBookingFormData.booking_date && editBookingFormData.start_time && (
+      {editBookingFormState.service_package_id && editBookingFormState.booking_date && editBookingFormState.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditBookingAvailabilityOpen}
           onClose={() => {
@@ -2085,22 +2123,22 @@ export function AdminCustomerDetail() {
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={editBookingFormData.booking_date || ''}
-          startTime={editBookingFormData.start_time || ''}
+          date={editBookingFormState.booking_date || ''}
+          startTime={editBookingFormState.start_time || ''}
           endTime={
-            editBookingFormData.service_package_id && editBookingFormData.start_time
+            editBookingFormState.service_package_id && editBookingFormState.start_time
               ? calculateEndTime(
-                  editBookingFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === editBookingFormData.service_package_id)?.duration_minutes || 0
+                  editBookingFormState.start_time,
+                  servicePackages.find(pkg => pkg.id === editBookingFormState.service_package_id)?.duration_minutes || 0
                 )
-              : (editBookingFormData.end_time || '')
+              : (editBookingFormState.end_time || '')
           }
-          servicePackageId={editBookingFormData.service_package_id || ''}
+          servicePackageId={editBookingFormState.service_package_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === editBookingFormData.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === editBookingFormState.service_package_id)?.name
           }
-          currentAssignedStaffId={editBookingFormData.staff_id}
-          currentAssignedTeamId={editBookingFormData.team_id}
+          currentAssignedStaffId={editBookingFormState.staff_id}
+          currentAssignedTeamId={editBookingFormState.team_id}
           excludeBookingId={selectedBooking?.id}
         />
       )}

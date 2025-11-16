@@ -272,7 +272,7 @@ export function AdminCustomers() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-              Customers
+              Customers Management
             </h1>
             <p className="text-muted-foreground mt-1">
               Manage your customer database
@@ -280,14 +280,32 @@ export function AdminCustomers() {
           </div>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
             <Plus className="h-4 w-4 mr-2" />
-            New CustomerRecord
+            New Customer
           </Button>
         </div>
 
-        {/* Search skeleton */}
+        {/* Stats Cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-24 mt-1" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Search and Filters skeleton */}
         <Card>
           <CardContent className="pt-6">
-            <Skeleton className="h-10 w-full" />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-full sm:w-48" />
+            </div>
           </CardContent>
         </Card>
 
@@ -324,7 +342,7 @@ export function AdminCustomers() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-            Customers
+            Customers Management
           </h1>
           <p className="text-muted-foreground mt-1">
             Manage your customer database
@@ -337,13 +355,13 @@ export function AdminCustomers() {
               onClick={resetForm}
             >
               <Plus className="h-4 w-4 mr-2" />
-              New CustomerRecord
+              New Customer
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingCustomer ? 'Edit CustomerRecord' : 'New CustomerRecord'}
+                {editingCustomer ? 'Edit Customer' : 'New Customer'}
               </DialogTitle>
               <DialogDescription>
                 {editingCustomer
@@ -419,9 +437,9 @@ export function AdminCustomers() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">🆕 New CustomerRecord</SelectItem>
-                        <SelectItem value="regular">💚 Regular CustomerRecord</SelectItem>
-                        <SelectItem value="vip">👑 VIP CustomerRecord</SelectItem>
+                        <SelectItem value="new">🆕 New Customer</SelectItem>
+                        <SelectItem value="regular">💚 Regular Customer</SelectItem>
+                        <SelectItem value="vip">👑 VIP Customer</SelectItem>
                         <SelectItem value="inactive">💤 Inactive</SelectItem>
                       </SelectContent>
                     </Select>

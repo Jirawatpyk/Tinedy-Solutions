@@ -8,6 +8,7 @@ export type BookingForAnalytics = Booking | {
   start_time?: string
   total_price: number
   status: string
+  payment_status?: string
   created_at?: string
   staff_id?: string | null
   customer_id?: string
@@ -64,32 +65,35 @@ export const calculateRevenueMetrics = (bookings: BookingForAnalytics[]): Revenu
   const lastMonthStart = startOfMonth(subMonths(now, 1))
   const lastMonthEnd = endOfMonth(subMonths(now, 1))
 
-  // Filter completed bookings only
-  const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
+  // Filter paid bookings only
+  const paidBookings = bookings.filter((b: BookingForAnalytics) => {
+    const paymentStatus = (b as { payment_status?: string }).payment_status
+    return paymentStatus === 'paid'
+  })
 
-  const total = completedBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+  const total = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const today = completedBookings
+  const today = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: todayStart, end: todayEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const yesterday = completedBookings
+  const yesterday = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: yesterdayStart, end: yesterdayEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const thisWeek = completedBookings
+  const thisWeek = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisWeekStart, end: thisWeekEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const lastWeek = completedBookings
+  const lastWeek = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastWeekStart, end: lastWeekEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const thisMonth = completedBookings
+  const thisMonth = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisMonthStart, end: thisMonthEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const lastMonth = completedBookings
+  const lastMonth = paidBookings
     .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastMonthStart, end: lastMonthEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
@@ -97,7 +101,7 @@ export const calculateRevenueMetrics = (bookings: BookingForAnalytics[]): Revenu
   const weekGrowth = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0
   const dayGrowth = yesterday > 0 ? ((today - yesterday) / yesterday) * 100 : 0
 
-  const avgOrderValue = completedBookings.length > 0 ? total / completedBookings.length : 0
+  const avgOrderValue = paidBookings.length > 0 ? total / paidBookings.length : 0
 
   return {
     total,
@@ -161,13 +165,16 @@ export const generateChartData = (
   endDate: Date
 ): ChartDataPoint[] => {
   const days = eachDayOfInterval({ start: startDate, end: endDate })
-  const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
+  const paidBookings = bookings.filter((b: BookingForAnalytics) => {
+    const paymentStatus = (b as { payment_status?: string }).payment_status
+    return paymentStatus === 'paid'
+  })
 
   return days.map((day) => {
     const dayStart = startOfDay(day)
     const dayEnd = endOfDay(day)
 
-    const dayBookings = completedBookings.filter((b) =>
+    const dayBookings = paidBookings.filter((b) =>
       isWithinInterval(new Date(b.booking_date), { start: dayStart, end: dayEnd })
     )
 
@@ -187,9 +194,12 @@ export const generateChartData = (
 export const getRevenueByServiceType = (
   bookings: BookingForAnalytics[]
 ): { cleaning: number; training: number } => {
-  const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
+  const paidBookings = bookings.filter((b: BookingForAnalytics) => {
+    const paymentStatus = (b as { payment_status?: string }).payment_status
+    return paymentStatus === 'paid'
+  })
 
-  const cleaning = completedBookings
+  const cleaning = paidBookings
     .filter((b) => {
       // Support both nested (service_packages.service_type) and flat (service_type) structures
       const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
@@ -197,7 +207,7 @@ export const getRevenueByServiceType = (
     })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  const training = completedBookings
+  const training = paidBookings
     .filter((b) => {
       // Support both nested (service_packages.service_type) and flat (service_type) structures
       const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
@@ -256,11 +266,11 @@ export const getBookingStatusBreakdown = (bookings: BookingForAnalytics[]) => {
   }, {} as Record<string, number>)
 
   return [
-    { name: 'Pending', value: statusCounts.pending || 0, color: '#f59e0b' },
-    { name: 'Confirmed', value: statusCounts.confirmed || 0, color: '#3b82f6' },
-    { name: 'In Progress', value: statusCounts.in_progress || 0, color: '#8b5cf6' },
-    { name: 'Completed', value: statusCounts.completed || 0, color: '#10b981' },
-    { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' },
+    { name: 'Pending', value: statusCounts.pending || 0, color: '#f59e0b' }, // amber-500
+    { name: 'Confirmed', value: statusCounts.confirmed || 0, color: '#3b82f6' }, // blue-500
+    { name: 'In Progress', value: statusCounts.in_progress || 0, color: '#8b5cf6' }, // violet-500
+    { name: 'Completed', value: statusCounts.completed || 0, color: '#22c55e' }, // green-500
+    { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' }, // red-500
   ]
 }
 
@@ -323,7 +333,10 @@ export const calculateCustomerMetrics = (
 ): CustomerMetrics => {
   const now = new Date()
   const thisMonthStart = startOfMonth(now)
-  const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
+  const paidBookings = bookings.filter((b: BookingForAnalytics) => {
+    const paymentStatus = (b as { payment_status?: string }).payment_status
+    return paymentStatus === 'paid'
+  })
 
   const total = customers.length
   const newThisMonth = customers.filter((c) =>
@@ -345,7 +358,7 @@ export const calculateCustomerMetrics = (
   const returning = Object.values(customerBookingCounts).filter((count) => count > 1).length
 
   // Calculate average CLV (Customer Lifetime Value)
-  const totalRevenue = completedBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+  const totalRevenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
   const averageCLV = total > 0 ? totalRevenue / total : 0
 
   // Retention rate: % of customers with more than one booking
@@ -368,8 +381,11 @@ export const getTopCustomers = (
   limit: number = 10
 ): TopCustomer[] => {
   const customerStats = customers.map((customer) => {
-    const completedBookings = customer.bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
-    const totalRevenue = completedBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+    const paidBookings = customer.bookings.filter((b: BookingForAnalytics) => {
+      const paymentStatus = (b as { payment_status?: string }).payment_status
+      return paymentStatus === 'paid'
+    })
+    const totalRevenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
     const totalBookings = customer.bookings.length
     const lastBooking = customer.bookings.sort(
       (a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
@@ -433,7 +449,10 @@ export const getCustomerCLVDistribution = (
   return ranges.map((range) => {
     const count = customers.filter((customer) => {
       const totalRevenue = customer.bookings
-        .filter((b: BookingForAnalytics) => b.status === 'completed')
+        .filter((b: BookingForAnalytics) => {
+          const paymentStatus = (b as { payment_status?: string }).payment_status
+          return paymentStatus === 'paid'
+        })
         .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
       return totalRevenue >= range.min && totalRevenue < range.max
@@ -553,21 +572,46 @@ export interface StaffPerformance {
  */
 export const calculateStaffMetrics = (
   staff: Staff[],
-  bookings: BookingForAnalytics[]
+  staffWithBookings: StaffWithBookings[]
 ): StaffMetrics => {
-  const completedBookings = bookings.filter((b: BookingForAnalytics) => b.status === 'completed')
-  const totalRevenue = completedBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+  // Calculate total revenue from all staff (with team revenue divided)
+  const totalRevenue = staffWithBookings.reduce((sum, staffMember) => {
+    const staffRevenue = staffMember.bookings
+      .filter((b: BookingForAnalytics) => {
+        const paymentStatus = (b as { payment_status?: string }).payment_status
+        return paymentStatus === 'paid'
+      })
+      .reduce((bookingSum: number, b: BookingForAnalytics) => {
+        const bookingRevenue = Number(b.total_price)
+        const teamId = (b as { team_id?: string }).team_id
+        const staffId = (b as { staff_id?: string }).staff_id
+        const teamMemberCount = (b as { team_member_count?: number }).team_member_count
+
+        // If this is a team booking WITHOUT staff assignment, divide revenue by team member count
+        if (teamId && !staffId && teamMemberCount) {
+          return bookingSum + (bookingRevenue / teamMemberCount)
+        }
+
+        // Direct staff booking gets full amount
+        return bookingSum + bookingRevenue
+      }, 0)
+    return sum + staffRevenue
+  }, 0)
+
+  // Count paid jobs across all staff
+  const totalPaidJobs = staffWithBookings.reduce((sum, staffMember) => {
+    const paidJobs = staffMember.bookings.filter((b: BookingForAnalytics) => {
+      const paymentStatus = (b as { payment_status?: string }).payment_status
+      return paymentStatus === 'paid'
+    }).length
+    return sum + paidJobs
+  }, 0)
 
   // Count staff with at least one booking
-  const staffWithBookings = new Set(
-    bookings
-      .map((b) => b.staff_id)
-      .filter((id): id is string => Boolean(id))
-  )
+  const activeStaff = staffWithBookings.filter(s => s.bookings.length > 0).length
 
   const totalStaff = staff.length
-  const activeStaff = staffWithBookings.size
-  const averageJobsPerStaff = activeStaff > 0 ? completedBookings.length / activeStaff : 0
+  const averageJobsPerStaff = activeStaff > 0 ? totalPaidJobs / activeStaff : 0
   const averageRevenuePerStaff = activeStaff > 0 ? totalRevenue / activeStaff : 0
 
   return {
@@ -575,7 +619,7 @@ export const calculateStaffMetrics = (
     activeStaff,
     averageJobsPerStaff,
     averageRevenuePerStaff,
-    totalJobsCompleted: completedBookings.length,
+    totalJobsCompleted: totalPaidJobs,
     totalRevenue,
   }
 }
@@ -587,12 +631,33 @@ export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPer
   return staffMembers.map((staff) => {
     const totalJobs = staff.bookings.length
     const completedJobs = staff.bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
-    const revenue = staff.bookings
-      .filter((b: BookingForAnalytics) => b.status === 'completed')
-      .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+
+    // Calculate both revenue and weighted job count
+    let revenue = 0
+    let weightedPaidJobs = 0
+
+    staff.bookings.forEach((b: BookingForAnalytics) => {
+      const paymentStatus = (b as { payment_status?: string }).payment_status
+      if (paymentStatus === 'paid') {
+        const bookingRevenue = Number(b.total_price)
+        const teamId = (b as { team_id?: string }).team_id
+        const staffId = (b as { staff_id?: string }).staff_id
+        const teamMemberCount = (b as { team_member_count?: number }).team_member_count
+
+        // If this is a team booking WITHOUT staff assignment, divide by member count
+        if (teamId && !staffId && teamMemberCount) {
+          revenue += bookingRevenue / teamMemberCount
+          weightedPaidJobs += 1 / teamMemberCount
+        } else {
+          // Direct staff booking gets full amount
+          revenue += bookingRevenue
+          weightedPaidJobs += 1
+        }
+      }
+    })
 
     const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
-    const avgJobValue = completedJobs > 0 ? revenue / completedJobs : 0
+    const avgJobValue = weightedPaidJobs > 0 ? revenue / weightedPaidJobs : 0
 
     // Utilization rate: assume 160 working hours per month (8h * 20 days)
     // Calculate based on completed jobs and estimated 2 hours per job
@@ -609,6 +674,125 @@ export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPer
       completionRate,
       avgJobValue,
       utilizationRate: Math.min(utilizationRate, 100), // Cap at 100%
+    }
+  })
+}
+
+// ============================================================================
+// TEAM ANALYTICS
+// ============================================================================
+
+export interface Team {
+  id: string
+  name: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface TeamWithBookings extends Team {
+  bookings: BookingForAnalytics[]
+  team_members: { id: string }[]
+}
+
+export interface TeamMetrics {
+  totalTeams: number
+  activeTeams: number
+  totalTeamBookings: number
+  totalTeamRevenue: number
+  averageTeamSize: number
+}
+
+export interface TeamPerformance {
+  id: string
+  name: string
+  memberCount: number
+  totalJobs: number
+  completed: number
+  inProgress: number
+  pending: number
+  revenue: number
+  completionRate: number
+  avgJobValue: number
+}
+
+/**
+ * Calculate team metrics
+ */
+export const calculateTeamMetrics = (
+  teams: Team[],
+  teamsWithBookings: TeamWithBookings[]
+): TeamMetrics => {
+  const totalTeams = teams.length
+  const activeTeams = teams.filter(t => t.is_active).length
+
+  // Count total team bookings (all bookings regardless of payment status)
+  const totalTeamBookings = teamsWithBookings.reduce(
+    (sum, team) => sum + team.bookings.length,
+    0
+  )
+
+  // Calculate total team revenue (only paid bookings)
+  const totalTeamRevenue = teamsWithBookings.reduce((sum, team) => {
+    const teamRevenue = team.bookings
+      .filter((b: BookingForAnalytics) => {
+        const paymentStatus = (b as { payment_status?: string }).payment_status
+        return paymentStatus === 'paid'
+      })
+      .reduce((revSum: number, b: BookingForAnalytics) => revSum + Number(b.total_price), 0)
+    return sum + teamRevenue
+  }, 0)
+
+  // Calculate average team size
+  const totalMembers = teamsWithBookings.reduce(
+    (sum, team) => sum + team.team_members.length,
+    0
+  )
+  const averageTeamSize = totalTeams > 0 ? totalMembers / totalTeams : 0
+
+  return {
+    totalTeams,
+    activeTeams,
+    totalTeamBookings,
+    totalTeamRevenue,
+    averageTeamSize,
+  }
+}
+
+/**
+ * Get team performance breakdown
+ */
+export const getTeamPerformance = (teamsWithBookings: TeamWithBookings[]): TeamPerformance[] => {
+  return teamsWithBookings.map((team) => {
+    const totalJobs = team.bookings.length
+    const completed = team.bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
+    const inProgress = team.bookings.filter((b: BookingForAnalytics) => b.status === 'in_progress').length
+    const pending = team.bookings.filter((b: BookingForAnalytics) => b.status === 'pending').length
+
+    // Calculate revenue from paid bookings only
+    const paidBookings = team.bookings.filter((b: BookingForAnalytics) => {
+      const paymentStatus = (b as { payment_status?: string }).payment_status
+      return paymentStatus === 'paid'
+    })
+
+    const revenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => {
+      return sum + Number(b.total_price)
+    }, 0)
+
+    const memberCount = team.team_members.length
+    const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
+    const avgJobValue = paidBookings.length > 0 ? revenue / paidBookings.length : 0
+
+    return {
+      id: team.id,
+      name: team.name,
+      memberCount,
+      totalJobs,
+      completed,
+      inProgress,
+      pending,
+      revenue,
+      completionRate,
+      avgJobValue,
     }
   })
 }

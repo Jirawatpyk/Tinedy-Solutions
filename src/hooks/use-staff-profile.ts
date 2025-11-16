@@ -96,48 +96,42 @@ export function useStaffProfile() {
           ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
           : 0
 
-      // Total revenue (from completed bookings)
+      // Total revenue (from completed bookings) - Support V1 + V2
       const { data: revenueData } = await supabase
         .from('bookings')
         .select(`
-          service_packages (price)
+          total_price,
+          service_packages (price),
+          service_packages_v2:package_v2_id (name)
         `)
         .eq('staff_id', user.id)
         .eq('status', 'completed')
         .gte('booking_date', sixMonthsAgoStr)
 
-      interface RevenueBooking {
-        service_packages: { price: number }[] | { price: number } | null
-      }
-
-      const totalRevenue = (revenueData as RevenueBooking[] | null)?.reduce((sum, booking) => {
-        const servicePackage = Array.isArray(booking.service_packages)
-          ? booking.service_packages[0]
-          : booking.service_packages
-        return sum + (servicePackage?.price || 0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalRevenue = (revenueData as any[] | null)?.reduce((sum, booking) => {
+        // Use total_price for both V1 and V2 bookings
+        return sum + (booking.total_price || 0)
       }, 0) || 0
 
-      // Monthly breakdown
+      // Monthly breakdown - Support V1 + V2
       const { data: monthlyBookings } = await supabase
         .from('bookings')
         .select(`
           booking_date,
           status,
-          service_packages (price)
+          total_price,
+          service_packages (price),
+          service_packages_v2:package_v2_id (name)
         `)
         .eq('staff_id', user.id)
         .gte('booking_date', sixMonthsAgoStr)
         .order('booking_date', { ascending: true })
 
-      interface MonthlyBooking {
-        booking_date: string
-        status: string
-        service_packages: { price: number }[] | { price: number } | null
-      }
-
-      // Group by month
+      // Group by month - Use total_price for both V1 and V2
       const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
-      ;(monthlyBookings as MonthlyBooking[] | null)?.forEach((booking) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(monthlyBookings as any[] | null)?.forEach((booking) => {
         const month = new Date(booking.booking_date).toISOString().slice(0, 7) // YYYY-MM
         if (!monthlyMap.has(month)) {
           monthlyMap.set(month, { jobs: 0, revenue: 0 })
@@ -145,10 +139,8 @@ export function useStaffProfile() {
         const data = monthlyMap.get(month)!
         data.jobs += 1
         if (booking.status === 'completed') {
-          const servicePackage = Array.isArray(booking.service_packages)
-            ? booking.service_packages[0]
-            : booking.service_packages
-          data.revenue += servicePackage?.price || 0
+          // Use total_price for both V1 and V2 bookings
+          data.revenue += booking.total_price || 0
         }
       })
 

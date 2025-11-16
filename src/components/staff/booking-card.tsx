@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
+import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -15,41 +16,6 @@ interface BookingCardProps {
   onStartProgress?: (bookingId: string) => void
   onMarkCompleted?: (bookingId: string) => void
   showDate?: boolean
-}
-
-// Helper functions moved outside component (computed once)
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-800 border-green-200'
-    case 'confirmed':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
-    case 'in_progress':
-      return 'bg-purple-100 text-purple-800 border-purple-200'
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-    case 'cancelled':
-      return 'bg-red-100 text-red-800 border-red-200'
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'Completed'
-    case 'confirmed':
-      return 'Confirmed'
-    case 'in_progress':
-      return 'In Progress'
-    case 'pending':
-      return 'Pending'
-    case 'cancelled':
-      return 'Cancelled'
-    default:
-      return status
-  }
 }
 
 export const BookingCard = memo(function BookingCard({
@@ -114,9 +80,9 @@ export const BookingCard = memo(function BookingCard({
             )}
           </div>
           <div className="flex flex-col gap-2 items-end">
-            <Badge className={getStatusColor(booking.status)} variant="outline">
-              {getStatusText(booking.status)}
-            </Badge>
+            <StatusBadge variant={getBookingStatusVariant(booking.status)}>
+              {getBookingStatusLabel(booking.status)}
+            </StatusBadge>
             {isTeamBooking && (
               <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200" variant="outline">
                 <Users className="h-3 w-3 mr-1" />

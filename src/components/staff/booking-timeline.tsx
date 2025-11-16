@@ -4,6 +4,7 @@ import { enUS } from 'date-fns/locale'
 import { CheckCircle2, Clock, XCircle, AlertCircle, Play } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { getBookingStatusLabel } from '@/components/common/StatusBadge'
 
 interface StatusHistoryItem {
   id: string
@@ -125,22 +126,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'Completed'
-      case 'confirmed':
-        return 'Confirmed'
-      case 'in_progress':
-        return 'In Progress'
-      case 'pending':
-        return 'Pending'
-      case 'cancelled':
-        return 'Cancelled'
-      default:
-        return status
-    }
-  }
+  // ใช้ getBookingStatusLabel จาก StatusBadge แทน custom function
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -206,10 +192,10 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
                 )}>
                   {item.old_status ? (
                     <>
-                      {getStatusText(item.old_status)} → {getStatusText(item.new_status)}
+                      {getBookingStatusLabel(item.old_status)} → {getBookingStatusLabel(item.new_status)}
                     </>
                   ) : (
-                    <>Created Booking - {getStatusText(item.new_status)}</>
+                    <>Created Booking - {getBookingStatusLabel(item.new_status)}</>
                   )}
                 </div>
 

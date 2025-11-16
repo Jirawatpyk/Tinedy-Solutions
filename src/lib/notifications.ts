@@ -48,7 +48,12 @@ class NotificationService {
   }
 
   isGranted(): boolean {
-    return this.permission === 'granted'
+    // Always check current browser permission, not cached value
+    // This ensures permission changes are detected even after page reload
+    if ('Notification' in window) {
+      return Notification.permission === 'granted'
+    }
+    return false
   }
 
   // Show a notification

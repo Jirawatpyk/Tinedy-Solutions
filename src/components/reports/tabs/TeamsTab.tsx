@@ -11,7 +11,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
 import { CHART_COLORS } from '@/types/reports'
-import type { TeamWithBookings } from '@/types/reports'
+import type { TeamMetrics, TeamPerformance } from '@/lib/analytics'
 import {
   BarChart,
   Bar,
@@ -27,13 +27,15 @@ import {
 } from 'recharts'
 
 interface TeamsTabProps {
-  teamsWithBookings: TeamWithBookings[]
+  teamMetrics: TeamMetrics
+  teamPerformance: TeamPerformance[]
   dateRange: string
 }
 
 // OPTIMIZED: Memoize tab component
 function TeamsTabComponent({
-  teamsWithBookings,
+  teamMetrics,
+  teamPerformance,
 }: TeamsTabProps) {
   return (
     <div className="space-y-6">
@@ -41,7 +43,7 @@ function TeamsTabComponent({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Total Teams"
-          value={teamsWithBookings.length}
+          value={teamMetrics.totalTeams}
           icon={BriefcaseBusiness}
           iconClassName="h-4 w-4 text-tinedy-blue"
         />
@@ -49,7 +51,7 @@ function TeamsTabComponent({
         <MetricCard
           variant="subtitle"
           title="Active Teams"
-          value={teamsWithBookings.filter(t => t.bookings.length > 0).length}
+          value={teamMetrics.activeTeams}
           icon={Activity}
           iconClassName="h-4 w-4 text-green-500"
           valueClassName="text-2xl font-bold text-green-600"
@@ -59,7 +61,7 @@ function TeamsTabComponent({
         <MetricCard
           variant="subtitle"
           title="Total Team Jobs"
-          value={teamsWithBookings.reduce((sum, team) => sum + team.bookings.length, 0)}
+          value={teamMetrics.totalTeamBookings}
           icon={Package}
           iconClassName="h-4 w-4 text-purple-500"
           valueClassName="text-2xl font-bold text-purple-600"
@@ -68,14 +70,7 @@ function TeamsTabComponent({
 
         <MetricCard
           title="Team Revenue"
-          value={formatCurrency(
-            teamsWithBookings.reduce((sum, team) =>
-              sum + team.bookings
-                .filter(b => b.status === 'completed')
-                .reduce((s, b) => s + Number(b.total_price), 0),
-              0
-            )
-          )}
+          value={formatCurrency(teamMetrics.totalTeamRevenue)}
           icon={DollarSign}
           iconClassName="h-4 w-4 text-tinedy-yellow"
         />
@@ -92,13 +87,11 @@ function TeamsTabComponent({
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
-              data={teamsWithBookings
+              data={teamPerformance
                 .map(team => ({
                   name: team.name,
-                  revenue: team.bookings
-                    .filter(b => b.status === 'completed')
-                    .reduce((sum, b) => sum + Number(b.total_price), 0),
-                  jobs: team.bookings.length,
+                  revenue: team.revenue,
+                  jobs: team.totalJobs,
                 }))
                 .sort((a, b) => b.revenue - a.revenue)
                 .slice(0, 10)
@@ -153,12 +146,12 @@ function TeamsTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={teamsWithBookings
-                    .map(team => ({
+                  data={teamPerformance
+                    .map((team: TeamPerformance) => ({
                       name: team.name,
-                      value: team.bookings.length,
+                      value: team.totalJobs,
                     }))
-                    .filter(t => t.value > 0)
+                    .filter((t: { value: number }) => t.value > 0)
                   }
                   cx="50%"
                   cy="50%"
@@ -171,7 +164,7 @@ function TeamsTabComponent({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {teamsWithBookings.map((_, index) => (
+                  {teamPerformance.map((_: TeamPerformance, index: number) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={[
@@ -189,11 +182,11 @@ function TeamsTabComponent({
               </PieChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">
-              {teamsWithBookings
-                .filter(t => t.bookings.length > 0)
-                .sort((a, b) => b.bookings.length - a.bookings.length)
+              {teamPerformance
+                .filter((t: TeamPerformance) => t.totalJobs > 0)
+                .sort((a: TeamPerformance, b: TeamPerformance) => b.totalJobs - a.totalJobs)
                 .slice(0, 5)
-                .map((team, index) => (
+                .map((team: TeamPerformance, index: number) => (
                   <div key={team.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div
@@ -210,7 +203,7 @@ function TeamsTabComponent({
                       />
                       <span className="text-muted-foreground">{team.name}</span>
                     </div>
-                    <span className="font-semibold">{team.bookings.length} jobs</span>
+                    <span className="font-semibold">{team.totalJobs} jobs</span>
                   </div>
                 ))}
             </div>
@@ -226,18 +219,14 @@ function TeamsTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {teamsWithBookings
-              .filter(t => t.bookings.length > 0)
-              .sort((a, b) => {
-                const aRate = a.bookings.filter(b => b.status === 'completed').length / a.bookings.length
-                const bRate = b.bookings.filter(b => b.status === 'completed').length / b.bookings.length
-                return bRate - aRate
-              })
+            {teamPerformance
+              .filter((t: TeamPerformance) => t.totalJobs > 0)
+              .sort((a: TeamPerformance, b: TeamPerformance) => b.completionRate - a.completionRate)
               .slice(0, 8)
-              .map(team => {
-                const totalJobs = team.bookings.length
-                const completed = team.bookings.filter(b => b.status === 'completed').length
-                const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
+              .map((team: TeamPerformance) => {
+                const totalJobs = team.totalJobs
+                const completed = team.completed
+                const completionRate = team.completionRate
 
                 return (
                   <div key={team.id}>
@@ -317,37 +306,14 @@ function TeamsTabComponent({
                 </tr>
               </thead>
               <tbody>
-                {teamsWithBookings.length === 0 ? (
+                {teamPerformance.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-8 text-center text-muted-foreground">
                       No team performance data available
                     </td>
                   </tr>
                 ) : (
-                  teamsWithBookings
-                    .map(team => {
-                      const totalJobs = team.bookings.length
-                      const completed = team.bookings.filter(b => b.status === 'completed').length
-                      const inProgress = team.bookings.filter(b => b.status === 'in_progress').length
-                      const pending = team.bookings.filter(b => b.status === 'pending').length
-                      const revenue = team.bookings
-                        .filter(b => b.status === 'completed')
-                        .reduce((sum, b) => sum + Number(b.total_price), 0)
-                      const memberCount = team.team_members.length
-                      const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
-
-                      return {
-                        id: team.id,
-                        name: team.name,
-                        memberCount,
-                        totalJobs,
-                        completed,
-                        inProgress,
-                        pending,
-                        revenue,
-                        completionRate,
-                      }
-                    })
+                  teamPerformance
                     .sort((a, b) => b.revenue - a.revenue)
                     .map((team, index) => (
                       <tr key={team.id} className="border-b hover:bg-accent/20">
@@ -416,7 +382,7 @@ function TeamsTabComponent({
               </tbody>
             </table>
           </div>
-          {teamsWithBookings.length > 0 && (
+          {teamPerformance.length > 0 && (
             <div className="mt-4 pt-4 border-t">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center gap-2">

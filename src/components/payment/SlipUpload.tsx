@@ -5,15 +5,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { Upload, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getBangkokDateString } from '@/lib/utils'
 
 interface SlipUploadProps {
   bookingId: string
   amount: number
+  recurringGroupId?: string
   onSuccess?: () => void
 }
 
-export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
+export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: SlipUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>('')
   const [uploading, setUploading] = useState(false)
@@ -100,23 +101,46 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
 
       // Determine payment status based on auto-verify setting
       const newPaymentStatus = autoVerify ? 'paid' : 'pending_verification'
+      const paymentDate = getBangkokDateString()
 
-      // Update booking with slip URL
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({
-          payment_slip_url: publicUrl,
-          payment_status: newPaymentStatus,
-          payment_method: 'bank_transfer',
-          ...(autoVerify && { payment_date: new Date().toISOString().split('T')[0] }),
-        })
-        .eq('id', bookingId)
+      const updateData = {
+        payment_slip_url: publicUrl,
+        payment_status: newPaymentStatus,
+        payment_method: 'bank_transfer',
+        ...(autoVerify && { payment_date: paymentDate }),
+      }
 
-      if (updateError) throw updateError
+      // ✅ ถ้าเป็น recurring booking ให้อัปเดตทั้ง group
+      let bookingCount = 1
+      if (recurringGroupId) {
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('recurring_group_id', recurringGroupId)
+
+        if (updateError) throw updateError
+
+        // นับจำนวน booking ที่อัปเดต
+        const { count } = await supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('recurring_group_id', recurringGroupId)
+
+        bookingCount = count || 1
+      } else {
+        // ✅ ถ้าเป็น single booking อัปเดตแค่ตัวเดียว
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('id', bookingId)
+
+        if (updateError) throw updateError
+      }
 
       // Send payment confirmation email if auto-verified
       if (autoVerify) {
         try {
+          // ✅ ทั้ง single และ recurring ให้ส่ง Payment Confirmation
           await supabase.functions.invoke('send-payment-confirmation', {
             body: { bookingId }
           })
@@ -128,11 +152,15 @@ export function SlipUpload({ bookingId, amount, onSuccess }: SlipUploadProps) {
 
       setUploaded(true)
 
+      const successMessage = recurringGroupId
+        ? `Payment confirmed for ${bookingCount} recurring bookings! You will receive a confirmation email shortly.`
+        : autoVerify
+          ? 'Payment confirmed! You will receive a confirmation email shortly.'
+          : 'Payment slip uploaded successfully. We will verify your payment soon.'
+
       toast({
         title: 'Success!',
-        description: autoVerify
-          ? 'Payment confirmed! You will receive a confirmation email shortly.'
-          : 'Payment slip uploaded successfully. We will verify your payment soon.',
+        description: successMessage,
       })
 
       // Call success callback after 2 seconds

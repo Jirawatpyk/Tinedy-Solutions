@@ -67,13 +67,21 @@ export function useNotifications() {
     loadMyTeams()
   }, [user])
 
-  // Request notification permission on mount
+  // Check notification permission on mount
   useEffect(() => {
-    const checkPermission = async () => {
+    try {
+      const supported = notificationService.isSupported()
       const granted = notificationService.isGranted()
+      console.log('[Notifications] 🔔 Permission Status:', {
+        supported,
+        granted,
+        browserPermission: typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
+      })
       setHasPermission(granted)
+    } catch (error) {
+      console.error('[Notifications] ❌ Error checking permission:', error)
+      setHasPermission(false)
     }
-    checkPermission()
   }, [])
 
   // Request permission from user
@@ -87,9 +95,22 @@ export function useNotifications() {
 
   // Listen for new bookings assigned to this staff OR their teams
   useEffect(() => {
-    if (!user || !hasPermission) return
+    if (!user) {
+      console.log('[Notifications] ⚠️ No user, skipping realtime setup')
+      return
+    }
 
-    console.log('[Notifications] Setting up realtime listener for staff:', user.id, 'teams:', myTeamIds)
+    if (!hasPermission) {
+      console.log('[Notifications] ⚠️ No permission granted, skipping realtime setup')
+      return
+    }
+
+    console.log('[Notifications] ✅ Setting up realtime listener:', {
+      staffId: user.id,
+      email: user.email,
+      myTeams: myTeamIds,
+      hasPermission
+    })
 
     const channel = supabase
       .channel('staff-notifications')
@@ -101,15 +122,29 @@ export function useNotifications() {
           table: 'bookings',
         },
         async (payload: RealtimePostgresChangesPayload<BookingPayload>) => {
-          console.log('[Notifications] New booking detected:', payload)
-
           const booking = payload.new as BookingPayload
+
+          console.log('[Notifications] 📥 INSERT event received:', {
+            event: payload.eventType,
+            bookingId: booking?.id,
+            timestamp: new Date().toISOString()
+          })
 
           // Check if this booking is relevant to current user
           const isMyBooking = booking.staff_id === user.id
           const isMyTeamBooking = booking.team_id && myTeamIds.includes(booking.team_id)
 
+          console.log('[Notifications] 🔍 Relevance check:', {
+            bookingStaffId: booking.staff_id,
+            bookingTeamId: booking.team_id,
+            currentUserId: user.id,
+            myTeams: myTeamIds,
+            isMyBooking,
+            isMyTeamBooking
+          })
+
           if (!isMyBooking && !isMyTeamBooking) {
+            console.log('[Notifications] ⏭️ Skipping - not relevant to this user')
             return // Not relevant to this user
           }
 
@@ -126,8 +161,14 @@ export function useNotifications() {
           // Determine notification type
           const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
 
+          console.log('[Notifications] 💾 Saving notification:', {
+            type: notificationType,
+            customer: customerName,
+            time
+          })
+
           // Save to in-app notifications
-          await supabase.from('notifications').insert({
+          const { error: insertError } = await supabase.from('notifications').insert({
             user_id: user.id,
             type: notificationType === 'team' ? 'team_booking' : 'new_booking',
             title: notificationType === 'team' ? '👥 New Team Booking!' : '🔔 New Booking!',
@@ -138,13 +179,21 @@ export function useNotifications() {
             team_id: booking.team_id || null,
           })
 
+          if (insertError) {
+            console.error('[Notifications] ❌ Error saving notification:', insertError)
+          } else {
+            console.log('[Notifications] ✅ Notification saved successfully!')
+          }
+
           // Show browser notification
+          console.log('[Notifications] 🔔 Showing browser notification...')
           await notificationService.notifyNewBooking(
             customerName,
             time,
             booking.id,
             notificationType
           )
+          console.log('[Notifications] ✅ Browser notification shown!')
         }
       )
       .on<BookingPayload>(
@@ -158,11 +207,56 @@ export function useNotifications() {
           const oldBooking = payload.old as BookingPayload
           const newBooking = payload.new as BookingPayload
 
+          console.log('[Notifications] 📥 UPDATE event received:', {
+            event: payload.eventType,
+            bookingId: newBooking.id,
+            oldStaffId: oldBooking.staff_id,
+            newStaffId: newBooking.staff_id,
+            oldTeamId: oldBooking.team_id,
+            newTeamId: newBooking.team_id,
+            oldStatus: oldBooking.status,
+            newStatus: newBooking.status,
+            timestamp: new Date().toISOString()
+          })
+
+          // Check if staff/team was just assigned to current user
+          // Assignment = staff_id changed from "not me" to "me"
+          const wasJustAssignedToMe =
+            oldBooking.staff_id !== user.id &&  // Was NOT assigned to me before
+            newBooking.staff_id === user.id      // Now IS assigned to me
+
+          // Team assignment = team_id changed from "not my team" to "my team"
+          const wasJustAssignedToMyTeam =
+            (!oldBooking.team_id || !myTeamIds.includes(oldBooking.team_id)) &&  // Was NOT my team before
+            newBooking.team_id &&
+            myTeamIds.includes(newBooking.team_id)  // Now IS my team
+
+          console.log('[Notifications] 🔍 Assignment check:', {
+            wasJustAssignedToMe,
+            wasJustAssignedToMyTeam,
+            oldStaffId: oldBooking.staff_id,
+            newStaffId: newBooking.staff_id,
+            currentUserId: user.id,
+            oldTeamId: oldBooking.team_id,
+            newTeamId: newBooking.team_id,
+            myTeamIds,
+            condition1: `oldStaffId (${oldBooking.staff_id}) !== userId (${user.id}) = ${oldBooking.staff_id !== user.id}`,
+            condition2: `newStaffId (${newBooking.staff_id}) === userId (${user.id}) = ${newBooking.staff_id === user.id}`
+          })
+
           // Check if this booking is relevant to current user
           const isMyBooking = newBooking.staff_id === user.id
           const isMyTeamBooking = newBooking.team_id && myTeamIds.includes(newBooking.team_id)
 
+          console.log('[Notifications] 🔍 Relevance check:', {
+            isMyBooking,
+            isMyTeamBooking,
+            bookingStaffId: newBooking.staff_id,
+            bookingTeamId: newBooking.team_id
+          })
+
           if (!isMyBooking && !isMyTeamBooking) {
+            console.log('[Notifications] ⏭️ Skipping - not relevant to this user')
             return // Not relevant to this user
           }
 
@@ -175,6 +269,45 @@ export function useNotifications() {
           const customerName = customerData?.full_name || 'Customer'
           const time = `${newBooking.start_time.slice(0, 5)} - ${newBooking.end_time.slice(0, 5)}`
           const notificationType = isMyTeamBooking && !isMyBooking ? 'team' : 'personal'
+
+          // Notify if staff/team was just assigned
+          if (wasJustAssignedToMe || wasJustAssignedToMyTeam) {
+            console.log('[Notifications] 🎯 New assignment detected!')
+
+            // Save to in-app notifications
+            const { error: assignError } = await supabase.from('notifications').insert({
+              user_id: user.id,
+              type: wasJustAssignedToMyTeam ? 'team_booking' : 'booking_assigned',
+              title: wasJustAssignedToMyTeam ? '👥 New Team Booking Assigned!' : '📌 New Booking Assigned to You!',
+              message: wasJustAssignedToMyTeam
+                ? `New team booking from ${customerName} at ${time}`
+                : `You have been assigned a booking with ${customerName} at ${time}`,
+              booking_id: newBooking.id,
+              team_id: newBooking.team_id || null,
+            })
+
+            if (assignError) {
+              console.error('[Notifications] Error saving assignment notification:', assignError)
+            } else {
+              console.log('[Notifications] ✅ Assignment notification saved!')
+            }
+
+            // Show browser notification
+            await notificationService.show({
+              title: wasJustAssignedToMyTeam ? '👥 New Team Booking Assigned!' : '📌 New Booking Assigned!',
+              body: wasJustAssignedToMyTeam
+                ? `New team booking from ${customerName} at ${time}`
+                : `You have been assigned to ${customerName} at ${time}`,
+              tag: `assignment-${newBooking.id}`,
+              data: {
+                type: 'booking_assigned',
+                bookingId: newBooking.id,
+                url: '/staff'
+              }
+            })
+
+            console.log('[Notifications] 🔔 Assignment browser notification sent!')
+          }
 
           // Notify if booking was cancelled
           if (oldBooking.status !== 'cancelled' && newBooking.status === 'cancelled') {
@@ -237,10 +370,19 @@ export function useNotifications() {
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Notifications] 📡 Channel status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('[Notifications] ✅ Successfully subscribed to realtime updates!')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Notifications] ❌ Channel error!')
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Notifications] ⏱️ Subscription timed out!')
+        }
+      })
 
     return () => {
-      console.log('[Notifications] Cleaning up realtime listener')
+      console.log('[Notifications] 🧹 Cleaning up realtime listener')
       supabase.removeChannel(channel)
     }
   }, [user, hasPermission, myTeamIds])

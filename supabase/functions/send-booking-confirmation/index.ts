@@ -164,6 +164,10 @@ function generateBookingConfirmationEmail(data: BookingEmailData & {
 <body>
   <div class="container">
     <div class="header">
+      <img src="https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png"
+           alt="Tinedy Logo"
+           class="logo"
+           style="height: 100px; margin-bottom: 16px;" />
       <h1>✅ Booking Confirmed!</h1>
     </div>
 

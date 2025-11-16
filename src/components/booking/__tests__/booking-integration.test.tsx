@@ -5,7 +5,7 @@ import { BookingCreateModal } from '../BookingCreateModal'
 import { BookingEditModal } from '../BookingEditModal'
 import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types/booking'
-import type { ServicePackage } from '@/types'
+import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
 
 // Mock dependencies
 vi.mock('@/lib/supabase', () => ({
@@ -52,26 +52,32 @@ vi.mock('@/lib/email', () => ({
 }))
 
 describe('Booking Integration Tests', () => {
-  const mockServicePackages: ServicePackage[] = [
+  const mockServicePackages: UnifiedServicePackage[] = [
     {
       id: 'service-1',
       name: 'Deep Cleaning',
       description: 'Comprehensive cleaning service',
       service_type: 'cleaning',
+      pricing_model: 'fixed',
+      base_price: 2000,
       duration_minutes: 120,
-      price: 2000,
       is_active: true,
       created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      _source: 'v1',
     },
     {
       id: 'service-2',
       name: 'Basic Training',
       description: 'Basic training service',
       service_type: 'training',
+      pricing_model: 'fixed',
+      base_price: 1000,
       duration_minutes: 60,
-      price: 1000,
       is_active: true,
       created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      _source: 'v1',
     },
   ]
 
@@ -84,6 +90,24 @@ describe('Booking Integration Tests', () => {
     { id: 'team-1', name: 'Team Alpha' },
     { id: 'team-2', name: 'Team Beta' },
   ]
+
+  const mockPackageSelection = {
+    packageId: '',
+    pricingModel: 'fixed' as const,
+    price: 0,
+    requiredStaff: 1,
+    packageName: '',
+  }
+
+  const mockSetPackageSelection = vi.fn((data) => {
+    if (data) {
+      Object.assign(mockPackageSelection, data)
+    } else {
+      mockPackageSelection.packageId = ''
+      mockPackageSelection.price = 0
+      mockPackageSelection.packageName = ''
+    }
+  })
 
   const mockBookingForm = {
     formData: {
@@ -218,6 +242,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="none"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -318,6 +344,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="none"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -370,6 +398,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           setAssignmentType={mockSetAssignmentType}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -394,6 +424,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="team"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -423,6 +455,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="none"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -453,6 +487,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -474,6 +510,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -526,6 +564,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -579,6 +619,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -626,6 +668,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -655,6 +699,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={mockOnAssignmentTypeChange}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -689,6 +735,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="team" // Changed to team
           onAssignmentTypeChange={mockOnAssignmentTypeChange}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -741,6 +789,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 
@@ -772,6 +822,8 @@ describe('Booking Integration Tests', () => {
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}
+          packageSelection={mockPackageSelection}
+          setPackageSelection={mockSetPackageSelection}
         />
       )
 

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 import { getErrorMessage } from '@/lib/error-utils'
+import { getBangkokDateString } from '@/lib/utils'
 import type { BookingBase } from '@/types/booking'
 
 interface PendingStatusChange {
@@ -175,30 +176,65 @@ export function useBookingStatusManager<T extends BookingBase>({
 
   const markAsPaid = async (bookingId: string, method: string = 'cash') => {
     try {
-      const { error } = await supabase
+      // ✅ ตรวจสอบว่าเป็น recurring booking หรือไม่
+      const { data: booking, error: fetchError } = await supabase
         .from('bookings')
-        .update({
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking?.total_price || 0,
-          payment_date: new Date().toISOString().split('T')[0],
-        })
+        .select('id, recurring_group_id, is_recurring, total_price')
         .eq('id', bookingId)
+        .single()
 
-      if (error) throw error
+      if (fetchError) throw fetchError
 
-      toast({
-        title: 'Success',
-        description: 'Booking marked as paid',
-      })
+      const paymentDate = getBangkokDateString()
+      const updateData = {
+        payment_status: 'paid',
+        payment_method: method,
+        amount_paid: booking?.total_price || selectedBooking?.total_price || 0,
+        payment_date: paymentDate,
+      }
 
+      // ✅ ถ้าเป็น recurring booking ให้อัปเดตทั้ง group
+      if (booking?.recurring_group_id) {
+        const { error } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('recurring_group_id', booking.recurring_group_id)
+
+        if (error) throw error
+
+        // นับจำนวน booking ที่อัปเดต
+        const { count } = await supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('recurring_group_id', booking.recurring_group_id)
+
+        toast({
+          title: 'Success',
+          description: `${count || 0} recurring bookings marked as paid`,
+        })
+      } else {
+        // ✅ ถ้าเป็น single booking อัปเดตแค่ตัวเดียว
+        const { error } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('id', bookingId)
+
+        if (error) throw error
+
+        toast({
+          title: 'Success',
+          description: 'Booking marked as paid',
+        })
+      }
+
+      // Update selected booking in state
       if (selectedBooking) {
         setSelectedBooking({
           ...selectedBooking,
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: paymentDate,
         })
       }
 

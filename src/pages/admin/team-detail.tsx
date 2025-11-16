@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -140,14 +141,14 @@ export function AdminTeamDetail() {
       // Fetch bookings stats
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select('id, status, total_price')
+        .select('id, status, total_price, payment_status')
         .eq('team_id', teamId)
 
       if (bookingsError) throw bookingsError
 
       const totalBookings = bookings?.length || 0
       const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
-      const totalRevenue = bookings?.reduce((sum, b) => sum + Number(b.total_price), 0) || 0
+      const totalRevenue = bookings?.filter(b => b.payment_status === 'paid').reduce((sum, b) => sum + Number(b.total_price), 0) || 0
 
       // Fetch ratings
       const { data: reviews, error: reviewsError } = await supabase
@@ -184,28 +185,55 @@ export function AdminTeamDetail() {
         <Skeleton className="h-10 w-24" />
 
         {/* Header skeleton */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-9 w-64" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-20" />
-            <Skeleton className="h-10 w-20" />
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-9 w-64" />
+                <Skeleton className="h-4 w-96" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
 
         {/* Stats skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-3 w-28" />
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Content skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-96" />
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-64" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-64" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     )

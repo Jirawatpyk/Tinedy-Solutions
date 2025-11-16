@@ -1,7 +1,6 @@
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { getErrorMessage } from '@/lib/error-utils'
-import { formatCurrency } from '@/lib/utils'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { useState } from 'react'
 import {
@@ -24,6 +23,10 @@ import {
 import { Sparkles } from 'lucide-react'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
+import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
+import type { BookingForm } from '@/hooks/useBookingForm'
+import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { ServicePackageV2WithTiers } from '@/types'
 
 interface StaffMember {
   id: string
@@ -37,39 +40,14 @@ interface Team {
   name: string
 }
 
-interface FormData {
-  customer_id?: string
-  full_name?: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  service_package_id?: string
-  booking_date?: string
-  start_time?: string
-  end_time?: string
-  total_price?: number
-  staff_id?: string
-  team_id?: string
-  notes?: string
-  status?: string
-}
-
-interface BookingForm {
-  formData: FormData
-  handleChange: <K extends keyof FormData>(field: K, value: FormData[K]) => void
-  setValues: (values: Partial<FormData>) => void
-  reset: () => void
-}
+// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
 
 interface BookingEditModalProps {
   isOpen: boolean
   onClose: () => void
   booking: Booking | null
   onSuccess: () => void
-  servicePackages: ServicePackage[]
+  servicePackages: ServicePackage[] | UnifiedServicePackage[]
   staffMembers: StaffMember[]
   teams: Team[]
   onOpenAvailabilityModal: () => void
@@ -77,6 +55,8 @@ interface BookingEditModalProps {
   assignmentType: 'staff' | 'team' | 'none'
   onAssignmentTypeChange: (type: 'staff' | 'team' | 'none') => void
   calculateEndTime: (startTime: string, duration: number) => string
+  packageSelection: PackageSelectionData | null
+  setPackageSelection: (selection: PackageSelectionData | null) => void
 }
 
 export function BookingEditModal({
@@ -92,6 +72,8 @@ export function BookingEditModal({
   assignmentType,
   onAssignmentTypeChange,
   calculateEndTime,
+  packageSelection,
+  setPackageSelection,
 }: BookingEditModalProps) {
   const { toast } = useToast()
   const {
@@ -104,17 +86,28 @@ export function BookingEditModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // Calculate end_time
-      const selectedPackage = servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)
-      const endTime = selectedPackage
-        ? calculateEndTime(editForm.formData.start_time || '', selectedPackage.duration_minutes)
-        : editForm.formData.end_time || ''
+      // Use existing end_time from form (เก็บเวลาเดิมที่ผู้ใช้ตั้งไว้)
+      let endTime = editForm.formData.end_time || ''
+
+      // Only calculate end_time if not set (ไม่มีค่า end_time)
+      if (!endTime && editForm.formData.start_time) {
+        const selectedPackage = servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id || pkg.id === editForm.formData.package_v2_id)
+
+        if (selectedPackage && selectedPackage.duration_minutes) {
+          // Package with fixed duration
+          endTime = calculateEndTime(editForm.formData.start_time || '', selectedPackage.duration_minutes)
+        } else if (packageSelection?.requiredStaff) {
+          // Tiered package - estimate duration
+          const estimatedHours = packageSelection.requiredStaff <= 2 ? 2 : packageSelection.requiredStaff <= 4 ? 3 : 4
+          endTime = calculateEndTime(editForm.formData.start_time || '', estimatedHours * 60)
+        }
+      }
 
       // Store booking_id separately (not in editForm.formData)
       const bookingId = booking?.id || ''
 
       const updateData = {
-        service_package_id: editForm.formData.service_package_id,
+        service_package_id: editForm.formData.service_package_id || null,
         booking_date: editForm.formData.booking_date,
         start_time: editForm.formData.start_time,
         end_time: endTime,
@@ -127,6 +120,11 @@ export function BookingEditModal({
         staff_id: editForm.formData.staff_id || null,
         team_id: editForm.formData.team_id || null,
         status: editForm.formData.status,
+        // V2 Tiered Pricing Fields
+        area_sqm: editForm.formData.area_sqm || null,
+        frequency: editForm.formData.frequency || null,
+        calculated_price: editForm.formData.calculated_price || null,
+        package_v2_id: editForm.formData.package_v2_id || null,
       }
 
       // Check for conflicts (unless user has already confirmed override)
@@ -193,29 +191,54 @@ export function BookingEditModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_service">Service Package *</Label>
-              <Select
-                value={editForm.formData.service_package_id || ''}
-                onValueChange={(value) => {
-                  const selectedPackage = servicePackages.find(p => p.id === value)
-                  editForm.setValues({
-                    service_package_id: value,
-                    total_price: selectedPackage?.price || 0
-                  })
+            {/* Package Selector V2 - รองรับทั้ง Fixed และ Tiered Pricing */}
+            <div className="space-y-2 sm:col-span-2">
+              <PackageSelector
+                serviceType="cleaning"
+                packages={servicePackages as unknown as ServicePackageV2WithTiers[]} // ส่ง unified packages
+                value={packageSelection}
+                onChange={(selection) => {
+                  setPackageSelection(selection)
+                  if (selection) {
+                    if (selection.pricingModel === 'fixed') {
+                      editForm.setValues({
+                        service_package_id: selection.packageId,
+                        total_price: selection.price,
+                        package_v2_id: selection.packageId,
+                        area_sqm: null,
+                        frequency: null,
+                        calculated_price: null,
+                      })
+                    } else {
+                      // Tiered pricing
+                      editForm.setValues({
+                        service_package_id: '',
+                        package_v2_id: selection.packageId,
+                        area_sqm: selection.areaSqm,
+                        frequency: selection.frequency,
+                        calculated_price: selection.price,
+                        total_price: selection.price,
+                      })
+                    }
+
+                    // Auto-calculate End Time if Start Time is set
+                    if (editForm.formData.start_time && selection.estimatedHours) {
+                      const durationMinutes = Math.round(selection.estimatedHours * 60)
+                      const endTime = calculateEndTime(editForm.formData.start_time, durationMinutes)
+                      editForm.handleChange('end_time', endTime)
+                    }
+                  } else {
+                    editForm.setValues({
+                      service_package_id: '',
+                      package_v2_id: undefined,
+                      area_sqm: null,
+                      frequency: null,
+                      calculated_price: null,
+                      total_price: 0,
+                    })
+                  }
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servicePackages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} - {formatCurrency(pkg.price)} ({pkg.duration_minutes}min)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className="space-y-2">
@@ -237,29 +260,38 @@ export function BookingEditModal({
                 id="edit_start_time"
                 type="time"
                 value={editForm.formData.start_time || ''}
-                onChange={(e) =>
-                  editForm.handleChange('start_time', e.target.value)
-                }
+                onChange={(e) => {
+                  const newStartTime = e.target.value
+                  editForm.handleChange('start_time', newStartTime)
+
+                  // Auto-calculate End Time when Start Time changes
+                  if (newStartTime && packageSelection?.estimatedHours) {
+                    const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                    const endTime = calculateEndTime(newStartTime, durationMinutes)
+                    editForm.handleChange('end_time', endTime)
+                  }
+                }}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_end_time">End Time (Auto-calculated)</Label>
+              <Label htmlFor="edit_end_time">End Time (Auto-calculated) *</Label>
               <Input
                 id="edit_end_time"
-                type="text"
-                value={
-                  editForm.formData.start_time && editForm.formData.service_package_id
-                    ? calculateEndTime(
-                        editForm.formData.start_time,
-                        servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.duration_minutes || 0
-                      )
-                    : '--:--'
+                type="time"
+                value={editForm.formData.end_time || ''}
+                onChange={(e) =>
+                  editForm.handleChange('end_time', e.target.value)
                 }
-                disabled
-                className="bg-muted"
+                placeholder="คำนวณอัตโนมัติจากแพ็คเก็จ"
+                disabled={!!packageSelection?.estimatedHours}
               />
+              <p className="text-xs text-muted-foreground">
+                {packageSelection?.estimatedHours
+                  ? `คำนวณจากระยะเวลา ${packageSelection.estimatedHours} ชม.`
+                  : 'ระยะเวลาคำนวณจากพื้นที่และจำนวนพนักงาน'}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -284,7 +316,7 @@ export function BookingEditModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_price">Total Price *</Label>
+              <Label htmlFor="edit_price">Total Price (Auto-calculated) *</Label>
               <Input
                 id="edit_price"
                 type="number"
@@ -294,7 +326,12 @@ export function BookingEditModal({
                   editForm.handleChange('total_price', parseFloat(e.target.value))
                 }
                 required
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">
+                Price is calculated from package selection
+              </p>
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -378,13 +415,13 @@ export function BookingEditModal({
                   disabled={
                     !editForm.formData.booking_date ||
                     !editForm.formData.start_time ||
-                    !editForm.formData.service_package_id
+                    !packageSelection
                   }
                 >
                   <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
                   Check Staff Availability
                 </Button>
-                {(!editForm.formData.booking_date || !editForm.formData.start_time || !editForm.formData.service_package_id) && (
+                {(!editForm.formData.booking_date || !editForm.formData.start_time || !packageSelection) && (
                   <p className="text-xs text-muted-foreground text-center">
                     Please select date, time, and service package first
                   </p>

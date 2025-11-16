@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,7 +11,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -22,19 +20,31 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Package, Plus, Edit, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { Package, Plus, DollarSign, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import type { ServicePackage } from '@/types'
+import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
+import { PackageCard, PackageFormV2 } from '@/components/service-packages'
+import { getPackagesOverview } from '@/lib/pricing-utils'
+import { PricingModel } from '@/types'
 
 export function AdminServicePackages() {
+  // V1 Packages (Legacy)
   const [packages, setPackages] = useState<ServicePackage[]>([])
+
+  // V2 Packages (Tiered Pricing)
+  const [packagesV2, setPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
+
+  // Combined & Filtered
   const [filteredPackages, setFilteredPackages] = useState<ServicePackage[]>([])
+  const [filteredPackagesV2, setFilteredPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
+
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [pricingModelFilter, setPricingModelFilter] = useState('all') // 'all', 'fixed', 'tiered'
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null)
+  const [editingPackageV2, setEditingPackageV2] = useState<ServicePackageV2WithTiers | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -55,6 +65,7 @@ export function AdminServicePackages() {
 
   const { toast } = useToast()
 
+  // Fetch V1 Packages (Legacy)
   const fetchPackages = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -65,50 +76,109 @@ export function AdminServicePackages() {
       if (error) throw error
       setPackages(data || [])
     } catch (error) {
-      console.error('Error fetching packages:', error)
+      console.error('Error fetching V1 packages:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load service packages',
+        description: 'Failed to load V1 service packages',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
   }, [toast])
 
+  // Fetch V2 Packages (Tiered Pricing)
+  const fetchPackagesV2 = useCallback(async () => {
+    try {
+      const data = await getPackagesOverview()
+      setPackagesV2(data || [])
+    } catch (error) {
+      console.error('Error fetching V2 packages:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load V2 service packages',
+        variant: 'destructive',
+      })
+    }
+  }, [toast])
+
+  // Fetch Both V1 and V2
+  const fetchAllPackages = useCallback(async () => {
+    setLoading(true)
+    await Promise.all([fetchPackages(), fetchPackagesV2()])
+    setLoading(false)
+  }, [fetchPackages, fetchPackagesV2])
+
   const calculateStats = useCallback(() => {
-    const total = packages.length
-    const active = packages.filter((p) => p.is_active).length
+    // Combine V1 and V2 for stats
+    const totalV1 = packages.length
+    const totalV2 = packagesV2.length
+    const total = totalV1 + totalV2
+
+    const activeV1 = packages.filter((p) => p.is_active).length
+    const activeV2 = packagesV2.filter((p) => p.is_active).length
+    const active = activeV1 + activeV2
+
     const inactive = total - active
-    const avgPrice = total > 0
-      ? packages.reduce((sum, p) => sum + Number(p.price), 0) / total
+
+    // Calculate average price (V1 fixed + V2 min price)
+    const v1Prices = packages.map(p => Number(p.price))
+    const v2Prices = packagesV2.map(p => p.min_price || 0)
+    const allPrices = [...v1Prices, ...v2Prices]
+    const avgPrice = allPrices.length > 0
+      ? allPrices.reduce((sum, p) => sum + p, 0) / allPrices.length
       : 0
 
     setStats({ total, active, inactive, avgPrice })
-  }, [packages])
+  }, [packages, packagesV2])
 
   const filterPackages = useCallback(() => {
-    let filtered = packages
+    // Filter V1 Packages
+    let filteredV1 = packages
 
     if (searchQuery) {
-      filtered = filtered.filter((pkg) =>
+      filteredV1 = filteredV1.filter((pkg) =>
         pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
     if (typeFilter !== 'all') {
-      filtered = filtered.filter((pkg) => pkg.service_type === typeFilter)
+      filteredV1 = filteredV1.filter((pkg) => pkg.service_type === typeFilter)
     }
 
-    setFilteredPackages(filtered)
+    // V1 packages are all "fixed" pricing
+    if (pricingModelFilter === 'tiered') {
+      filteredV1 = [] // Hide V1 when filtering for tiered only
+    }
+
+    // Filter V2 Packages
+    let filteredV2 = packagesV2
+
+    if (searchQuery) {
+      filteredV2 = filteredV2.filter((pkg) =>
+        pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    if (typeFilter !== 'all') {
+      filteredV2 = filteredV2.filter((pkg) => pkg.service_type === typeFilter)
+    }
+
+    if (pricingModelFilter === 'fixed') {
+      filteredV2 = filteredV2.filter((pkg) => pkg.pricing_model === PricingModel.Fixed)
+    } else if (pricingModelFilter === 'tiered') {
+      filteredV2 = filteredV2.filter((pkg) => pkg.pricing_model === PricingModel.Tiered)
+    }
+
+    setFilteredPackages(filteredV1)
+    setFilteredPackagesV2(filteredV2)
     // Reset display count when filter changes
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [packages, searchQuery, typeFilter, ITEMS_PER_LOAD])
+  }, [packages, packagesV2, searchQuery, typeFilter, pricingModelFilter, ITEMS_PER_LOAD])
 
   useEffect(() => {
-    fetchPackages()
-  }, [fetchPackages])
+    fetchAllPackages()
+  }, [fetchAllPackages])
 
   useEffect(() => {
     filterPackages()
@@ -165,17 +235,7 @@ export function AdminServicePackages() {
     }
   }
 
-  const handleEdit = (pkg: ServicePackage) => {
-    setEditingPackage(pkg)
-    setFormData({
-      name: pkg.name,
-      description: pkg.description || '',
-      service_type: pkg.service_type,
-      duration_minutes: pkg.duration_minutes.toString(),
-      price: pkg.price.toString(),
-    })
-    setIsDialogOpen(true)
-  }
+  // V1 handleEdit removed - using handleUnifiedEdit instead
 
   const toggleActive = async (pkg: ServicePackage) => {
     try {
@@ -235,6 +295,7 @@ export function AdminServicePackages() {
 
   const resetForm = () => {
     setEditingPackage(null)
+    setEditingPackageV2(null)
     setFormData({
       name: '',
       description: '',
@@ -244,12 +305,149 @@ export function AdminServicePackages() {
     })
   }
 
-  const getServiceTypeBadge = (type: string) => {
-    return type === 'cleaning' ? (
-      <Badge className="bg-blue-500">Cleaning</Badge>
-    ) : (
-      <Badge className="bg-green-500">Training</Badge>
-    )
+  /**
+   * Handle Edit V2 Package
+   */
+  const handleEditV2 = (pkg: ServicePackageV2WithTiers) => {
+    setEditingPackageV2(pkg)
+    setEditingPackage(null) // Clear V1 editing
+    setIsDialogOpen(true)
+  }
+
+  /**
+   * Handle Delete V2 Package
+   */
+  const deletePackageV2 = async (id: string) => {
+    try {
+      // Delete tiers first
+      const { error: tiersError } = await supabase
+        .from('package_pricing_tiers')
+        .delete()
+        .eq('package_id', id)
+
+      if (tiersError) throw tiersError
+
+      // Delete package
+      const { error: packageError } = await supabase
+        .from('service_packages_v2')
+        .delete()
+        .eq('id', id)
+
+      if (packageError) throw packageError
+
+      toast({
+        title: 'Success',
+        description: 'Package deleted successfully',
+      })
+
+      fetchAllPackages()
+    } catch (error) {
+      console.error('Delete V2 package error:', error)
+      const dbError = error as { code?: string }
+      if (dbError.code === '23503') {
+        toast({
+          title: 'Error',
+          description: 'Cannot delete package that has existing bookings',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to delete package',
+          variant: 'destructive',
+        })
+      }
+    }
+  }
+
+  /**
+   * Handle Toggle Active V2 Package
+   */
+  const toggleActiveV2 = async (pkg: ServicePackageV2WithTiers) => {
+    try {
+      const { error } = await supabase
+        .from('service_packages_v2')
+        .update({ is_active: !pkg.is_active })
+        .eq('id', pkg.id)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
+      })
+      fetchAllPackages()
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to update package status',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  /**
+   * Unified handlers for PackageCard (handles both V1 and V2)
+   */
+  const handleUnifiedEdit = (pkg: ServicePackageV2WithTiers) => {
+    if (pkg.pricing_model === PricingModel.Fixed && 'price' in pkg) {
+      // It's actually a V1 package converted to V2 format - shouldn't happen
+      // But if it does, just open V2 edit mode with the data
+      handleEditV2(pkg)
+    } else {
+      handleEditV2(pkg)
+    }
+  }
+
+  const handleUnifiedDelete = async (id: string) => {
+    // Try V2 first (check if it exists in V2)
+    const { data: v2Pkg } = await supabase
+      .from('service_packages_v2')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (v2Pkg) {
+      await deletePackageV2(id)
+    } else {
+      await deletePackage(id)
+    }
+  }
+
+  const handleUnifiedToggle = (pkg: ServicePackageV2WithTiers) => {
+    if (pkg.pricing_model === PricingModel.Tiered) {
+      toggleActiveV2(pkg)
+    } else {
+      // Convert V2 format back to V1 for toggle
+      const v1Pkg: ServicePackage = {
+        id: pkg.id,
+        name: pkg.name,
+        description: pkg.description || '',
+        service_type: pkg.service_type,
+        duration_minutes: pkg.duration_minutes || 0,
+        price: pkg.base_price || 0,
+        is_active: pkg.is_active,
+        created_at: pkg.created_at,
+      }
+      toggleActive(v1Pkg)
+    }
+  }
+
+  /**
+   * Handle Form Success (for V2 form)
+   */
+  const handleFormSuccess = () => {
+    setIsDialogOpen(false)
+    resetForm()
+    fetchAllPackages()
+  }
+
+  /**
+   * Handle Form Cancel (for V2 form)
+   */
+  const handleFormCancel = () => {
+    setIsDialogOpen(false)
+    resetForm()
   }
 
   if (loading) {
@@ -342,25 +540,46 @@ export function AdminServicePackages() {
             Manage cleaning and training service packages
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Package
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingPackage ? 'Edit Package' : 'Create New Package'}
-              </DialogTitle>
-              <DialogDescription>
-                Fill in the package details below
-              </DialogDescription>
-            </DialogHeader>
+        <Button
+          className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+          onClick={() => {
+            resetForm()
+            setIsDialogOpen(true)
+          }}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Package
+        </Button>
+      </div>
+
+      {/* Create/Edit Dialog with V2 Form */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPackageV2 ? 'Edit Package' : editingPackage ? 'Edit Package (V1)' : 'Create New Package'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingPackageV2
+                ? 'Update package information and pricing'
+                : editingPackage
+                  ? 'Update V1 package information (Fixed pricing only)'
+                  : 'Create a new service package with tiered pricing'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Use V2 Form for new packages and V2 editing */}
+          {(editingPackageV2 || !editingPackage) && (
+            <PackageFormV2
+              package={editingPackageV2}
+              onSuccess={handleFormSuccess}
+              onCancel={handleFormCancel}
+              showCancel={true}
+            />
+          )}
+
+          {/* Use old V1 Form for editing V1 packages */}
+          {editingPackage && !editingPackageV2 && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2 sm:col-span-2">
@@ -453,9 +672,9 @@ export function AdminServicePackages() {
                 </Button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -537,12 +756,22 @@ export function AdminServicePackages() {
                 <SelectItem value="training">Training</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by pricing" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Pricing</SelectItem>
+                <SelectItem value="fixed">Fixed Price</SelectItem>
+                <SelectItem value="tiered">Tiered Price</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
       {/* Packages Grid */}
-      {filteredPackages.length === 0 ? (
+      {filteredPackages.length === 0 && filteredPackagesV2.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
@@ -554,77 +783,58 @@ export function AdminServicePackages() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPackages.slice(0, displayCount).map((pkg) => (
-              <Card key={pkg.id} className={!pkg.is_active ? 'opacity-60' : ''}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="font-display text-lg">
-                        {pkg.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
-                        {getServiceTypeBadge(pkg.service_type)}
-                        <Badge variant={pkg.is_active ? 'default' : 'outline'}>
-                          {pkg.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {pkg.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {pkg.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{pkg.duration_minutes} min</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-semibold text-tinedy-dark">
-                        {formatCurrency(Number(pkg.price))}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEdit(pkg)}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleActive(pkg)}
-                    >
-                      {pkg.is_active ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                    </Button>
-                    <DeleteButton
-                      itemName={pkg.name}
-                      onDelete={() => deletePackage(pkg.id)}
-                      size="sm"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            {/* V2 Packages - Display using PackageCard component */}
+            {filteredPackagesV2.slice(0, displayCount).map((pkg) => (
+              <PackageCard
+                key={pkg.id}
+                package={pkg}
+                onEdit={handleEditV2}
+                onDelete={deletePackageV2}
+                onToggleActive={toggleActiveV2}
+                showActions={true}
+              />
             ))}
+
+            {/* V1 Packages - Convert to V2 format for PackageCard */}
+            {filteredPackages.slice(0, Math.max(0, displayCount - filteredPackagesV2.length)).map((pkg) => {
+              // Convert V1 to V2 format for PackageCard
+              const v1AsV2: ServicePackageV2WithTiers = {
+                id: pkg.id,
+                name: pkg.name,
+                description: pkg.description,
+                service_type: pkg.service_type,
+                category: null,
+                pricing_model: PricingModel.Fixed,
+                duration_minutes: pkg.duration_minutes,
+                base_price: Number(pkg.price),
+                is_active: pkg.is_active,
+                display_order: 0,
+                created_at: pkg.created_at,
+                updated_at: pkg.created_at, // V1 doesn't have updated_at, use created_at
+                tier_count: 0,
+                min_price: Number(pkg.price),
+                max_price: Number(pkg.price),
+                tiers: [],
+              }
+              return (
+                <PackageCard
+                  key={pkg.id}
+                  package={v1AsV2}
+                  onEdit={handleUnifiedEdit}
+                  onDelete={handleUnifiedDelete}
+                  onToggleActive={handleUnifiedToggle}
+                  showActions={true}
+                />
+              )
+            })}
           </div>
 
           {/* Load More Button */}
-          {displayCount < filteredPackages.length && (
+          {displayCount < (filteredPackages.length + filteredPackagesV2.length) && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Showing {displayCount} of {filteredPackages.length} packages
+                  Showing {Math.min(displayCount, filteredPackages.length + filteredPackagesV2.length)} of {filteredPackages.length + filteredPackagesV2.length} packages
                 </p>
                 <Button
                   variant="outline"

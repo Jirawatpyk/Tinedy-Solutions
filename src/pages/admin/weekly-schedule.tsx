@@ -1,5 +1,5 @@
 import type { CustomerRecord, Booking } from '@/types'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,9 +19,14 @@ import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import { formatTime } from '@/lib/booking-utils'
+import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
+import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import { getErrorMessage } from '@/lib/error-utils'
+import { getBangkokDateString } from '@/lib/utils'
 import type { ServicePackage , UserProfile } from '@/types'
+import type { BookingFormState } from '@/hooks/useBookingForm'
+import type { PackageSelectionData } from '@/components/service-packages'
+import { useServicePackages } from '@/hooks/useServicePackages'
 
 interface Staff {
   id: string
@@ -35,25 +40,7 @@ interface Team {
   name: string
 }
 
-interface BookingFormData {
-  customer_id?: string
-  full_name?: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  service_package_id?: string
-  booking_date?: string
-  start_time?: string
-  end_time?: string
-  total_price?: number
-  staff_id?: string
-  team_id?: string
-  notes?: string
-  status?: string
-}
+// BookingFormState imported from @/hooks/useBookingForm
 
 interface BookingRaw {
   id: string
@@ -78,7 +65,33 @@ interface BookingRaw {
   service_packages: ServicePackage[] | ServicePackage | null
   customers: CustomerRecord[] | CustomerRecord | null
   profiles: UserProfile[] | UserProfile | null
-  teams: { name: string }[] | { name: string } | null
+  teams: {
+    name: string
+    team_lead?: {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    }[] | {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    } | null
+  }[] | {
+    name: string
+    team_lead?: {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    }[] | {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    } | null
+  } | null
 }
 
 const DAYS_OF_WEEK = [
@@ -99,10 +112,9 @@ const TIME_SLOTS = [
 export function AdminWeeklySchedule() {
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('staff')
+  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('all')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -113,10 +125,14 @@ export function AdminWeeklySchedule() {
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editFormData, setEditFormData] = useState<BookingFormData>({})
+  const [editFormData, setEditFormData] = useState<BookingFormState>({})
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
+  const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
   const { toast } = useToast()
+
+  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+  const { packages: servicePackages } = useServicePackages()
 
   // Calculate week dates based on currentWeekStart
   const calculateWeekDates = useCallback((weekStart: Date) => {
@@ -206,9 +222,10 @@ export function AdminWeeklySchedule() {
         .select(`
           *,
           service_packages (name, service_type),
+          service_packages_v2:package_v2_id (name, service_type),
           customers (id, full_name, email),
           profiles (full_name),
-          teams (name)
+          ${TEAMS_WITH_LEAD_QUERY}
         `)
         .gte('booking_date', startDate)
         .lte('booking_date', endDate)
@@ -237,21 +254,33 @@ export function AdminWeeklySchedule() {
 
       if (error) throw error
 
-      const transformedData = (data || []).map((booking: BookingRaw): Booking => ({
-        ...booking,
-        service_packages: Array.isArray(booking.service_packages)
-          ? booking.service_packages[0] || null
-          : booking.service_packages,
-        customers: Array.isArray(booking.customers)
-          ? booking.customers[0] || null
-          : booking.customers,
-        profiles: Array.isArray(booking.profiles)
-          ? booking.profiles[0] || null
-          : booking.profiles,
-        teams: Array.isArray(booking.teams)
-          ? booking.teams[0] || null
-          : booking.teams,
-      }))
+      const transformedData = (data || []).map((booking: BookingRaw): Booking => {
+        // Merge V1 and V2 package data for compatibility
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const servicePackages = booking.service_packages || (booking as any).service_packages_v2
+
+        return {
+          ...booking,
+          service_packages: Array.isArray(servicePackages)
+            ? servicePackages[0] || null
+            : servicePackages,
+          customers: Array.isArray(booking.customers)
+            ? booking.customers[0] || null
+            : booking.customers,
+          profiles: Array.isArray(booking.profiles)
+            ? booking.profiles[0] || null
+            : booking.profiles,
+          teams: transformTeamsData(booking.teams) as {
+            name: string
+            team_lead?: {
+              id: string
+              full_name: string
+              email: string
+              avatar_url: string | null
+            } | null
+          } | null,
+        }
+      })
 
       setBookings(transformedData)
     } catch (error) {
@@ -264,43 +293,14 @@ export function AdminWeeklySchedule() {
     }
   }, [selectedStaff, selectedTeam, weekDates, viewMode, toast])
 
-  const fetchServicePackages = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('service_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) throw error
-      setServicePackages(data || [])
-    } catch (error) {
-      console.error('Error fetching service packages:', error)
-    }
-  }, [])
-
   useEffect(() => {
     fetchStaffMembers()
     fetchTeams()
-    fetchServicePackages()
-  }, [fetchStaffMembers, fetchTeams, fetchServicePackages])
+  }, [fetchStaffMembers, fetchTeams])
 
   useEffect(() => {
     fetchBookings()
   }, [fetchBookings])
-
-  const getBookingsForDay = (dayIndex: number) => {
-    const date = weekDates[dayIndex]
-    if (!date) return []
-
-    // Format date in local timezone YYYY-MM-DD
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const dateStr = `${year}-${month}-${day}`
-
-    return bookings.filter((booking) => booking.booking_date === dateStr)
-  }
 
   const calculateBookingPosition = (startTime: string, endTime: string) => {
     const [startHour, startMin] = startTime.split(':').map(Number)
@@ -319,7 +319,8 @@ export function AdminWeeklySchedule() {
     return { top: `${Math.max(0, top)}%`, height: `${height}%` }
   }
 
-  const doBookingsOverlap = (booking1: Booking, booking2: Booking) => {
+  // Memoize helper functions to prevent unnecessary re-renders
+  const doBookingsOverlap = useCallback((booking1: Booking, booking2: Booking) => {
     const [start1Hour, start1Min] = booking1.start_time.split(':').map(Number)
     const [end1Hour, end1Min] = booking1.end_time.split(':').map(Number)
     const [start2Hour, start2Min] = booking2.start_time.split(':').map(Number)
@@ -331,9 +332,9 @@ export function AdminWeeklySchedule() {
     const end2 = end2Hour * 60 + end2Min
 
     return start1 < end2 && start2 < end1
-  }
+  }, [])
 
-  const getBookingLayout = (dayBookings: Booking[]) => {
+  const getBookingLayout = useCallback((dayBookings: Booking[]) => {
     const layouts: Array<{
       booking: Booking
       column: number
@@ -373,28 +374,7 @@ export function AdminWeeklySchedule() {
     })
 
     return layouts
-  }
-
-  const getWeekStats = () => {
-    const totalBookings = bookings.length
-    const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length
-    const completedBookings = bookings.filter(b => b.status === 'completed').length
-
-    // Find busiest day
-    const bookingsByDay = DAYS_OF_WEEK.map((_, index) => ({
-      day: DAYS_OF_WEEK[index],
-      count: getBookingsForDay(index).length
-    }))
-    const busiestDay = bookingsByDay.reduce((max, day) => day.count > max.count ? day : max, bookingsByDay[0])
-
-    return {
-      totalBookings,
-      confirmedBookings,
-      completedBookings,
-      busiestDay: busiestDay.day,
-      busiestDayCount: busiestDay.count
-    }
-  }
+  }, [doBookingsOverlap])
 
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking)
@@ -414,10 +394,10 @@ export function AdminWeeklySchedule() {
   // Edit Booking Form Helpers
   const editForm = {
     formData: editFormData,
-    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
+    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
       setEditFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Partial<BookingFormData>) => {
+    setValues: (values: Partial<BookingFormState>) => {
       setEditFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -451,6 +431,47 @@ export function AdminWeeklySchedule() {
       setEditAssignmentType('team')
     } else {
       setEditAssignmentType('none')
+    }
+
+    // Set package selection for PackageSelector component
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (booking.service_package_id || ('package_v2_id' in booking && (booking as any).package_v2_id)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const packageId = ('package_v2_id' in booking && (booking as any).package_v2_id) || booking.service_package_id
+
+      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
+      const pkg = servicePackages.find(p => p.id === packageId)
+
+      if (pkg) {
+        // Check if this is a V2 Tiered Pricing package
+        const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (isTiered && 'area_sqm' in booking && 'frequency' in booking && (booking as any).area_sqm && (booking as any).frequency) {
+          // V2 Tiered Pricing - restore area and frequency
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'tiered',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            areaSqm: Number((booking as any).area_sqm) || 0,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            frequency: ((booking as any).frequency as 1 | 2 | 4 | 8) || 1,
+            price: booking.total_price || 0,
+            requiredStaff: 1, // Will be recalculated by PackageSelector
+            packageName: pkg.name,
+          })
+        } else {
+          // Fixed Pricing (V1 หรือ V2)
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'fixed',
+            price: Number(pkg.base_price || booking.total_price || 0),
+            requiredStaff: 1,
+            packageName: pkg.name,
+            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
+          })
+        }
+      }
     }
 
     setSelectedBooking(booking)
@@ -523,7 +544,7 @@ export function AdminWeeklySchedule() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking?.total_price || 0,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getBangkokDateString(),
         })
         .eq('id', bookingId)
 
@@ -540,7 +561,7 @@ export function AdminWeeklySchedule() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getBangkokDateString(),
         })
       }
 
@@ -611,7 +632,75 @@ export function AdminWeeklySchedule() {
 
   const selectedStaffData = staffMembers.find((s) => s.id === selectedStaff)
   const selectedTeamData = teams.find((t) => t.id === selectedTeam)
-  const weekStats = getWeekStats()
+
+  // OPTIMIZATION 2: Pre-calculate bookings grouped by date for O(1) lookup (เหมือน Calendar)
+  // Loop ครั้งเดียวผ่าน bookings แทนที่จะ filter 7 ครั้ง
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, Booking[]>()
+    bookings.forEach(booking => {
+      const dateKey = booking.booking_date // Already in 'yyyy-MM-dd' format
+      const existing = map.get(dateKey)
+      if (existing) {
+        existing.push(booking) // Mutate existing array instead of creating new one
+      } else {
+        map.set(dateKey, [booking])
+      }
+    })
+    return map
+  }, [bookings])
+
+  // Helper: Get bookings for a day index using date string lookup
+  const getBookingsForDayIndex = useCallback((dayIndex: number): Booking[] => {
+    const date = weekDates[dayIndex]
+    if (!date) return []
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day}`
+
+    return bookingsByDate.get(dateStr) || []
+  }, [weekDates, bookingsByDate])
+
+  // OPTIMIZATION 3: Memoize booking layouts per day to avoid O(n²) calculations every render
+  const bookingLayoutsByDay = useMemo(() => {
+    const layoutsMap = new Map<number, Array<{
+      booking: Booking
+      column: number
+      totalColumns: number
+    }>>()
+
+    // Calculate layout for each day
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      const dayBookings = getBookingsForDayIndex(dayIndex)
+      layoutsMap.set(dayIndex, getBookingLayout(dayBookings))
+    }
+
+    return layoutsMap
+  }, [getBookingsForDayIndex, getBookingLayout])
+
+  // OPTIMIZATION 1: Memoize weekStats calculation to avoid re-computing every render
+  const weekStats = useMemo(() => {
+    const totalBookings = bookings.length
+    const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length
+    const completedBookings = bookings.filter(b => b.status === 'completed').length
+
+    // Find busiest day using helper function
+    const bookingsByDay = DAYS_OF_WEEK.map((_, index) => ({
+      day: DAYS_OF_WEEK[index],
+      count: getBookingsForDayIndex(index).length
+    }))
+    const busiestDay = bookingsByDay.reduce((max, day) => day.count > max.count ? day : max, bookingsByDay[0])
+
+    return {
+      totalBookings,
+      confirmedBookings,
+      completedBookings,
+      busiestDay: busiestDay.day,
+      busiestDayCount: busiestDay.count
+    }
+  }, [bookings, getBookingsForDayIndex])
+
   const weekStart = weekDates[0] ? format(weekDates[0], 'MMM dd') : ''
   const weekEnd = weekDates[6] ? format(weekDates[6], 'MMM dd, yyyy') : ''
 
@@ -755,10 +844,18 @@ export function AdminWeeklySchedule() {
               <Label className="whitespace-nowrap">View Mode:</Label>
               <div className="inline-flex rounded-md shadow-sm w-full max-w-[400px]" role="group">
                 <Button
+                  variant={viewMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('all')}
+                  className="rounded-r-none flex-1"
+                >
+                  All Bookings
+                </Button>
+                <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('staff')}
-                  className="rounded-r-none flex-1"
+                  className="rounded-none border-l-0 flex-1"
                 >
                   Staff View
                 </Button>
@@ -766,17 +863,9 @@ export function AdminWeeklySchedule() {
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('team')}
-                  className="rounded-none border-l-0 flex-1"
-                >
-                  Team View
-                </Button>
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
                   className="rounded-l-none border-l-0 flex-1"
                 >
-                  All Bookings
+                  Team View
                 </Button>
               </div>
             </div>
@@ -892,90 +981,21 @@ export function AdminWeeklySchedule() {
               {/* Day columns */}
               {DAYS_OF_WEEK.map((day, dayIndex) => {
                 const date = weekDates[dayIndex]
-                const dateStr = date
-                  ? format(date, 'MMM d')
-                  : ''
-                const dayBookings = getBookingsForDay(dayIndex)
-                const isToday = date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                const dayBookings = getBookingsForDayIndex(dayIndex)
+                const isToday = date ? format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') : false
 
                 return (
-                  <div key={dayIndex} className="flex-1 min-w-[120px]">
-                    {/* Day header */}
-                    <div className={`h-12 border-b text-center font-medium text-sm text-muted-foreground flex flex-col items-center justify-center ${isToday ? 'bg-tinedy-blue/10 border-tinedy-blue' : ''}`}>
-                      <div className={isToday ? 'text-tinedy-blue font-bold' : ''}>{day}</div>
-                      <div className={`text-xs font-semibold ${isToday ? 'text-tinedy-blue' : 'text-muted-foreground'}`}>
-                        {dateStr}
-                      </div>
-                    </div>
-
-                    {/* Timeline area */}
-                    <div className={`relative border-r ${isToday ? 'bg-tinedy-blue/5' : 'bg-gray-50/50'}`} style={{ height: '720px' }}>
-                      {/* Hour lines */}
-                      {TIME_SLOTS.map((_, index) => (
-                        <div
-                          key={index}
-                          className="absolute w-full border-t border-gray-200"
-                          style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
-                        />
-                      ))}
-
-                      {/* Booking bars */}
-                      {dayBookings.length === 0 ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <p className="text-xs text-muted-foreground">No bookings</p>
-                        </div>
-                      ) : (
-                        getBookingLayout(dayBookings).map((layout) => {
-                          const { booking, column, totalColumns } = layout
-                          const position = calculateBookingPosition(
-                            booking.start_time,
-                            booking.end_time
-                          )
-
-                          const statusColors = {
-                            pending: 'bg-yellow-400 hover:bg-yellow-500',
-                            confirmed: 'bg-tinedy-blue hover:bg-tinedy-blue/90',
-                            in_progress: 'bg-purple-500 hover:bg-purple-600',
-                            completed: 'bg-green-500 hover:bg-green-600',
-                            cancelled: 'bg-red-500 hover:bg-red-600',
-                          }
-
-                          const bgColor = statusColors[booking.status as keyof typeof statusColors] || 'bg-tinedy-blue'
-
-                          const gap = 2
-                          const widthPercent = (100 / totalColumns) - gap
-                          const leftPercent = (column / totalColumns) * 100 + (gap / 2)
-
-                          return (
-                            <div
-                              key={booking.id}
-                              className={`absolute rounded-md ${bgColor} text-white shadow-sm transition-all cursor-pointer overflow-hidden group`}
-                              style={{
-                                top: position.top,
-                                height: position.height,
-                                left: `${leftPercent}%`,
-                                width: `${widthPercent}%`,
-                              }}
-                              onClick={() => handleBookingClick(booking)}
-                              title={`${booking.service_packages?.name} - ${viewMode === 'staff' ? booking.customers?.full_name : booking.teams?.name || 'No Team'}\n${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`}
-                            >
-                              <div className="px-2 py-1 h-full flex flex-col items-center justify-center text-xs">
-                                <div className="font-semibold truncate text-center w-full">
-                                  {formatTime(booking.start_time)}
-                                </div>
-                                <div className="text-[10px] truncate text-center w-full opacity-90">
-                                  {viewMode === 'staff' ? booking.customers?.full_name : booking.teams?.name || 'No Team'}
-                                </div>
-                                <div className="text-[10px] truncate text-center w-full opacity-75">
-                                  {booking.service_packages?.name}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
+                  <WeekDayColumn
+                    key={dayIndex}
+                    day={day}
+                    dayIndex={dayIndex}
+                    date={date}
+                    isToday={isToday}
+                    dayBookings={dayBookings}
+                    bookingLayouts={bookingLayoutsByDay.get(dayIndex) || []}
+                    calculateBookingPosition={calculateBookingPosition}
+                    onBookingClick={handleBookingClick}
+                  />
                 )
               })}
             </div>
@@ -1049,6 +1069,8 @@ export function AdminWeeklySchedule() {
           assignmentType={editAssignmentType}
           onAssignmentTypeChange={setEditAssignmentType}
           calculateEndTime={calculateEndTime}
+          packageSelection={editPackageSelection}
+          setPackageSelection={setEditPackageSelection}
         />
       )}
 

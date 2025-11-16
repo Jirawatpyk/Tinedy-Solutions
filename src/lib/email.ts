@@ -19,6 +19,24 @@ export interface PaymentEmailData extends BookingEmailData {
   paymentLink: string;
 }
 
+export interface RecurringBookingEmailData {
+  groupId: string;
+  bookingIds: string[];
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  bookingDates: { date: string; sequence: number }[];
+  startTime: string;
+  endTime: string;
+  totalPrice: number;
+  pricePerBooking: number;
+  location: string;
+  paymentLink: string;
+  staffName?: string;
+  notes?: string;
+  frequency: number;
+}
+
 // Queue email in database
 async function queueEmail(
   bookingId: string,
@@ -188,4 +206,36 @@ export async function sendBookingRescheduled(data: BookingEmailData & { oldDate:
   // Note: This should be sent via Edge Function in production
   console.log('Booking rescheduled email queued for:', data.customerEmail);
   return { success: true };
+}
+
+// ============================================================================
+// 7. RECURRING BOOKING CONFIRMATION EMAIL
+// ============================================================================
+export async function sendRecurringBookingConfirmation(data: RecurringBookingEmailData) {
+  try {
+    // Call Edge Function for recurring booking confirmation
+    const { data: result, error } = await supabase.functions.invoke('send-recurring-booking-confirmation', {
+      body: data
+    });
+
+    if (error) {
+      console.error('Edge function error:', error);
+      throw error;
+    }
+
+    // Queue email for tracking (use parent booking ID)
+    await queueEmail(
+      data.bookingIds[0], // parent booking
+      'recurring_booking_confirmation',
+      data.customerEmail,
+      data.customerName,
+      `Recurring Booking Confirmed - ${data.serviceName} (${data.frequency} times)`,
+      '', // HTML not needed as Edge Function handles it
+    );
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to send recurring booking confirmation:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }

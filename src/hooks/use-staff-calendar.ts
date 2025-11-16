@@ -16,6 +16,8 @@ interface BookingData {
   zip_code: string | null
   staff_id: string | null
   team_id: string | null
+  area_sqm: number | null
+  frequency: 1 | 2 | 4 | 8 | null
   customers: {
     full_name: string
     phone: string
@@ -68,6 +70,8 @@ export interface CalendarEvent {
   team_id: string | null
   staff_name: string | null
   team_name: string | null
+  area_sqm: number | null
+  frequency: 1 | 2 | 4 | 8 | null
 }
 
 export function useStaffCalendar() {
@@ -112,8 +116,11 @@ export function useStaffCalendar() {
           zip_code,
           staff_id,
           team_id,
+          area_sqm,
+          frequency,
           customers (full_name, phone, avatar_url),
           service_packages (name, duration_minutes, price),
+          service_packages_v2:package_v2_id (name),
           profiles (full_name),
           teams (name)
         `)
@@ -134,27 +141,33 @@ export function useStaffCalendar() {
 
       // Transform bookings to calendar events
       const calendarEvents: CalendarEvent[] = (data as BookingData[] || []).map((booking) => {
-        const [hours, minutes] = booking.start_time.split(':')
+        const [startHours, startMinutes] = booking.start_time.split(':').map(Number)
         const startDate = new Date(booking.booking_date)
-        startDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+        startDate.setHours(startHours, startMinutes, 0, 0)
+
+        // Use end_time from booking (works for both V1 and V2)
+        const [endHours, endMinutes] = booking.end_time.split(':').map(Number)
+        const endDate = new Date(booking.booking_date)
+        endDate.setHours(endHours, endMinutes, 0, 0)
+
+        // Calculate actual duration from start_time and end_time
+        const actualDurationMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes)
 
         // Handle customers as array or single object
         const customer = Array.isArray(booking.customers) ? booking.customers[0] : booking.customers
 
-        // Handle service_packages as array or single object
-        const servicePackage = Array.isArray(booking.service_packages)
-          ? booking.service_packages[0]
-          : booking.service_packages
+        // Merge V1 and V2 package data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const packageData = (booking as any).service_packages || (booking as any).service_packages_v2
+        const servicePackage = Array.isArray(packageData)
+          ? packageData[0]
+          : packageData
 
         // Handle profiles (staff) as array or single object
         const profile = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
 
         // Handle teams as array or single object
         const team = Array.isArray(booking.teams) ? booking.teams[0] : booking.teams
-
-        const duration = servicePackage?.duration_minutes || 60
-        const endDate = new Date(startDate)
-        endDate.setMinutes(endDate.getMinutes() + duration)
 
         return {
           id: booking.id,
@@ -167,7 +180,7 @@ export function useStaffCalendar() {
           customer_avatar: customer?.avatar_url || null,
           service_name: servicePackage?.name || 'Unknown Service',
           service_price: servicePackage?.price || 0,
-          service_duration: servicePackage?.duration_minutes || 60,
+          service_duration: actualDurationMinutes,
           notes: booking.notes,
           booking_id: booking.id,
           address: booking.address || '',
@@ -178,6 +191,8 @@ export function useStaffCalendar() {
           team_id: booking.team_id || null,
           staff_name: profile?.full_name || null,
           team_name: team?.name || null,
+          area_sqm: booking.area_sqm || null,
+          frequency: booking.frequency || null,
         }
       })
 

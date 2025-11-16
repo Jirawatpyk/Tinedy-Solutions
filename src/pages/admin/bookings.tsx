@@ -7,11 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useBookingFilters } from '@/hooks/useBookingFilters'
 import { usePagination } from '@/hooks/useBookingPagination'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
-import { useBookingForm } from '@/hooks/useBookingForm'
+import { useBookingForm, toBookingForm } from '@/hooks/useBookingForm'
 import { useBulkActions } from '@/hooks/useBulkActions'
 import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useServicePackages } from '@/hooks/useServicePackages'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -23,9 +24,12 @@ import { BookingStatusConfirmDialog } from '@/components/booking/BookingStatusCo
 import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
 import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
-import { calculateEndTime, formatTime } from '@/lib/booking-utils'
+import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
+import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
-import type { ServicePackage } from '@/types'
+import type { PackageSelectionData } from '@/components/service-packages'
+import type { RecurringEditScope, RecurringPattern } from '@/types/recurring-booking'
+import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
 
 interface StaffMember {
   id: string
@@ -44,7 +48,10 @@ export function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
+
+  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+  const { packages: servicePackages } = useServicePackages()
+
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
@@ -135,8 +142,8 @@ export function AdminBookings() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   // Edit Modal
   const [isEditOpen, setIsEditOpen] = useState(false)
-  // Flag to prevent processing location.state multiple times
-  const hasProcessedState = useRef(false)
+  // Track the last processed location key to detect new navigations
+  const lastProcessedLocationKey = useRef<string | null>(null)
   // Edit Booking Form - Using useBookingForm hook (shared with edit modal and availability modal)
   const editForm = useBookingForm({
     onSubmit: async () => {
@@ -155,6 +162,20 @@ export function AdminBookings() {
   const [isEditAvailabilityModalOpen, setIsEditAvailabilityModalOpen] = useState(false)
   const { toast } = useToast()
 
+  // Package Selection State - Lifted to parent to persist across modal open/close
+  const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
+  const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
+
+  // Recurring Bookings State (for Create Modal)
+  const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
+  const [createEnableRecurring, setCreateEnableRecurring] = useState(false)
+  const [createRecurringPattern, setCreateRecurringPattern] = useState<RecurringPattern>('auto-monthly' as RecurringPattern)
+
+  // Recurring Edit Dialog State
+  const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false)
+  const [recurringEditAction, setRecurringEditAction] = useState<'edit' | 'delete'>('delete')
+  const [pendingRecurringBooking, setPendingRecurringBooking] = useState<Booking | null>(null)
+
   // Create Booking Form - Using useBookingForm hook (shared with create modal and availability modal)
   const createForm = useBookingForm({
     onSubmit: async () => {
@@ -170,13 +191,23 @@ export function AdminBookings() {
           *,
           customers (id, full_name, email),
           service_packages (name, service_type),
+          service_packages_v2:package_v2_id (name, service_type),
           profiles (full_name),
-          teams (name)
+          ${TEAMS_WITH_LEAD_QUERY}
         `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setBookings(data || [])
+
+      // Merge V1 and V2 package data into service_packages field for compatibility
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const processedData = (data || []).map((booking: any) => ({
+        ...booking,
+        service_packages: booking.service_packages || booking.service_packages_v2,
+        teams: transformTeamsData(booking.teams),
+      }))
+
+      setBookings(processedData || [])
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast({
@@ -226,9 +257,9 @@ export function AdminBookings() {
 
   useEffect(() => {
     // OPTIMIZE: Run all queries in parallel for better performance
+    // Service packages โหลดผ่าน useServicePackages hook อัตโนมัติแล้ว
     Promise.all([
       fetchBookings(),
-      fetchServicePackages(),
       fetchStaffMembers(),
       fetchTeams()
     ])
@@ -255,15 +286,22 @@ export function AdminBookings() {
               *,
               customers (id, full_name, email),
               service_packages (name, service_type),
+              service_packages_v2:package_v2_id (name, service_type),
               profiles (full_name),
-              teams (name)
+              ${TEAMS_WITH_LEAD_QUERY}
             `)
             .eq('id', payload.new.id)
             .single()
 
           if (data) {
+            // Merge V1 and V2 package data for compatibility
+            const processedBooking = {
+              ...data,
+              service_packages: data.service_packages || data.service_packages_v2,
+              teams: transformTeamsData(data.teams),
+            }
             // Add new booking to the beginning of the list
-            setBookings(prev => [data as Booking, ...prev])
+            setBookings(prev => [processedBooking as Booking, ...prev])
           }
         }
       )
@@ -283,19 +321,27 @@ export function AdminBookings() {
               *,
               customers (id, full_name, email),
               service_packages (name, service_type),
+              service_packages_v2:package_v2_id (name, service_type),
               profiles (full_name),
-              teams (name)
+              ${TEAMS_WITH_LEAD_QUERY}
             `)
             .eq('id', payload.new.id)
             .single()
 
           if (data) {
+            // Merge V1 and V2 package data for compatibility
+            const processedBooking = {
+              ...data,
+              service_packages: data.service_packages || data.service_packages_v2,
+              teams: transformTeamsData(data.teams),
+            } as Booking
+
             // Update the booking in the list
-            setBookings(prev => prev.map(b => b.id === data.id ? data as Booking : b))
+            setBookings(prev => prev.map(b => b.id === processedBooking.id ? processedBooking : b))
 
             // If the updated booking is currently selected in detail modal, refresh it
-            if (selectedBooking && selectedBooking.id === data.id) {
-              setSelectedBooking(data as Booking)
+            if (selectedBooking && selectedBooking.id === processedBooking.id) {
+              setSelectedBooking(processedBooking)
             }
           }
         }
@@ -354,29 +400,35 @@ export function AdminBookings() {
         start_time: string;
         end_time: string;
         service_package_id: string;
+        package_v2_id?: string;
         staff_id: string;
         team_id: string;
         total_price?: number;
+        area_sqm?: number | null;
+        frequency?: 1 | 2 | 4 | 8 | null;
+        is_recurring?: boolean;
+        recurring_dates?: string[];
+        recurring_pattern?: RecurringPattern;
       }
     } | null
 
     // Skip if no state
     if (!state) {
-      // Reset flag when there's no state
-      hasProcessedState.current = false
+      // Reset tracking when there's no state
+      lastProcessedLocationKey.current = null
       return
     }
-
-    // Skip if already processed this specific state
-    if (hasProcessedState.current) return
 
     // Wait for data to load before processing create booking
     if (loading || servicePackages.length === 0) {
       return
     }
 
-    // Mark as processed
-    hasProcessedState.current = true
+    // Skip if already processed this specific navigation
+    if (lastProcessedLocationKey.current === location.key) return
+
+    // Mark this location key as processed
+    lastProcessedLocationKey.current = location.key
 
     // Handle create booking from Quick Availability Check
     if (state?.createBooking && state?.prefilledData) {
@@ -385,17 +437,67 @@ export function AdminBookings() {
         booking_date: state.prefilledData.booking_date,
         start_time: state.prefilledData.start_time,
         end_time: state.prefilledData.end_time,
-        service_package_id: state.prefilledData.service_package_id,
+        service_package_id: state.prefilledData.service_package_id || '',
+        package_v2_id: state.prefilledData.package_v2_id,
         staff_id: state.prefilledData.staff_id,
         team_id: state.prefilledData.team_id,
         total_price: state.prefilledData.total_price || 0,
+        area_sqm: state.prefilledData.area_sqm || null,
+        frequency: state.prefilledData.frequency || null,
       })
+
+      // Set package selection for PackageSelector (if V2 tiered package)
+      if (state.prefilledData.package_v2_id && state.prefilledData.area_sqm && state.prefilledData.frequency) {
+        const pkg = servicePackages.find(p => p.id === state.prefilledData!.package_v2_id)
+        if (pkg) {
+          setCreatePackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'tiered',
+            areaSqm: state.prefilledData.area_sqm,
+            frequency: state.prefilledData.frequency,
+            price: state.prefilledData.total_price || 0,
+            requiredStaff: 1, // Will be recalculated
+            packageName: pkg.name,
+          })
+        }
+      } else if (state.prefilledData.service_package_id) {
+        // Fixed pricing package
+        const pkg = servicePackages.find(p => p.id === state.prefilledData!.service_package_id)
+        if (pkg && pkg.base_price) {
+          setCreatePackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'fixed',
+            price: pkg.base_price,
+            requiredStaff: 1,
+            packageName: pkg.name,
+            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
+          })
+        }
+      }
+
       // Set assignment type
       if (state.prefilledData.staff_id) {
         setCreateAssignmentType('staff')
       } else if (state.prefilledData.team_id) {
         setCreateAssignmentType('team')
       }
+
+      // Handle recurring booking data from Quick Availability Check
+      if (state.prefilledData.is_recurring && state.prefilledData.recurring_dates && state.prefilledData.recurring_dates.length > 0) {
+        console.log('📥 Bookings page - Received recurring data from Quick Check:', {
+          is_recurring: state.prefilledData.is_recurring,
+          recurring_dates: state.prefilledData.recurring_dates,
+          recurring_pattern: state.prefilledData.recurring_pattern
+        })
+
+        setCreateEnableRecurring(true)
+        setCreateRecurringDates(state.prefilledData.recurring_dates)
+        if (state.prefilledData.recurring_pattern) {
+          setCreateRecurringPattern(state.prefilledData.recurring_pattern)
+          console.log('✅ Set recurring pattern to:', state.prefilledData.recurring_pattern)
+        }
+      }
+
       // Open create dialog
       setIsDialogOpen(true)
       // Clear the state to prevent reopening on refresh
@@ -455,20 +557,7 @@ export function AdminBookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, bookings, servicePackages, loading])
 
-  const fetchServicePackages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('service_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) throw error
-      setServicePackages(data || [])
-    } catch (error) {
-      console.error('Error fetching service packages:', error)
-    }
-  }
+  // Service packages โหลดผ่าน useServicePackages hook แล้ว (ไม่ต้องมี fetchServicePackages อีกต่อไป)
 
   const fetchStaffMembers = async () => {
     try {
@@ -542,9 +631,64 @@ export function AdminBookings() {
   }
 
 
+  // Handle Recurring Delete Confirmation
+  const handleRecurringDelete = useCallback(async (scope: RecurringEditScope) => {
+    if (!pendingRecurringBooking) return
+
+    try {
+      console.log('🔍 Deleting with:', {
+        bookingId: pendingRecurringBooking.id,
+        groupId: pendingRecurringBooking.recurring_group_id,
+        scope,
+        isRecurring: pendingRecurringBooking.is_recurring,
+        sequence: pendingRecurringBooking.recurring_sequence,
+        total: pendingRecurringBooking.recurring_total
+      })
+
+      const result = await deleteRecurringBookings(
+        pendingRecurringBooking.id,
+        scope
+      )
+
+      console.log('📊 Delete result:', result)
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete recurring bookings')
+      }
+
+      toast({
+        title: 'Success',
+        description: `Deleted ${result.deletedCount} booking(s) successfully`,
+      })
+
+      setShowRecurringEditDialog(false)
+      setPendingRecurringBooking(null)
+      fetchBookings()
+    } catch (error) {
+      console.error('Delete recurring booking error:', error)
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }, [pendingRecurringBooking, toast, fetchBookings])
+
   // OPTIMIZED: Wrap event handlers with useCallback to prevent unnecessary re-renders
   const deleteBooking = useCallback(async (bookingId: string) => {
     try {
+      // Check if this is a recurring booking
+      const booking = bookings.find(b => b.id === bookingId)
+
+      if (booking?.is_recurring && booking.recurring_group_id) {
+        // Show recurring edit dialog
+        setPendingRecurringBooking(booking)
+        setRecurringEditAction('delete')
+        setShowRecurringEditDialog(true)
+        return
+      }
+
+      // Non-recurring booking - delete normally
       const { error } = await supabase
         .from('bookings')
         .delete()
@@ -565,7 +709,65 @@ export function AdminBookings() {
         variant: 'destructive',
       })
     }
-  }, [toast, fetchBookings])
+  }, [bookings, toast, fetchBookings])
+
+  // Delete entire recurring group
+  const deleteRecurringGroup = useCallback(async (groupId: string) => {
+    try {
+      console.log('🔍 Fetching group:', groupId)
+
+      // ดึง booking แรกของ group จาก database (ต้อง select ทุก field รวม recurring fields)
+      const { data: firstBooking, error: fetchError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          customers (id, full_name, email),
+          service_packages (name, service_type),
+          service_packages_v2:package_v2_id (name, service_type),
+          profiles (full_name),
+          ${TEAMS_WITH_LEAD_QUERY}
+        `)
+        .eq('recurring_group_id', groupId)
+        .order('recurring_sequence')
+        .limit(1)
+        .single()
+
+      console.log('📦 First booking:', firstBooking)
+      console.log('❌ Fetch error:', fetchError)
+
+      if (fetchError) throw fetchError
+      if (!firstBooking) {
+        throw new Error('Recurring group not found')
+      }
+
+      // Transform teams data
+      const processedBooking = {
+        ...firstBooking,
+        service_packages: firstBooking.service_packages || firstBooking.service_packages_v2,
+        teams: transformTeamsData(firstBooking.teams),
+      }
+
+      console.log('✅ Setting pending booking:', {
+        id: processedBooking.id,
+        groupId: processedBooking.recurring_group_id,
+        isRecurring: processedBooking.is_recurring,
+        sequence: processedBooking.recurring_sequence,
+        total: processedBooking.recurring_total
+      })
+
+      // แสดง RecurringEditDialog เพื่อให้เลือก scope การลบ
+      setPendingRecurringBooking(processedBooking as Booking)
+      setRecurringEditAction('delete')
+      setShowRecurringEditDialog(true)
+    } catch (error) {
+      console.error('Delete recurring group error:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete recurring group',
+        variant: 'destructive',
+      })
+    }
+  }, [toast])
 
   const openBookingDetail = useCallback((booking: Booking) => {
     setSelectedBooking(booking)
@@ -602,9 +804,45 @@ export function AdminBookings() {
       setEditAssignmentType('none')
     }
 
+    // Set package selection for PackageSelector component
+    if (booking.service_package_id || ('package_v2_id' in booking && booking.package_v2_id)) {
+      const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+
+      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
+      const pkg = servicePackages.find(p => p.id === packageId)
+
+      if (pkg) {
+        // Check if this is a V2 Tiered Pricing package
+        const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
+
+        if (isTiered && 'area_sqm' in booking && 'frequency' in booking && booking.area_sqm && booking.frequency) {
+          // V2 Tiered Pricing - restore area and frequency
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'tiered',
+            areaSqm: Number(booking.area_sqm) || 0,
+            frequency: (booking.frequency as 1 | 2 | 4 | 8) || 1,
+            price: booking.total_price || 0,
+            requiredStaff: 1, // Will be recalculated by PackageSelector
+            packageName: pkg.name,
+          })
+        } else {
+          // Fixed Pricing (V1 หรือ V2)
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'fixed',
+            price: Number(pkg.base_price || booking.total_price || 0),
+            requiredStaff: 1,
+            packageName: pkg.name,
+            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
+          })
+        }
+      }
+    }
+
     setIsEditOpen(true)
     setIsDetailOpen(false)
-  }, [editForm])
+  }, [editForm, servicePackages])
 
 
 
@@ -629,12 +867,30 @@ export function AdminBookings() {
 
         {/* Filters skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-full sm:w-48" />
-              <Skeleton className="h-10 w-full sm:w-48" />
-              <Skeleton className="h-10 w-full sm:w-48" />
+          <CardContent className="pt-6 space-y-4">
+            {/* Quick Filters skeleton */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-28" />
+            </div>
+
+            {/* Main Filters skeleton - 4 columns grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-10 w-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-10 flex-1" />
+                <Skeleton className="h-10 flex-1" />
+              </div>
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Additional Filters skeleton - 2 columns grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           </CardContent>
         </Card>
@@ -642,10 +898,29 @@ export function AdminBookings() {
         {/* Bookings list skeleton */}
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-40" />
+            {/* BulkActionsToolbar skeleton */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-6 w-40" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Pagination Controls skeleton - Top */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-10 w-20" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-56" />
+                </div>
+              </div>
+
+              {/* Booking cards skeleton */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
@@ -693,10 +968,13 @@ export function AdminBookings() {
 
         <BookingCreateModal
           isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
+          onClose={() => {
+            setIsDialogOpen(false); setCreatePackageSelection(null);
+          }}
           onSuccess={() => {
             // Realtime subscription will update the list automatically
             setIsDialogOpen(false)
+            setCreatePackageSelection(null) // Clear selection after success
           }}
           servicePackages={servicePackages}
           staffMembers={staffMembers}
@@ -705,14 +983,25 @@ export function AdminBookings() {
             setIsDialogOpen(false)
             setIsAvailabilityModalOpen(true)
           }}
-          createForm={createForm}
+          createForm={toBookingForm(createForm)}
           assignmentType={createAssignmentType}
           setAssignmentType={setCreateAssignmentType}
           calculateEndTime={calculateEndTime}
+          packageSelection={createPackageSelection}
+          setPackageSelection={setCreatePackageSelection}
+          recurringDates={createRecurringDates}
+          setRecurringDates={setCreateRecurringDates}
+          enableRecurring={createEnableRecurring}
+          setEnableRecurring={setCreateEnableRecurring}
+          recurringPattern={createRecurringPattern}
+          setRecurringPattern={setCreateRecurringPattern}
         />
 
         {/* Staff Availability Modal - Create Form */}
-        {createForm.formData.service_package_id && createForm.formData.booking_date && createForm.formData.start_time && (
+        {(createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
+          // ถ้าเป็น recurring ใช้ recurringDates[0], ถ้าไม่ใช่ใช้ booking_date
+          (createEnableRecurring ? createRecurringDates.length > 0 : createForm.formData.booking_date) &&
+          createForm.formData.start_time && (
           <StaffAvailabilityModal
             isOpen={isAvailabilityModalOpen}
             onClose={() => {
@@ -738,25 +1027,22 @@ export function AdminBookings() {
                 description: 'Team has been assigned to the booking',
               })
             }}
-            date={createForm.formData.booking_date}
+            // Recurring: ส่ง dates array, Non-recurring: ส่ง date เดี่ยว
+            date={!createEnableRecurring ? createForm.formData.booking_date : undefined}
+            dates={createEnableRecurring && createRecurringDates.length > 0 ? createRecurringDates : undefined}
             startTime={createForm.formData.start_time}
-            endTime={
-              createForm.formData.service_package_id
-                ? calculateEndTime(
-                    createForm.formData.start_time,
-                    servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.duration_minutes || 0
-                  )
-                : createForm.formData.end_time || ''
-            }
-            servicePackageId={createForm.formData.service_package_id}
+            endTime={createForm.formData.end_time || ''}
+            servicePackageId={createForm.formData.service_package_id || createForm.formData.package_v2_id || ''}
             servicePackageName={
-              servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.name
+              createForm.formData.service_package_id
+                ? servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.name
+                : 'Service Package'
             }
           />
         )}
 
         {/* Staff Availability Modal - Edit Form */}
-        {editForm.formData.service_package_id && editForm.formData.booking_date && editForm.formData.start_time && (
+        {(editForm.formData.service_package_id || editForm.formData.package_v2_id) && editForm.formData.booking_date && editForm.formData.start_time && (
           <StaffAvailabilityModal
             isOpen={isEditAvailabilityModalOpen}
             onClose={() => {
@@ -784,17 +1070,12 @@ export function AdminBookings() {
             }}
             date={editForm.formData.booking_date}
             startTime={editForm.formData.start_time}
-            endTime={
-              editForm.formData.service_package_id
-                ? calculateEndTime(
-                    editForm.formData.start_time || '',
-                    servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.duration_minutes || 0
-                  )
-                : editForm.formData.end_time || ''
-            }
-            servicePackageId={editForm.formData.service_package_id}
+            endTime={editForm.formData.end_time || ''}
+            servicePackageId={editForm.formData.service_package_id || editForm.formData.package_v2_id || ''}
             servicePackageName={
-              servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.name
+              editForm.formData.service_package_id
+                ? servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.name
+                : 'Service Package'
             }
             currentAssignedStaffId={editForm.formData.staff_id}
             currentAssignedTeamId={editForm.formData.team_id}
@@ -843,10 +1124,12 @@ export function AdminBookings() {
           setIsEditOpen(false)
           setIsEditAvailabilityModalOpen(true)
         }}
-        editForm={editForm}
+        editForm={toBookingForm(editForm)}
         assignmentType={editAssignmentType}
         onAssignmentTypeChange={setEditAssignmentType}
         calculateEndTime={calculateEndTime}
+        packageSelection={editPackageSelection}
+        setPackageSelection={setEditPackageSelection}
       />
 
       {/* Status Change Confirmation Dialog */}
@@ -900,6 +1183,7 @@ export function AdminBookings() {
             onNextPage={nextPage}
             onLastPage={goToLast}
             onDeleteBooking={deleteBooking}
+            onDeleteRecurringGroup={deleteRecurringGroup}
             onStatusChange={handleStatusChange}
             formatTime={formatTime}
             getStatusBadge={getStatusBadge}
@@ -909,6 +1193,18 @@ export function AdminBookings() {
           />
         </CardContent>
       </Card>
+
+      {/* Recurring Edit/Delete Dialog */}
+      {pendingRecurringBooking && (
+        <RecurringEditDialog
+          open={showRecurringEditDialog}
+          onOpenChange={setShowRecurringEditDialog}
+          onConfirm={handleRecurringDelete}
+          action={recurringEditAction}
+          recurringSequence={pendingRecurringBooking.recurring_sequence || 1}
+          recurringTotal={pendingRecurringBooking.recurring_total || 1}
+        />
+      )}
     </div>
   )
 }

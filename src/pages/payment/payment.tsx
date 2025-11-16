@@ -17,6 +17,7 @@ export function PaymentPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
   const [booking, setBooking] = useState<Booking | null>(null)
+  const [recurringBookings, setRecurringBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null)
 
@@ -27,14 +28,39 @@ export function PaymentPage() {
         .select(`
           *,
           customers (id, full_name, email, phone),
-          service_packages (name, service_type)
+          service_packages (name, service_type),
+          service_packages_v2 (name, service_type)
         `)
         .eq('id', bookingId)
         .single()
 
       if (error) throw error
 
+      // ✅ ถ้าเป็น child booking ให้ redirect ไปที่ parent
+      if (data.parent_booking_id) {
+        navigate(`/payment/${data.parent_booking_id}`, { replace: true })
+        return
+      }
+
       setBooking(data)
+
+      // ✅ ถ้าเป็น recurring booking ให้ fetch ทั้ง group
+      if (data.is_recurring && data.recurring_group_id) {
+        const { data: groupBookings, error: groupError } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            customers (id, full_name, email, phone),
+            service_packages (name, service_type),
+            service_packages_v2 (name, service_type)
+          `)
+          .eq('recurring_group_id', data.recurring_group_id)
+          .order('booking_date')
+
+        if (!groupError && groupBookings) {
+          setRecurringBookings(groupBookings)
+        }
+      }
 
       // Redirect if already paid
       if (data.payment_status === 'paid') {
@@ -106,6 +132,12 @@ export function PaymentPage() {
     )
   }
 
+  // Calculate total amount for recurring bookings
+  const isRecurring = booking.is_recurring && recurringBookings.length > 0
+  const totalAmount = isRecurring
+    ? recurringBookings.reduce((sum, b) => sum + Number(b.total_price), 0)
+    : booking.total_price
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -116,6 +148,11 @@ export function PaymentPage() {
           </h1>
           <p className="text-gray-600">
             Booking ID: <span className="font-mono font-semibold">#{booking.id.slice(0, 8)}</span>
+            {isRecurring && (
+              <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                🔄 Recurring ({recurringBookings.length} sessions)
+              </span>
+            )}
           </p>
         </div>
 
@@ -125,7 +162,9 @@ export function PaymentPage() {
             {/* Service Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Booking Summary</CardTitle>
+                <CardTitle className="text-lg">
+                  {isRecurring ? 'Recurring Booking Summary' : 'Booking Summary'}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Service */}
@@ -133,31 +172,52 @@ export function PaymentPage() {
                   <p className="text-sm text-muted-foreground mb-1">Service</p>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      {booking.service_packages?.service_type || 'Service'}
+                      {(booking.service_packages?.service_type || booking.service_packages_v2?.service_type) || 'Service'}
                     </Badge>
-                    <p className="font-medium">{booking.service_packages?.name}</p>
+                    <p className="font-medium">{booking.service_packages?.name || booking.service_packages_v2?.name}</p>
                   </div>
                 </div>
 
-                {/* Date & Time */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Recurring Schedule */}
+                {isRecurring ? (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Date</p>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <p className="font-medium">{formatDate(booking.booking_date)}</p>
+                    <p className="text-sm text-muted-foreground mb-2">Schedule ({recurringBookings.length} sessions)</p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {recurringBookings.map((b, index) => (
+                        <div key={b.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-blue-600">{index + 1}/{recurringBookings.length}</span>
+                            <Calendar className="h-3 w-3 text-gray-400" />
+                            <span>{formatDate(b.booking_date)}</span>
+                            <Clock className="h-3 w-3 text-gray-400 ml-2" />
+                            <span>{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</span>
+                          </div>
+                          <span className="text-green-600 font-medium">{formatCurrency(b.total_price)}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Time</p>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <p className="font-medium">
-                        {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
-                      </p>
+                ) : (
+                  /* Single Date & Time */
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Date</p>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <p className="font-medium">{formatDate(booking.booking_date)}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Time</p>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        <p className="font-medium">
+                          {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Location */}
                 <div>
@@ -181,12 +241,23 @@ export function PaymentPage() {
 
                 {/* Total */}
                 <div className="pt-4 border-t">
+                  {isRecurring && (
+                    <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+                      <span>Price per session:</span>
+                      <span>{formatCurrency(booking.total_price)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <p className="text-lg font-semibold">Total Amount</p>
                     <p className="text-3xl font-bold text-green-600">
-                      {formatCurrency(booking.total_price)}
+                      {formatCurrency(totalAmount)}
                     </p>
                   </div>
+                  {isRecurring && (
+                    <p className="text-xs text-gray-500 text-right mt-1">
+                      Pay once for all {recurringBookings.length} sessions
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -251,15 +322,17 @@ export function PaymentPage() {
             {/* Payment Method Content */}
             {paymentMethod === 'promptpay' && (
               <PromptPayQR
-                amount={booking.total_price}
+                amount={totalAmount}
                 bookingId={booking.id}
+                recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
               />
             )}
 
             {paymentMethod === 'slip' && (
               <SlipUpload
                 bookingId={booking.id}
-                amount={booking.total_price}
+                amount={totalAmount}
+                recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
                 onSuccess={() => navigate(`/payment/${booking.id}/success`)}
               />
             )}

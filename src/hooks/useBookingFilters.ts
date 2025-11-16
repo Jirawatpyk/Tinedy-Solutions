@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDebounce } from './use-debounce'
+import { getBangkokDateString } from '@/lib/utils'
 
 /**
  * Interface defining UI state for booking filter options
@@ -159,12 +160,21 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
 
   /**
    * Set quick date range filters (today, this week, this month)
+   * ใช้ getBangkokDateString() เพื่อให้วันที่ถูกต้องตาม timezone Bangkok (UTC+7)
    *
    * @param filter - The quick filter type to apply
    */
   const setQuickFilter = useCallback((filter: 'today' | 'week' | 'month') => {
-    const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
+    const now = new Date()
+    const todayStr = getBangkokDateString()
+
+    // Helper function to format local date as YYYY-MM-DD
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
 
     if (filter === 'today') {
       setFilters((prev) => ({
@@ -173,22 +183,26 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
         dateTo: todayStr,
       }))
     } else if (filter === 'week') {
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - today.getDay())
+      // คำนวณวันแรกและวันสุดท้ายของสัปดาห์ (อาทิตย์ - เสาร์)
+      const weekStart = new Date(now)
+      weekStart.setDate(now.getDate() - now.getDay()) // วันอาทิตย์
       const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekStart.getDate() + 6)
+      weekEnd.setDate(weekStart.getDate() + 6) // วันเสาร์
+
       setFilters((prev) => ({
         ...prev,
-        dateFrom: weekStart.toISOString().split('T')[0],
-        dateTo: weekEnd.toISOString().split('T')[0],
+        dateFrom: formatLocalDate(weekStart),
+        dateTo: formatLocalDate(weekEnd),
       }))
     } else if (filter === 'month') {
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      // คำนวณวันแรกและวันสุดท้ายของเดือน
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
       setFilters((prev) => ({
         ...prev,
-        dateFrom: monthStart.toISOString().split('T')[0],
-        dateTo: monthEnd.toISOString().split('T')[0],
+        dateFrom: formatLocalDate(monthStart),
+        dateTo: formatLocalDate(monthEnd),
       }))
     }
   }, [])

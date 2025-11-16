@@ -67,5 +67,51 @@ export function calculateEndTime(startTime: string, durationMinutes: number): st
  * // Returns: "14:30"
  */
 export function formatTime(time: string): string {
+  if (!time) return ''
   return time.split(':').slice(0, 2).join(':')
+}
+
+/**
+ * Supabase query string for fetching teams with their team lead
+ * This is used in Supabase select queries to fetch team data along with the team lead's profile
+ */
+export const TEAMS_WITH_LEAD_QUERY = 'teams(id, name, team_lead:team_lead_id(id, full_name))'
+
+export interface TeamLead {
+  id: string
+  full_name: string
+  email?: string
+  avatar_url?: string | null
+}
+
+export interface TeamData {
+  id?: string
+  name?: string
+  team_lead?: TeamLead | TeamLead[] | null
+}
+
+/**
+ * Transform teams data from Supabase query result
+ * Converts the nested team_lead structure to a flat structure
+ *
+ * @param teams - Raw teams data from Supabase (can be any shape from Supabase)
+ * @returns Transformed teams object or null
+ */
+export function transformTeamsData(teams: unknown): TeamData | null {
+  if (!teams) return null
+
+  // Type guard to check if it's an object
+  if (typeof teams !== 'object') return null
+
+  // If teams is already in the correct format, return as is
+  if ('name' in teams && !Array.isArray(teams)) {
+    return teams as TeamData
+  }
+
+  // Handle array of teams (shouldn't happen in current schema)
+  if (Array.isArray(teams) && teams.length > 0) {
+    return teams[0] as TeamData
+  }
+
+  return null
 }

@@ -330,7 +330,7 @@ export function AdminStaff() {
           </div>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
             <Plus className="h-4 w-4 mr-2" />
-            Add Staff Member
+            New Staff
           </Button>
         </div>
 
@@ -410,7 +410,7 @@ export function AdminStaff() {
               onClick={resetForm}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Staff Member
+              New Staff
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">

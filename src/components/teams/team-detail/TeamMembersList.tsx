@@ -43,6 +43,16 @@ const getInitials = (name: string) => {
 export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
   const { toast } = useToast()
 
+  // Sort members: Team lead first, then others
+  const sortedMembers = [...(team.members || [])].sort((a, b) => {
+    // Team lead always comes first
+    if (a.id === team.team_lead_id) return -1
+    if (b.id === team.team_lead_id) return 1
+
+    // Then sort by name
+    return a.full_name.localeCompare(b.full_name)
+  })
+
   const handleRemoveMember = async (staffId: string) => {
     try {
       const { error } = await supabase
@@ -122,7 +132,7 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {!team.members || team.members.length === 0 ? (
+        {sortedMembers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p>No members yet</p>
@@ -130,7 +140,7 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {team.members.map((member) => (
+            {sortedMembers.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center gap-3 p-3 rounded-md hover:bg-muted transition-colors group"

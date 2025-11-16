@@ -13,8 +13,8 @@ SELECT
   c.relationship_level,
   c.created_at as customer_since,
   COUNT(b.id) as total_bookings,
-  COALESCE(SUM(CASE WHEN b.status = 'completed' THEN sp.price ELSE 0 END), 0) as lifetime_value,
-  COALESCE(AVG(CASE WHEN b.status = 'completed' THEN sp.price END), 0) as avg_booking_value,
+  COALESCE(SUM(CASE WHEN b.status = 'completed' THEN b.total_price ELSE 0 END), 0) as lifetime_value,
+  COALESCE(AVG(CASE WHEN b.status = 'completed' THEN b.total_price END), 0) as avg_booking_value,
   MAX(b.booking_date) as last_booking_date,
   MIN(b.booking_date) as first_booking_date,
   COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as completed_bookings,
@@ -85,7 +85,7 @@ SELECT
   sp.service_type,
   COUNT(b.id) as times_booked,
   MAX(b.booking_date) as last_booked,
-  COALESCE(SUM(CASE WHEN b.status = 'completed' THEN sp.price ELSE 0 END), 0) as total_spent,
+  COALESCE(SUM(CASE WHEN b.status = 'completed' THEN b.total_price ELSE 0 END), 0) as total_spent,
   -- Rank services by booking frequency for each customer
   ROW_NUMBER() OVER (PARTITION BY c.id ORDER BY COUNT(b.id) DESC) as preference_rank
 FROM customers c

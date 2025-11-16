@@ -47,11 +47,15 @@ import {
   getTopCustomers,
   calculateStaffMetrics,
   getStaffPerformance,
+  calculateTeamMetrics,
+  getTeamPerformance,
   getDateRangePreset,
   type ChartDataPoint,
   type CustomerWithBookings,
   type Staff,
   type StaffWithBookings,
+  type Team,
+  type TeamWithBookings,
 } from '@/lib/analytics'
 import { RevenueBookingsTab } from '@/components/reports/tabs/RevenueBookingsTab'
 import { CustomersTab } from '@/components/reports/tabs/CustomersTab'
@@ -59,8 +63,6 @@ import { StaffTab } from '@/components/reports/tabs/StaffTab'
 import { TeamsTab } from '@/components/reports/tabs/TeamsTab'
 import type {
   BookingWithService,
-  Team,
-  TeamWithBookings,
 } from '@/types/reports'
 
 export function AdminReports() {
@@ -69,7 +71,7 @@ export function AdminReports() {
   const [customersWithBookings, setCustomersWithBookings] = useState<CustomerWithBookings[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [staffWithBookings, setStaffWithBookings] = useState<StaffWithBookings[]>([])
-  const [_teams, setTeams] = useState<Team[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [teamsWithBookings, setTeamsWithBookings] = useState<TeamWithBookings[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('thisMonth')
@@ -87,11 +89,17 @@ export function AdminReports() {
           start_time,
           total_price,
           status,
+          payment_status,
           created_at,
           customer_id,
           staff_id,
           service_package_id,
+          package_v2_id,
           service_packages (
+            name,
+            service_type
+          ),
+          service_packages_v2:package_v2_id (
             name,
             service_type
           )
@@ -100,7 +108,7 @@ export function AdminReports() {
 
       if (error) throw error
 
-      // Transform Supabase data - service_packages comes as array, we need single object
+      // Transform Supabase data - service_packages comes as array, we need single object (V1 + V2)
       interface SupabaseBooking {
         id: string
         booking_date: string
@@ -111,15 +119,23 @@ export function AdminReports() {
         customer_id: string
         staff_id: string | null
         service_package_id: string
+        package_v2_id: string | null
         service_packages: { name: string; service_type: string }[] | { name: string; service_type: string } | null
+        service_packages_v2: { name: string; service_type: string }[] | { name: string; service_type: string } | null
       }
 
-      const transformedBookings = (data as SupabaseBooking[] || []).map((booking): BookingWithService => ({
-        ...booking,
-        service_packages: Array.isArray(booking.service_packages)
-          ? booking.service_packages[0] || null
-          : booking.service_packages
-      }))
+      const transformedBookings = (data as SupabaseBooking[] || []).map((booking): BookingWithService => {
+        // Merge V1 and V2 package data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const servicePackages = booking.service_packages || (booking as any).service_packages_v2
+
+        return {
+          ...booking,
+          service_packages: Array.isArray(servicePackages)
+            ? servicePackages[0] || null
+            : servicePackages
+        }
+      })
 
       setBookings(transformedBookings)
     } catch (error) {
@@ -145,7 +161,7 @@ export function AdminReports() {
           .order('full_name'),
         supabase
           .from('bookings')
-          .select('id, booking_date, total_price, status, created_at, customer_id')
+          .select('id, booking_date, total_price, status, payment_status, created_at, customer_id')
       ])
 
       if (customersResult.error) throw customersResult.error
@@ -187,40 +203,103 @@ export function AdminReports() {
   // OPTIMIZED: Fetch staff and bookings in parallel (40-60% faster)
   const fetchStaff = useCallback(async () => {
     try {
-      // Fetch staff and bookings in parallel instead of sequential
-      const [staffResult, bookingsResult] = await Promise.all([
+      // Fetch staff, staff bookings, team members, and team bookings in parallel
+      const [staffResult, staffBookingsResult, teamMembersResult, teamBookingsResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, full_name, email, role, created_at')
           .order('full_name'),
         supabase
           .from('bookings')
-          .select('id, booking_date, total_price, status, staff_id, created_at')
-          .not('staff_id', 'is', null)
+          .select('id, booking_date, total_price, status, payment_status, staff_id, created_at')
+          .not('staff_id', 'is', null),
+        supabase
+          .from('team_members')
+          .select('team_id, staff_id'),
+        supabase
+          .from('bookings')
+          .select('id, booking_date, total_price, status, payment_status, team_id, created_at')
+          .not('team_id', 'is', null)
       ])
 
       if (staffResult.error) throw staffResult.error
-      if (bookingsResult.error) throw bookingsResult.error
+      if (staffBookingsResult.error) throw staffBookingsResult.error
+      if (teamMembersResult.error) throw teamMembersResult.error
+      if (teamBookingsResult.error) throw teamBookingsResult.error
 
       const staffData = staffResult.data
-      const bookingsData = bookingsResult.data
+      const staffBookingsData = staffBookingsResult.data
+      const teamMembersData = teamMembersResult.data
+      const teamBookingsData = teamBookingsResult.data
 
       setStaff(staffData || [])
 
-      // Group bookings by staff
-      type StaffBooking = { id: string; booking_date: string; total_price: number; status: string; staff_id: string; created_at: string }
+      // Create map of staff -> teams they belong to
+      const staffToTeamsMap = new Map<string, string[]>()
+      teamMembersData?.forEach((tm) => {
+        if (!staffToTeamsMap.has(tm.staff_id)) {
+          staffToTeamsMap.set(tm.staff_id, [])
+        }
+        staffToTeamsMap.get(tm.staff_id)?.push(tm.team_id)
+      })
+
+      // Count team members for each team
+      const teamMemberCounts = new Map<string, number>()
+      teamMembersData?.forEach((tm) => {
+        const count = teamMemberCounts.get(tm.team_id) || 0
+        teamMemberCounts.set(tm.team_id, count + 1)
+      })
+
+      // Group team bookings by team_id
+      const teamBookingsMap = new Map<string, typeof teamBookingsData>()
+      teamBookingsData?.forEach((booking) => {
+        const teamId = booking.team_id
+        if (teamId) {
+          if (!teamBookingsMap.has(teamId)) {
+            teamBookingsMap.set(teamId, [])
+          }
+          teamBookingsMap.get(teamId)?.push(booking)
+        }
+      })
+
+      // Group staff bookings by staff_id
+      type StaffBooking = { id: string; booking_date: string; total_price: number; status: string; payment_status?: string; staff_id?: string; team_id?: string; team_member_count?: number; created_at: string }
       const staffBookingsMap = new Map<string, StaffBooking[]>()
-      bookingsData?.forEach((booking) => {
+
+      // Add individual staff bookings
+      staffBookingsData?.forEach((booking) => {
         const staffId = booking.staff_id
         if (staffId) {
           if (!staffBookingsMap.has(staffId)) {
             staffBookingsMap.set(staffId, [])
           }
-          staffBookingsMap.get(staffId)?.push(booking)
+          staffBookingsMap.get(staffId)?.push({
+            ...booking,
+            staff_id: booking.staff_id,
+          })
         }
       })
 
-      // Merge staff with their bookings
+      // Add team bookings for each staff member
+      staffData?.forEach((staff) => {
+        const teams = staffToTeamsMap.get(staff.id) || []
+        teams.forEach((teamId) => {
+          const teamBookings = teamBookingsMap.get(teamId) || []
+          const memberCount = teamMemberCounts.get(teamId) || 1
+          teamBookings.forEach((booking) => {
+            if (!staffBookingsMap.has(staff.id)) {
+              staffBookingsMap.set(staff.id, [])
+            }
+            staffBookingsMap.get(staff.id)?.push({
+              ...booking,
+              team_id: booking.team_id,
+              team_member_count: memberCount,
+            })
+          })
+        })
+      })
+
+      // Merge staff with their bookings (both individual and team bookings)
       const merged = (staffData || []).map((staffMember) => ({
         ...staffMember,
         bookings: staffBookingsMap.get(staffMember.id) || [],
@@ -258,7 +337,7 @@ export function AdminReports() {
           .order('name'),
         supabase
           .from('bookings')
-          .select('id, booking_date, total_price, status, team_id, created_at')
+          .select('id, booking_date, total_price, status, payment_status, team_id, created_at')
           .not('team_id', 'is', null)
       ])
 
@@ -380,6 +459,7 @@ export function AdminReports() {
       booking_date: b.booking_date,
       total_price: b.total_price,
       status: b.status,
+      payment_status: b.payment_status,
       created_at: b.created_at,
       customer_id: b.customer_id,
       staff_id: b.staff_id,
@@ -411,6 +491,7 @@ export function AdminReports() {
       start_time: b.start_time,
       total_price: b.total_price,
       status: b.status,
+      payment_status: b.payment_status,
       created_at: b.created_at,
       staff_id: b.staff_id,
       service_type: b.service_packages?.service_type,
@@ -444,8 +525,10 @@ export function AdminReports() {
     [customersWithBookings, mappedBookings]
   )
   const topCustomers = useMemo(() => getTopCustomers(customersWithBookings, 10), [customersWithBookings])
-  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, mappedBookings), [staff, mappedBookings])
+  const staffMetrics = useMemo(() => calculateStaffMetrics(staff, staffWithBookings), [staff, staffWithBookings])
   const staffPerformance = useMemo(() => getStaffPerformance(staffWithBookings), [staffWithBookings])
+  const teamMetrics = useMemo(() => calculateTeamMetrics(teams, teamsWithBookings), [teams, teamsWithBookings])
+  const teamPerformance = useMemo(() => getTeamPerformance(teamsWithBookings), [teamsWithBookings])
 
   const serviceTypePieData = useMemo(
     () => [
@@ -661,7 +744,8 @@ export function AdminReports() {
         {/* Tab 4: Team Analytics */}
         <TabsContent value="teams" className="space-y-6">
           <TeamsTab
-            teamsWithBookings={teamsWithBookings}
+            teamMetrics={teamMetrics}
+            teamPerformance={teamPerformance}
             dateRange={dateRange}
           />
         </TabsContent>

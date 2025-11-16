@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { BookingCreateModal } from '../BookingCreateModal'
 import { createMockSupabaseError } from '@/test/mocks/supabase'
 import { createMockServicePackage, createMockCustomer } from '@/test/factories'
-import type { ServicePackage } from '@/types'
+import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
 
 // Mock modules
 vi.mock('@/lib/supabase', () => ({
@@ -58,21 +58,33 @@ describe('BookingCreateModal', () => {
     return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}:00`
   })
 
-  const mockServicePackages: ServicePackage[] = [
-    createMockServicePackage({
-      id: 'service-1',
-      name: 'Basic Cleaning',
-      price: 1500,
-      duration_minutes: 120,
-      service_type: 'cleaning',
-    }),
-    createMockServicePackage({
-      id: 'service-2',
-      name: 'Deep Cleaning',
-      price: 2500,
-      duration_minutes: 180,
-      service_type: 'cleaning',
-    }),
+  const mockServicePackages: UnifiedServicePackage[] = [
+    {
+      ...createMockServicePackage({
+        id: 'service-1',
+        name: 'Basic Cleaning',
+        price: 1500,
+        duration_minutes: 120,
+        service_type: 'cleaning',
+      }),
+      pricing_model: 'fixed',
+      base_price: 1500,
+      updated_at: '2025-01-01T00:00:00Z',
+      _source: 'v1' as const,
+    },
+    {
+      ...createMockServicePackage({
+        id: 'service-2',
+        name: 'Deep Cleaning',
+        price: 2500,
+        duration_minutes: 180,
+        service_type: 'cleaning',
+      }),
+      pricing_model: 'fixed',
+      base_price: 2500,
+      updated_at: '2025-01-01T00:00:00Z',
+      _source: 'v1' as const,
+    },
   ]
 
   const mockStaffMembers = [
@@ -89,6 +101,8 @@ describe('BookingCreateModal', () => {
   let mockHandleChange: any
   let mockSetValues: any
   let mockReset: any
+  let mockPackageSelection: any
+  let mockSetPackageSelection: any
 
   beforeEach(() => {
     mockFormData = {}
@@ -100,6 +114,24 @@ describe('BookingCreateModal', () => {
     })
     mockReset = vi.fn(() => {
       mockFormData = {}
+    })
+
+    // Mock package selection state
+    mockPackageSelection = {
+      packageId: '',
+      pricingModel: 'fixed' as const,
+      price: 0,
+      requiredStaff: 1,
+      packageName: '',
+    }
+    mockSetPackageSelection = vi.fn((data) => {
+      if (data) {
+        Object.assign(mockPackageSelection, data)
+      } else {
+        mockPackageSelection.packageId = ''
+        mockPackageSelection.price = 0
+        mockPackageSelection.packageName = ''
+      }
     })
 
     vi.clearAllMocks()
@@ -128,6 +160,8 @@ describe('BookingCreateModal', () => {
     assignmentType: 'none' as const,
     setAssignmentType: mockSetAssignmentType,
     calculateEndTime: mockCalculateEndTime,
+    packageSelection: mockPackageSelection,
+    setPackageSelection: mockSetPackageSelection,
   })
 
   describe('Rendering', () => {

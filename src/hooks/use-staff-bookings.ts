@@ -10,14 +10,6 @@ interface RealtimeBookingPayload {
   [key: string]: unknown
 }
 
-interface BookingWithPrice {
-  service_packages: {
-    price: number
-  } | {
-    price: number
-  }[] | null
-}
-
 interface ReviewData {
   rating: number
 }
@@ -36,6 +28,8 @@ export interface StaffBooking {
   created_at: string
   staff_id: string | null
   team_id: string | null
+  area_sqm?: number | null
+  frequency?: 1 | 2 | 4 | 8 | null
   customers: {
     id: string
     full_name: string
@@ -238,7 +232,7 @@ export function useStaffBookings() {
         (async () => {
           let query = supabase
             .from('bookings')
-            .select('service_packages (price)')
+            .select('service_packages (price), service_packages_v2:package_v2_id (name), total_price')
             .eq('status', 'completed')
             .gte('booking_date', startOfMonthStr)
           if (filterCondition) {
@@ -257,11 +251,10 @@ export function useStaffBookings() {
         ? reviewsResult.reduce((sum: number, r: ReviewData) => sum + r.rating, 0) / reviewsResult.length
         : 0
 
-      const totalEarnings = (earningsResult as BookingWithPrice[])?.reduce((sum, booking) => {
-        const price = Array.isArray(booking.service_packages)
-          ? booking.service_packages[0]?.price || 0
-          : booking.service_packages?.price || 0
-        return sum + price
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalEarnings = (earningsResult as any[])?.reduce((sum, booking) => {
+        // Use total_price for both V1 and V2 bookings
+        return sum + (booking.total_price || 0)
       }, 0) || 0
 
       setStats({
@@ -317,7 +310,8 @@ export function useStaffBookings() {
             .select(`
               *,
               customers (id, full_name, phone, avatar_url),
-              service_packages (id, name, duration_minutes, price)
+              service_packages (id, name, duration_minutes, price),
+              service_packages_v2:package_v2_id (id, name)
             `)
             .eq('booking_date', todayStr)
             .order('start_time', { ascending: true })
@@ -338,7 +332,8 @@ export function useStaffBookings() {
             .select(`
               *,
               customers (id, full_name, phone, avatar_url),
-              service_packages (id, name, duration_minutes, price)
+              service_packages (id, name, duration_minutes, price),
+              service_packages_v2:package_v2_id (id, name)
             `)
             .gt('booking_date', todayStr)
             .lte('booking_date', nextWeekStr)
@@ -361,7 +356,8 @@ export function useStaffBookings() {
             .select(`
               *,
               customers (id, full_name, phone, avatar_url),
-              service_packages (id, name, duration_minutes, price)
+              service_packages (id, name, duration_minutes, price),
+              service_packages_v2:package_v2_id (id, name)
             `)
             .lt('booking_date', todayStr)
             .gte('booking_date', thirtyDaysAgoStr)
@@ -388,13 +384,22 @@ export function useStaffBookings() {
         bookings: todayResult.data?.map(b => ({ date: b.booking_date, time: b.start_time }))
       })
 
-      const todayData = todayResult.data
-      const upcomingData = upcomingResult.data
-      const completedData = completedResult.data
+      // Merge V1 and V2 package data for all results
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mergePackages = (bookings: any[]) => {
+        return bookings.map(booking => ({
+          ...booking,
+          service_packages: booking.service_packages || booking.service_packages_v2
+        }))
+      }
 
-      setTodayBookings((todayData as StaffBooking[]) || [])
-      setUpcomingBookings((upcomingData as StaffBooking[]) || [])
-      setCompletedBookings((completedData as StaffBooking[]) || [])
+      const todayData = mergePackages(todayResult.data || [])
+      const upcomingData = mergePackages(upcomingResult.data || [])
+      const completedData = mergePackages(completedResult.data || [])
+
+      setTodayBookings(todayData as StaffBooking[])
+      setUpcomingBookings(upcomingData as StaffBooking[])
+      setCompletedBookings(completedData as StaffBooking[])
     } catch (err) {
       console.error('Error loading bookings:', err)
       setError(getErrorMessage(err))

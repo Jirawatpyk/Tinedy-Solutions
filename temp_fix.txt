@@ -1,0 +1,8 @@
+# Files to fix with eslint-disable-next-line:
+# use-staff-calendar.ts:146 (2 occurrences)
+# use-staff-profile.ts:111, 132
+# calendar.tsx:185, 348, 349, 358(2), 363, 364
+# customer-detail.tsx:282, 402
+# dashboard.tsx:164, 413
+# reports.tsx:126
+# weekly-schedule.tsx:231, 435, 436, 445(2), 450, 451

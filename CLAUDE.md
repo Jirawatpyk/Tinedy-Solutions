@@ -307,11 +307,19 @@ DO $$ ... $$;
 - `src/components/auth/` - Authentication components (ProtectedRoute, etc.)
 - `src/components/layout/` - Layout components (MainLayout, Sidebar, Header)
 - `src/components/booking/` - Booking-related components
+- `src/components/calendar/` - Calendar view components
 - `src/components/customers/` - Customer-related components
+- `src/components/dashboard/` - Dashboard components (stats cards, charts)
+- `src/components/schedule/` - Weekly schedule components
 - `src/components/staff/` - Staff-related components
+- `src/components/service-packages/` - Service package components
+- `src/components/reports/` - Reports and analytics components
+- `src/components/payment/` - Payment-related components
 - `src/components/chat/` - Chat system components
 - `src/components/notifications/` - Notification components
+- `src/components/charts/` - Reusable chart components
 - `src/components/common/` - Shared components (ConfirmDialog, EmptyState, StatCard, StatusBadge)
+- `src/components/error/` - Error handling components
 
 **State Management:**
 - Global auth state via Context
@@ -329,6 +337,19 @@ DO $$ ... $$;
 - `use-staff-availability-check.ts` - Staff availability validation
 - `use-settings.ts` - Application settings management
 - `use-toast.ts` - Toast notification hook
+- `useDashboardData.ts` - Dashboard data aggregation
+- `useBookingForm.ts` - Booking form state and validation
+- `useBookingFilters.ts` - Booking filtering logic
+- `useBookingPagination.ts` - Pagination for booking lists
+- `useBookingStatusManager.tsx` - Booking status updates
+- `useBulkActions.ts` - Bulk operations on bookings
+- `useConflictDetection.ts` - Booking conflict detection
+- `useChartAnimation.ts` - Chart animation utilities
+- `use-debounce.ts` - Debounce utility hook
+- `use-error-handler.ts` - Error handling utilities
+- `dashboard/useDashboardStats.ts` - Dashboard statistics
+- `dashboard/useDashboardCharts.ts` - Dashboard charts data
+- `chat/useChatMessages.ts` - Chat messaging functionality
 
 **Error Boundaries:**
 - Try-catch blocks for async operations
@@ -373,6 +394,12 @@ DO $$ ... $$;
 
 7. **Build Errors**: Always run `npm run build` before committing to catch TypeScript errors
 
+8. **Component Re-renders**: Use React.memo, useMemo, and useCallback appropriately to prevent unnecessary re-renders in large components
+
+9. **Chart Performance**: For charts with large datasets, implement data sampling or virtualization
+
+10. **State Management**: For components with 5+ useState, consider using useReducer for better organization
+
 ### Git Workflow
 
 **Commit Messages:**
@@ -394,10 +421,65 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 3. Commit with descriptive message
 4. Push to remote
 
+### Dashboard Architecture
+
+**Component Structure:**
+Dashboard ได้ถูก refactor เป็น modular components:
+- `src/components/dashboard/` - Dashboard components
+  - `DashboardStats.tsx` - Statistics cards (total bookings, revenue, etc.)
+  - `DashboardCharts.tsx` - Revenue and booking charts
+  - `BookingsByServiceChart.tsx` - Service breakdown chart
+  - `RecentActivity.tsx` - Recent activities timeline
+
+**Hooks:**
+- `src/hooks/dashboard/useDashboardStats.ts` - Dashboard statistics
+- `src/hooks/dashboard/useDashboardCharts.ts` - Chart data processing
+- `src/hooks/useChartAnimation.ts` - Chart animation utilities
+
+**Performance:**
+- Charts use React.memo for optimization
+- Data fetching with proper loading states
+- Responsive design for mobile/tablet/desktop
+
+### Reports & Analytics
+
+**Location:** [reports.tsx](src/pages/admin/reports.tsx)
+
+**Features:**
+- Revenue analysis by period (day/week/month/year)
+- Booking statistics and trends
+- Staff performance metrics
+- Customer analytics
+- Service package popularity
+- Export functionality (CSV, PDF)
+
+**Charts:**
+- Revenue over time (line chart)
+- Booking status distribution (pie chart)
+- Top performing staff (bar chart)
+- Service package breakdown
+
+### Payment System
+
+**Payment Pages:**
+- `src/pages/payment/payment.tsx` - Payment processing page
+- `src/pages/payment/payment-success.tsx` - Payment success confirmation
+
+**Components:**
+- `src/components/payment/` - Payment-related components
+
+**Integration Status:**
+- ✅ Payment UI implemented
+- ⚠️ Backend integration pending (Stripe/Omise/PromptPay)
+- PromptPay QR code generation available (`promptpay-qr` package)
+
 ### Feature Status
 
 **Implemented:**
 - Admin Dashboard with stats and charts ([dashboard.tsx](src/pages/admin/dashboard.tsx))
+  - Modular component architecture
+  - Real-time statistics
+  - Interactive charts with animation
 - Booking Management with calendar ([bookings.tsx](src/pages/admin/bookings.tsx), [calendar.tsx](src/pages/admin/calendar.tsx))
 - Customer Management with detailed profiles ([customers.tsx](src/pages/admin/customers.tsx), [customer-detail.tsx](src/pages/admin/customer-detail.tsx))
 - Staff Management with auto-generated staff numbers ([staff.tsx](src/pages/admin/staff.tsx))
@@ -405,16 +487,28 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - Chat system with realtime updates ([chat.tsx](src/pages/admin/chat.tsx))
 - Staff Portal (dashboard, calendar, profile) ([src/pages/staff/](src/pages/staff/))
 - Staff Availability and performance tracking
-- Service Packages ([service-packages.tsx](src/pages/admin/service-packages.tsx))
+- Service Packages V1 & V2 ([service-packages.tsx](src/pages/admin/service-packages.tsx), [service-packages-v2.tsx](src/pages/admin/service-packages-v2.tsx))
 - Reports & analytics with export ([reports.tsx](src/pages/admin/reports.tsx))
 - Weekly schedule view ([weekly-schedule.tsx](src/pages/admin/weekly-schedule.tsx))
 - Settings & notifications ([settings.tsx](src/pages/admin/settings.tsx))
+- Payment UI ([src/pages/payment/](src/pages/payment/))
+
+**Partially Implemented:**
+- Payment Integration (UI ready, backend pending)
+- SMS/Email Notifications (Edge function exists but not fully integrated)
 
 **Not Implemented:**
 - Customer Portal (customers cannot self-service)
-- Payment Integration (Stripe/Omise)
-- SMS/Email Notifications (Edge function exists but not fully integrated)
-- Advanced reporting features
+- Complete Payment Gateway Integration (Stripe/Omise)
+- Recurring Bookings (planned - see [RECURRING_BOOKINGS_PLAN.md](../RECURRING_BOOKINGS_PLAN.md))
+
+**Planned Improvements:**
+- See [OPTIMIZATION_ROADMAP.md](../OPTIMIZATION_ROADMAP.md) for refactoring and performance optimization plans
+  - God component refactoring
+  - Type safety improvements
+  - React Query integration
+  - Performance optimization with memoization
+  - Testing strategy
 
 ### Platform Notes
 

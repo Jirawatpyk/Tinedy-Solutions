@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,18 +16,18 @@ import { useToast } from '@/hooks/use-toast'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { CalendarCell } from '@/components/calendar/CalendarCell'
+import { BookingCard } from '@/components/calendar/BookingCard'
 import { getErrorMessage } from '@/lib/error-utils'
-import { formatTime } from '@/lib/booking-utils'
-import { formatCurrency } from '@/lib/utils'
-import type { ServicePackage } from '@/types'
+import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
+import { formatCurrency, getBangkokDateString } from '@/lib/utils'
+import type { PackageSelectionData } from '@/components/service-packages'
+import type { BookingFormState } from '@/hooks/useBookingForm'
+import { useServicePackages } from '@/hooks/useServicePackages'
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Clock,
-  User,
-  Briefcase,
-  Users,
   CheckCircle,
   TrendingUp,
   DollarSign,
@@ -39,11 +39,8 @@ import {
   endOfWeek,
   eachDayOfInterval,
   format,
-  isSameMonth,
-  isSameDay,
   addMonths,
   subMonths,
-  isToday,
 } from 'date-fns'
 
 interface Team {
@@ -58,53 +55,19 @@ interface Staff {
   role: string
 }
 
-interface BookingFormData {
-  customer_id?: string
-  full_name?: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  service_package_id?: string
-  booking_date?: string
-  start_time?: string
-  end_time?: string
-  total_price?: number
-  staff_id?: string
-  team_id?: string
-  notes?: string
-  status?: string
-}
-
-const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
-  in_progress: 'bg-purple-100 text-purple-800 border-purple-300',
-  completed: 'bg-green-100 text-green-800 border-green-300',
-  cancelled: 'bg-red-100 text-red-800 border-red-300',
-}
-
-const STATUS_DOTS = {
-  pending: 'bg-yellow-500',
-  confirmed: 'bg-blue-500',
-  in_progress: 'bg-purple-500',
-  completed: 'bg-green-500',
-  cancelled: 'bg-red-500',
-}
+// BookingFormData replaced with BookingFormState from @/hooks/useBookingForm
 
 export function AdminCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [staffMembers, setStaffMembers] = useState<Staff[]>([])
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([])
+  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+  const { packages: servicePackages } = useServicePackages()
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('staff')
+  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('all')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -113,14 +76,18 @@ export function AdminCalendar() {
   // Create Booking Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [createFormData, setCreateFormData] = useState<BookingFormData>({})
+  const [createFormData, setCreateFormData] = useState<BookingFormState>({})
   const [isCreateAvailabilityOpen, setIsCreateAvailabilityOpen] = useState(false)
 
   // Edit Booking Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editFormData, setEditFormData] = useState<BookingFormData>({})
+  const [editFormData, setEditFormData] = useState<BookingFormState>({})
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
+
+  // Package Selection State - Lifted to parent to persist across modal open/close
+  const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
+  const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
   const { toast } = useToast()
 
@@ -154,20 +121,7 @@ export function AdminCalendar() {
     }
   }, [])
 
-  const fetchServicePackages = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('service_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) throw error
-      setServicePackages(data || [])
-    } catch (error) {
-      console.error('Error fetching service packages:', error)
-    }
-  }, [])
+  // Service packages โหลดผ่าน useServicePackages hook แล้ว (ไม่ต้องมี fetchServicePackages อีกต่อไป)
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -188,10 +142,12 @@ export function AdminCalendar() {
           profiles (
             full_name
           ),
-          teams (
-            name
+          ${TEAMS_WITH_LEAD_QUERY},
+          service_packages (
+            name,
+            service_type
           ),
-          service_packages!inner (
+          service_packages_v2:package_v2_id (
             name,
             service_type
           )
@@ -201,14 +157,19 @@ export function AdminCalendar() {
         .order('start_time')
 
       if (error) throw error
-      // Transform array relations to single objects
-      const transformedData = (data || []).map((booking) => ({
-        ...booking,
-        customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-        profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-        teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
-        service_packages: Array.isArray(booking.service_packages) ? booking.service_packages[0] : booking.service_packages,
-      }))
+      // Transform array relations to single objects and merge V1/V2 packages
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const transformedData = (data || []).map((booking: any) => {
+        const servicePackages = booking.service_packages || booking.service_packages_v2
+
+        return {
+          ...booking,
+          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+          teams: transformTeamsData(booking.teams),
+          service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
+        }
+      })
       setBookings(transformedData as Booking[])
     } catch (error) {
       console.error('Error fetching bookings:', error)
@@ -222,7 +183,8 @@ export function AdminCalendar() {
     }
   }, [currentDate, toast])
 
-  const filterBookings = useCallback(() => {
+  // OPTIMIZATION 1: Memoize filtered bookings instead of using useCallback + useEffect
+  const filteredBookings = useMemo(() => {
     let filtered = bookings
 
     // Filter by view mode
@@ -246,31 +208,26 @@ export function AdminCalendar() {
       filtered = filtered.filter(b => b.status === selectedStatus)
     }
 
-    setFilteredBookings(filtered)
+    return filtered
   }, [bookings, selectedTeam, selectedStaff, selectedStatus, viewMode])
 
-  useEffect(() => {
-    // OPTIMIZE: Run all queries in parallel for better performance
-    Promise.all([
-      fetchBookings(),
-      fetchTeams(),
-      fetchStaffMembers(),
-      fetchServicePackages()
-    ])
-  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers, fetchServicePackages])
+  // OPTIMIZATION 2: Pre-calculate bookings grouped by date for O(1) lookup
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, Booking[]>()
+    filteredBookings.forEach(booking => {
+      const dateKey = booking.booking_date // Already in 'yyyy-MM-dd' format
+      const existing = map.get(dateKey)
+      if (existing) {
+        existing.push(booking) // Mutate existing array instead of creating new one
+      } else {
+        map.set(dateKey, [booking])
+      }
+    })
+    return map
+  }, [filteredBookings])
 
-  useEffect(() => {
-    filterBookings()
-  }, [filterBookings])
-
-  const getBookingsForDate = (date: Date) => {
-    return filteredBookings.filter((booking) =>
-      isSameDay(new Date(booking.booking_date), date)
-    )
-  }
-
-  // Calculate month stats
-  const getMonthStats = () => {
+  // OPTIMIZATION 3: Memoize month stats calculation
+  const monthStats = useMemo(() => {
     const totalBookings = filteredBookings.length
     const confirmedBookings = filteredBookings.filter(
       b => b.status === 'confirmed' || b.status === 'in_progress'
@@ -286,7 +243,23 @@ export function AdminCalendar() {
       completedBookings,
       totalRevenue
     }
-  }
+  }, [filteredBookings])
+
+  // Helper function: Get bookings for a specific date using O(1) Map lookup
+  const getBookingsForDate = useCallback((date: Date): Booking[] => {
+    const dateKey = format(date, 'yyyy-MM-dd')
+    return bookingsByDate.get(dateKey) || []
+  }, [bookingsByDate])
+
+  useEffect(() => {
+    // OPTIMIZE: Run all queries in parallel for better performance
+    // Service packages โหลดผ่าน useServicePackages hook อัตโนมัติแล้ว
+    Promise.all([
+      fetchBookings(),
+      fetchTeams(),
+      fetchStaffMembers()
+    ])
+  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers])
 
   // Helper function: Calculate end time from start time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -301,10 +274,10 @@ export function AdminCalendar() {
   // Create Booking Form Helpers
   const createForm = {
     formData: createFormData,
-    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
+    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
       setCreateFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Partial<BookingFormData>) => {
+    setValues: (values: Partial<BookingFormState>) => {
       setCreateFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -316,10 +289,10 @@ export function AdminCalendar() {
   // Edit Booking Form Helpers
   const editForm = {
     formData: editFormData,
-    handleChange: <K extends keyof BookingFormData>(field: K, value: BookingFormData[K]) => {
+    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
       setEditFormData(prev => ({ ...prev, [field]: value }))
     },
-    setValues: (values: Partial<BookingFormData>) => {
+    setValues: (values: Partial<BookingFormState>) => {
       setEditFormData(prev => ({ ...prev, ...values }))
     },
     reset: () => {
@@ -359,6 +332,47 @@ export function AdminCalendar() {
       setEditAssignmentType('team')
     } else {
       setEditAssignmentType('none')
+    }
+
+    // Set package selection for PackageSelector component
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (booking.service_package_id || ('package_v2_id' in booking && (booking as any).package_v2_id)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const packageId = ('package_v2_id' in booking && (booking as any).package_v2_id) || booking.service_package_id
+
+      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
+      const pkg = servicePackages.find(p => p.id === packageId)
+
+      if (pkg) {
+        // Check if this is a V2 Tiered Pricing package
+        const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (isTiered && 'area_sqm' in booking && 'frequency' in booking && (booking as any).area_sqm && (booking as any).frequency) {
+          // V2 Tiered Pricing - restore area and frequency
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'tiered',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            areaSqm: Number((booking as any).area_sqm) || 0,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            frequency: ((booking as any).frequency as 1 | 2 | 4 | 8) || 1,
+            price: booking.total_price || 0,
+            requiredStaff: 1, // Will be recalculated by PackageSelector
+            packageName: pkg.name,
+          })
+        } else {
+          // Fixed Pricing (V1 หรือ V2)
+          setEditPackageSelection({
+            packageId: pkg.id,
+            pricingModel: 'fixed',
+            price: Number(pkg.base_price || booking.total_price || 0),
+            requiredStaff: 1,
+            packageName: pkg.name,
+            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
+          })
+        }
+      }
     }
 
     setSelectedBooking(booking)
@@ -460,7 +474,14 @@ export function AdminCalendar() {
         setSelectedBooking({ ...selectedBooking, status: newStatus })
       }
 
-      fetchBookings()
+      // Update bookings in state without full refetch (ป้องกัน modal reload)
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking.id === bookingId
+            ? { ...booking, status: newStatus }
+            : booking
+        )
+      )
     } catch (error) {
       toast({
         title: 'Error',
@@ -478,7 +499,7 @@ export function AdminCalendar() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking?.total_price || 0,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getBangkokDateString(),
         })
         .eq('id', bookingId)
 
@@ -495,7 +516,7 @@ export function AdminCalendar() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getBangkokDateString(),
         })
       }
 
@@ -506,7 +527,7 @@ export function AdminCalendar() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: b.total_price,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getBangkokDateString(),
         } : b)
       )
     } catch (error) {
@@ -519,8 +540,6 @@ export function AdminCalendar() {
   }
 
   const handleDelete = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to delete this booking?')) return
-
     try {
       const { error } = await supabase
         .from('bookings')
@@ -534,7 +553,9 @@ export function AdminCalendar() {
         description: 'Booking deleted successfully',
       })
       setIsDetailOpen(false)
-      fetchBookings()
+
+      // Remove booking from state without refetch
+      setBookings(prevBookings => prevBookings.filter(b => b.id !== bookingId))
     } catch {
       toast({
         title: 'Error',
@@ -645,8 +666,6 @@ export function AdminCalendar() {
     )
   }
 
-  const monthStats = getMonthStats()
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -717,10 +736,18 @@ export function AdminCalendar() {
               <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
               <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
                 <Button
+                  variant={viewMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('all')}
+                  className="rounded-r-none flex-1"
+                >
+                  All Bookings
+                </Button>
+                <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('staff')}
-                  className="rounded-r-none flex-1"
+                  className="rounded-none border-l-0 flex-1"
                 >
                   Staff View
                 </Button>
@@ -728,17 +755,9 @@ export function AdminCalendar() {
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('team')}
-                  className="rounded-none border-l-0 flex-1"
-                >
-                  Team View
-                </Button>
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
                   className="rounded-l-none border-l-0 flex-1"
                 >
-                  All Bookings
+                  Team View
                 </Button>
               </div>
             </div>
@@ -852,77 +871,18 @@ export function AdminCalendar() {
                 </div>
               ))}
 
-              {/* Calendar days */}
-              {calendarDays.map((day, index) => {
-                const dayBookings = getBookingsForDate(day)
-                const isCurrentMonth = isSameMonth(day, currentDate)
-                const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
-                const isTodayDate = isToday(day)
-
-                return (
-                  <div
-                    key={index}
-                    className={`
-                      relative min-h-20 p-2 border rounded-lg transition-all group
-                      ${!isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-background'}
-                      ${isSelected ? 'ring-2 ring-tinedy-blue bg-blue-50' : ''}
-                      ${isTodayDate && !isSelected ? 'ring-2 ring-tinedy-yellow' : ''}
-                      hover:bg-accent/50
-                    `}
-                    onClick={() => setSelectedDate(day)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <span
-                        className={`text-sm font-medium ${
-                          isTodayDate ? 'text-tinedy-blue font-bold' : ''
-                        }`}
-                      >
-                        {format(day, 'd')}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {dayBookings.length > 0 && (
-                          <span className="text-xs bg-tinedy-blue text-white rounded-full px-1.5">
-                            {dayBookings.length}
-                          </span>
-                        )}
-                        {/* Add Booking Button */}
-                        {isCurrentMonth && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCreateBooking(day)
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-green-600"
-                            title="Create booking"
-                          >
-                            +
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Booking dots */}
-                    {dayBookings.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {dayBookings.slice(0, 3).map((booking) => (
-                          <div
-                            key={booking.id}
-                            className={`w-2 h-2 rounded-full ${
-                              STATUS_DOTS[booking.status as keyof typeof STATUS_DOTS]
-                            }`}
-                            title={booking.service_packages?.name || 'Booking'}
-                          />
-                        ))}
-                        {dayBookings.length > 3 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{dayBookings.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              {/* Calendar days - OPTIMIZED: Use memoized CalendarCell component */}
+              {calendarDays.map((day, index) => (
+                <CalendarCell
+                  key={index}
+                  day={day}
+                  currentDate={currentDate}
+                  selectedDate={selectedDate}
+                  dayBookings={getBookingsForDate(day)}
+                  onDateClick={setSelectedDate}
+                  onCreateBooking={handleCreateBooking}
+                />
+              ))}
             </div>
 
             {/* Legend */}
@@ -982,51 +942,11 @@ export function AdminCalendar() {
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {selectedDateBookings.map((booking) => (
-                  <div
+                  <BookingCard
                     key={booking.id}
-                    onClick={() => openBookingDetail(booking)}
-                    className={`p-3 rounded-lg border-2 cursor-pointer hover:opacity-80 transition-opacity ${
-                      STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS]
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span className="font-semibold">
-                          {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                        </span>
-                      </div>
-                      <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">
-                        {booking.status.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>
-                          {booking.customers?.full_name || 'N/A'}
-                          <span className="ml-2 text-xs font-mono text-muted-foreground">#{booking.id.slice(0, 8)}</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{booking.service_packages?.name || 'N/A'}</span>
-                      </div>
-                      {booking.profiles && (
-                        <div className="flex items-center gap-2 text-tinedy-blue">
-                          <User className="h-3.5 w-3.5" />
-                          <span>Staff: {booking.profiles.full_name}</span>
-                        </div>
-                      )}
-                      {booking.teams && (
-                        <div className="flex items-center gap-2 text-tinedy-green">
-                          <Users className="h-3.5 w-3.5" />
-                          <span>Team: {booking.teams.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    booking={booking}
+                    onClick={openBookingDetail}
+                  />
                 ))}
               </div>
             )}
@@ -1054,10 +974,11 @@ export function AdminCalendar() {
         isOpen={isCreateOpen && !isCreateAvailabilityOpen}
         onClose={() => {
           setIsCreateOpen(false)
-          createForm.reset()
+          setCreatePackageSelection(null); createForm.reset();
         }}
         onSuccess={() => {
           fetchBookings()
+          setCreatePackageSelection(null) // Clear selection after success
         }}
         servicePackages={servicePackages}
         staffMembers={staffMembers}
@@ -1069,6 +990,8 @@ export function AdminCalendar() {
         assignmentType={createAssignmentType}
         setAssignmentType={setCreateAssignmentType}
         calculateEndTime={calculateEndTime}
+        packageSelection={createPackageSelection}
+        setPackageSelection={setCreatePackageSelection}
       />
 
       {/* Edit Booking Modal */}
@@ -1082,6 +1005,7 @@ export function AdminCalendar() {
           booking={selectedBooking}
           onSuccess={() => {
             fetchBookings()
+            setEditPackageSelection(null) // Clear selection after success
           }}
           servicePackages={servicePackages}
           staffMembers={staffMembers}
@@ -1093,11 +1017,13 @@ export function AdminCalendar() {
           assignmentType={editAssignmentType}
           onAssignmentTypeChange={setEditAssignmentType}
           calculateEndTime={calculateEndTime}
+          packageSelection={editPackageSelection}
+          setPackageSelection={setEditPackageSelection}
         />
       )}
 
       {/* Staff Availability Modal - Create */}
-      {createFormData.service_package_id && createFormData.booking_date && createFormData.start_time && (
+      {(createFormData.service_package_id || createFormData.package_v2_id) && createFormData.booking_date && createFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isCreateAvailabilityOpen}
           onClose={() => {
@@ -1131,17 +1057,18 @@ export function AdminCalendar() {
                   createFormData.start_time,
                   servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.duration_minutes || 0
                 )
-              : (createFormData.end_time || '')
+              : createFormData.end_time || ''
           }
-          servicePackageId={createFormData.service_package_id || ''}
+          servicePackageId={createFormData.service_package_id || createFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.name ||
+            createPackageSelection?.packageName
           }
         />
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+      {(editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditAvailabilityOpen}
           onClose={() => {
@@ -1175,11 +1102,12 @@ export function AdminCalendar() {
                   editFormData.start_time,
                   servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
                 )
-              : (editFormData.end_time || '')
+              : editFormData.end_time || ''
           }
-          servicePackageId={editFormData.service_package_id || ''}
+          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name ||
+            editPackageSelection?.packageName
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}

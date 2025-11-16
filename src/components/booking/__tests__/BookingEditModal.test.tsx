@@ -126,6 +126,8 @@ describe('BookingEditModal', () => {
   let mockHandleChange: any
   let mockSetValues: any
   let mockReset: any
+  let mockPackageSelection: any
+  let mockSetPackageSelection: any
 
   beforeEach(() => {
     mockFormData = {
@@ -152,6 +154,24 @@ describe('BookingEditModal', () => {
     })
     mockReset = vi.fn(() => {
       mockFormData = {}
+    })
+
+    // Mock package selection state
+    mockPackageSelection = {
+      packageId: 'service-1',
+      pricingModel: 'fixed' as const,
+      price: 1500,
+      requiredStaff: 1,
+      packageName: 'Basic Cleaning',
+    }
+    mockSetPackageSelection = vi.fn((data) => {
+      if (data) {
+        Object.assign(mockPackageSelection, data)
+      } else {
+        mockPackageSelection.packageId = ''
+        mockPackageSelection.price = 0
+        mockPackageSelection.packageName = ''
+      }
     })
 
     mockCheckConflicts.mockResolvedValue([]) // No conflicts by default
@@ -182,6 +202,8 @@ describe('BookingEditModal', () => {
     assignmentType: 'staff' as const,
     onAssignmentTypeChange: mockOnAssignmentTypeChange,
     calculateEndTime: mockCalculateEndTime,
+    packageSelection: mockPackageSelection,
+    setPackageSelection: mockSetPackageSelection,
   })
 
   describe('Rendering', () => {

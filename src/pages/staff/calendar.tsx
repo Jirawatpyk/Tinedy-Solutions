@@ -365,6 +365,8 @@ export default function StaffCalendar() {
             created_at: new Date().toISOString(),
             staff_id: selectedEvent.staff_id || null,
             team_id: selectedEvent.team_id || null,
+            area_sqm: selectedEvent.area_sqm || null,
+            frequency: selectedEvent.frequency || null,
             customers: {
               id: '',
               full_name: selectedEvent.customer_name,

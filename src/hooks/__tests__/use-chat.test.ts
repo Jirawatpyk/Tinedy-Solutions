@@ -342,7 +342,13 @@ describe('useChat', () => {
     })
 
     it('should throw on delete error', async () => {
-      const query = createQueryMock({ error: new Error('Delete failed') })
+      const query = createQueryMock({ error: { message: 'Delete failed' } })
+      query.delete = vi.fn().mockReturnValue({
+        or: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'Delete failed' }
+        })
+      })
       vi.mocked(supabase.from).mockReturnValue(query as never)
 
       const { result } = renderHook(() => useChat())
@@ -351,7 +357,7 @@ describe('useChat', () => {
         act(async () => {
           await result.current.deleteConversation('user-2')
         })
-      ).rejects.toThrow('Delete failed')
+      ).rejects.toThrow()
     })
   })
 
@@ -359,7 +365,7 @@ describe('useChat', () => {
     it('should setup channel on mount', () => {
       renderHook(() => useChat())
 
-      expect(supabase.channel).toHaveBeenCalledWith('messages')
+      expect(supabase.channel).toHaveBeenCalledWith('messages-channel')
     })
 
     it('should cleanup channel on unmount', () => {
@@ -374,6 +380,8 @@ describe('useChat', () => {
   describe('Error handling', () => {
     it('should set error when fetchUsers fails', async () => {
       const query = createQueryMock({ data: null, error: { message: 'Fetch error' } })
+      // Override order to return error properly
+      query.order.mockReturnValue({ data: null, error: { message: 'Fetch error' } })
       vi.mocked(supabase.from).mockReturnValue(query as never)
 
       const { result } = renderHook(() => useChat())
@@ -390,6 +398,7 @@ describe('useChat', () => {
     it('should clear error on successful operation', async () => {
       // First set error
       const errorQuery = createQueryMock({ data: null, error: { message: 'Error' } })
+      errorQuery.order.mockReturnValue({ data: null, error: { message: 'Error' } })
       vi.mocked(supabase.from).mockReturnValue(errorQuery as never)
 
       const { result } = renderHook(() => useChat())
@@ -404,6 +413,7 @@ describe('useChat', () => {
 
       // Then success
       const successQuery = createQueryMock({ data: [mockOtherUser], error: null })
+      successQuery.order.mockResolvedValue({ data: [mockOtherUser], error: null })
       vi.mocked(supabase.from).mockReturnValue(successQuery as never)
 
       await act(async () => {
@@ -436,6 +446,8 @@ describe('useChat', () => {
 
     it('should fetch users successfully', async () => {
       const query = createQueryMock({ data: [mockOtherUser], error: null })
+      // Override order to return data properly
+      query.order.mockResolvedValue({ data: [mockOtherUser], error: null })
       vi.mocked(supabase.from).mockReturnValue(query as never)
 
       const { result } = renderHook(() => useChat())

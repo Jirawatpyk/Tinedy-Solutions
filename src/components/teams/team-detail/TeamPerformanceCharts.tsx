@@ -36,29 +36,34 @@ export function TeamPerformanceCharts({ teamId }: TeamPerformanceChartsProps) {
 
       if (error) throw error
 
-      // Group bookings by month
-      const monthlyMap = new Map<string, number>()
+      // Generate range: start of current month to 6 months from now
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const sixMonthsLater = new Date(now.getFullYear(), now.getMonth() + 6, 0)
+
+      // Count bookings from start of current month to next 6 months with sort key
+      const monthDataMap = new Map<string, { month: string; bookings: number; sortKey: string }>()
 
       bookings?.forEach((booking) => {
         const date = new Date(booking.booking_date)
-        const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
 
-        if (!monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, 0)
+        // Only count if booking is from start of current month to next 6 months
+        if (date >= startOfMonth && date <= sixMonthsLater) {
+          const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+          const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+          if (!monthDataMap.has(monthKey)) {
+            monthDataMap.set(monthKey, { month: monthKey, bookings: 0, sortKey })
+          }
+          const current = monthDataMap.get(monthKey)!
+          monthDataMap.set(monthKey, { ...current, bookings: current.bookings + 1 })
         }
-
-        monthlyMap.set(monthKey, monthlyMap.get(monthKey)! + 1)
       })
 
-      // Convert to array and get last 6 months
-      const data = Array.from(monthlyMap.entries())
-        .map(([month, bookings]) => ({
-          month,
-          bookings,
-        }))
-        .reverse()
-        .slice(0, 6)
-        .reverse()
+      // Convert to array and sort by sortKey
+      const data = Array.from(monthDataMap.values())
+        .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+        .map(({ month, bookings }) => ({ month, bookings }))
 
       setMonthlyData(data)
     } catch (error) {

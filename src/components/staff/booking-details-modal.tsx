@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
   Clock,
@@ -26,11 +25,12 @@ import {
 } from 'lucide-react'
 import { type StaffBooking } from '@/hooks/use-staff-bookings'
 import { format } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
 import { formatFullAddress } from '@/lib/booking-utils'
 import { formatTime } from '@/lib/booking-utils'
 import { BookingTimeline } from './booking-timeline'
+import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 
 interface BookingDetailsModalProps {
   booking: StaffBooking | null
@@ -71,40 +71,6 @@ export function BookingDetailsModal({
   }, [open, booking])
 
   if (!currentBooking) return null
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'in_progress':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'Completed'
-      case 'confirmed':
-        return 'Confirmed'
-      case 'in_progress':
-        return 'In Progress'
-      case 'pending':
-        return 'Pending'
-      case 'cancelled':
-        return 'Cancelled'
-      default:
-        return status
-    }
-  }
 
   const handleSaveNotes = async () => {
     if (!onAddNotes || !notes.trim()) return
@@ -182,9 +148,9 @@ export function BookingDetailsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Booking Details</span>
-            <Badge className={getStatusColor(currentBooking.status)} variant="outline">
-              {getStatusText(currentBooking.status)}
-            </Badge>
+            <StatusBadge variant={getBookingStatusVariant(currentBooking.status)}>
+              {getBookingStatusLabel(currentBooking.status)}
+            </StatusBadge>
           </DialogTitle>
           <DialogDescription>
             Booking ID: {currentBooking.id.slice(0, 8)}
@@ -200,7 +166,7 @@ export function BookingDetailsModal({
                 <span>Date</span>
               </div>
               <p className="font-medium">
-                {format(new Date(currentBooking.booking_date), 'dd MMMM yyyy', { locale: th })}
+                {format(new Date(currentBooking.booking_date), 'dd MMM yyyy', { locale: enUS })}
               </p>
             </div>
             <div className="space-y-2">
@@ -269,25 +235,74 @@ export function BookingDetailsModal({
               <Package className="h-4 w-4" />
               Service Information
             </h3>
-            <div className="space-y-2 ml-6">
-              <div>
-                <p className="text-sm text-muted-foreground">Service Name</p>
-                <p className="font-medium">
-                  {currentBooking.service_packages?.name || 'Unknown Service'}
-                </p>
-              </div>
-              {currentBooking.service_packages?.duration_minutes && (
+            <div className="ml-6 space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Service Name</p>
+                  <p className="font-medium">
+                    {currentBooking.service_packages?.name || 'Unknown Service'}
+                  </p>
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Duration</p>
-                  <p className="font-medium">{currentBooking.service_packages.duration_minutes} minutes</p>
+                  <p className="font-medium">
+                    {(() => {
+                      // Calculate duration from start_time and end_time
+                      if (currentBooking.start_time && currentBooking.end_time) {
+                        const [startHours, startMinutes] = currentBooking.start_time.split(':').map(Number)
+                        const [endHours, endMinutes] = currentBooking.end_time.split(':').map(Number)
+                        const durationMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes)
+                        const hours = Math.floor(durationMinutes / 60)
+                        const minutes = durationMinutes % 60
+
+                        if (hours > 0 && minutes > 0) {
+                          return `${hours} hours ${minutes} minutes`
+                        } else if (hours > 0) {
+                          return `${hours} hours`
+                        } else {
+                          return `${minutes} minutes`
+                        }
+                      }
+                      return 'N/A'
+                    })()}
+                  </p>
+                </div>
+              </div>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {((currentBooking as any).area_sqm || (currentBooking as any).frequency) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {(currentBooking as any).area_sqm && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Area Size</p>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      <p className="font-medium">{(currentBooking as any).area_sqm} sqm</p>
+                    </div>
+                  )}
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {(currentBooking as any).frequency && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Frequency</p>
+                      <p className="font-medium">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(currentBooking as any).frequency === 1 && 'Once'}
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(currentBooking as any).frequency === 2 && 'Twice a month'}
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(currentBooking as any).frequency === 4 && 'Weekly'}
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(currentBooking as any).frequency === 8 && 'Twice a week'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-              {currentBooking.service_packages?.price && (
-                <div>
+              {(currentBooking.service_packages?.price ?? 0) > 0 && (
+                <div className="mt-2">
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ฿{currentBooking.service_packages.price.toLocaleString()}
+                    ฿{currentBooking.service_packages?.price?.toLocaleString() ?? '0'}
                   </p>
                 </div>
               )}

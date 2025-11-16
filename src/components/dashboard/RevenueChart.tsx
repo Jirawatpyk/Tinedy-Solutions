@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { memo } from 'react'
 
@@ -24,13 +24,20 @@ function RevenueChartComponent({ data }: RevenueChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
+          <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip formatter={(value: number) => formatCurrency(value)} />
-            <Bar dataKey="revenue" fill="#22c55e" radius={[8, 8, 0, 0]} />
-          </BarChart>
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              stroke="#22c55e"
+              strokeWidth={2}
+              dot={{ fill: '#22c55e', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

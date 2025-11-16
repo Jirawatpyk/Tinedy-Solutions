@@ -29,3 +29,14 @@ export function formatCurrency(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount)
 }
+
+/**
+ * Get current date in Bangkok timezone (UTC+7) as YYYY-MM-DD string
+ * This ensures payment_date is always correct regardless of browser timezone
+ */
+export function getBangkokDateString(): string {
+  const now = new Date()
+  const bangkokOffset = 7 * 60 * 60 * 1000 // UTC+7 in milliseconds
+  const bangkokTime = new Date(now.getTime() + bangkokOffset)
+  return bangkokTime.toISOString().split('T')[0]
+}

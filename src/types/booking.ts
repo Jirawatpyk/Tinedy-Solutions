@@ -83,7 +83,7 @@ export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod]
  * @property {string} customer_id - UUID of the customer who made the booking
  * @property {string | null} staff_id - UUID of the assigned staff member, null if assigned to team
  * @property {string | null} team_id - UUID of the assigned team, null if assigned to individual staff
- * @property {string} service_package_id - UUID of the booked service package
+ * @property {string} service_package_id - UUID of the booked service package (legacy/V1)
  * @property {number} total_price - Total price for the booking in decimal format
  * @property {BookingStatus} status - Current status of the booking
  * @property {PaymentStatus} payment_status - Current payment status
@@ -95,6 +95,11 @@ export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod]
  * @property {string | null} notes - Additional notes or special instructions for the booking
  * @property {string} created_at - Timestamp when the booking was created (ISO 8601)
  * @property {string} updated_at - Timestamp when the booking was last updated (ISO 8601)
+ *
+ * @property {number | null} area_sqm - Service area in square meters (for V2 tiered pricing)
+ * @property {1 | 2 | 4 | 8 | null} frequency - Booking frequency per month (1, 2, 4, or 8 times)
+ * @property {number | null} calculated_price - Auto-calculated price from tiered pricing (may differ from total_price)
+ * @property {string | null} package_v2_id - UUID of V2 service package (tiered pricing model)
  */
 export interface BookingRecord {
   id: string
@@ -116,6 +121,18 @@ export interface BookingRecord {
   notes: string | null
   created_at?: string
   updated_at: string
+  // V2 Tiered Pricing Fields
+  area_sqm?: number | null
+  frequency?: 1 | 2 | 4 | 8 | null
+  calculated_price?: number | null
+  package_v2_id?: string | null
+  // Recurring Bookings Fields
+  recurring_group_id?: string | null
+  recurring_sequence?: number
+  recurring_total?: number
+  recurring_pattern?: string | null
+  is_recurring?: boolean
+  parent_booking_id?: string | null
 }
 
 /**
@@ -202,6 +219,9 @@ export interface Booking {
   team_id: string | null
   customer_id?: string
   service_package_id: string
+  package_v2_id?: string | null
+  area_sqm?: number | null
+  frequency?: 1 | 2 | 4 | 8 | null
   notes: string | null
   payment_status?: string
   payment_method?: string
@@ -210,10 +230,27 @@ export interface Booking {
   payment_notes?: string
   payment_slip_url?: string | null
   created_at?: string
+  // Recurring Bookings Fields
+  recurring_group_id?: string | null
+  recurring_sequence?: number
+  recurring_total?: number
+  recurring_pattern?: string | null
+  is_recurring?: boolean
+  parent_booking_id?: string | null
+  // Relations
   customers: { id: string; full_name: string; email: string; phone?: string | null } | null
   service_packages: { name: string; service_type: string } | null
+  service_packages_v2?: { name: string; service_type: string } | null
   profiles: { full_name: string } | null
-  teams: { name: string } | null
+  teams: {
+    name: string
+    team_lead?: {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    } | null
+  } | null
 }
 
 /**

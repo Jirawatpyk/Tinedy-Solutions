@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { Skeleton } from '@/components/ui/skeleton'
+import { formatTime } from '@/lib/booking-utils'
 
 interface TeamRecentBookingsProps {
   teamId: string
@@ -16,9 +16,9 @@ interface TeamRecentBookingsProps {
 export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const [isVisible, setIsVisible] = useState(false)
   const itemsPerPage = 5
 
   const loadRecentBookings = useCallback(async () => {
@@ -41,21 +41,32 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           id,
           booking_date,
           start_time,
+          end_time,
           status,
           total_price,
           customers (full_name),
-          service_packages (name)
+          service_packages (name),
+          service_packages_v2:package_v2_id (name)
         `)
         .eq('team_id', teamId)
         .order('booking_date', { ascending: false })
         .range(from, to)
 
       if (error) throw error
-      setBookings(data as unknown as Booking[] || [])
+
+      // Merge V1 and V2 package data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const processedData = (data || []).map((booking: any) => ({
+        ...booking,
+        service_packages: booking.service_packages || booking.service_packages_v2
+      }))
+
+      setBookings(processedData as unknown as Booking[] || [])
+
+      // Trigger fade-in animation after data is loaded
+      setTimeout(() => setIsVisible(true), 50)
     } catch (error) {
       console.error('Error loading recent bookings:', error)
-    } finally {
-      setLoading(false)
     }
   }, [teamId, currentPage])
 
@@ -82,25 +93,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Bookings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-20" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
-    <Card>
+    <Card className={`transition-opacity duration-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -149,12 +143,12 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
                 className="flex items-start justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium truncate">
-                      {booking.customers?.full_name || 'Unknown Customer'}
-                    </p>
-                    {getStatusBadge(booking.status)}
-                  </div>
+                  <p className="font-medium mb-1">
+                    {booking.customers?.full_name || 'Unknown Customer'}
+                    <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">
+                      #{booking.id.slice(0, 8)}
+                    </span>
+                  </p>
                   <p className="text-sm text-muted-foreground truncate">
                     {booking.service_packages?.name || 'Unknown Service'}
                   </p>
@@ -162,13 +156,14 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(booking.booking_date)}</span>
                     <span>•</span>
-                    <span>{booking.start_time}</span>
+                    <span>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-4">
+                <div className="text-right flex-shrink-0 ml-4 space-y-1">
                   <p className="font-semibold text-tinedy-dark">
                     {formatCurrency(Number(booking.total_price))}
                   </p>
+                  {getStatusBadge(booking.status)}
                 </div>
               </div>
             ))}

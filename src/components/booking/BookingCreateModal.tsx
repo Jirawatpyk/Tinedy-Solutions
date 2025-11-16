@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, startTransition } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,12 +20,20 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Info, Sparkles } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getErrorMessage } from '@/lib/error-utils'
-import type { ServicePackage } from '@/types'
+import type { BookingForm } from '@/hooks/useBookingForm'
 import type { CustomerRecord } from '@/types/customer'
-import { sendBookingConfirmation, sendBookingReminder, type PaymentEmailData } from '@/lib/email'
+import { sendBookingConfirmation, sendBookingReminder, sendRecurringBookingConfirmation, type PaymentEmailData, type RecurringBookingEmailData } from '@/lib/email'
+import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
+import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { ServicePackageV2WithTiers } from '@/types'
+import { RecurringScheduleSelector } from './RecurringScheduleSelector'
+import { RecurringPattern as Pattern } from '@/types/recurring-booking'
+import type { RecurringPattern } from '@/types/recurring-booking'
+import type { BookingFrequency } from '@/types/service-package-v2'
+import { createRecurringGroup } from '@/lib/recurring-booking-service'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface StaffMember {
   id: string
@@ -38,38 +46,39 @@ interface Team {
   name: string
 }
 
-interface FormData {
-  customer_id?: string
-  full_name?: string
-  email?: string
-  phone?: string
+interface BookingWithRelations {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  total_price: number
   address?: string
   city?: string
   state?: string
   zip_code?: string
-  service_package_id?: string
-  booking_date?: string
-  start_time?: string
-  end_time?: string
-  total_price?: number
-  staff_id?: string
-  team_id?: string
   notes?: string
-  status?: string
+  customers?: {
+    full_name: string
+    email: string
+  }
+  service_packages?: {
+    name: string
+  }
+  service_packages_v2?: {
+    name: string
+  }
+  profiles?: {
+    full_name: string
+  }
 }
 
-interface BookingForm {
-  formData: FormData
-  handleChange: <K extends keyof FormData>(field: K, value: FormData[K]) => void
-  setValues: (values: Partial<FormData>) => void
-  reset: () => void
-}
+// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
 
 interface BookingCreateModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  servicePackages: ServicePackage[]
+  servicePackages: UnifiedServicePackage[]
   staffMembers: StaffMember[]
   teams: Team[]
   onOpenAvailabilityModal: () => void
@@ -77,6 +86,15 @@ interface BookingCreateModalProps {
   assignmentType: 'staff' | 'team' | 'none'
   setAssignmentType: (type: 'staff' | 'team' | 'none') => void
   calculateEndTime: (startTime: string, durationMinutes: number) => string
+  packageSelection: PackageSelectionData | null
+  setPackageSelection: (selection: PackageSelectionData | null) => void
+  // Recurring bookings props (lifted to parent for StaffAvailabilityModal)
+  recurringDates?: string[]
+  setRecurringDates?: (dates: string[]) => void
+  enableRecurring?: boolean
+  setEnableRecurring?: (enabled: boolean) => void
+  recurringPattern?: RecurringPattern
+  setRecurringPattern?: (pattern: RecurringPattern) => void
 }
 
 export function BookingCreateModal({
@@ -91,10 +109,39 @@ export function BookingCreateModal({
   assignmentType,
   setAssignmentType,
   calculateEndTime,
+  packageSelection,
+  setPackageSelection,
+  recurringDates: parentRecurringDates,
+  setRecurringDates: parentSetRecurringDates,
+  enableRecurring: parentEnableRecurring,
+  setEnableRecurring: parentSetEnableRecurring,
+  recurringPattern: parentRecurringPattern,
+  setRecurringPattern: parentSetRecurringPattern,
 }: BookingCreateModalProps) {
   const { toast } = useToast()
   const [existingCustomer, setExistingCustomer] = useState<CustomerRecord | null>(null)
   const [checkingCustomer, setCheckingCustomer] = useState(false)
+
+  // Recurring Bookings State - use parent state if provided, otherwise use local state
+  const [localEnableRecurring, localSetEnableRecurring] = useState(false)
+  const [localRecurringDates, localSetRecurringDates] = useState<string[]>([])
+  const [localRecurringPattern, localSetRecurringPattern] = useState<RecurringPattern>(Pattern.AutoMonthly)
+
+  const enableRecurring = parentEnableRecurring !== undefined ? parentEnableRecurring : localEnableRecurring
+  const setEnableRecurring = parentSetEnableRecurring || localSetEnableRecurring
+  const recurringDates = parentRecurringDates !== undefined ? parentRecurringDates : localRecurringDates
+  const recurringPattern = parentRecurringPattern !== undefined ? parentRecurringPattern : localRecurringPattern
+  const setRecurringPattern = parentSetRecurringPattern || localSetRecurringPattern
+  const setRecurringDates = parentSetRecurringDates || localSetRecurringDates
+
+  // Debug: Track modal open/close and packageSelection prop
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🟢 BookingCreateModal OPENED, packageSelection prop:', packageSelection)
+    } else {
+      console.log('🔴 BookingCreateModal CLOSED, packageSelection prop:', packageSelection)
+    }
+  }, [isOpen, packageSelection])
 
   // Check existing customer by email
   const handleEmailBlur = async () => {
@@ -180,9 +227,13 @@ export function BookingCreateModal({
     try {
       // Calculate end_time from start_time and service duration
       const selectedPackage = servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)
-      const calculatedEndTime = selectedPackage
-        ? calculateEndTime(createForm.formData.start_time || '', selectedPackage.duration_minutes)
-        : createForm.formData.end_time || ''
+      let calculatedEndTime = createForm.formData.end_time || ''
+
+      if (selectedPackage && selectedPackage.duration_minutes) {
+        calculatedEndTime = calculateEndTime(createForm.formData.start_time || '', selectedPackage.duration_minutes)
+      } else if (packageSelection?.estimatedHours && createForm.formData.start_time) {
+        calculatedEndTime = calculateEndTime(createForm.formData.start_time || '', packageSelection.estimatedHours * 60)
+      }
 
       let customerId = createForm.formData.customer_id
 
@@ -206,90 +257,198 @@ export function BookingCreateModal({
         customerId = newCustomer.id
       }
 
-      // Create booking
-      const { data: newBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          customer_id: customerId,
-          service_package_id: createForm.formData.service_package_id,
-          booking_date: createForm.formData.booking_date,
-          start_time: createForm.formData.start_time,
-          end_time: calculatedEndTime,
-          total_price: createForm.formData.total_price,
-          address: createForm.formData.address,
-          city: createForm.formData.city,
-          state: createForm.formData.state,
-          zip_code: createForm.formData.zip_code,
-          notes: createForm.formData.notes || null,
-          status: 'pending',
-          payment_status: 'unpaid',
-          staff_id: assignmentType === 'staff' ? (createForm.formData.staff_id || null) : null,
-          team_id: assignmentType === 'team' ? (createForm.formData.team_id || null) : null,
-        })
-        .select(`
-          *,
-          customers (full_name, email),
-          services:service_packages (name),
-          profiles (full_name)
-        `)
-        .single()
-
-      if (bookingError) throw bookingError
-
-      // Send booking confirmation email with payment link
-      if (newBooking && createForm.formData.email) {
-        const paymentLink = `${window.location.origin}/payment/${newBooking.id}`
-
-        // Format full address for email
-        const fullAddress = [
-          newBooking.address,
-          newBooking.city,
-          newBooking.state,
-          newBooking.zip_code
-        ].filter(part => part && part.trim()).join(', ')
-
-        const emailData: PaymentEmailData = {
-          bookingId: newBooking.id,
-          customerName: createForm.formData.full_name || 'Customer',
-          customerEmail: createForm.formData.email,
-          serviceName: selectedPackage?.name || 'Service',
-          bookingDate: newBooking.booking_date,
-          startTime: newBooking.start_time,
-          endTime: newBooking.end_time,
-          totalPrice: Number(newBooking.total_price),
-          location: fullAddress || undefined,
-          notes: newBooking.notes || undefined,
-          staffName: newBooking.profiles?.full_name || undefined,
-          paymentLink,
-        }
-
-        // Send emails (non-blocking)
-        sendBookingConfirmation(emailData).catch(err => {
-          console.error('Failed to send booking confirmation:', err)
-        })
-
-        // Also schedule booking reminder
-        sendBookingReminder({
-          bookingId: newBooking.id,
-          customerName: emailData.customerName,
-          customerEmail: emailData.customerEmail,
-          serviceName: emailData.serviceName,
-          bookingDate: emailData.bookingDate,
-          startTime: emailData.startTime,
-          endTime: emailData.endTime,
-          totalPrice: emailData.totalPrice,
-          location: emailData.location,
-          notes: emailData.notes,
-          staffName: emailData.staffName,
-        }).catch(err => {
-          console.error('Failed to schedule booking reminder:', err)
-        })
+      // Validation: ต้องมี service_package_id หรือ package_v2_id
+      const servicePackageId = createForm.formData.service_package_id || createForm.formData.package_v2_id
+      if (!servicePackageId) {
+        throw new Error('Please select a service package')
       }
 
-      toast({
-        title: 'Success',
-        description: 'Booking created successfully. Confirmation email sent!',
-      })
+      // Build base booking data
+      const baseBookingData = {
+        customer_id: customerId!,
+        service_package_id: createForm.formData.service_package_id || null,
+        start_time: createForm.formData.start_time || '',
+        end_time: calculatedEndTime || null,
+        total_price: createForm.formData.total_price || 0,
+        address: createForm.formData.address || '',
+        city: createForm.formData.city || '',
+        state: createForm.formData.state || null,
+        zip_code: createForm.formData.zip_code || null,
+        notes: createForm.formData.notes || null,
+        status: 'pending' as const,
+        payment_status: 'unpaid' as const,
+        staff_id: assignmentType === 'staff' ? (createForm.formData.staff_id || null) : null,
+        team_id: assignmentType === 'team' ? (createForm.formData.team_id || null) : null,
+        area_sqm: createForm.formData.area_sqm || null,
+        frequency: createForm.formData.frequency || null,
+        calculated_price: createForm.formData.calculated_price || null,
+        package_v2_id: createForm.formData.package_v2_id || null,
+      }
+
+      // Validation สำหรับ recurring bookings
+      if (enableRecurring && recurringDates.length > 0 && packageSelection?.frequency) {
+        // ตรวจสอบว่าเลือกวันครบตามความถี่หรือยัง
+        if (recurringDates.length !== packageSelection.frequency) {
+          throw new Error(`Please select ${packageSelection.frequency} dates for recurring bookings`)
+        }
+
+        // ตรวจสอบว่าทุก field ที่จำเป็นมีค่า
+        if (!customerId) throw new Error('Customer ID is required')
+        if (!baseBookingData.start_time) throw new Error('Start time is required')
+        if (!baseBookingData.address) throw new Error('Address is required')
+        if (!baseBookingData.city) throw new Error('City is required')
+
+        // ✅ คำนวณราคาต่อ booking (หารด้วย frequency)
+        const pricePerBooking = baseBookingData.total_price / packageSelection.frequency
+
+        // Debug: แสดง baseBookingData
+        console.log('📋 Base booking data for recurring group:', {
+          customer_id: baseBookingData.customer_id,
+          service_package_id: baseBookingData.service_package_id,
+          package_v2_id: baseBookingData.package_v2_id,
+          staff_id: baseBookingData.staff_id,
+          team_id: baseBookingData.team_id,
+          start_time: baseBookingData.start_time,
+          total_price_original: baseBookingData.total_price,
+          total_price_per_booking: pricePerBooking,
+          frequency: packageSelection.frequency
+        })
+
+        // Create recurring group with adjusted price
+        const result = await createRecurringGroup({
+          baseBooking: {
+            ...baseBookingData,
+            total_price: pricePerBooking  // ✅ ใช้ราคาต่อ booking
+          },
+          dates: recurringDates,
+          pattern: recurringPattern,
+          totalOccurrences: packageSelection.frequency as BookingFrequency,
+        })
+
+        if (!result.success) {
+          throw new Error(result.errors?.join(', ') || 'Failed to create recurring bookings')
+        }
+
+        // ✅ ส่ง email confirmation สำหรับ recurring bookings
+        if (createForm.formData.email) {
+          const fullAddress = [
+            baseBookingData.address,
+            baseBookingData.city,
+            baseBookingData.state,
+            baseBookingData.zip_code
+          ].filter(part => part && part.trim()).join(', ')
+
+          // Get service name
+          const selectedPackage = servicePackages.find(pkg =>
+            pkg.id === baseBookingData.service_package_id ||
+            pkg.id === baseBookingData.package_v2_id
+          )
+
+          // Prepare booking dates with sequence
+          const bookingDatesWithSequence = recurringDates.map((date, index) => ({
+            date,
+            sequence: index + 1
+          }))
+
+          const recurringEmailData: RecurringBookingEmailData = {
+            groupId: result.groupId,
+            bookingIds: result.bookingIds,
+            customerName: createForm.formData.full_name || 'Customer',
+            customerEmail: createForm.formData.email,
+            serviceName: selectedPackage?.name || 'Service',
+            bookingDates: bookingDatesWithSequence,
+            startTime: baseBookingData.start_time,
+            endTime: calculatedEndTime || baseBookingData.end_time || '',
+            totalPrice: baseBookingData.total_price, // ราคาเดิมก่อนหาร
+            pricePerBooking: pricePerBooking,
+            location: fullAddress,
+            paymentLink: `${window.location.origin}/payment/${result.bookingIds[0]}`, // parent booking
+            staffName: assignmentType === 'staff' ? staffMembers.find(s => s.id === baseBookingData.staff_id)?.full_name : undefined,
+            notes: baseBookingData.notes || undefined,
+            frequency: packageSelection.frequency
+          }
+
+          // ส่ง email (don't await to avoid blocking)
+          sendRecurringBookingConfirmation(recurringEmailData).catch(err => {
+            console.error('Failed to send recurring booking confirmation:', err)
+          })
+        }
+
+        toast({
+          title: 'Success',
+          description: `Created ${result.bookingIds.length} recurring bookings successfully! Confirmation email sent.`,
+        })
+      } else {
+        // Create single booking (original flow)
+        const { data: newBooking, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            ...baseBookingData,
+            booking_date: createForm.formData.booking_date,
+          })
+          .select(`
+            *,
+            customers (full_name, email),
+            service_packages (name),
+            service_packages_v2 (name),
+            profiles (full_name)
+          `)
+          .single()
+
+        if (bookingError) throw bookingError
+
+        // Send booking confirmation email
+        if (newBooking && createForm.formData.email) {
+          const paymentLink = `${window.location.origin}/payment/${newBooking.id}`
+          const fullAddress = [
+            newBooking.address,
+            newBooking.city,
+            newBooking.state,
+            newBooking.zip_code
+          ].filter(part => part && part.trim()).join(', ')
+
+          const bookingWithRelations = newBooking as BookingWithRelations
+          const emailData: PaymentEmailData = {
+            bookingId: bookingWithRelations.id,
+            customerName: createForm.formData.full_name || 'Customer',
+            customerEmail: createForm.formData.email,
+            serviceName: bookingWithRelations.service_packages?.name || bookingWithRelations.service_packages_v2?.name || 'Service',
+            bookingDate: bookingWithRelations.booking_date,
+            startTime: bookingWithRelations.start_time,
+            endTime: bookingWithRelations.end_time,
+            totalPrice: Number(bookingWithRelations.total_price),
+            location: fullAddress || undefined,
+            notes: bookingWithRelations.notes || undefined,
+            staffName: bookingWithRelations.profiles?.full_name || undefined,
+            paymentLink,
+          }
+
+          sendBookingConfirmation(emailData).catch(err => {
+            console.error('Failed to send booking confirmation:', err)
+          })
+
+          sendBookingReminder({
+            bookingId: newBooking.id,
+            customerName: emailData.customerName,
+            customerEmail: emailData.customerEmail,
+            serviceName: emailData.serviceName,
+            bookingDate: emailData.bookingDate,
+            startTime: emailData.startTime,
+            endTime: emailData.endTime,
+            totalPrice: emailData.totalPrice,
+            location: emailData.location,
+            notes: emailData.notes,
+            staffName: emailData.staffName,
+          }).catch(err => {
+            console.error('Failed to schedule booking reminder:', err)
+          })
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Booking created successfully. Confirmation email sent!',
+        })
+      }
 
       // Reset and close
       resetForm()
@@ -309,6 +468,10 @@ export function BookingCreateModal({
     createForm.reset()
     setAssignmentType('none')
     setExistingCustomer(null)
+    setPackageSelection(null)
+    setEnableRecurring(false)
+    setRecurringDates([])
+    setRecurringPattern(Pattern.AutoMonthly)
   }
 
   const handleClose = () => {
@@ -400,89 +563,192 @@ export function BookingCreateModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
+            {/* Package Selector V2 - รองรับทั้ง Fixed และ Tiered Pricing */}
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="service_package_id">Service Package *</Label>
-              <Select
-                value={createForm.formData.service_package_id || ''}
-                onValueChange={(value) => {
-                  const selectedPackage = servicePackages.find(p => p.id === value)
-                  createForm.setValues({
-                    service_package_id: value,
-                    total_price: selectedPackage?.price || 0
+              <PackageSelector
+                serviceType="cleaning"
+                packages={servicePackages as unknown as ServicePackageV2WithTiers[]} // ส่ง unified packages
+                value={packageSelection}
+                onChange={(selection) => {
+                  console.log('📦 Package Selection Changed:', selection)
+
+                  // ใช้ startTransition เพื่อ batch updates แบบ non-blocking
+                  startTransition(() => {
+                    // Update parent state
+                    console.log('🟣 Calling setPackageSelection (parent state):', selection)
+                    setPackageSelection(selection)
+
+                    if (selection) {
+                      // Update form data with package selection
+                      const formUpdates: Record<string, unknown> = {}
+
+                      // ตรวจสอบว่า package เป็น V1 หรือ V2 จาก _source field
+                      const selectedPkg = servicePackages.find(pkg => pkg.id === selection.packageId)
+                      const isV1Package = selectedPkg?._source === 'v1'
+
+                      if (selection.pricingModel === 'fixed') {
+                        console.log('💰 Setting Fixed Price:', selection.price, 'Version:', selectedPkg?._source)
+
+                        // FIX: ตั้งค่าตาม version ของ package (ต้องมีเพียงหนึ่งตัว)
+                        if (isV1Package) {
+                          formUpdates.service_package_id = selection.packageId
+                          formUpdates.package_v2_id = null
+                        } else {
+                          formUpdates.service_package_id = null
+                          formUpdates.package_v2_id = selection.packageId
+                        }
+
+                        formUpdates.total_price = selection.price
+                        formUpdates.area_sqm = null
+                        formUpdates.frequency = null
+                        formUpdates.calculated_price = null
+                      } else {
+                        // Tiered pricing - ต้องเป็น V2 แน่นอน
+                        console.log('💰 Setting Tiered Price:', selection.price, 'for area:', selection.areaSqm, 'frequency:', selection.frequency)
+                        formUpdates.service_package_id = null
+                        formUpdates.package_v2_id = selection.packageId
+                        formUpdates.area_sqm = selection.areaSqm
+                        formUpdates.frequency = selection.frequency
+                        formUpdates.calculated_price = selection.price
+                        formUpdates.total_price = selection.price
+                      }
+
+                      // Auto-calculate End Time if Start Time is set
+                      if (createForm.formData.start_time && selection.estimatedHours) {
+                        const durationMinutes = Math.round(selection.estimatedHours * 60)
+                        const endTime = calculateEndTime(createForm.formData.start_time, durationMinutes)
+                        console.log('⏰ Auto-calculated End Time:', endTime, 'from', selection.estimatedHours, 'hours')
+                        formUpdates.end_time = endTime
+                      }
+
+                      // Update form ครั้งเดียวด้วย batch updates
+                      createForm.setValues(formUpdates)
+                    } else {
+                      // Clear selection
+                      console.log('🗑️ Clearing package selection')
+                      createForm.setValues({
+                        service_package_id: '',
+                        package_v2_id: undefined,
+                        area_sqm: null,
+                        frequency: null,
+                        calculated_price: null,
+                        total_price: 0,
+                      })
+                    }
                   })
                 }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servicePackages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} - {formatCurrency(pkg.price)} ({pkg.duration_minutes} min)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="booking_date">Booking Date *</Label>
-              <Input
-                id="booking_date"
-                type="date"
-                value={createForm.formData.booking_date || ''}
-                onChange={(e) =>
-                  createForm.handleChange('booking_date', e.target.value)
-                }
-                required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="start_time">Start Time *</Label>
-              <Input
-                id="start_time"
-                type="time"
-                value={createForm.formData.start_time || ''}
-                onChange={(e) =>
-                  createForm.handleChange('start_time', e.target.value)
-                }
-                required
-              />
+            {/* Recurring Bookings Checkbox - แสดงเฉพาะเมื่อ frequency > 1 */}
+            {packageSelection?.frequency && packageSelection.frequency > 1 && (
+              <div className="space-y-2 sm:col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="enable_recurring"
+                    checked={enableRecurring}
+                    onCheckedChange={(checked) => setEnableRecurring(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="enable_recurring"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Create Recurring Bookings ({packageSelection.frequency} times)
+                  </Label>
+                </div>
+              </div>
+            )}
+
+            {/* Recurring Schedule Selector */}
+            {enableRecurring && packageSelection?.frequency && (
+              <div className="space-y-2 sm:col-span-2">
+                <RecurringScheduleSelector
+                  frequency={packageSelection.frequency as BookingFrequency}
+                  selectedDates={recurringDates}
+                  onDatesChange={setRecurringDates}
+                  pattern={recurringPattern}
+                  onPatternChange={setRecurringPattern}
+                />
+              </div>
+            )}
+
+            {/* Date/Time Fields - 3 columns when not recurring, 2 columns when recurring */}
+            <div className={`sm:col-span-2 grid gap-3 ${!enableRecurring ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring */}
+              {!enableRecurring && (
+                <div className="space-y-2">
+                  <Label htmlFor="booking_date">Booking Date *</Label>
+                  <Input
+                    id="booking_date"
+                    type="date"
+                    value={createForm.formData.booking_date || ''}
+                    onChange={(e) =>
+                      createForm.handleChange('booking_date', e.target.value)
+                    }
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Start Time */}
+              <div className="space-y-2">
+                <Label htmlFor="start_time">Start Time *</Label>
+                <Input
+                  id="start_time"
+                  type="time"
+                  value={createForm.formData.start_time || ''}
+                  onChange={(e) => {
+                    const newStartTime = e.target.value
+                    createForm.handleChange('start_time', newStartTime)
+
+                    // Auto-calculate End Time when Start Time changes
+                    if (newStartTime && packageSelection?.estimatedHours) {
+                      const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                      const endTime = calculateEndTime(newStartTime, durationMinutes)
+                      console.log('⏰ Auto-recalculated End Time:', endTime)
+                      createForm.handleChange('end_time', endTime)
+                    }
+                  }}
+                  required
+                />
+              </div>
+
+              {/* End Time */}
+              <div className="space-y-2">
+                <Label htmlFor="end_time">End Time *</Label>
+                <Input
+                  id="end_time"
+                  type="time"
+                  value={createForm.formData.end_time || ''}
+                  onChange={(e) =>
+                    createForm.handleChange('end_time', e.target.value)
+                  }
+                  disabled={!!packageSelection?.estimatedHours}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="end_time_display">End Time (Auto-calculated)</Label>
-              <Input
-                id="end_time_display"
-                type="text"
-                value={
-                  createForm.formData.start_time && createForm.formData.service_package_id
-                    ? calculateEndTime(
-                        createForm.formData.start_time,
-                        servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.duration_minutes || 0
-                      )
-                    : '--:--'
-                }
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="total_price">Total Price *</Label>
-              <Input
-                id="total_price"
-                type="number"
-                step="0.01"
-                value={createForm.formData.total_price || 0}
-                onChange={(e) =>
-                  createForm.handleChange('total_price', parseFloat(e.target.value))
-                }
-                required
-              />
-            </div>
+            {/* Price Display - For fixed pricing only */}
+            {packageSelection?.pricingModel === 'fixed' && (
+              <div className="space-y-2">
+                <Label htmlFor="total_price">Total Price (Auto-calculated) *</Label>
+                <Input
+                  id="total_price"
+                  type="number"
+                  step="0.01"
+                  value={createForm.formData.total_price || 0}
+                  onChange={(e) =>
+                    createForm.handleChange('total_price', parseFloat(e.target.value))
+                  }
+                  required
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Price is calculated from package selection
+                </p>
+              </div>
+            )}
 
             {/* Assignment Type Selector */}
             <div className="space-y-2 sm:col-span-2">
@@ -562,19 +828,26 @@ export function BookingCreateModal({
                   type="button"
                   variant="outline"
                   className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
-                  onClick={onOpenAvailabilityModal}
+                  onClick={() => {
+                    console.log('🎯 Check Availability Button CLICKED!')
+                    onOpenAvailabilityModal()
+                  }}
                   disabled={
-                    !createForm.formData.booking_date ||
+                    // ถ้าเป็น recurring ต้องเช็ค recurringDates, ถ้าไม่ใช่ต้องเช็ค booking_date
+                    (enableRecurring ? recurringDates.length === 0 : !createForm.formData.booking_date) ||
                     !createForm.formData.start_time ||
-                    !createForm.formData.service_package_id
+                    !packageSelection
                   }
                 >
                   <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
                   Check Staff Availability
                 </Button>
-                {(!createForm.formData.booking_date || !createForm.formData.start_time || !createForm.formData.service_package_id) && (
+                {((enableRecurring ? recurringDates.length === 0 : !createForm.formData.booking_date) || !createForm.formData.start_time || !packageSelection) && (
                   <p className="text-xs text-muted-foreground text-center">
-                    Please select date, time, and service package first
+                    {enableRecurring
+                      ? 'Please select dates, time, and service package first'
+                      : 'Please select date, time, and service package first'
+                    }
                   </p>
                 )}
               </div>
@@ -592,40 +865,42 @@ export function BookingCreateModal({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                value={createForm.formData.city || ''}
-                onChange={(e) =>
-                  createForm.handleChange('city', e.target.value)
-                }
-                required
-              />
-            </div>
+            <div className="sm:col-span-2 grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={createForm.formData.city || ''}
+                  onChange={(e) =>
+                    createForm.handleChange('city', e.target.value)
+                  }
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="state">State *</Label>
-              <Input
-                id="state"
-                value={createForm.formData.state || ''}
-                onChange={(e) =>
-                  createForm.handleChange('state', e.target.value)
-                }
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Input
+                  id="state"
+                  value={createForm.formData.state || ''}
+                  onChange={(e) =>
+                    createForm.handleChange('state', e.target.value)
+                  }
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="zip_code">Zip Code *</Label>
-              <Input
-                id="zip_code"
-                value={createForm.formData.zip_code || ''}
-                onChange={(e) =>
-                  createForm.handleChange('zip_code', e.target.value)
-                }
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="zip_code">Zip Code *</Label>
+                <Input
+                  id="zip_code"
+                  value={createForm.formData.zip_code || ''}
+                  onChange={(e) =>
+                    createForm.handleChange('zip_code', e.target.value)
+                  }
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2 sm:col-span-2">

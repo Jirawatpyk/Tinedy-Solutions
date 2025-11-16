@@ -20,6 +20,10 @@ export * from './customer'
 // Service package types including records, relations, forms, and enums
 export * from './service-package'
 
+// Service Package V2 Types (Tiered Pricing)
+// Enhanced service package types with area-based tiered pricing and frequency options
+export * from './service-package-v2'
+
 // Chat System Types
 // Real-time chat messaging types including messages, conversations, and profiles
 export * from './chat'

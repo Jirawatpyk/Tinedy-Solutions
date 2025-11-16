@@ -4,6 +4,7 @@ export interface BookingWithService {
   start_time: string
   total_price: number
   status: string
+  payment_status?: string
   created_at: string
   customer_id: string
   staff_id: string | null
@@ -28,6 +29,7 @@ export interface CustomerWithBookings extends Customer {
     booking_date: string
     total_price: number
     status: string
+    payment_status?: string
     created_at: string
   }[]
 }
@@ -46,7 +48,10 @@ export interface StaffWithBookings extends Staff {
     booking_date: string
     total_price: number
     status: string
-    staff_id: string
+    payment_status?: string
+    staff_id?: string
+    team_id?: string
+    team_member_count?: number
     created_at: string
   }[]
 }
@@ -64,6 +69,7 @@ export interface TeamWithBookings extends Team {
     booking_date: string
     total_price: number
     status: string
+    payment_status?: string
     team_id: string
     created_at: string
   }[]

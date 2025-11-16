@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { memo } from 'react'
+import { memo, useState, useEffect } from 'react'
 
 interface BookingStatus {
   status: string
@@ -14,6 +14,18 @@ interface BookingStatusChartProps {
 }
 
 function BookingStatusChartComponent({ data }: BookingStatusChartProps) {
+  const [showLabels, setShowLabels] = useState(false)
+
+  useEffect(() => {
+    // Hide labels when data changes
+    setShowLabels(false)
+    // Show labels slightly before animation completes (600ms out of 800ms)
+    const timer = setTimeout(() => {
+      setShowLabels(true)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [data])
+
   return (
     <Card>
       <CardHeader>
@@ -35,15 +47,24 @@ function BookingStatusChartComponent({ data }: BookingStatusChartProps) {
                   data={data as unknown as Record<string, unknown>[]}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={false}
+                  labelLine={showLabels}
+                  label={
+                    showLabels
+                      ? ((props) => {
+                          const entry = props as unknown as { payload: BookingStatus; percent: number }
+                          return `${entry.payload.status}: ${(entry.percent * 100).toFixed(0)}%`
+                        })
+                      : false
+                  }
                   outerRadius={90}
                   innerRadius={60}
                   fill="#8884d8"
                   dataKey="count"
                   paddingAngle={2}
                   nameKey="status"
-                  isAnimationActive={false}
+                  animationBegin={0}
+                  animationDuration={800}
+                  animationEasing="ease-out"
                 >
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -66,27 +87,20 @@ function BookingStatusChartComponent({ data }: BookingStatusChartProps) {
 
             {/* Status Count Summary */}
             <div className="flex flex-wrap justify-center gap-4 pt-2 border-t">
-              {data.map((entry, index) => {
-                const total = data.reduce((sum, item) => sum + item.count, 0)
-                const percent = ((entry.count / total) * 100).toFixed(0)
-                return (
-                  <div key={index} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: entry.color }}
-                    />
-                    <span className="text-sm font-medium text-tinedy-dark">
-                      {entry.status}
-                    </span>
-                    <span className="text-sm font-bold text-tinedy-dark">
-                      {entry.count}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({percent}%)
-                    </span>
-                  </div>
-                )
-              })}
+              {data.map((entry, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-sm font-medium text-tinedy-dark">
+                    {entry.status}
+                  </span>
+                  <span className="text-sm font-bold text-tinedy-dark">
+                    {entry.count}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}

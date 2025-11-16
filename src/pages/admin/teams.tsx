@@ -483,7 +483,7 @@ export function AdminTeams() {
           </div>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
             <Plus className="h-4 w-4 mr-2" />
-            Create Team
+            New Team
           </Button>
         </div>
 
@@ -558,7 +558,7 @@ export function AdminTeams() {
         </div>
         <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
           <Plus className="h-4 w-4 mr-2" />
-          Create Team
+          New Team
         </Button>
       </div>
 
@@ -639,7 +639,7 @@ export function AdminTeams() {
             {!searchQuery && (
               <Button onClick={openCreateDialog}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Team
+                New Team
               </Button>
             )}
           </CardContent>

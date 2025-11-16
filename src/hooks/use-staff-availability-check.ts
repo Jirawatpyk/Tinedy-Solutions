@@ -15,6 +15,7 @@ interface BookingConflictData {
   staff_id: string | null
   team_id: string | null
   service_packages: { name: string }[] | { name: string } | null
+  service_packages_v2: { name: string }[] | { name: string } | null
   customers: { full_name: string }[] | { full_name: string } | null
 }
 
@@ -64,7 +65,7 @@ export interface TeamAvailabilityResult {
   teamMatch: number
 }
 
-interface BookingConflict {
+export interface BookingConflict {
   id: string
   bookingDate: string
   startTime: string
@@ -114,16 +115,60 @@ export function useStaffAvailabilityCheck({
     try {
       setLoading(true)
 
-      // 1. Get service type
-      const { data: service } = await supabase
-        .from('service_packages')
+      // 1. Get service type - Query both V1 and V2 safely (suppress errors)
+      let serviceTypeValue: string | null = null
+
+      // Try V2 first (suppress error if not found)
+      const { data: serviceV2, error: errorV2 } = await supabase
+        .from('service_packages_v2')
         .select('service_type')
         .eq('id', servicePackageId)
-        .single()
+        .maybeSingle()
 
-      if (!service) return
+      if (serviceV2 && !errorV2) {
+        serviceTypeValue = serviceV2.service_type
+      } else {
+        // Fall back to V1 packages (suppress error if not found)
+        const { data: serviceV1, error: errorV1 } = await supabase
+          .from('service_packages')
+          .select('service_type')
+          .eq('id', servicePackageId)
+          .maybeSingle()
 
-      setServiceType(service.service_type)
+        if (serviceV1 && !errorV1) {
+          serviceTypeValue = serviceV1.service_type
+        }
+      }
+
+      if (!serviceTypeValue) {
+        console.warn('⚠️ [Staff Availability] Package not found in V1 or V2:', servicePackageId)
+        return
+      }
+
+      setServiceType(serviceTypeValue)
+
+      // 1.5. Get all booking IDs to exclude (recurring group if applicable)
+      let excludeBookingIds: string[] = []
+
+      if (excludeBookingId) {
+        const { data: excludedBooking } = await supabase
+          .from('bookings')
+          .select('id, recurring_group_id')
+          .eq('id', excludeBookingId)
+          .single()
+
+        if (excludedBooking?.recurring_group_id) {
+          const { data: recurringBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('recurring_group_id', excludedBooking.recurring_group_id)
+
+          excludeBookingIds = recurringBookings?.map(b => b.id) || [excludeBookingId]
+          console.log(`🔗 [Single-Date] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
+        } else {
+          excludeBookingIds = [excludeBookingId]
+        }
+      }
 
       // 2. Get all staff with their reviews
       const { data: allStaff } = await supabase
@@ -163,15 +208,16 @@ export function useStaffAvailabilityCheck({
               staff_id,
               team_id,
               service_packages (name),
+              service_packages_v2 (name),
               customers (full_name)
             `)
             .eq('staff_id', staff.id)
             .eq('booking_date', date)
             .in('status', ['pending', 'confirmed', 'in_progress'])
 
-          // Exclude current booking when editing
-          if (excludeBookingId) {
-            staffQuery = staffQuery.neq('id', excludeBookingId)
+          // Exclude current booking when editing (recurring group if applicable)
+          if (excludeBookingIds.length > 0) {
+            staffQuery = staffQuery.not('id', 'in', `(${excludeBookingIds.join(',')})`)
           }
 
           const { data: staffBookings } = await staffQuery as { data: BookingConflictData[] | null }
@@ -189,15 +235,16 @@ export function useStaffAvailabilityCheck({
                 staff_id,
                 team_id,
                 service_packages (name),
+                service_packages_v2 (name),
                 customers (full_name)
               `)
               .in('team_id', teamIds)
               .eq('booking_date', date)
               .in('status', ['pending', 'confirmed', 'in_progress'])
 
-            // Exclude current booking when editing
-            if (excludeBookingId) {
-              teamQuery = teamQuery.neq('id', excludeBookingId)
+            // Exclude current booking when editing (recurring group if applicable)
+            if (excludeBookingIds.length > 0) {
+              teamQuery = teamQuery.not('id', 'in', `(${excludeBookingIds.join(',')})`)
             }
 
             const { data } = await teamQuery
@@ -226,9 +273,14 @@ export function useStaffAvailabilityCheck({
               )
             })
             .map((booking: BookingConflictData) => {
-              const servicePackages = Array.isArray(booking.service_packages)
+              // Try V1 packages first, fallback to V2
+              const servicePackagesV1 = Array.isArray(booking.service_packages)
                 ? booking.service_packages[0]
                 : booking.service_packages
+              const servicePackagesV2 = Array.isArray(booking.service_packages_v2)
+                ? booking.service_packages_v2[0]
+                : booking.service_packages_v2
+
               const customers = Array.isArray(booking.customers)
                 ? booking.customers[0]
                 : booking.customers
@@ -238,7 +290,7 @@ export function useStaffAvailabilityCheck({
                 bookingDate: booking.booking_date,
                 startTime: booking.start_time,
                 endTime: booking.end_time,
-                serviceName: servicePackages?.name || 'Unknown',
+                serviceName: servicePackagesV1?.name || servicePackagesV2?.name || 'Unknown',
                 customerName: customers?.full_name || 'Unknown'
               }
             })
@@ -261,7 +313,7 @@ export function useStaffAvailabilityCheck({
             }))
 
           // Calculate skill match
-          const skillMatch = calculateSkillMatch(staff.skills, service.service_type)
+          const skillMatch = calculateSkillMatch(staff.skills, serviceTypeValue || '')
 
           // Calculate average rating
           const reviews = Array.isArray(staff.reviews) ? staff.reviews : []
@@ -301,8 +353,8 @@ export function useStaffAvailabilityCheck({
             isAvailable,
             conflicts,
             unavailabilityReasons,
-            score: Math.round(score),
-            skillMatch: Math.round(skillMatch),
+            score: Number(score.toFixed(2)),
+            skillMatch: Number(skillMatch.toFixed(2)),
             jobsToday
           }
         })
@@ -325,16 +377,60 @@ export function useStaffAvailabilityCheck({
     try {
       setLoading(true)
 
-      // 1. Get service type
-      const { data: service } = await supabase
-        .from('service_packages')
+      // Get all booking IDs to exclude (recurring group if applicable)
+      let excludeBookingIds: string[] = []
+
+      if (excludeBookingId) {
+        const { data: excludedBooking } = await supabase
+          .from('bookings')
+          .select('id, recurring_group_id')
+          .eq('id', excludeBookingId)
+          .single()
+
+        if (excludedBooking?.recurring_group_id) {
+          const { data: recurringBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('recurring_group_id', excludedBooking.recurring_group_id)
+
+          excludeBookingIds = recurringBookings?.map(b => b.id) || [excludeBookingId]
+          console.log(`🔗 [Team Check] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
+        } else {
+          excludeBookingIds = [excludeBookingId]
+        }
+      }
+
+      // 1. Get service type - Query both V1 and V2 safely (suppress errors)
+      let serviceTypeValue: string | null = null
+
+      // Try V2 first (suppress error if not found)
+      const { data: serviceV2, error: errorV2 } = await supabase
+        .from('service_packages_v2')
         .select('service_type')
         .eq('id', servicePackageId)
-        .single()
+        .maybeSingle()
 
-      if (!service) return
+      if (serviceV2 && !errorV2) {
+        serviceTypeValue = serviceV2.service_type
+      } else {
+        // Fall back to V1 packages (suppress error if not found)
+        const { data: serviceV1, error: errorV1 } = await supabase
+          .from('service_packages')
+          .select('service_type')
+          .eq('id', servicePackageId)
+          .maybeSingle()
 
-      setServiceType(service.service_type)
+        if (serviceV1 && !errorV1) {
+          serviceTypeValue = serviceV1.service_type
+        }
+      }
+
+      if (!serviceTypeValue) {
+        console.warn('⚠️ [Team Availability] Package not found in V1 or V2:', servicePackageId)
+        return
+      }
+
+      setServiceType(serviceTypeValue)
 
       // 2. Get all active teams
       const { data: teams } = await supabase
@@ -371,15 +467,16 @@ export function useStaffAvailabilityCheck({
               start_time,
               end_time,
               service_packages (name),
+              service_packages_v2 (name),
               customers (full_name)
             `)
             .eq('team_id', team.id)
             .eq('booking_date', date)
             .in('status', ['pending', 'confirmed', 'in_progress'])
 
-          // Exclude current booking when editing
-          if (excludeBookingId) {
-            teamQuery = teamQuery.neq('id', excludeBookingId)
+          // Exclude current booking when editing (recurring group if applicable)
+          if (excludeBookingIds.length > 0) {
+            teamQuery = teamQuery.not('id', 'in', `(${excludeBookingIds.join(',')})`)
           }
 
           const { data: teamBookings } = await teamQuery
@@ -419,14 +516,15 @@ export function useStaffAvailabilityCheck({
                   staff_id,
                   team_id,
                   service_packages (name),
+                  service_packages_v2 (name),
                   customers (full_name)
                 `)
                 .eq('booking_date', date)
                 .in('status', ['pending', 'confirmed', 'in_progress'])
 
-              // Exclude current booking when editing
-              if (excludeBookingId) {
-                memberQuery = memberQuery.neq('id', excludeBookingId)
+              // Exclude current booking when editing (recurring group if applicable)
+              if (excludeBookingIds.length > 0) {
+                memberQuery = memberQuery.not('id', 'in', `(${excludeBookingIds.join(',')})`)
               }
 
               const { data: allBookings } = await memberQuery
@@ -446,9 +544,14 @@ export function useStaffAvailabilityCheck({
                   )
                 })
                 .map((booking: BookingConflictData) => {
-                  const servicePackages = Array.isArray(booking.service_packages)
+                  // Try V1 packages first, fallback to V2
+                  const servicePackagesV1 = Array.isArray(booking.service_packages)
                     ? booking.service_packages[0]
                     : booking.service_packages
+                  const servicePackagesV2 = Array.isArray(booking.service_packages_v2)
+                    ? booking.service_packages_v2[0]
+                    : booking.service_packages_v2
+
                   const customers = Array.isArray(booking.customers)
                     ? booking.customers[0]
                     : booking.customers
@@ -458,7 +561,7 @@ export function useStaffAvailabilityCheck({
                     bookingDate: booking.booking_date,
                     startTime: booking.start_time,
                     endTime: booking.end_time,
-                    serviceName: servicePackages?.name || 'Unknown',
+                    serviceName: servicePackagesV1?.name || servicePackagesV2?.name || 'Unknown',
                     customerName: customers?.full_name || 'Unknown'
                   }
                 })
@@ -507,7 +610,7 @@ export function useStaffAvailabilityCheck({
             const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles
             return profile?.skills || []
           })
-          const teamMatch = calculateTeamMatch(teamSkills, service.service_type)
+          const teamMatch = calculateTeamMatch(teamSkills, serviceTypeValue || '')
 
           // Calculate average team rating from member results
           const membersWithRatings = memberResults.filter((m) => m.rating > 0)
@@ -535,8 +638,8 @@ export function useStaffAvailabilityCheck({
             availableMembers: hasTeamConflict ? 0 : availableMembers,
             members: memberResults,
             isFullyAvailable,
-            score: Math.round(score),
-            teamMatch: Math.round(teamMatch)
+            score: Number(score.toFixed(2)),
+            teamMatch: Number(teamMatch.toFixed(2))
           }
         })
       )

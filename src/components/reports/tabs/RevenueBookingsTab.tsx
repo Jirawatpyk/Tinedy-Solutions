@@ -27,6 +27,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { useChartAnimation } from '@/hooks/useChartAnimation'
 
 interface RevenueMetrics {
   total: number
@@ -91,6 +92,19 @@ function RevenueBookingsTabComponent({
   topPackages,
   peakHoursData,
 }: RevenueBookingsTabProps) {
+  // Chart animations using custom hook
+  const statusChart = useChartAnimation(statusBreakdown, {
+    initialDelay: 50,
+    animationDuration: 800,
+    enabled: true,
+  })
+
+  const serviceTypeChart = useChartAnimation(serviceTypePieData, {
+    initialDelay: 50,
+    animationDuration: 800,
+    enabled: true,
+  })
+
   return (
     <div className="space-y-6">
       {/* Revenue Stats Cards */}
@@ -160,7 +174,7 @@ function RevenueBookingsTabComponent({
                 <YAxis
                   tick={{ fontSize: 12 }}
                   stroke="#888"
-                  tickFormatter={(value) => `฿${value}`}
+                  tickFormatter={(value) => `฿${(value / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
@@ -242,9 +256,18 @@ function RevenueBookingsTabComponent({
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
-                  label={(props: { name?: string; percent?: number }) =>
-                    (props.percent || 0) > 0 ? `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(0)}%` : ''
+                  labelLine={statusChart.showLabels}
+                  label={
+                    statusChart.showLabels
+                      ? ((props: { name?: string; percent?: number }) =>
+                          (props.percent || 0) > 0 ? `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(0)}%` : ''
+                        )
+                      : false
                   }
+                  animationBegin={0}
+                  animationDuration={statusChart.isReady ? 800 : 0}
+                  animationEasing="ease-out"
+                  opacity={statusChart.isReady ? 1 : 0}
                 >
                   {statusBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -253,15 +276,15 @@ function RevenueBookingsTabComponent({
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="flex flex-wrap justify-center gap-4 pt-2 border-t mt-4">
               {statusBreakdown.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm text-muted-foreground">{item.name}</span>
-                  <span className="text-sm font-semibold ml-auto">{item.value}</span>
+                  <span className="text-sm font-medium text-tinedy-dark">{item.name}</span>
+                  <span className="text-sm font-bold text-tinedy-dark">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -280,14 +303,22 @@ function RevenueBookingsTabComponent({
                   data={serviceTypePieData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(props: { name?: string; percent?: number }) => {
-                    const percent = Number(props.percent || 0)
-                    return `${props.name || ''}: ${(percent * 100).toFixed(0)}%`
-                  }}
+                  labelLine={serviceTypeChart.showLabels}
+                  label={
+                    serviceTypeChart.showLabels
+                      ? ((props: { name?: string; percent?: number }) => {
+                          const percent = Number(props.percent || 0)
+                          return `${props.name || ''}: ${(percent * 100).toFixed(0)}%`
+                        })
+                      : false
+                  }
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  animationBegin={0}
+                  animationDuration={serviceTypeChart.isReady ? 800 : 0}
+                  animationEasing="ease-out"
+                  opacity={serviceTypeChart.isReady ? 1 : 0}
                 >
                   {serviceTypePieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
