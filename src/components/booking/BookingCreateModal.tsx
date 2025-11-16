@@ -481,14 +481,15 @@ export function BookingCreateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Create New Booking</DialogTitle>
           <DialogDescription>
             Fill in the booking details below
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="space-y-4 overflow-y-auto flex-1 pl-1 pr-3">
           {/* Customer Information */}
           <div className="space-y-4 border-b pb-4">
             <h3 className="font-medium">Customer Information</h3>
@@ -915,8 +916,9 @@ export function BookingCreateModal({
               />
             </div>
           </div>
+          </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-shrink-0 border-t pt-4 mt-4">
             <Button
               type="button"
               variant="outline"

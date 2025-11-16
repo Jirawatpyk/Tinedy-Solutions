@@ -173,7 +173,7 @@ export function StaffAvailabilityModal({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {assignmentType === 'individual' ? '🔍 Check Staff Availability' : '🔍 Check Team Availability'}

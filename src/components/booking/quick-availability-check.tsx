@@ -137,8 +137,8 @@ export function QuickAvailabilityCheck() {
 
       {/* Step 1: Input Dialog */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <CalendarCheck className="h-5 w-5" />
               Quick Availability Check
@@ -148,7 +148,7 @@ export function QuickAvailabilityCheck() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 pl-1 pr-3 overflow-y-auto flex-1">
             {/* Service Package - MOVED TO TOP */}
             <div className="space-y-2">
               <Label htmlFor="service">Service Package</Label>
@@ -310,7 +310,7 @@ export function QuickAvailabilityCheck() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
