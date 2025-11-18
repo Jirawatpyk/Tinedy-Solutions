@@ -34,6 +34,7 @@ import type { RecurringPattern } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
 import { createRecurringGroup } from '@/lib/recurring-booking-service'
 import { Checkbox } from '@/components/ui/checkbox'
+import { logger } from '@/lib/logger'
 
 interface StaffMember {
   id: string
@@ -134,12 +135,12 @@ export function BookingCreateModal({
   const setRecurringPattern = parentSetRecurringPattern || localSetRecurringPattern
   const setRecurringDates = parentSetRecurringDates || localSetRecurringDates
 
-  // Debug: Track modal open/close and packageSelection prop
+  // Track modal open/close and packageSelection prop
   useEffect(() => {
     if (isOpen) {
-      console.log('🟢 BookingCreateModal OPENED, packageSelection prop:', packageSelection)
+      logger.debug('BookingCreateModal opened', { packageSelection }, { context: 'BookingCreateModal' })
     } else {
-      console.log('🔴 BookingCreateModal CLOSED, packageSelection prop:', packageSelection)
+      logger.debug('BookingCreateModal closed', { packageSelection }, { context: 'BookingCreateModal' })
     }
   }, [isOpen, packageSelection])
 
@@ -313,8 +314,8 @@ export function BookingCreateModal({
         // ✅ คำนวณราคาต่อ booking (หารด้วย frequency)
         const pricePerBooking = baseBookingData.total_price / packageSelection.frequency
 
-        // Debug: แสดง baseBookingData
-        console.log('📋 Base booking data for recurring group:', {
+        // Log base booking data for recurring group
+        logger.debug('Creating recurring booking group', {
           customer_id: baseBookingData.customer_id,
           service_package_id: baseBookingData.service_package_id,
           package_v2_id: baseBookingData.package_v2_id,
@@ -324,7 +325,7 @@ export function BookingCreateModal({
           total_price_original: baseBookingData.total_price,
           total_price_per_booking: pricePerBooking,
           frequency: packageSelection.frequency
-        })
+        }, { context: 'BookingCreateModal' })
 
         // Create recurring group with adjusted price
         const result = await createRecurringGroup({
@@ -388,7 +389,7 @@ export function BookingCreateModal({
 
           // ส่ง email (don't await to avoid blocking)
           sendRecurringBookingConfirmation(recurringEmailData).catch(err => {
-            console.error('Failed to send recurring booking confirmation:', err)
+            logger.error('Failed to send recurring booking confirmation', { error: err }, { context: 'BookingCreateModal' })
           })
         }
 
@@ -442,7 +443,7 @@ export function BookingCreateModal({
           }
 
           sendBookingConfirmation(emailData).catch(err => {
-            console.error('Failed to send booking confirmation:', err)
+            logger.error('Failed to send booking confirmation', { error: err }, { context: 'BookingCreateModal' })
           })
 
           sendBookingReminder({
@@ -458,7 +459,7 @@ export function BookingCreateModal({
             notes: emailData.notes,
             staffName: emailData.staffName,
           }).catch(err => {
-            console.error('Failed to schedule booking reminder:', err)
+            logger.error('Failed to schedule booking reminder', { error: err }, { context: 'BookingCreateModal' })
           })
         }
 
@@ -473,7 +474,7 @@ export function BookingCreateModal({
       onClose()
       onSuccess()
     } catch (error) {
-      console.error('Error creating booking:', error)
+      logger.error('Error creating booking', { error }, { context: 'BookingCreateModal' })
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
         title: errorMsg.title,
@@ -590,12 +591,12 @@ export function BookingCreateModal({
                 packages={servicePackages as unknown as ServicePackageV2WithTiers[]} // ส่ง unified packages
                 value={packageSelection}
                 onChange={(selection) => {
-                  console.log('📦 Package Selection Changed:', selection)
+                  logger.debug('Package selection changed', { selection }, { context: 'BookingCreateModal' })
 
                   // ใช้ startTransition เพื่อ batch updates แบบ non-blocking
                   startTransition(() => {
                     // Update parent state
-                    console.log('🟣 Calling setPackageSelection (parent state):', selection)
+                    logger.debug('Updating package selection state', { selection }, { context: 'BookingCreateModal' })
                     setPackageSelection(selection)
 
                     if (selection) {
@@ -607,7 +608,10 @@ export function BookingCreateModal({
                       const isV1Package = selectedPkg?._source === 'v1'
 
                       if (selection.pricingModel === 'fixed') {
-                        console.log('💰 Setting Fixed Price:', selection.price, 'Version:', selectedPkg?._source)
+                        logger.debug('Setting fixed price', {
+                          price: selection.price,
+                          version: selectedPkg?._source
+                        }, { context: 'BookingCreateModal' })
 
                         // FIX: ตั้งค่าตาม version ของ package (ต้องมีเพียงหนึ่งตัว)
                         if (isV1Package) {
@@ -624,7 +628,11 @@ export function BookingCreateModal({
                         formUpdates.calculated_price = null
                       } else {
                         // Tiered pricing - ต้องเป็น V2 แน่นอน
-                        console.log('💰 Setting Tiered Price:', selection.price, 'for area:', selection.areaSqm, 'frequency:', selection.frequency)
+                        logger.debug('Setting tiered price', {
+                          price: selection.price,
+                          areaSqm: selection.areaSqm,
+                          frequency: selection.frequency
+                        }, { context: 'BookingCreateModal' })
                         formUpdates.service_package_id = null
                         formUpdates.package_v2_id = selection.packageId
                         formUpdates.area_sqm = selection.areaSqm
@@ -637,7 +645,11 @@ export function BookingCreateModal({
                       if (createForm.formData.start_time && selection.estimatedHours) {
                         const durationMinutes = Math.round(selection.estimatedHours * 60)
                         const endTime = calculateEndTime(createForm.formData.start_time, durationMinutes)
-                        console.log('⏰ Auto-calculated End Time:', endTime, 'from', selection.estimatedHours, 'hours')
+                        logger.debug('Auto-calculated end time', {
+                          endTime,
+                          estimatedHours: selection.estimatedHours,
+                          startTime: createForm.formData.start_time
+                        }, { context: 'BookingCreateModal' })
                         formUpdates.end_time = endTime
                       }
 
@@ -645,7 +657,7 @@ export function BookingCreateModal({
                       createForm.setValues(formUpdates)
                     } else {
                       // Clear selection
-                      console.log('🗑️ Clearing package selection')
+                      logger.debug('Clearing package selection', undefined, { context: 'BookingCreateModal' })
                       createForm.setValues({
                         service_package_id: '',
                         package_v2_id: undefined,
@@ -725,7 +737,11 @@ export function BookingCreateModal({
                     if (newStartTime && packageSelection?.estimatedHours) {
                       const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
                       const endTime = calculateEndTime(newStartTime, durationMinutes)
-                      console.log('⏰ Auto-recalculated End Time:', endTime)
+                      logger.debug('Auto-recalculated end time on start time change', {
+                        newStartTime,
+                        endTime,
+                        estimatedHours: packageSelection.estimatedHours
+                      }, { context: 'BookingCreateModal' })
                       createForm.handleChange('end_time', endTime)
                     }
                   }}
@@ -849,7 +865,13 @@ export function BookingCreateModal({
                   variant="outline"
                   className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
                   onClick={() => {
-                    console.log('🎯 Check Availability Button CLICKED!')
+                    logger.debug('Check availability button clicked', {
+                      assignmentType,
+                      hasRecurringDates: enableRecurring ? recurringDates.length : null,
+                      hasBookingDate: !enableRecurring ? !!createForm.formData.booking_date : null,
+                      hasStartTime: !!createForm.formData.start_time,
+                      hasPackageSelection: !!packageSelection
+                    }, { context: 'BookingCreateModal' })
                     onOpenAvailabilityModal()
                   }}
                   disabled={
