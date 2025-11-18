@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { Calendar, ChevronLeft, ChevronRight, TrendingUp, Download, Clock, CheckCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
@@ -130,6 +131,7 @@ export function AdminWeeklySchedule() {
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
   const { toast } = useToast()
+  const { softDelete } = useSoftDelete('bookings')
 
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
   const { packages: servicePackages } = useServicePackages()
@@ -224,7 +226,7 @@ export function AdminWeeklySchedule() {
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
           customers (id, full_name, email),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           ${TEAMS_WITH_LEAD_QUERY}
         `)
         .gte('booking_date', startDate)
@@ -533,6 +535,14 @@ export function AdminWeeklySchedule() {
         description: getErrorMessage(error),
         variant: 'destructive',
       })
+    }
+  }
+
+  const archiveBooking = async (bookingId: string) => {
+    const result = await softDelete(bookingId)
+    if (result.success) {
+      setIsDetailModalOpen(false)
+      fetchBookings()
     }
   }
 
@@ -1037,6 +1047,7 @@ export function AdminWeeklySchedule() {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           onEdit={() => selectedBooking && handleEditBooking(selectedBooking)}
+          onCancel={archiveBooking}
           onDelete={handleDeleteBooking}
           onStatusChange={handleStatusChange}
           onMarkAsPaid={handleMarkAsPaid}

@@ -1,11 +1,12 @@
 import { memo, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { Edit, UserPlus, Users, Crown, Star, ArrowRight } from 'lucide-react'
+import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucide-react'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
 
 interface TeamMember {
@@ -29,12 +30,15 @@ interface Team {
   member_count?: number
   members?: TeamMember[]
   average_rating?: number
+  deleted_at?: string | null
 }
 
 interface TeamCardProps {
   team: Team
   onEdit: (team: Team) => void
   onDelete: (teamId: string) => void
+  onCancel?: (teamId: string) => void
+  onRestore?: (teamId: string) => void
   onAddMember: (team: Team) => void
   onRemoveMember: (teamId: string, staffId: string) => void
   onToggleMemberStatus: (membershipId: string, currentStatus: boolean) => void
@@ -49,8 +53,14 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
+export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const isArchived = !!team.deleted_at
+
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
 
   // Memoize expensive calculations
   const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])
@@ -83,11 +93,11 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
   )
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={`hover:shadow-md transition-shadow ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
+            <div className={`w-12 h-12 rounded-full ${isArchived ? 'bg-gray-400' : 'bg-tinedy-blue'} flex items-center justify-center text-white font-semibold text-lg`}>
               {teamInitial}
             </div>
             <div>
@@ -95,6 +105,11 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
                 {team.name}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
+                {isArchived && (
+                  <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50">
+                    Archived
+                  </Badge>
+                )}
                 <Badge variant="secondary">
                   <Users className="h-3 w-3 mr-1" />
                   {team.member_count || 0} members
@@ -111,17 +126,35 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEdit(team)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <DeleteButton
-              itemName={team.name}
-              onDelete={() => onDelete(team.id)}
-            />
+            {isArchived && onRestore ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRestore(team.id)}
+                className="border-green-500 text-green-700 hover:bg-green-50"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Restore
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(team)}
+                  disabled={isArchived}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <PermissionAwareDeleteButton
+                  resource="teams"
+                  itemName={team.name}
+                  onDelete={() => onDelete(team.id)}
+                  onCancel={onCancel ? () => onCancel(team.id) : undefined}
+                  cancelText="Archive"
+                />
+              </>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -234,7 +267,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onAddMe
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => navigate(`/admin/teams/${team.id}`)}
+            onClick={() => navigate(`${basePath}/teams/${team.id}`)}
           >
             View Details
             <ArrowRight className="h-4 w-4 ml-2" />

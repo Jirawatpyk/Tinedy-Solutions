@@ -35,6 +35,20 @@ const adminNavItems = [
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
+const managerNavItems = [
+  { name: 'Dashboard', href: '/manager', icon: LayoutDashboard },
+  { name: 'Bookings', href: '/manager/bookings', icon: ClipboardList },
+  { name: 'Calendar', href: '/manager/calendar', icon: Calendar },
+  { name: 'Weekly Schedule', href: '/manager/weekly-schedule', icon: Calendar },
+  { name: 'Customers', href: '/manager/customers', icon: Users },
+  { name: 'Staff', href: '/manager/staff', icon: UsersRound },
+  { name: 'Teams', href: '/manager/teams', icon: UsersRound },
+  { name: 'Chat', href: '/manager/chat', icon: MessageSquare },
+  { name: 'Service Packages', href: '/manager/packages', icon: Package },
+  { name: 'Reports', href: '/manager/reports', icon: BarChart3 },
+  { name: 'My Profile', href: '/manager/profile', icon: UserCircle },
+]
+
 const staffNavItems = [
   { name: 'My Bookings', href: '/staff', icon: ClipboardList },
   { name: 'My Calendar', href: '/staff/calendar', icon: Calendar },
@@ -56,7 +70,10 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const navItems = profile?.role === 'admin' ? adminNavItems : staffNavItems
+  const navItems =
+    profile?.role === 'admin' ? adminNavItems :
+    profile?.role === 'manager' ? managerNavItems :
+    staffNavItems
 
   // Fetch unread message count
   useEffect(() => {

@@ -40,8 +40,8 @@ CREATE TRIGGER email_queue_updated_at
 -- Add RLS policies
 ALTER TABLE email_queue ENABLE ROW LEVEL SECURITY;
 
--- Admin can do everything
-CREATE POLICY "Admin full access to email_queue"
+-- Admin and Manager can do everything
+CREATE POLICY "Admin and Manager full access to email_queue"
   ON email_queue
   FOR ALL
   TO authenticated
@@ -49,7 +49,7 @@ CREATE POLICY "Admin full access to email_queue"
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      AND profiles.role IN ('admin', 'manager')
     )
   );
 

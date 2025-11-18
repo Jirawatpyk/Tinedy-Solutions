@@ -51,6 +51,7 @@ serve(async (req) => {
     let fromEmail = 'bookings@resend.dev'
     let businessPhone = ''
     let businessAddress = ''
+    let businessLogoUrl = 'https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png'
 
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -66,7 +67,7 @@ serve(async (req) => {
 
         const { data: settings } = await supabase
           .from('settings')
-          .select('business_name, business_email, business_phone, business_address')
+          .select('business_name, business_email, business_phone, business_address, business_logo_url')
           .limit(1)
           .maybeSingle()
 
@@ -75,6 +76,7 @@ serve(async (req) => {
           fromEmail = settings.business_email || fromEmail
           businessPhone = settings.business_phone || businessPhone
           businessAddress = settings.business_address || businessAddress
+          businessLogoUrl = settings.business_logo_url || businessLogoUrl
         }
       }
     } catch (error) {
@@ -97,6 +99,7 @@ serve(async (req) => {
       fromName,
       businessPhone,
       businessAddress,
+      businessLogoUrl,
     })
 
     // Send email using Resend API
@@ -151,6 +154,7 @@ function generateBookingConfirmationEmail(data: BookingEmailData & {
   fromName: string
   businessPhone: string
   businessAddress: string
+  businessLogoUrl: string
 }): string {
   return `
 <!DOCTYPE html>
@@ -164,10 +168,10 @@ function generateBookingConfirmationEmail(data: BookingEmailData & {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png"
-           alt="Tinedy Logo"
+      <img src="${data.businessLogoUrl}"
+           alt="${data.fromName} Logo"
            class="logo"
-           style="height: 100px; margin-bottom: 16px;" />
+           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
       <h1>✅ Booking Confirmed!</h1>
     </div>
 

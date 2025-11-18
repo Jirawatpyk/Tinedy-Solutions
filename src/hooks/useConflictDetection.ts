@@ -150,7 +150,7 @@ export function useConflictDetection(params?: ConflictCheckParams) {
           *,
           customers (id, full_name, email),
           service_packages (name, service_type),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
         .eq('booking_date', bookingDate)

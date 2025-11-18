@@ -17,12 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Users, Mail, MapPin, Clock, Edit, Send, Trash2, CreditCard, Star, Copy, Link2, Check, Package, Crown } from 'lucide-react'
+import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 
 interface Review {
@@ -36,8 +36,9 @@ interface BookingDetailModalProps {
   booking: Booking | null
   isOpen: boolean
   onClose: () => void
-  onEdit: (booking: Booking) => void
+  onEdit?: (booking: Booking) => void
   onDelete: (bookingId: string) => void
+  onCancel?: (bookingId: string) => void
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   onMarkAsPaid: (bookingId: string, method: string) => void
   getStatusBadge: (status: string) => React.ReactNode
@@ -57,6 +58,7 @@ export function BookingDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onCancel,
   onStatusChange,
   onMarkAsPaid,
   getStatusBadge,
@@ -71,7 +73,6 @@ export function BookingDetailModal({
   const [hoverRating, setHoverRating] = useState(0)
   const [savingReview, setSavingReview] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { toast } = useToast()
 
   const resetReview = useCallback(() => {
@@ -572,15 +573,17 @@ export function BookingDetailModal({
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Quick Actions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => onEdit(booking)}
-                disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
-                title={['completed', 'cancelled', 'no_show'].includes(booking.status) ? 'Cannot edit completed, cancelled, or no-show bookings' : undefined}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  onClick={() => onEdit(booking)}
+                  disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
+                  title={['completed', 'cancelled', 'no_show'].includes(booking.status) ? 'Cannot edit completed, cancelled, or no-show bookings' : undefined}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleSendReminder}
@@ -608,34 +611,27 @@ export function BookingDetailModal({
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={actionLoading?.delete}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {actionLoading?.delete ? 'Deleting...' : 'Delete'}
-              </Button>
+              <PermissionAwareDeleteButton
+                resource="bookings"
+                itemName={`Booking for ${booking.customers?.full_name || 'customer'} on ${formatDate(booking.booking_date)}`}
+                onDelete={() => {
+                  onDelete(booking.id)
+                  onClose()
+                }}
+                onCancel={onCancel ? () => {
+                  onCancel(booking.id)
+                  onClose()
+                } : undefined}
+                variant="default"
+                size="default"
+                buttonVariant="outline"
+                cancelText="Archive"
+              />
             </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-
-    <ConfirmDialog
-      open={showDeleteConfirm}
-      onOpenChange={setShowDeleteConfirm}
-      onConfirm={() => {
-        onDelete(booking.id)
-        setShowDeleteConfirm(false)
-        onClose()
-      }}
-      title="Delete Booking"
-      description={`Are you sure you want to delete the booking for ${booking.customers?.full_name || 'customer'} on ${formatDate(booking.booking_date)} at ${formatTime(booking.start_time)}? This action cannot be undone.`}
-      confirmText="Delete"
-      cancelText="Cancel"
-      variant="destructive"
-    />
   </>
   )
 }

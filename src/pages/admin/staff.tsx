@@ -24,17 +24,18 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star } from 'lucide-react'
+import { usePermissions } from '@/hooks/use-permissions'
+import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { useNavigate } from 'react-router-dom'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 
 interface StaffMember {
   id: string
   email: string
   full_name: string
   avatar_url: string | null
-  role: 'admin' | 'staff'
+  role: 'admin' | 'manager' | 'staff'
   phone: string | null
   staff_number: string | null
   skills: string[] | null
@@ -45,6 +46,7 @@ interface StaffMember {
 
 export function AdminStaff() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,17 +55,21 @@ export function AdminStaff() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
 
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
   const { toast } = useToast()
+  const { isAdmin } = usePermissions()
 
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
     phone: '',
-    role: 'staff' as 'admin' | 'staff',
+    role: 'staff' as 'admin' | 'manager' | 'staff',
     password: '',
     staff_number: '',
     skills: '',
@@ -71,9 +77,10 @@ export function AdminStaff() {
 
   const fetchStaff = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('profiles')
         .select('id, email, full_name, avatar_url, role, phone, staff_number, skills, created_at, updated_at')
+        .in('role', ['admin', 'manager', 'staff']) // ดึงทุก role เพื่อนับสถิติ
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -256,21 +263,34 @@ export function AdminStaff() {
 
   const deleteStaff = async (staffId: string) => {
     try {
+      console.log('[Delete Staff] Starting deletion for userId:', staffId)
+
       // Call Edge Function to delete user from auth.users (will cascade to profiles)
       const { data, error } = await supabase.functions.invoke('delete-user', {
         body: { userId: staffId },
       })
 
-      if (error) throw error
-      if (!data?.success) throw new Error(data?.error || 'Failed to delete user')
+      console.log('[Delete Staff] Edge Function response:', { data, error })
+
+      if (error) {
+        console.error('[Delete Staff] Edge Function error:', error)
+        throw error
+      }
+
+      if (!data?.success) {
+        console.error('[Delete Staff] Edge Function returned failure:', data)
+        throw new Error(data?.error || data?.details || 'Failed to delete user')
+      }
+
+      console.log('[Delete Staff] Success!', data)
 
       toast({
         title: 'Success',
-        description: 'Staff member deleted successfully',
+        description: data.message || 'Staff member deleted successfully',
       })
       fetchStaff()
     } catch (error) {
-      console.error('Delete staff error:', error)
+      console.error('[Delete Staff] Caught error:', error)
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to delete staff member',
@@ -309,8 +329,9 @@ export function AdminStaff() {
   const getStaffStats = () => {
     const totalStaff = staff.length
     const admins = staff.filter(s => s.role === 'admin').length
+    const managers = staff.filter(s => s.role === 'manager').length
     const staffMembers = staff.filter(s => s.role === 'staff').length
-    return { totalStaff, admins, staffMembers }
+    return { totalStaff, admins, managers, staffMembers }
   }
 
   const stats = getStaffStats()
@@ -335,8 +356,8 @@ export function AdminStaff() {
         </div>
 
         {/* Stats cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -518,7 +539,7 @@ export function AdminStaff() {
                 <Label htmlFor="role">Role *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: 'admin' | 'staff') =>
+                  onValueChange={(value: 'admin' | 'manager' | 'staff') =>
                     setFormData({ ...formData, role: value })
                   }
                 >
@@ -527,7 +548,12 @@ export function AdminStaff() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {isAdmin && (
+                      <>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -550,7 +576,7 @@ export function AdminStaff() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
@@ -577,6 +603,21 @@ export function AdminStaff() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Full access users
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Managers</CardTitle>
+            <Users className="h-4 w-4 text-tinedy-purple" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-tinedy-dark">
+              {stats.managers}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Team managers
             </p>
           </CardContent>
         </Card>
@@ -617,6 +658,7 @@ export function AdminStaff() {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
               </SelectContent>
             </Select>
@@ -640,7 +682,7 @@ export function AdminStaff() {
               <Card
                 key={member.id}
                 className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-                onClick={() => navigate(`/admin/staff/${member.id}`)}
+                onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -654,9 +696,10 @@ export function AdminStaff() {
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            variant={member.role === 'admin' ? 'default' : 'secondary'}
+                            variant={member.role === 'admin' ? 'default' : member.role === 'manager' ? 'default' : 'secondary'}
+                            className={member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}
                           >
-                            {member.role === 'admin' ? '👑 Admin' : 'Staff'}
+                            {member.role === 'admin' ? '👑 Admin' : member.role === 'manager' ? '👔 Manager' : 'Staff'}
                           </Badge>
                           {member.average_rating !== undefined && (
                             <div className="flex items-center gap-1 text-yellow-500">
@@ -677,7 +720,8 @@ export function AdminStaff() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <DeleteButton
+                      <PermissionAwareDeleteButton
+                        resource="staff"
                         itemName={member.full_name}
                         onDelete={() => deleteStaff(member.id)}
                       />

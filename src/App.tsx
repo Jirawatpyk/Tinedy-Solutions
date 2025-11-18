@@ -20,6 +20,7 @@ const AdminStaff = lazy(() => import('./pages/admin/staff').then(m => ({ default
 const AdminStaffPerformance = lazy(() => import('./pages/admin/staff-performance').then(m => ({ default: m.AdminStaffPerformance })))
 const AdminWeeklySchedule = lazy(() => import('./pages/admin/weekly-schedule').then(m => ({ default: m.AdminWeeklySchedule })))
 const AdminServicePackages = lazy(() => import('./pages/admin/service-packages').then(m => ({ default: m.AdminServicePackages })))
+const AdminPackageDetail = lazy(() => import('./pages/admin/package-detail'))
 const AdminReports = lazy(() => import('./pages/admin/reports').then(m => ({ default: m.AdminReports })))
 const AdminCalendar = lazy(() => import('./pages/admin/calendar').then(m => ({ default: m.AdminCalendar })))
 const AdminChat = lazy(() => import('./pages/admin/chat').then(m => ({ default: m.AdminChat })))
@@ -82,11 +83,38 @@ function App() {
               <Route path="calendar" element={<AdminCalendar />} />
               <Route path="chat" element={<AdminChat />} />
               <Route path="packages" element={<AdminServicePackages />} />
+              <Route path="packages/:packageId" element={<AdminPackageDetail />} />
               <Route path="reports" element={<AdminReports />} />
               <Route path="teams" element={<AdminTeams />} />
               <Route path="teams/:teamId" element={<AdminTeamDetail />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="settings" element={<AdminSettings />} />
+            </Route>
+
+            {/* Protected Manager routes (shared pages with admin) */}
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="customers" element={<AdminCustomers />} />
+              <Route path="customers/:id" element={<AdminCustomerDetail />} />
+              <Route path="staff" element={<AdminStaff />} />
+              <Route path="staff/:id" element={<AdminStaffPerformance />} />
+              <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
+              <Route path="calendar" element={<AdminCalendar />} />
+              <Route path="chat" element={<AdminChat />} />
+              <Route path="packages" element={<AdminServicePackages />} />
+              <Route path="packages/:packageId" element={<AdminPackageDetail />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="teams" element={<AdminTeams />} />
+              <Route path="teams/:teamId" element={<AdminTeamDetail />} />
+              <Route path="profile" element={<AdminProfile />} />
             </Route>
 
             {/* Protected Staff routes */}

@@ -22,7 +22,7 @@ Tinedy CRM is a comprehensive customer relationship management system designed s
 - Service packages
 - Basic reporting
 
-#### ✅ **Phase 2 - Advanced Features** (Recently Completed)
+#### ✅ **Phase 2 - Advanced Features**
 - **Quick Availability Check** - Instant staff/team availability lookup
 - **Advanced Conflict Detection** - Prevents double bookings
 - **Team Management** - Organize staff into teams
@@ -30,6 +30,15 @@ Tinedy CRM is a comprehensive customer relationship management system designed s
 - **Real-time Chat** - Internal communication system
 - **Error Handling** - Robust error recovery system
 - **Mobile Responsive** - Works on all devices
+
+#### ✅ **Manager Role Implementation** (Recently Completed)
+- **Role-Based Access Control** - Three-tier permission system (Admin, Manager, Staff)
+- **Manager Portal** - Dedicated dashboard and features for operational managers
+- **Soft Delete System** - Archive and restore functionality
+- **Permission Matrix** - Granular control over feature access
+- **157 Comprehensive Tests** - Full test coverage for permission system
+- **Route Protection** - Role-based access to different portal sections
+- **Archive Management** - Managers can archive/restore without permanent deletion
 
 ---
 
@@ -42,11 +51,15 @@ Tinedy CRM is a comprehensive customer relationship management system designed s
 - **Code Quality**: ✅ ESLint validated
 
 ### 2. Documentation
-- ✅ `README.md` - Setup instructions
-- ✅ `DEPLOYMENT.md` - Deployment guide (see detailed steps)
+- ✅ `README.md` - Setup instructions with role system overview
+- ✅ `DEPLOYMENT.md` - Deployment guide with role testing checklist
 - ✅ `HANDOVER.md` - This document
+- ✅ `MANAGER_ROLE_MIGRATION_GUIDE.md` - Technical migration guide
+- ✅ `USER_GUIDE_MANAGER_ROLE.md` - Manager user guide with workflows
+- ✅ `ADMIN_GUIDE_USER_MANAGEMENT.md` - Admin guide for user management
 - ✅ Inline code comments
 - ✅ Component documentation
+- ✅ 157 permission system tests
 
 ### 3. Database Schema
 - Supabase project configured
@@ -109,12 +122,15 @@ vercel --prod
 - Revenue statistics
 - Performance metrics
 - Quick actions
+- Full system oversight
 
 **Bookings** (`/admin/bookings`)
 - Create new booking
 - Edit existing bookings
+- Hard delete bookings (permanent)
 - View booking calendar
-- Quick availability check ⭐ NEW
+- Quick availability check ⭐
+- Restore archived bookings ⭐
 
 **Customers** (`/admin/customers`)
 - Add new customers
@@ -146,11 +162,52 @@ vercel --prod
 - Staff performance
 - Export to Excel/CSV
 
-**Chat** (`/admin/chat`) ⭐ NEW
+**Chat** (`/admin/chat`)
 - Real-time messaging
 - File attachments
 - Message history
 - Notifications
+
+**User Management** (`/admin/staff`) ⭐ NEW
+- Create and manage users
+- Assign roles (Admin, Manager, Staff)
+- Change user permissions
+- View user activity
+
+### Manager User Guide
+
+**Dashboard** (`/manager`)
+- View team appointments
+- Revenue overview
+- Team performance metrics
+- Operational insights
+
+**Bookings** (`/manager/bookings`)
+- Create new bookings
+- Edit existing bookings
+- Archive bookings (soft delete) ⭐
+- Restore archived bookings ⭐
+- Cannot permanently delete
+
+**Customers** (`/manager/customers`)
+- Create customers
+- Update customer information
+- View customer history
+- Cannot delete customers
+
+**Teams** (`/manager/teams`)
+- Create and manage teams
+- Assign staff to teams
+- View team performance
+- Update team schedules
+
+**Reports** (`/manager/reports`)
+- View analytics
+- Export reports
+- Performance metrics
+- Revenue tracking
+
+For detailed manager workflows, see [USER_GUIDE_MANAGER_ROLE.md](USER_GUIDE_MANAGER_ROLE.md)
 
 #### 3. **Common Tasks**
 
@@ -186,11 +243,19 @@ vercel --prod
 - **Email**: [Provided separately for security]
 - **Password**: [Provided separately for security]
 - **Role**: Admin (full access)
+- **Portal**: Redirects to `/admin`
+
+### Manager Demo Access
+- **Email**: [Provided separately]
+- **Password**: [Provided separately]
+- **Role**: Manager (operational access)
+- **Portal**: Redirects to `/manager`
 
 ### Staff Demo Access
 - **Email**: [Provided separately]
 - **Password**: [Provided separately]
 - **Role**: Staff (limited access)
+- **Portal**: Redirects to `/staff`
 
 ### Supabase Dashboard
 - **URL**: https://supabase.com/dashboard
@@ -377,6 +442,27 @@ If you have any questions or need assistance, please don't hesitate to reach out
 
 ---
 
-*Tinedy CRM System v2.0*
+---
+
+## 📚 Additional Resources
+
+### Documentation Files:
+- **[README.md](README.md)** - Project overview and setup
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide with role testing
+- **[MANAGER_ROLE_MIGRATION_GUIDE.md](MANAGER_ROLE_MIGRATION_GUIDE.md)** - Technical migration guide
+- **[USER_GUIDE_MANAGER_ROLE.md](USER_GUIDE_MANAGER_ROLE.md)** - Manager user guide
+- **[ADMIN_GUIDE_USER_MANAGEMENT.md](ADMIN_GUIDE_USER_MANAGEMENT.md)** - Admin guide for user management
+
+### Key Features:
+✅ 157 comprehensive tests for permission system
+✅ Three-tier role-based access control
+✅ Soft delete with archive/restore functionality
+✅ Route protection based on user roles
+✅ Granular permission matrix
+
+---
+
+*Tinedy CRM System v2.1*
+*Now with Manager Role Support*
 *Developed with ❤️ for Tinedy Solutions*
 *© 2025 All Rights Reserved*

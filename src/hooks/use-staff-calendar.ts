@@ -121,7 +121,7 @@ export function useStaffCalendar() {
           customers (full_name, phone, avatar_url),
           service_packages (name, duration_minutes, price),
           service_packages_v2:package_v2_id (name),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
         .gte('booking_date', today.toISOString().split('T')[0])

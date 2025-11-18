@@ -39,6 +39,7 @@ export const createMockCustomer = (overrides: Partial<CustomerRecord> = {}): Cus
   notes: faker.datatype.boolean() ? faker.lorem.sentence() : null,
   created_at: faker.date.past().toISOString(),
   updated_at: faker.date.recent().toISOString(),
+  deleted_at: null,
   ...overrides,
 })
 

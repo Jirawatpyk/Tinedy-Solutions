@@ -25,6 +25,7 @@ import {
   Calendar,
   Hash,
   Award,
+  Shield,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -223,6 +224,25 @@ export default function StaffProfile() {
                 onUpload={uploadAvatar}
                 size="lg"
               />
+            </div>
+
+            <Separator />
+
+            {/* Role Badge */}
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-full">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Account Role</p>
+                  <p className="text-xs text-gray-500">Your access level in the system</p>
+                </div>
+              </div>
+              <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm font-semibold">
+                {staffProfile.role === 'admin' ? 'Administrator' :
+                 staffProfile.role === 'manager' ? 'Manager' : 'Staff'}
+              </Badge>
             </div>
 
             <Separator />

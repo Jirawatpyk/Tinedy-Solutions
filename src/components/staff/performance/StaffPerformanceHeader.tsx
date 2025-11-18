@@ -14,14 +14,15 @@ interface Staff {
 
 interface StaffPerformanceHeaderProps {
   staff: Staff
+  basePath: string
 }
 
-export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({ staff }: StaffPerformanceHeaderProps) {
+export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({ staff, basePath }: StaffPerformanceHeaderProps) {
   const navigate = useNavigate()
 
   return (
     <div className="flex items-center gap-4">
-      <Button variant="ghost" size="icon" onClick={() => navigate('/admin/staff')}>
+      <Button variant="ghost" size="icon" onClick={() => navigate(`${basePath}/staff`)}>
         <ArrowLeft className="h-5 w-5" />
       </Button>
       <div className="flex items-center gap-4 flex-1">

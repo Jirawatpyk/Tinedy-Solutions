@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useBookingFilters } from '@/hooks/useBookingFilters'
 import { usePagination } from '@/hooks/useBookingPagination'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
@@ -48,6 +49,9 @@ export function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  // Archive filter
+  const [showArchived, setShowArchived] = useState(false)
 
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
   const { packages: servicePackages } = useServicePackages()
@@ -173,7 +177,7 @@ export function AdminBookings() {
 
   // Recurring Edit Dialog State
   const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false)
-  const [recurringEditAction, setRecurringEditAction] = useState<'edit' | 'delete'>('delete')
+  const [recurringEditAction, setRecurringEditAction] = useState<'edit' | 'delete' | 'archive'>('delete')
   const [pendingRecurringBooking, setPendingRecurringBooking] = useState<Booking | null>(null)
 
   // Create Booking Form - Using useBookingForm hook (shared with create modal and availability modal)
@@ -185,17 +189,23 @@ export function AdminBookings() {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
           customers (id, full_name, email),
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           ${TEAMS_WITH_LEAD_QUERY}
         `)
-        .order('created_at', { ascending: false })
+
+      // Filter by archived status
+      if (!showArchived) {
+        query = query.is('deleted_at', null)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
 
@@ -218,7 +228,7 @@ export function AdminBookings() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, showArchived])
 
   // Bulk Actions (using hook)
   const {
@@ -287,7 +297,7 @@ export function AdminBookings() {
               customers (id, full_name, email),
               service_packages (name, service_type),
               service_packages_v2:package_v2_id (name, service_type),
-              profiles (full_name),
+              profiles!bookings_staff_id_fkey (full_name),
               ${TEAMS_WITH_LEAD_QUERY}
             `)
             .eq('id', payload.new.id)
@@ -322,7 +332,7 @@ export function AdminBookings() {
               customers (id, full_name, email),
               service_packages (name, service_type),
               service_packages_v2:package_v2_id (name, service_type),
-              profiles (full_name),
+              profiles!bookings_staff_id_fkey (full_name),
               ${TEAMS_WITH_LEAD_QUERY}
             `)
             .eq('id', payload.new.id)
@@ -674,6 +684,101 @@ export function AdminBookings() {
     }
   }, [pendingRecurringBooking, toast, fetchBookings])
 
+  // Handle Recurring Archive Confirmation
+  const handleRecurringArchive = useCallback(async (scope: RecurringEditScope) => {
+    if (!pendingRecurringBooking) return
+
+    try {
+      console.log('🔍 Archiving with:', {
+        bookingId: pendingRecurringBooking.id,
+        groupId: pendingRecurringBooking.recurring_group_id,
+        scope,
+        isRecurring: pendingRecurringBooking.is_recurring,
+        sequence: pendingRecurringBooking.recurring_sequence,
+        total: pendingRecurringBooking.recurring_total
+      })
+
+      // Get booking details first
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('recurring_group_id, recurring_sequence')
+        .eq('id', pendingRecurringBooking.id)
+        .single()
+
+      if (fetchError) throw fetchError
+      if (!booking) throw new Error('Booking not found')
+
+      let bookingIdsToArchive: string[] = []
+
+      // Determine which bookings to archive based on scope
+      switch (scope) {
+        case 'this_only':
+          bookingIdsToArchive = [pendingRecurringBooking.id]
+          break
+
+        case 'this_and_future': {
+          if (!booking.recurring_group_id) {
+            throw new Error('Booking is not part of a recurring group')
+          }
+
+          const { data: futureBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('recurring_group_id', booking.recurring_group_id)
+            .gte('recurring_sequence', booking.recurring_sequence)
+
+          bookingIdsToArchive = futureBookings?.map(b => b.id) || []
+          break
+        }
+
+        case 'all': {
+          if (!booking.recurring_group_id) {
+            throw new Error('Booking is not part of a recurring group')
+          }
+
+          const { data: allBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('recurring_group_id', booking.recurring_group_id)
+
+          bookingIdsToArchive = allBookings?.map(b => b.id) || []
+          break
+        }
+      }
+
+      // Archive bookings using RPC soft_delete_record
+      let archivedCount = 0
+      for (const bookingId of bookingIdsToArchive) {
+        const { error } = await supabase.rpc('soft_delete_record', {
+          table_name: 'bookings',
+          record_id: bookingId
+        })
+
+        if (!error) {
+          archivedCount++
+        }
+      }
+
+      console.log('📊 Archive result:', { archivedCount, total: bookingIdsToArchive.length })
+
+      toast({
+        title: 'Success',
+        description: `Archived ${archivedCount} booking(s) successfully`,
+      })
+
+      setShowRecurringEditDialog(false)
+      setPendingRecurringBooking(null)
+      fetchBookings()
+    } catch (error) {
+      console.error('Archive recurring booking error:', error)
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }, [pendingRecurringBooking, toast, fetchBookings])
+
   // OPTIMIZED: Wrap event handlers with useCallback to prevent unnecessary re-renders
   const deleteBooking = useCallback(async (bookingId: string) => {
     try {
@@ -711,6 +816,69 @@ export function AdminBookings() {
     }
   }, [bookings, toast, fetchBookings])
 
+  // Archive booking (soft delete)
+  const archiveBooking = useCallback(async (bookingId: string) => {
+    try {
+      // Check if this is a recurring booking
+      const booking = bookings.find(b => b.id === bookingId)
+
+      if (booking?.is_recurring && booking.recurring_group_id) {
+        // Show recurring edit dialog
+        setPendingRecurringBooking(booking)
+        setRecurringEditAction('archive')
+        setShowRecurringEditDialog(true)
+        return
+      }
+
+      // Non-recurring booking - archive normally
+      const { error } = await supabase
+        .rpc('soft_delete_record', {
+          table_name: 'bookings',
+          record_id: bookingId
+        })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking archived successfully',
+      })
+      fetchBookings()
+    } catch (error) {
+      console.error('Archive booking error:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to archive booking',
+        variant: 'destructive',
+      })
+    }
+  }, [bookings, toast, fetchBookings])
+
+  // Restore archived booking
+  const restoreBooking = useCallback(async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ deleted_at: null })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Booking restored successfully',
+      })
+      fetchBookings()
+    } catch (error) {
+      console.error('Error restoring booking:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to restore booking',
+        variant: 'destructive',
+      })
+    }
+  }, [toast, fetchBookings])
+
   // Delete entire recurring group
   const deleteRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -724,7 +892,7 @@ export function AdminBookings() {
           customers (id, full_name, email),
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           ${TEAMS_WITH_LEAD_QUERY}
         `)
         .eq('recurring_group_id', groupId)
@@ -961,10 +1129,25 @@ export function AdminBookings() {
             Manage all service bookings
           </p>
         </div>
-        <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Booking
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-archived-bookings"
+              checked={showArchived}
+              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+            />
+            <label
+              htmlFor="show-archived-bookings"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Show archived bookings
+            </label>
+          </div>
+          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Booking
+          </Button>
+        </div>
 
         <BookingCreateModal
           isOpen={isDialogOpen}
@@ -1103,6 +1286,7 @@ export function AdminBookings() {
         onClose={() => setIsDetailOpen(false)}
         onEdit={openEditBooking}
         onDelete={deleteBooking}
+        onCancel={archiveBooking}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={markAsPaid}
         getStatusBadge={getStatusBadge}
@@ -1184,6 +1368,9 @@ export function AdminBookings() {
             onLastPage={goToLast}
             onDeleteBooking={deleteBooking}
             onDeleteRecurringGroup={deleteRecurringGroup}
+            onArchiveBooking={archiveBooking}
+            onRestoreBooking={restoreBooking}
+            showArchived={showArchived}
             onStatusChange={handleStatusChange}
             formatTime={formatTime}
             getStatusBadge={getStatusBadge}
@@ -1199,7 +1386,7 @@ export function AdminBookings() {
         <RecurringEditDialog
           open={showRecurringEditDialog}
           onOpenChange={setShowRecurringEditDialog}
-          onConfirm={handleRecurringDelete}
+          onConfirm={recurringEditAction === 'archive' ? handleRecurringArchive : handleRecurringDelete}
           action={recurringEditAction}
           recurringSequence={pendingRecurringBooking.recurring_sequence || 1}
           recurringTotal={pendingRecurringBooking.recurring_total || 1}

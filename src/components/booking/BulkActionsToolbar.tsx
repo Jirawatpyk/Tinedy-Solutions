@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Download, Trash2 } from 'lucide-react'
+import { Download, Trash2, Archive } from 'lucide-react'
+import { usePermissions } from '@/hooks/use-permissions'
 
 interface BulkActionsToolbarProps {
   selectedBookings: string[]
@@ -26,6 +27,12 @@ export function BulkActionsToolbar({
   onBulkExport,
   onBulkDelete
 }: BulkActionsToolbarProps) {
+  const { canDelete, canSoftDelete } = usePermissions()
+
+  // Check permissions for bulk delete
+  const hasDeletePermission = canDelete('bookings')
+  const hasArchivePermission = canSoftDelete('bookings')
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -67,14 +74,31 @@ export function BulkActionsToolbar({
             <Download className="h-4 w-4 mr-1" />
             Export
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={onBulkDelete}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
+
+          {/* Permission-aware Delete/Archive button */}
+          {hasDeletePermission && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={onBulkDelete}
+              title="Delete selected bookings (Admin only)"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          )}
+
+          {!hasDeletePermission && hasArchivePermission && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={onBulkDelete}
+              title="Archive selected bookings (Manager)"
+            >
+              <Archive className="h-4 w-4 mr-1" />
+              Archive
+            </Button>
+          )}
         </div>
       )}
     </div>

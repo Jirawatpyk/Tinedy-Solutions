@@ -1,12 +1,13 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { getErrorMessage } from '@/lib/error-utils'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
@@ -84,6 +85,7 @@ import {
 } from '@/components/ui/select'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
+import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
 interface CustomerStats {
   total_bookings: number
@@ -162,7 +164,12 @@ interface Team {
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
+  const { softDelete } = useSoftDelete('bookings')
+
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null)
   const [stats, setStats] = useState<CustomerStats | null>(null)
@@ -336,6 +343,7 @@ export function AdminCustomerDetail() {
         `
         )
         .eq('customer_id', id)
+        .is('deleted_at', null)
         .order('booking_date', { ascending: false })
 
       if (bookingsError) {
@@ -375,6 +383,15 @@ export function AdminCustomerDetail() {
       console.error('Error refreshing bookings:', error)
     }
   }, [id])
+
+  const archiveBooking = async (bookingId: string) => {
+    const result = await softDelete(bookingId)
+    if (result.success) {
+      setIsBookingDetailModalOpen(false)
+      setSelectedBookingId(null)
+      refreshBookings()
+    }
+  }
 
   const fetchCustomerDetails = useCallback(async () => {
     try {
@@ -457,6 +474,7 @@ export function AdminCustomerDetail() {
         `
         )
         .eq('customer_id', id)
+        .is('deleted_at', null)
         .order('booking_date', { ascending: false })
 
       if (bookingsError) {
@@ -810,7 +828,7 @@ export function AdminCustomerDetail() {
         title: 'Success',
         description: 'Customer deleted successfully',
       })
-      navigate('/admin/customers')
+      navigate(`${basePath}/customers`)
     } catch (error) {
       console.error('Error deleting customer:', error)
       toast({
@@ -1063,6 +1081,7 @@ export function AdminCustomerDetail() {
   const statusConfig = {
     pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
     confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-700 border-blue-300' },
+    in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700 border-purple-300' },
     completed: { label: 'Completed', className: 'bg-green-100 text-green-700 border-green-300' },
     cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 border-red-300' },
     no_show: { label: 'No Show', className: 'bg-gray-100 text-gray-700 border-gray-300' },
@@ -1073,7 +1092,7 @@ export function AdminCustomerDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/admin/customers">
+          <Link to={`${basePath}/customers`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -1482,10 +1501,13 @@ export function AdminCustomerDetail() {
                                 ฿{booking.total_price?.toLocaleString() || 0}
                               </p>
                             </div>
-                            <div className="flex flex-wrap gap-2 items-end">
+                            <div className="flex flex-wrap gap-2 items-center sm:items-end">
                               <Badge variant="outline" className={statusInfo.className}>
                                 {statusInfo.label}
                               </Badge>
+                              <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')}>
+                                {getPaymentStatusLabel(booking.payment_status || 'unpaid')}
+                              </StatusBadge>
                             </div>
                           </div>
                         </div>
@@ -1952,6 +1974,7 @@ export function AdminCustomerDetail() {
           onEdit={(booking) => {
             handleEditBooking(booking)
           }}
+          onCancel={archiveBooking}
           onDelete={async (bookingId) => {
             try {
               const { error } = await supabase
@@ -2042,10 +2065,13 @@ export function AdminCustomerDetail() {
             return <Badge variant="outline" className={config.className}>{config.label}</Badge>
           }}
           getPaymentStatusBadge={(status) => {
-            if (status === 'paid') {
-              return <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
-            }
-            return <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300">Pending</Badge>
+            // Map 'pending' to 'unpaid' for display
+            const displayStatus = status === 'pending' ? 'unpaid' : (status || 'unpaid')
+            return (
+              <StatusBadge variant={getPaymentStatusVariant(displayStatus)}>
+                {getPaymentStatusLabel(displayStatus)}
+              </StatusBadge>
+            )
           }}
           getAvailableStatuses={(currentStatus) => {
             const statusFlow: Record<string, string[]> = {

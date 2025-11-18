@@ -1,23 +1,26 @@
 import { memo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
+import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
+import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 
 interface StaffRecentBookingsProps {
   bookings: Booking[]
+  onRefresh?: () => void
 }
 
 const ITEMS_PER_PAGE = 5
 
 export const StaffRecentBookings = memo(function StaffRecentBookings({
   bookings,
+  onRefresh = () => {},
 }: StaffRecentBookingsProps) {
-  const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
+  const modal = useBookingDetailModal({ refresh: onRefresh })
 
   const totalBookings = bookings.length
   const totalPages = Math.ceil(totalBookings / ITEMS_PER_PAGE)
@@ -36,7 +39,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
     > = {
       pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
       confirmed: { variant: 'default', label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
-      'in-progress': {
+      in_progress: {
         variant: 'default',
         label: 'In Progress',
         className: 'bg-purple-100 text-purple-800',
@@ -100,7 +103,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
             {paginatedBookings.map((booking) => (
               <div
                 key={booking.id}
-                onClick={() => navigate('/admin/bookings')}
+                onClick={() => modal.openDetail(booking)}
                 className="flex items-start justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
@@ -133,6 +136,9 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           </div>
         )}
       </CardContent>
+
+      {/* Booking Detail Modal */}
+      <BookingDetailModal {...modal.modalProps} />
     </Card>
   )
 })

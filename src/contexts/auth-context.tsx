@@ -7,7 +7,7 @@ type Profile = {
   email: string
   full_name: string
   avatar_url: string | null
-  role: 'admin' | 'staff'
+  role: 'admin' | 'manager' | 'staff'
   phone: string | null
   staff_number: string | null
   skills: string[] | null

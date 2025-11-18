@@ -391,7 +391,7 @@ export function BookingCreateModal({
             customers (full_name, email),
             service_packages (name),
             service_packages_v2 (name),
-            profiles (full_name)
+            profiles!bookings_staff_id_fkey (full_name)
           `)
           .single()
 

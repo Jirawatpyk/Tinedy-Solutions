@@ -81,7 +81,7 @@ export function useDashboardStats() {
           customers (id, full_name, phone, email),
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
-          profiles (full_name),
+          profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `).eq('booking_date', todayStr).order('start_time', { ascending: true }),
 

@@ -1,12 +1,13 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { getErrorMessage } from '@/lib/error-utils'
 import {
   Dialog,
@@ -19,12 +20,12 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
-import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag } from 'lucide-react'
+import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag, RotateCcw } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import {
   Select,
   SelectContent,
@@ -35,9 +36,13 @@ import {
 
 export function AdminCustomers() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [customers, setCustomers] = useState<CustomerRecord[]>([])
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerRecord[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
   const [searchQuery, setSearchQuery] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -49,6 +54,9 @@ export function AdminCustomers() {
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
+
+  // Archive filter
+  const [showArchived, setShowArchived] = useState(false)
 
   const { toast } = useToast()
 
@@ -73,10 +81,16 @@ export function AdminCustomers() {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
         .select('*')
-        .order('created_at', { ascending: false })
+
+      // Filter by archived status
+      if (!showArchived) {
+        query = query.is('deleted_at', null)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
       setCustomers(data || [])
@@ -90,7 +104,7 @@ export function AdminCustomers() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, showArchived])
 
   const filterCustomers = useCallback(() => {
     let filtered = customers
@@ -193,13 +207,62 @@ export function AdminCustomers() {
 
       toast({
         title: 'Success',
-        description: 'CustomerRecord deleted successfully',
+        description: 'Customer deleted successfully',
       })
       fetchCustomers()
     } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete customer',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const archiveCustomer = async (customerId: string) => {
+    try {
+      const { error } = await supabase
+        .rpc('soft_delete_record', {
+          table_name: 'customers',
+          record_id: customerId
+        })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Customer archived successfully',
+      })
+      fetchCustomers()
+    } catch (error) {
+      console.error('Archive customer error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to archive customer',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const restoreCustomer = async (customerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ deleted_at: null })
+        .eq('id', customerId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Customer restored successfully',
+      })
+      fetchCustomers()
+    } catch (error) {
+      console.error('Error restoring customer:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to restore customer',
         variant: 'destructive',
       })
     }
@@ -348,7 +411,21 @@ export function AdminCustomers() {
             Manage your customer database
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-archived-customers"
+              checked={showArchived}
+              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+            />
+            <label
+              htmlFor="show-archived-customers"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Show archived customers
+            </label>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
@@ -617,6 +694,7 @@ export function AdminCustomers() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -726,6 +804,7 @@ export function AdminCustomers() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredCustomers.slice(0, displayCount).map((customer) => {
+            const isArchived = !!customer.deleted_at
             const hasCompleteProfile = customer.address && customer.city && customer.state
             const isRecent = () => {
               const createdDate = new Date(customer.created_at)
@@ -755,13 +834,13 @@ export function AdminCustomers() {
             return (
               <Card
                 key={customer.id}
-                className="hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer"
-                onClick={() => navigate(`/admin/customers/${customer.id}`)}
+                className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}
+                onClick={() => navigate(`${basePath}/customers/${customer.id}`)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-full ${isArchived ? 'bg-gray-400' : 'bg-tinedy-blue'} flex items-center justify-center text-white font-semibold text-lg flex-shrink-0`}>
                         {customer.full_name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -769,6 +848,13 @@ export function AdminCustomers() {
                           {customer.full_name}
                         </CardTitle>
                       <div className="flex flex-wrap gap-1.5">
+                        {/* Archived Badge */}
+                        {isArchived && (
+                          <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                            Archived
+                          </Badge>
+                        )}
+
                         {/* Relationship Level Badge */}
                         <Badge variant="outline" className={`text-xs ${relationshipInfo.className}`}>
                           {relationshipInfo.label}
@@ -818,22 +904,43 @@ export function AdminCustomers() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditDialog(customer)
-                        }}
-                        className="h-8 w-8 hover:bg-tinedy-blue/10 hover:text-tinedy-blue"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <DeleteButton
-                        itemName={customer.full_name}
-                        onDelete={() => deleteCustomer(customer.id)}
-                        className="h-8 w-8"
-                      />
+                      {isArchived ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            restoreCustomer(customer.id)
+                          }}
+                          className="border-green-500 text-green-700 hover:bg-green-50"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          Restore
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openEditDialog(customer)
+                            }}
+                            className="h-8 w-8 hover:bg-tinedy-blue/10 hover:text-tinedy-blue"
+                            disabled={isArchived}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <PermissionAwareDeleteButton
+                            resource="customers"
+                            itemName={customer.full_name}
+                            onDelete={() => deleteCustomer(customer.id)}
+                            onCancel={() => archiveCustomer(customer.id)}
+                            cancelText="Archive"
+                            className="h-8 w-8"
+                          />
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

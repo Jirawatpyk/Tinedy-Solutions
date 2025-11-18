@@ -126,6 +126,7 @@ export function useStaffPerformance(staffId: string | undefined) {
           service_packages_v2:package_v2_id (name, service_type),
           customers (full_name)
         `)
+        .is('deleted_at', null)
         .order('booking_date', { ascending: false })
 
       // Build OR condition: staff_id = id OR (team_id IN teamIds AND staff_id IS NULL)

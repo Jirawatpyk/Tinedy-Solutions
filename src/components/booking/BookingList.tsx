@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User, Users, ChevronLeft, ChevronRight } from 'lucide-react'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { User, Users, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
@@ -36,6 +36,11 @@ interface BookingListProps {
   onLastPage: () => void
   onDeleteBooking: (bookingId: string) => void
   onDeleteRecurringGroup?: (groupId: string) => void
+  onArchiveBooking?: (bookingId: string) => void
+  onRestoreBooking?: (bookingId: string) => void
+  // Note: showArchived parameter is intentionally unused (prefixed with _ in implementation)
+  // It's kept in the interface for future use when archive filtering is needed
+  showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
   getStatusBadge: (status: string) => React.ReactElement
@@ -62,6 +67,9 @@ function BookingListComponent({
   onLastPage,
   onDeleteBooking,
   onDeleteRecurringGroup,
+  onArchiveBooking,
+  onRestoreBooking,
+  showArchived: _showArchived,
   onStatusChange,
   formatTime,
   getStatusBadge,
@@ -194,10 +202,11 @@ function BookingListComponent({
               } else {
                 // Standalone Booking
                 const booking = item.data
+                const isArchived = !!booking.deleted_at
                 return (
               <div
                 key={booking.id}
-                className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                className={`flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
               >
                 <Checkbox
                   checked={selectedBookings.includes(booking.id)}
@@ -212,10 +221,17 @@ function BookingListComponent({
                   <div className="space-y-2 flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-tinedy-dark">
-                          {booking.customers?.full_name || 'Unknown Customer'}
-                          <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-tinedy-dark">
+                            {booking.customers?.full_name || 'Unknown Customer'}
+                            <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
+                          </p>
+                          {isArchived && (
+                            <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                              Archived
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {booking.customers?.email}
                         </p>
@@ -259,27 +275,48 @@ function BookingListComponent({
                       {getPaymentStatusBadge(booking.payment_status)}
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={booking.status}
-                        onValueChange={(value) =>
-                          onStatusChange(booking.id, booking.status, value)
-                        }
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableStatuses(booking.status).map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {getStatusLabel(status)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <DeleteButton
-                        itemName={`Booking #${booking.id.slice(0, 8)}`}
-                        onDelete={() => onDeleteBooking(booking.id)}
-                      />
+                      {isArchived && onRestoreBooking ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onRestoreBooking(booking.id)
+                          }}
+                          className="border-green-500 text-green-700 hover:bg-green-50"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          Restore
+                        </Button>
+                      ) : (
+                        <>
+                          <Select
+                            value={booking.status}
+                            onValueChange={(value) =>
+                              onStatusChange(booking.id, booking.status, value)
+                            }
+                            disabled={isArchived}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getAvailableStatuses(booking.status).map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {getStatusLabel(status)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <PermissionAwareDeleteButton
+                            resource="bookings"
+                            itemName={`Booking #${booking.id.slice(0, 8)}`}
+                            onDelete={() => onDeleteBooking(booking.id)}
+                            onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
+                            cancelText="Archive"
+                          />
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

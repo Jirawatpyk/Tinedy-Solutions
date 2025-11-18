@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import type { CustomerRecord } from '@/types'
 import { supabase } from '@/lib/supabase'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Select,
@@ -78,6 +79,7 @@ export function AdminReports() {
   const [activeTab, setActiveTab] = useState('revenue')
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const { toast } = useToast()
+  const { role } = usePermissions()
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -397,15 +399,15 @@ export function AdminReports() {
       switch (exportType) {
         // Revenue & Bookings exports
         case 'revenue-summary':
-          exportRevenueBookings(bookings, dateRange, 'summary')
+          exportRevenueBookings(bookings, dateRange, 'summary', role)
           toast({ title: 'Export successful', description: 'Revenue summary exported to CSV' })
           break
         case 'bookings-list':
-          exportRevenueBookings(bookings, dateRange, 'detailed')
+          exportRevenueBookings(bookings, dateRange, 'detailed', role)
           toast({ title: 'Export successful', description: 'Bookings list exported to CSV' })
           break
         case 'revenue-by-service':
-          exportRevenueByServiceType(bookings, dateRange)
+          exportRevenueByServiceType(bookings, dateRange, role)
           toast({ title: 'Export successful', description: 'Revenue by service type exported to CSV' })
           break
         case 'peak-hours':
@@ -428,14 +430,14 @@ export function AdminReports() {
         // Staff exports
         case 'staff-performance': {
           const staffPerformanceData = getStaffPerformance(staffWithBookings)
-          exportStaffPerformance(staffPerformanceData)
+          exportStaffPerformance(staffPerformanceData, role)
           toast({ title: 'Export successful', description: 'Staff performance data exported to CSV' })
           break
         }
 
         // Teams exports
         case 'teams-performance':
-          exportTeamPerformance(teamsWithBookings)
+          exportTeamPerformance(teamsWithBookings, role)
           toast({ title: 'Export successful', description: 'Team performance data exported to CSV' })
           break
 
@@ -515,6 +517,7 @@ export function AdminReports() {
       .slice(0, 5)
   }, [bookings])
 
+  // Calculate metrics
   const revenueMetrics = useMemo(() => calculateRevenueMetrics(mappedBookings), [mappedBookings])
   const bookingMetrics = useMemo(() => calculateBookingMetrics(mappedBookings), [mappedBookings])
   const serviceTypeRevenue = useMemo(() => getRevenueByServiceType(mappedBookings), [mappedBookings])

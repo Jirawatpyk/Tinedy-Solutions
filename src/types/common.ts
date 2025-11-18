@@ -17,12 +17,14 @@
  *
  * @enum {string}
  *
- * @property {string} Admin - Full system access, manages all resources
+ * @property {string} Admin - Full system access, manages all resources including delete
+ * @property {string} Manager - Operational management, CRUD except hard delete
  * @property {string} Staff - Limited access to staff portal and assigned bookings
  * @property {string} Customer - Customer portal access (not yet implemented)
  */
 export const UserRole = {
   Admin: 'admin',
+  Manager: 'manager',
   Staff: 'staff',
   Customer: 'customer'
 } as const
@@ -59,6 +61,77 @@ export interface UserProfile {
   skills: string[] | null
   created_at: string
   updated_at: string
+}
+
+// ============================================================================
+// PERMISSIONS
+// ============================================================================
+
+/**
+ * Permission action types
+ *
+ * @typedef {string} PermissionAction
+ *
+ * @property {'create'} create - Create new records
+ * @property {'read'} read - Read/view records
+ * @property {'update'} update - Update existing records
+ * @property {'delete'} delete - Delete records
+ * @property {'export'} export - Export data
+ */
+export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export'
+
+/**
+ * Resource types that can have permissions
+ *
+ * @typedef {string} PermissionResource
+ */
+export type PermissionResource =
+  | 'bookings'
+  | 'customers'
+  | 'staff'
+  | 'teams'
+  | 'reports'
+  | 'settings'
+  | 'users'
+  | 'service_packages'
+
+/**
+ * Permission set for a specific resource
+ *
+ * @interface Permission
+ *
+ * @property {boolean} create - Can create new records
+ * @property {boolean} read - Can read/view records
+ * @property {boolean} update - Can update existing records
+ * @property {boolean} delete - Can delete records
+ * @property {boolean} [export] - Can export data (optional)
+ */
+export interface Permission {
+  create: boolean
+  read: boolean
+  update: boolean
+  delete: boolean
+  export?: boolean
+}
+
+/**
+ * Map of permissions by resource name
+ *
+ * @type {Record<string, Permission>}
+ */
+export type PermissionMap = Record<PermissionResource, Permission>
+
+/**
+ * Role permission configuration
+ *
+ * @interface RolePermission
+ *
+ * @property {UserRole} role - User role
+ * @property {PermissionMap} permissions - Permission map for all resources
+ */
+export interface RolePermission {
+  role: UserRole
+  permissions: Partial<PermissionMap>
 }
 
 // ============================================================================

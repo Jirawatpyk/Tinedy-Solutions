@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Menu, Search, User, Users, Calendar, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
 import { useAuth } from '@/contexts/auth-context'
@@ -34,9 +33,9 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Open search with Cmd+K or Ctrl+K (Admin only)
+  // Open search with Cmd+K or Ctrl+K (Admin & Manager)
   useEffect(() => {
-    if (profile?.role !== 'admin') return
+    if (profile?.role !== 'admin' && profile?.role !== 'manager') return
 
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -58,6 +57,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
     setLoading(true)
     const searchResults: SearchResult[] = []
+    const basePath = profile?.role === 'manager' ? '/manager' : '/admin'
 
     try {
       // Search Customers
@@ -73,7 +73,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           type: 'customer',
           title: customer.full_name,
           subtitle: customer.email,
-          link: `/admin/customers/${customer.id}`,
+          link: `${basePath}/customers/${customer.id}`,
         })
       })
 
@@ -90,7 +90,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           type: 'staff',
           title: member.full_name,
           subtitle: `${member.role} • ${member.email}`,
-          link: `/admin/staff/${member.id}`,
+          link: `${basePath}/staff/${member.id}`,
         })
       })
 
@@ -117,7 +117,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             type: 'booking',
             title: `Booking - ${customerName}`,
             subtitle: `${booking.booking_date} • ${booking.status}`,
-            link: `/admin/bookings`,
+            link: `${basePath}/bookings`,
           })
         }
       })
@@ -135,7 +135,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           type: 'service',
           title: service.name,
           subtitle: `฿${service.price?.toLocaleString() ?? '0'}`,
-          link: `/admin/packages`,
+          link: `${basePath}/packages`,
         })
       })
 
@@ -146,7 +146,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [profile?.role])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -200,8 +200,8 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </Button>
 
-          {/* Search bar - Admin only, hidden on mobile */}
-          {profile?.role === 'admin' && (
+          {/* Search bar - Admin & Manager, hidden on mobile */}
+          {(profile?.role === 'admin' || profile?.role === 'manager') && (
             <div className="hidden md:flex items-center relative">
               <Button
                 variant="outline"
@@ -217,18 +217,17 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
           )}
 
-          {/* Quick Availability Check - Admin only, hidden on mobile */}
-          {profile?.role === 'admin' && (
+          {/* Quick Availability Check - Admin & Manager, hidden on mobile */}
+          {(profile?.role === 'admin' || profile?.role === 'manager') && (
             <div className="hidden lg:block">
               <QuickAvailabilityCheck />
             </div>
           )}
         </div>
 
-        {/* Right side - Notifications and Theme Toggle */}
+        {/* Right side - Notifications */}
         <div className="flex items-center space-x-2">
           <NotificationBell />
-          <ThemeToggle />
         </div>
       </div>
 

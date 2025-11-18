@@ -28,7 +28,7 @@ import { getRecurringPatternLabel } from '@/types/recurring-booking'
 import { formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { RecurringGroup } from '@/types/recurring-booking'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 
 interface RecurringBookingCardProps {
   group: RecurringGroup
@@ -140,9 +140,12 @@ export function RecurringBookingCard({
                 )}
               </Button>
               {onDeleteGroup && (
-                <DeleteButton
+                <PermissionAwareDeleteButton
+                  resource="bookings"
                   itemName={`Recurring Group (${group.totalBookings} bookings)`}
                   onDelete={() => onDeleteGroup(group.groupId)}
+                  onCancel={() => onDeleteGroup(group.groupId)}
+                  cancelText="Cancel Group"
                 />
               )}
             </div>

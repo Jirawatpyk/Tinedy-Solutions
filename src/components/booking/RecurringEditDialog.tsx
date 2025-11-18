@@ -27,7 +27,7 @@ interface RecurringEditDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: (scope: RecurringEditScope) => void
-  action: 'edit' | 'delete'
+  action: 'edit' | 'delete' | 'archive'
   recurringSequence: number
   recurringTotal: number
 }
@@ -42,7 +42,7 @@ export function RecurringEditDialog({
 }: RecurringEditDialogProps) {
   const [scope, setScope] = useState<RecurringEditScope>(Scope.ThisOnly)
 
-  const actionText = action === 'edit' ? 'Edit' : 'Delete'
+  const actionText = action === 'edit' ? 'Edit' : action === 'archive' ? 'Archive' : 'Delete'
 
   const handleConfirm = () => {
     onConfirm(scope)

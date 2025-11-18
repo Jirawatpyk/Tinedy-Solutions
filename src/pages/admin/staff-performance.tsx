@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,6 +13,10 @@ import { ErrorBoundary, SectionErrorBoundary } from '@/components/ErrorBoundary'
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
 
   // Use custom hook for data fetching and stats calculation
   const { staff, bookings, stats, monthlyData, loading, error } = useStaffPerformance(id)
@@ -68,7 +72,7 @@ export function AdminStaffPerformance() {
         <XCircle className="h-16 w-16 text-red-500" />
         <h2 className="text-2xl font-bold">{error || 'Staff Not Found'}</h2>
         <p className="text-muted-foreground">Unable to load staff member details</p>
-        <Button onClick={() => navigate('/admin/staff')}>Back to Staff List</Button>
+        <Button onClick={() => navigate(`${basePath}/staff`)}>Back to Staff List</Button>
       </div>
     )
   }
@@ -77,7 +81,7 @@ export function AdminStaffPerformance() {
     <ErrorBoundary onReset={() => window.location.reload()}>
       <div className="space-y-6">
         <SectionErrorBoundary sectionName="Staff Header">
-          <StaffPerformanceHeader staff={staff} />
+          <StaffPerformanceHeader staff={staff} basePath={basePath} />
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Performance Stats">

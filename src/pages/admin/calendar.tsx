@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
@@ -90,6 +91,7 @@ export function AdminCalendar() {
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
   const { toast } = useToast()
+  const { softDelete } = useSoftDelete('bookings')
 
   const fetchTeams = useCallback(async () => {
     try {
@@ -139,7 +141,7 @@ export function AdminCalendar() {
             phone,
             email
           ),
-          profiles (
+          profiles!bookings_staff_id_fkey (
             full_name
           ),
           ${TEAMS_WITH_LEAD_QUERY},
@@ -565,6 +567,15 @@ export function AdminCalendar() {
     }
   }
 
+  const archiveBooking = async (bookingId: string) => {
+    const result = await softDelete(bookingId)
+    if (result.success) {
+      setIsDetailOpen(false)
+      // Remove booking from state without refetch
+      setBookings(prevBookings => prevBookings.filter(b => b.id !== bookingId))
+    }
+  }
+
 
   // Generate calendar days
   const monthStart = startOfMonth(currentDate)
@@ -960,6 +971,7 @@ export function AdminCalendar() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onEdit={() => selectedBooking && handleEditBooking(selectedBooking)}
+        onCancel={archiveBooking}
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={handleMarkAsPaid}

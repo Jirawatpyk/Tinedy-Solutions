@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { getErrorMessage } from '@/lib/error-utils'
 import { getBangkokDateString } from '@/lib/dashboard-utils'
 import type { TodayBooking, ActionLoading } from '@/types/dashboard'
@@ -11,6 +12,7 @@ export function useDashboardActions(
   onBookingUpdate?: (booking: TodayBooking) => void
 ) {
   const { toast } = useToast()
+  const { softDelete } = useSoftDelete('bookings')
   const [actionLoading, setActionLoading] = useState<ActionLoading>({
     statusChange: false,
     delete: false,
@@ -123,9 +125,20 @@ export function useDashboardActions(
     [selectedBooking, toast, refresh, onBookingUpdate]
   )
 
+  const archiveBooking = useCallback(
+    async (bookingId: string) => {
+      const result = await softDelete(bookingId)
+      if (result.success) {
+        refresh()
+      }
+    },
+    [softDelete, refresh]
+  )
+
   return {
     handleStatusChange,
     deleteBooking,
+    archiveBooking,
     markAsPaid,
     actionLoading,
   }

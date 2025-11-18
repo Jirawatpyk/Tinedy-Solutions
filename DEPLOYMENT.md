@@ -9,7 +9,11 @@
 - [x] All Phase 2 refactoring complete
 
 ### ✅ Features Implemented
+- [x] Role-Based Access Control (Admin, Manager, Staff)
+- [x] Manager Role with Operational Permissions
+- [x] Permission System with 157 Tests
 - [x] Admin Dashboard with analytics
+- [x] Manager Dashboard with team oversight
 - [x] Booking Management System
 - [x] Customer Management
 - [x] Staff Management & Performance Tracking
@@ -22,6 +26,7 @@
 - [x] Quick Availability Check
 - [x] Staff/Team Availability Detection
 - [x] Conflict Detection System
+- [x] Soft Delete & Archive System
 - [x] Error Handling & Error Boundaries
 
 ### ✅ Error Handling
@@ -68,9 +73,56 @@ VITE_SUPABASE_ANON_KEY=your-production-anon-key
    - `chat-attachments` - Chat file uploads
    - `customer-documents` - Customer files
 
-3. **Row Level Security (RLS)**:
-   - Ensure all RLS policies are enabled in production
-   - Verify admin and staff role permissions
+3. **Row Level Security (RLS)** 🔴 **CRITICAL - MUST COMPLETE**:
+
+   **⚠️ WARNING:** RLS is NOT enabled by default! Without RLS, anyone with the anon key can access all data.
+
+   **Steps to Enable RLS:**
+
+   a. **Backup Database First**
+      ```bash
+      # In Supabase Dashboard:
+      # Settings → Database → Backups → Create backup
+      ```
+
+   b. **Run RLS Migration**
+      - Open Supabase Dashboard → SQL Editor
+      - Create New Query
+      - Copy entire contents from `supabase/migrations/enable_rls_policies_v2.sql`
+      - Click **Run** or press `Ctrl+Enter`
+      - Wait for completion (should take ~10 seconds)
+
+   c. **Verify RLS Enabled**
+
+      Run this verification query:
+      ```sql
+      SELECT
+        tablename,
+        CASE
+          WHEN relrowsecurity THEN '✅ RLS Enabled'
+          ELSE '❌ RLS Disabled'
+        END as rls_status
+      FROM pg_tables
+      LEFT JOIN pg_class ON pg_tables.tablename = pg_class.relname
+      WHERE schemaname = 'public'
+        AND tablename IN (
+          'profiles', 'customers', 'bookings', 'service_packages',
+          'teams', 'team_members', 'messages', 'notifications', 'reviews'
+        )
+      ORDER BY tablename;
+      ```
+
+      **Expected:** All 9 tables show `✅ RLS Enabled`
+
+   d. **Test Permissions**
+      - Admin can hard delete
+      - Manager can soft delete (archive) only
+      - Manager blocked from /admin/settings
+      - Staff sees only assigned bookings
+
+   **Documentation:**
+   - Detailed guide: `RLS_SECURITY_SETUP.md`
+   - Pre-production checklist: `PRE_PRODUCTION_CHECKLIST.md`
 
 4. **Realtime**:
    - Enable realtime for `messages` table
@@ -167,16 +219,25 @@ server {
 
 ### Critical User Flows to Test:
 
-1. **Authentication**
-   - [ ] Admin login
-   - [ ] Staff login
+1. **Authentication & Authorization**
+   - [ ] Admin login and redirect to /admin
+   - [ ] Manager login and redirect to /manager
+   - [ ] Staff login and redirect to /staff
    - [ ] Logout
    - [ ] Session persistence
+   - [ ] Role-based route protection works
+   - [ ] Manager blocked from /admin routes
+   - [ ] Staff blocked from /admin and /manager routes
 
 2. **Booking Flow**
-   - [ ] Create new booking
-   - [ ] Edit existing booking
-   - [ ] Delete booking
+   - [ ] Admin can create new booking
+   - [ ] Manager can create new booking
+   - [ ] Admin can edit existing booking
+   - [ ] Manager can edit existing booking
+   - [ ] Admin can hard delete booking
+   - [ ] Manager can archive (soft delete) booking
+   - [ ] Manager can restore archived booking
+   - [ ] Manager CANNOT hard delete booking (should be blocked)
    - [ ] Check availability (Quick Availability Check)
    - [ ] Conflict detection works
    - [ ] Team assignment works
@@ -256,15 +317,43 @@ npx vite-bundle-visualizer
 
 ## 👥 User Management
 
-### Default Roles:
-- **Admin**: Full system access
-- **Staff**: Limited to assigned features
+### User Roles:
+
+The system supports three distinct roles:
+
+| Role | Access Level | Permissions |
+|------|--------------|-------------|
+| **Admin** | Full Control | All CRUD operations, hard delete, settings, user management |
+| **Manager** | Operational | Create, read, update, soft delete, reports, team management |
+| **Staff** | Personal | View assigned bookings, update profile, team chat |
 
 ### First Time Setup:
-1. Create admin user in Supabase Auth
-2. Set role in `profiles` table to 'admin'
-3. Login with admin credentials
-4. Create staff accounts from admin panel
+
+1. **Create Admin User**
+   ```sql
+   -- In Supabase SQL Editor
+   -- First create auth user, then:
+   INSERT INTO profiles (id, full_name, role, email)
+   VALUES ('user-uuid', 'Admin Name', 'admin', 'admin@example.com');
+   ```
+
+2. **Create Manager Users** (Optional)
+   ```sql
+   UPDATE profiles
+   SET role = 'manager'
+   WHERE id = 'user-uuid';
+   ```
+
+3. **Login and Test**
+   - Admin redirects to `/admin`
+   - Manager redirects to `/manager`
+   - Staff redirects to `/staff`
+
+4. **Create Additional Users**
+   - Admins can create users from admin panel
+   - Assign appropriate roles during creation
+
+For detailed user management, see [ADMIN_GUIDE_USER_MANAGEMENT.md](ADMIN_GUIDE_USER_MANAGEMENT.md)
 
 ---
 
@@ -297,7 +386,14 @@ npx vite-bundle-visualizer
 - ✅ README.md with setup instructions
 - ✅ Code documentation
 - ✅ API integration guide
+- ✅ Permission system documentation (157 tests)
+- ✅ Manager Role Migration Guide
 - [ ] Database schema documentation
+
+### Role-Specific Documentation:
+- ✅ [Manager Role User Guide](USER_GUIDE_MANAGER_ROLE.md) - For manager users
+- ✅ [Admin User Management Guide](ADMIN_GUIDE_USER_MANAGEMENT.md) - For admins
+- ✅ [Manager Role Migration Guide](MANAGER_ROLE_MIGRATION_GUIDE.md) - For technical team
 
 ---
 
@@ -377,4 +473,5 @@ Track these KPIs post-deployment:
 ---
 
 *Generated for Tinedy Solutions CRM System*
-*Version: 2.0 (Phase 2 Complete)*
+*Version: 2.1 (Manager Role Implementation Complete)*
+*Last Updated: 2025-01-18*

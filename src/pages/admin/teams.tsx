@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ interface Team {
   member_count?: number
   members?: TeamMember[]
   average_rating?: number
+  deleted_at?: string | null
 }
 
 export function AdminTeams() {
@@ -69,18 +71,22 @@ export function AdminTeams() {
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
+  // Archive filter
+  const [showArchived, setShowArchived] = useState(false)
+
   const { toast } = useToast()
 
   const loadTeams = useCallback(async () => {
     try {
       // Fetch teams with member count and team lead
-      const { data: teamsData, error: teamsError } = await supabase
+      let query = supabase
         .from('teams')
         .select(`
           id,
           name,
           description,
           created_at,
+          deleted_at,
           team_lead_id,
           team_lead:profiles!teams_team_lead_id_fkey (
             id,
@@ -103,7 +109,13 @@ export function AdminTeams() {
             )
           )
         `)
-        .order('created_at', { ascending: false })
+
+      // Filter by archived status
+      if (!showArchived) {
+        query = query.is('deleted_at', null)
+      }
+
+      const { data: teamsData, error: teamsError } = await query.order('created_at', { ascending: false })
 
       if (teamsError) throw teamsError
 
@@ -112,6 +124,7 @@ export function AdminTeams() {
         name: string
         description: string | null
         created_at: string
+        deleted_at: string | null
         team_lead_id: string | null
         team_lead: TeamMember[] | TeamMember | null
         team_members: Array<{
@@ -130,6 +143,7 @@ export function AdminTeams() {
           name: team.name,
           description: team.description,
           created_at: team.created_at,
+          deleted_at: team.deleted_at,
           team_lead_id: team.team_lead_id,
           team_lead: teamLead,
           member_count: team.team_members?.length || 0,
@@ -193,7 +207,7 @@ export function AdminTeams() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [showArchived, toast])
 
   const filterTeams = useCallback(() => {
     let filtered = teams
@@ -361,6 +375,57 @@ export function AdminTeams() {
       toast({
         title: 'Error',
         description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const archiveTeam = async (teamId: string) => {
+    try {
+      const { error } = await supabase
+        .rpc('soft_delete_record', {
+          table_name: 'teams',
+          record_id: teamId
+        })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Team archived successfully',
+      })
+
+      loadTeams()
+    } catch (error) {
+      console.error('Error archiving team:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to archive team',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const restoreTeam = async (teamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({ deleted_at: null })
+        .eq('id', teamId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Team restored successfully',
+      })
+
+      loadTeams()
+    } catch (error) {
+      console.error('Error restoring team:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to restore team',
         variant: 'destructive',
       })
     }
@@ -556,10 +621,25 @@ export function AdminTeams() {
           <h1 className="text-3xl font-display font-bold text-tinedy-dark">Teams Management</h1>
           <p className="text-muted-foreground mt-1">Manage teams and team members</p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
-          <Plus className="h-4 w-4 mr-2" />
-          New Team
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-archived"
+              checked={showArchived}
+              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+            />
+            <label
+              htmlFor="show-archived"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Show archived teams
+            </label>
+          </div>
+          <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
+            <Plus className="h-4 w-4 mr-2" />
+            New Team
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -653,6 +733,8 @@ export function AdminTeams() {
                 team={team}
                 onEdit={openEditDialog}
                 onDelete={handleDeleteTeam}
+                onCancel={archiveTeam}
+                onRestore={restoreTeam}
                 onAddMember={openMemberDialog}
                 onRemoveMember={handleRemoveMember}
                 onToggleMemberStatus={handleToggleMemberStatus}

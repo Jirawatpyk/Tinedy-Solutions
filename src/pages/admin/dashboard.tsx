@@ -199,6 +199,7 @@ export function AdminDashboard() {
         isOpen={modal.isDetailOpen}
         onClose={modal.closeDetail}
         onEdit={() => modal.selectedBooking && handleEditBooking(modal.selectedBooking)}
+        onCancel={actions.archiveBooking}
         onDelete={actions.deleteBooking}
         onStatusChange={actions.handleStatusChange}
         onMarkAsPaid={actions.markAsPaid}

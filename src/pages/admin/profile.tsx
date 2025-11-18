@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -191,6 +192,25 @@ export default function AdminProfile() {
 
             <Separator />
 
+            {/* Role Badge */}
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-full">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Account Role</p>
+                  <p className="text-xs text-gray-500">Your access level in the system</p>
+                </div>
+              </div>
+              <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm font-semibold">
+                {adminProfile.role === 'admin' ? 'Administrator' :
+                 adminProfile.role === 'manager' ? 'Manager' : 'Staff'}
+              </Badge>
+            </div>
+
+            <Separator />
+
             {/* Personal Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -243,16 +263,6 @@ export default function AdminProfile() {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
                     {format(new Date(adminProfile.created_at), 'MMMM dd, yyyy')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold text-tinedy-blue">
-                    {adminProfile.role === 'admin' ? 'Administrator' : adminProfile.role}
                   </span>
                 </div>
               </div>

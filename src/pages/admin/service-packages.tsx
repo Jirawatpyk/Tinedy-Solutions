@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Package, Plus, DollarSign, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
@@ -28,6 +29,8 @@ import { getPackagesOverview } from '@/lib/pricing-utils'
 import { PricingModel } from '@/types'
 
 export function AdminServicePackages() {
+  // Permission checks
+  const { can, canDelete } = usePermissions()
   // V1 Packages (Legacy)
   const [packages, setPackages] = useState<ServicePackage[]>([])
 
@@ -463,10 +466,12 @@ export function AdminServicePackages() {
               Manage cleaning and training service packages
             </p>
           </div>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Package
-          </Button>
+          {can('create', 'service_packages') && (
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Package
+            </Button>
+          )}
         </div>
 
         {/* Stats cards skeleton */}
@@ -540,16 +545,18 @@ export function AdminServicePackages() {
             Manage cleaning and training service packages
           </p>
         </div>
-        <Button
-          className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-          onClick={() => {
-            resetForm()
-            setIsDialogOpen(true)
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Package
-        </Button>
+        {can('create', 'service_packages') && (
+          <Button
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={() => {
+              resetForm()
+              setIsDialogOpen(true)
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Package
+          </Button>
+        )}
       </div>
 
       {/* Create/Edit Dialog with V2 Form */}
@@ -791,7 +798,7 @@ export function AdminServicePackages() {
                 onEdit={handleEditV2}
                 onDelete={deletePackageV2}
                 onToggleActive={toggleActiveV2}
-                showActions={true}
+                showActions={can('update', 'service_packages') || canDelete('service_packages')}
               />
             ))}
 
@@ -823,7 +830,7 @@ export function AdminServicePackages() {
                   onEdit={handleUnifiedEdit}
                   onDelete={handleUnifiedDelete}
                   onToggleActive={handleUnifiedToggle}
-                  showActions={true}
+                  showActions={can('update', 'service_packages') || canDelete('service_packages')}
                 />
               )
             })}

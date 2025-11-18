@@ -30,6 +30,7 @@ interface Team {
 interface TeamDetailHeaderProps {
   team: Team
   onUpdate: () => void
+  basePath: string
 }
 
 const getInitials = (name: string) => {
@@ -40,7 +41,7 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
+export function TeamDetailHeader({ team, basePath }: TeamDetailHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -58,7 +59,7 @@ export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
         description: 'Team deleted successfully',
       })
 
-      navigate('/admin/teams')
+      navigate(`${basePath}/teams`)
     } catch (error) {
       console.error('Error deleting team:', error)
       toast({

@@ -1,6 +1,5 @@
 import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
+import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
+import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 
 interface TeamRecentBookingsProps {
   teamId: string
 }
 
 export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
-  const navigate = useNavigate()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
@@ -49,6 +49,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           service_packages_v2:package_v2_id (name)
         `)
         .eq('team_id', teamId)
+        .is('deleted_at', null)
         .order('booking_date', { ascending: false })
         .range(from, to)
 
@@ -70,6 +71,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     }
   }, [teamId, currentPage])
 
+  const modal = useBookingDetailModal({ refresh: loadRecentBookings })
+
   useEffect(() => {
     loadRecentBookings()
   }, [loadRecentBookings])
@@ -78,7 +81,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; className?: string }> = {
       pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
       confirmed: { variant: 'default', label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
-      'in-progress': { variant: 'default', label: 'In Progress', className: 'bg-purple-100 text-purple-800' },
+      in_progress: { variant: 'default', label: 'In Progress', className: 'bg-purple-100 text-purple-800' },
       completed: { variant: 'default', label: 'Completed', className: 'bg-green-100 text-green-800' },
       cancelled: { variant: 'outline', label: 'Cancelled', className: 'bg-gray-100 text-gray-800' },
     }
@@ -139,7 +142,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
             {bookings.map((booking) => (
               <div
                 key={booking.id}
-                onClick={() => navigate('/admin/bookings')}
+                onClick={() => modal.openDetail(booking)}
                 className="flex items-start justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
@@ -170,6 +173,9 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Booking Detail Modal */}
+      <BookingDetailModal {...modal.modalProps} />
     </Card>
   )
 }

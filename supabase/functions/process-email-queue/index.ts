@@ -154,7 +154,7 @@ serve(async (req) => {
             *,
             customers (full_name, email),
             service_packages (name),
-            profiles (full_name)
+            profiles!bookings_staff_id_fkey (full_name)
           `)
           .eq('id', email.booking_id)
           .single()

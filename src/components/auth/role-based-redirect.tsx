@@ -40,6 +40,9 @@ export function RoleBasedRedirect() {
   if (profile.role === 'admin') {
     console.log('[RoleBasedRedirect] Admin user, redirecting to /admin')
     return <Navigate to="/admin" replace />
+  } else if (profile.role === 'manager') {
+    console.log('[RoleBasedRedirect] Manager user, redirecting to /manager')
+    return <Navigate to="/manager" replace />
   } else if (profile.role === 'staff') {
     console.log('[RoleBasedRedirect] Staff user, redirecting to /staff')
     return <Navigate to="/staff" replace />

@@ -11,6 +11,7 @@
  * - Responsive design
  */
 
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -106,11 +107,27 @@ export function PackageCard({
   onToggleActive,
   showActions = true,
 }: PackageCardProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const isTiered = pkg.pricing_model === PricingModel.Tiered
   const isActive = pkg.is_active
 
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on buttons or dropdown
+    if ((e.target as HTMLElement).closest('button, [role="menuitem"]')) {
+      return
+    }
+    navigate(`${basePath}/packages/${pkg.id}`)
+  }
+
   return (
-    <Card className={`relative transition-all hover:shadow-md ${!isActive ? 'opacity-60' : ''}`}>
+    <Card
+      className={`relative transition-all hover:shadow-md cursor-pointer ${!isActive ? 'opacity-60' : ''}`}
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">

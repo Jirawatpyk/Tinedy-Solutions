@@ -134,7 +134,8 @@ export const downloadCSV = (csvContent: string, filename: string): void => {
 export const exportRevenueBookings = (
   bookings: BookingForExport[],
   dateRange: string,
-  exportType: 'summary' | 'detailed' | 'all'
+  exportType: 'summary' | 'detailed' | 'all',
+  role: 'admin' | 'manager' | 'staff' | null = null
 ): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
@@ -155,42 +156,67 @@ export const exportRevenueBookings = (
     const completedBookings = filteredBookings.filter(b => b.status === 'completed')
 
     if (completedBookings.length > 0) {
-      const revenueData = completedBookings.map(b => ({
-        Date: format(new Date(b.booking_date), 'dd/MM/yyyy'),
-        Time: b.start_time || 'N/A',
-        'Service Package': b.service_packages?.name || 'N/A',
-        'Service Type': b.service_packages?.service_type || 'N/A',
-        'Revenue (฿)': Number(b.total_price).toFixed(2),
-      }))
+      const revenueData = completedBookings.map(b => {
+        const baseData = {
+          Date: format(new Date(b.booking_date), 'dd/MM/yyyy'),
+          Time: b.start_time || 'N/A',
+          'Service Package': b.service_packages?.name || 'N/A',
+          'Service Type': b.service_packages?.service_type || 'N/A',
+        }
 
-      const csvContent = convertToCSV(revenueData, ['Date', 'Time', 'Service Package', 'Service Type', 'Revenue (฿)'])
+        // Only include revenue for admin
+        if (role === 'admin') {
+          return {
+            ...baseData,
+            'Revenue (฿)': Number(b.total_price).toFixed(2),
+          }
+        }
+
+        return baseData
+      })
+
+      const headers = role === 'admin'
+        ? ['Date', 'Time', 'Service Package', 'Service Type', 'Revenue (฿)']
+        : ['Date', 'Time', 'Service Package', 'Service Type']
+
+      const csvContent = convertToCSV(revenueData, headers)
       downloadCSV(csvContent, `revenue-summary_${dateRange}_${timestamp}.csv`)
     }
   }
 
   if (exportType === 'detailed' || exportType === 'all') {
     // Export all bookings with details
-    const detailedData = filteredBookings.map(b => ({
-      'Booking ID': b.id.substring(0, 8),
-      'Date': format(new Date(b.booking_date), 'dd/MM/yyyy'),
-      'Time': b.start_time || 'N/A',
-      'Service Package': b.service_packages?.name || 'N/A',
-      'Service Type': b.service_packages?.service_type || 'N/A',
-      'Price (฿)': Number(b.total_price).toFixed(2),
-      'Status': b.status,
-      'Created': format(new Date(b.created_at), 'dd/MM/yyyy HH:mm'),
-    }))
+    const detailedData = filteredBookings.map(b => {
+      const baseData = {
+        'Booking ID': b.id.substring(0, 8),
+        'Date': format(new Date(b.booking_date), 'dd/MM/yyyy'),
+        'Time': b.start_time || 'N/A',
+        'Service Package': b.service_packages?.name || 'N/A',
+        'Service Type': b.service_packages?.service_type || 'N/A',
+      }
 
-    const csvContent = convertToCSV(detailedData, [
-      'Booking ID',
-      'Date',
-      'Time',
-      'Service Package',
-      'Service Type',
-      'Price (฿)',
-      'Status',
-      'Created'
-    ])
+      // Only include price for admin
+      if (role === 'admin') {
+        return {
+          ...baseData,
+          'Price (฿)': Number(b.total_price).toFixed(2),
+          'Status': b.status,
+          'Created': format(new Date(b.created_at), 'dd/MM/yyyy HH:mm'),
+        }
+      }
+
+      return {
+        ...baseData,
+        'Status': b.status,
+        'Created': format(new Date(b.created_at), 'dd/MM/yyyy HH:mm'),
+      }
+    })
+
+    const headers = role === 'admin'
+      ? ['Booking ID', 'Date', 'Time', 'Service Package', 'Service Type', 'Price (฿)', 'Status', 'Created']
+      : ['Booking ID', 'Date', 'Time', 'Service Package', 'Service Type', 'Status', 'Created']
+
+    const csvContent = convertToCSV(detailedData, headers)
     downloadCSV(csvContent, `bookings-detailed_${dateRange}_${timestamp}.csv`)
   }
 }
@@ -200,7 +226,8 @@ export const exportRevenueBookings = (
  */
 export const exportRevenueByServiceType = (
   bookings: BookingForExport[],
-  dateRange: string
+  dateRange: string,
+  role: 'admin' | 'manager' | 'staff' | null = null
 ): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
@@ -228,19 +255,29 @@ export const exportRevenueByServiceType = (
     serviceTypeData[serviceType].revenue += Number(b.total_price)
   })
 
-  const exportData = Object.entries(serviceTypeData).map(([type, data]) => ({
-    'Service Type': type,
-    'Total Bookings': data.count,
-    'Total Revenue (฿)': data.revenue.toFixed(2),
-    'Average Price (฿)': (data.revenue / data.count).toFixed(2),
-  }))
+  const exportData = Object.entries(serviceTypeData).map(([type, data]) => {
+    const baseData = {
+      'Service Type': type,
+      'Total Bookings': data.count,
+    }
 
-  const csvContent = convertToCSV(exportData, [
-    'Service Type',
-    'Total Bookings',
-    'Total Revenue (฿)',
-    'Average Price (฿)'
-  ])
+    // Only include revenue data for admin
+    if (role === 'admin') {
+      return {
+        ...baseData,
+        'Total Revenue (฿)': data.revenue.toFixed(2),
+        'Average Price (฿)': (data.revenue / data.count).toFixed(2),
+      }
+    }
+
+    return baseData
+  })
+
+  const headers = role === 'admin'
+    ? ['Service Type', 'Total Bookings', 'Total Revenue (฿)', 'Average Price (฿)']
+    : ['Service Type', 'Total Bookings']
+
+  const csvContent = convertToCSV(exportData, headers)
   downloadCSV(csvContent, `revenue-by-service-type_${dateRange}_${timestamp}.csv`)
 }
 
@@ -399,35 +436,48 @@ export const exportCustomers = (
 /**
  * Export Staff Performance data
  */
-export const exportStaffPerformance = (staffPerformance: StaffPerformanceForExport[]): void => {
+export const exportStaffPerformance = (
+  staffPerformance: StaffPerformanceForExport[],
+  role: 'admin' | 'manager' | 'staff' | null = null
+): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 
-  const staffData = staffPerformance.map(s => ({
-    'Staff Name': s.name,
-    'Total Jobs': s.totalJobs,
-    'Completed Jobs': s.completedJobs,
-    'Revenue': s.revenue,
-    'Completion Rate (%)': s.completionRate.toFixed(1),
-    'Avg Job Value': s.avgJobValue.toFixed(2),
-    'Utilization Rate (%)': s.utilizationRate.toFixed(1),
-  }))
+  const staffData = staffPerformance.map(s => {
+    const baseData = {
+      'Staff Name': s.name,
+      'Total Jobs': s.totalJobs,
+      'Completed Jobs': s.completedJobs,
+      'Completion Rate (%)': s.completionRate.toFixed(1),
+      'Utilization Rate (%)': s.utilizationRate.toFixed(1),
+    }
 
-  const csvContent = convertToCSV(staffData, [
-    'Staff Name',
-    'Total Jobs',
-    'Completed Jobs',
-    'Revenue',
-    'Completion Rate (%)',
-    'Avg Job Value',
-    'Utilization Rate (%)'
-  ])
+    // Only admin can see revenue data
+    if (role === 'admin') {
+      return {
+        ...baseData,
+        'Revenue': s.revenue,
+        'Avg Job Value': s.avgJobValue.toFixed(2),
+      }
+    }
+
+    return baseData
+  })
+
+  const headers = role === 'admin'
+    ? ['Staff Name', 'Total Jobs', 'Completed Jobs', 'Completion Rate (%)', 'Utilization Rate (%)', 'Revenue', 'Avg Job Value']
+    : ['Staff Name', 'Total Jobs', 'Completed Jobs', 'Completion Rate (%)', 'Utilization Rate (%)']
+
+  const csvContent = convertToCSV(staffData, headers)
   downloadCSV(csvContent, `staff-performance_${timestamp}.csv`)
 }
 
 /**
  * Export Team Performance data
  */
-export const exportTeamPerformance = (teamsData: TeamForExport[]): void => {
+export const exportTeamPerformance = (
+  teamsData: TeamForExport[],
+  role: 'admin' | 'manager' | 'staff' | null = null
+): void => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 
   const teamData = teamsData.map((team, index) => {
@@ -441,7 +491,7 @@ export const exportTeamPerformance = (teamsData: TeamForExport[]): void => {
     const memberCount = team.team_members.length
     const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
 
-    return {
+    const baseData = {
       'Rank': index + 1,
       'Team Name': team.name,
       'Members': memberCount,
@@ -449,21 +499,24 @@ export const exportTeamPerformance = (teamsData: TeamForExport[]): void => {
       'Completed': completed,
       'In Progress': inProgress,
       'Pending': pending,
-      'Revenue': revenue.toFixed(2),
       'Completion Rate (%)': completionRate.toFixed(1),
     }
+
+    // Only admin can see revenue
+    if (role === 'admin') {
+      return {
+        ...baseData,
+        'Revenue': revenue.toFixed(2),
+      }
+    }
+
+    return baseData
   })
 
-  const csvContent = convertToCSV(teamData, [
-    'Rank',
-    'Team Name',
-    'Members',
-    'Total Jobs',
-    'Completed',
-    'In Progress',
-    'Pending',
-    'Revenue',
-    'Completion Rate (%)'
-  ])
+  const headers = role === 'admin'
+    ? ['Rank', 'Team Name', 'Members', 'Total Jobs', 'Completed', 'In Progress', 'Pending', 'Completion Rate (%)', 'Revenue']
+    : ['Rank', 'Team Name', 'Members', 'Total Jobs', 'Completed', 'In Progress', 'Pending', 'Completion Rate (%)']
+
+  const csvContent = convertToCSV(teamData, headers)
   downloadCSV(csvContent, `team-performance_${timestamp}.csv`)
 }

@@ -797,3 +797,31 @@ export const getTeamPerformance = (teamsWithBookings: TeamWithBookings[]): TeamP
   })
 }
 
+/**
+ * Filter financial data based on user role
+ * Removes sensitive financial fields for non-admin users
+ *
+ * @param data - The data object to filter
+ * @param role - User role ('admin', 'manager', 'staff', or null)
+ * @param sensitiveFields - Array of field names to remove for non-admin users
+ * @returns Filtered data object (full data for admin, filtered for others)
+ */
+export function filterFinancialDataForRole<T extends Record<string, unknown>>(
+  data: T,
+  role: 'admin' | 'manager' | 'staff' | null,
+  sensitiveFields: (keyof T)[] = []
+): Partial<T> {
+  // Admin sees everything
+  if (role === 'admin') {
+    return data
+  }
+
+  // For non-admin users, remove sensitive fields
+  const filtered = { ...data }
+  sensitiveFields.forEach(field => {
+    delete filtered[field]
+  })
+
+  return filtered
+}
+

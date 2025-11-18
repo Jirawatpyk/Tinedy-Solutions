@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSettings } from '@/hooks/use-settings'
+import { usePermissions } from '@/hooks/use-permissions'
 import { getErrorMessage } from '@/lib/error-utils'
+import { supabase } from '@/lib/supabase'
 import {
   Building2,
   Clock,
@@ -22,14 +24,18 @@ import {
   MapPin,
   Calendar,
   AlertCircle,
+  ShieldAlert,
+  X,
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function AdminSettings() {
   const { toast } = useToast()
   const { settings, loading, error, updateGeneralSettings, updateBookingSettings, updateNotificationSettings } = useSettings()
+  const { isAdmin } = usePermissions()
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // General Settings State
   const [businessName, setBusinessName] = useState('')
@@ -37,6 +43,8 @@ export default function AdminSettings() {
   const [businessPhone, setBusinessPhone] = useState('')
   const [businessAddress, setBusinessAddress] = useState('')
   const [businessDescription, setBusinessDescription] = useState('')
+  const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Booking Settings State
   const [timeSlotDuration, setTimeSlotDuration] = useState('60')
@@ -63,6 +71,8 @@ export default function AdminSettings() {
       setBusinessPhone(settings.business_phone)
       setBusinessAddress(settings.business_address)
       setBusinessDescription(settings.business_description || '')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setBusinessLogoUrl((settings as any).business_logo_url || null)
 
       // Booking
       setTimeSlotDuration(String(settings.time_slot_duration))
@@ -162,6 +172,155 @@ export default function AdminSettings() {
     }
   }
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a JPG, PNG, or WEBP image',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Validate file size (2MB max)
+    const maxSize = 2 * 1024 * 1024 // 2MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please upload an image smaller than 2MB',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setUploadingLogo(true)
+
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `business-logo-${Date.now()}.${fileExt}`
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('business-logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('business-logos')
+        .getPublicUrl(uploadData.path)
+
+      // Update settings with new logo URL
+      const { error: updateError } = await supabase
+        .from('settings')
+        .update({ business_logo_url: publicUrl })
+        .eq('id', settings?.id)
+
+      if (updateError) throw updateError
+
+      setBusinessLogoUrl(publicUrl)
+
+      toast({
+        title: 'Logo Uploaded',
+        description: 'Business logo has been updated successfully',
+      })
+    } catch (error) {
+      console.error('Error uploading logo:', error)
+      toast({
+        title: 'Upload Failed',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingLogo(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    if (!businessLogoUrl) return
+
+    try {
+      setUploadingLogo(true)
+
+      // Extract filename from URL
+      const urlParts = businessLogoUrl.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+
+      // Delete from Supabase Storage
+      const { error: deleteError } = await supabase.storage
+        .from('business-logos')
+        .remove([fileName])
+
+      if (deleteError) {
+        console.warn('Error deleting old logo from storage:', deleteError)
+      }
+
+      // Update settings to remove logo URL
+      const { error: updateError } = await supabase
+        .from('settings')
+        .update({ business_logo_url: null })
+        .eq('id', settings?.id)
+
+      if (updateError) throw updateError
+
+      setBusinessLogoUrl(null)
+
+      toast({
+        title: 'Logo Removed',
+        description: 'Business logo has been removed successfully',
+      })
+    } catch (error) {
+      console.error('Error removing logo:', error)
+      toast({
+        title: 'Remove Failed',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  // Check if user has permission to access settings (Admin only)
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b">
+          <div className="px-4 sm:px-6 py-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-12">
+                <ShieldAlert className="h-16 w-16 text-muted-foreground mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                  You do not have permission to access system settings. Only administrators can manage settings.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   // Show error if settings fail to load
   if (error) {
     return (
@@ -249,14 +408,60 @@ export default function AdminSettings() {
                 {/* Business Logo */}
                 <div className="space-y-2">
                   <Label>Business Logo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    This logo will appear in emails sent to customers
+                  </p>
                   <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow rounded-lg flex items-center justify-center">
-                      <span className="text-2xl font-bold text-white">T</span>
+                    {/* Logo Preview */}
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200">
+                      {businessLogoUrl ? (
+                        <>
+                          <img
+                            src={businessLogoUrl}
+                            alt="Business Logo"
+                            className="w-full h-full object-cover"
+                          />
+                          {!uploadingLogo && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveLogo}
+                              className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-lg hover:bg-red-600 transition-colors"
+                              aria-label="Remove logo"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow flex items-center justify-center">
+                          <span className="text-2xl font-bold text-white">
+                            {businessName.charAt(0).toUpperCase() || 'T'}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Logo
-                    </Button>
+
+                    {/* Upload Button */}
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        disabled={uploadingLogo}
+                        aria-label="Upload business logo"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingLogo ? 'Uploading...' : businessLogoUrl ? 'Change Logo' : 'Upload Logo'}
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Recommended size: 200x200px, Max 2MB (JPG, PNG, WEBP)

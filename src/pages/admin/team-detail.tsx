@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
@@ -44,7 +44,11 @@ interface TeamStats {
 export function AdminTeamDetail() {
   const { teamId } = useParams<{ teamId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
+
+  // Determine base path (admin or manager)
+  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
 
   const [team, setTeam] = useState<Team | null>(null)
   const [stats, setStats] = useState<TeamStats | null>(null)
@@ -94,7 +98,7 @@ export function AdminTeamDetail() {
           description: 'Team not found',
           variant: 'destructive',
         })
-        navigate('/admin/teams')
+        navigate(`${basePath}/teams`)
         return
       }
 
@@ -134,6 +138,7 @@ export function AdminTeamDetail() {
     } finally {
       setLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, navigate, toast])
 
   const loadTeamStats = async (teamId: string) => {
@@ -243,7 +248,7 @@ export function AdminTeamDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-96">
         <p className="text-muted-foreground mb-4">Team not found</p>
-        <Button onClick={() => navigate('/admin/teams')}>
+        <Button onClick={() => navigate(`${basePath}/teams`)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Teams
         </Button>
@@ -256,7 +261,7 @@ export function AdminTeamDetail() {
       {/* Back Button */}
       <Button
         variant="ghost"
-        onClick={() => navigate('/admin/teams')}
+        onClick={() => navigate(`${basePath}/teams`)}
         className="gap-2"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -267,6 +272,7 @@ export function AdminTeamDetail() {
       <TeamDetailHeader
         team={team}
         onUpdate={loadTeamDetail}
+        basePath={basePath}
       />
 
       {/* Team Stats */}

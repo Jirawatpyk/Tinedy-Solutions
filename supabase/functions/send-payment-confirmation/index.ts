@@ -80,11 +80,12 @@ serve(async (req) => {
     let fromEmail = 'bookings@resend.dev'
     let businessPhone = ''
     let businessAddress = ''
+    let businessLogoUrl = 'https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png'
 
     try {
       const { data: settings, error: settingsError } = await supabase
         .from('settings')
-        .select('business_name, business_email, business_phone, business_address')
+        .select('business_name, business_email, business_phone, business_address, business_logo_url')
         .limit(1)
         .maybeSingle()
 
@@ -99,6 +100,7 @@ serve(async (req) => {
         fromEmail = settings.business_email || fromEmail
         businessPhone = settings.business_phone || businessPhone
         businessAddress = settings.business_address || businessAddress
+        businessLogoUrl = settings.business_logo_url || businessLogoUrl
       }
     } catch (error) {
       console.warn('Failed to fetch settings, using defaults:', error)
@@ -183,6 +185,7 @@ serve(async (req) => {
           fromName,
           businessPhone,
           businessAddress,
+          businessLogoUrl,
         })
       } else {
         // Generate recurring booking email
@@ -201,6 +204,7 @@ serve(async (req) => {
           fromName,
           businessPhone,
           businessAddress,
+          businessLogoUrl,
         })
       }
     } else {
@@ -225,6 +229,7 @@ serve(async (req) => {
         fromName,
         businessPhone,
         businessAddress,
+        businessLogoUrl,
       })
     }
 
@@ -291,6 +296,7 @@ function generatePaymentConfirmationEmail(data: {
   fromName: string
   businessPhone: string
   businessAddress: string
+  businessLogoUrl: string
 }): string {
   return `
 <!DOCTYPE html>
@@ -398,10 +404,10 @@ function generatePaymentConfirmationEmail(data: {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png"
-           alt="Tinedy Logo"
+      <img src="${data.businessLogoUrl}"
+           alt="${data.fromName} Logo"
            class="logo"
-           style="height: 100px; margin-bottom: 16px;" />
+           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
       <h1>✅ Payment Confirmed!</h1>
     </div>
 
@@ -491,6 +497,7 @@ function generateRecurringPaymentConfirmationEmail(data: {
   fromName: string
   businessPhone: string
   businessAddress: string
+  businessLogoUrl: string
 }): string {
   const scheduleListHtml = data.bookings.map((booking, index) => {
     const bookingDate = new Date(booking.booking_date)
@@ -654,10 +661,10 @@ function generateRecurringPaymentConfirmationEmail(data: {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png"
-           alt="Tinedy Logo"
+      <img src="${data.businessLogoUrl}"
+           alt="${data.fromName} Logo"
            class="logo"
-           style="height: 100px; margin-bottom: 16px;" />
+           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
       <h1>✅ Payment Confirmed!</h1>
       <p class="header-subtitle">Recurring Booking - ${data.frequency} sessions</p>
     </div>

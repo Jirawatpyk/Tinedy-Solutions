@@ -230,6 +230,7 @@ export interface Booking {
   payment_notes?: string
   payment_slip_url?: string | null
   created_at?: string
+  deleted_at?: string | null
   // Recurring Bookings Fields
   recurring_group_id?: string | null
   recurring_sequence?: number

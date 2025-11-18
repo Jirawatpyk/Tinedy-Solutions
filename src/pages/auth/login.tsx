@@ -31,7 +31,10 @@ export function LoginPage() {
       })
 
       // Determine default path based on role
-      const defaultPath = profile?.role === 'admin' ? '/admin' : '/staff'
+      const defaultPath =
+        profile?.role === 'admin' ? '/admin' :
+        profile?.role === 'manager' ? '/manager' :
+        '/staff'
 
       // Get the from path
       const from = location.state?.from?.pathname
@@ -39,9 +42,12 @@ export function LoginPage() {
       // Only use 'from' path if it matches the user's role
       if (from) {
         const isAdminPath = from.startsWith('/admin')
+        const isManagerPath = from.startsWith('/manager')
         const isStaffPath = from.startsWith('/staff')
 
         if (profile?.role === 'admin' && isAdminPath) {
+          navigate(from, { replace: true })
+        } else if (profile?.role === 'manager' && isManagerPath) {
           navigate(from, { replace: true })
         } else if (profile?.role === 'staff' && isStaffPath) {
           navigate(from, { replace: true })
