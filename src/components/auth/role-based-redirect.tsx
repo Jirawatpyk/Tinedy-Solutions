@@ -1,22 +1,23 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
+import { logger } from '@/lib/logger'
 
 /**
  * RoleBasedRedirect component
  * Redirects users to their appropriate dashboard based on their role
- * - admin -> /admin
+ * - admin, manager -> /admin (shared dashboard)
  * - staff -> /staff
  * - no user -> /login
  */
 export function RoleBasedRedirect() {
   const { user, profile, loading } = useAuth()
 
-  console.log('[RoleBasedRedirect] State:', {
+  logger.debug('RoleBasedRedirect state', {
     loading,
     hasUser: !!user,
     hasProfile: !!profile,
     profileRole: profile?.role
-  })
+  }, { context: 'RoleBasedRedirect' })
 
   // Show loading while checking auth
   if (loading) {
@@ -32,23 +33,21 @@ export function RoleBasedRedirect() {
 
   // Not logged in -> go to login
   if (!user || !profile) {
-    console.log('[RoleBasedRedirect] No user, redirecting to login')
+    logger.debug('No user, redirecting to login', undefined, { context: 'RoleBasedRedirect' })
     return <Navigate to="/login" replace />
   }
 
   // Redirect based on role
-  if (profile.role === 'admin') {
-    console.log('[RoleBasedRedirect] Admin user, redirecting to /admin')
+  // Note: Admin and Manager now share the same dashboard at /admin
+  if (profile.role === 'admin' || profile.role === 'manager') {
+    logger.debug(`${profile.role} user, redirecting to /admin`, undefined, { context: 'RoleBasedRedirect' })
     return <Navigate to="/admin" replace />
-  } else if (profile.role === 'manager') {
-    console.log('[RoleBasedRedirect] Manager user, redirecting to /manager')
-    return <Navigate to="/manager" replace />
   } else if (profile.role === 'staff') {
-    console.log('[RoleBasedRedirect] Staff user, redirecting to /staff')
+    logger.debug('Staff user, redirecting to /staff', undefined, { context: 'RoleBasedRedirect' })
     return <Navigate to="/staff" replace />
   }
 
   // Fallback (should never happen)
-  console.error('[RoleBasedRedirect] Unknown role:', profile.role)
+  logger.error('Unknown role, redirecting to login', { role: profile.role }, { context: 'RoleBasedRedirect' })
   return <Navigate to="/login" replace />
 }

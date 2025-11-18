@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
+import { logger } from '@/lib/logger'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -10,15 +11,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  // Debug logging
-  console.log('[ProtectedRoute] State:', {
+  // Development-only logging
+  logger.debug('ProtectedRoute state', {
     loading,
     hasUser: !!user,
     hasProfile: !!profile,
     profileRole: profile?.role,
     allowedRoles,
     currentPath: location.pathname
-  })
+  }, { context: 'ProtectedRoute' })
 
   if (loading) {
     return (
@@ -32,15 +33,18 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user || !profile) {
-    console.log('[ProtectedRoute] Redirecting to login: no user or profile')
+    logger.debug('Redirecting to login: no user or profile', undefined, { context: 'ProtectedRoute' })
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    console.log('[ProtectedRoute] Redirecting to unauthorized: role mismatch')
+    logger.debug('Redirecting to unauthorized: role mismatch', {
+      userRole: profile.role,
+      allowedRoles
+    }, { context: 'ProtectedRoute' })
     return <Navigate to="/unauthorized" replace />
   }
 
-  console.log('[ProtectedRoute] Access granted')
+  logger.debug('Access granted', undefined, { context: 'ProtectedRoute' })
   return <>{children}</>
 }

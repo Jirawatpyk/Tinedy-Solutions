@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/auth-context'
 import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
@@ -49,31 +49,6 @@ const PageLoader = () => (
   </div>
 )
 
-// 403 Unauthorized Page Component
-function UnauthorizedPage() {
-  const navigate = useNavigate()
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow">
-      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
-        <h1 className="text-4xl font-display font-bold text-tinedy-dark">
-          403
-        </h1>
-        <p className="text-lg font-semibold text-tinedy-dark mt-4">Unauthorized</p>
-        <p className="text-muted-foreground mt-2">
-          You do not have permission to access this page
-        </p>
-        <button
-          onClick={() => navigate('/login')}
-          className="mt-6 px-6 py-2 bg-tinedy-blue text-white rounded-lg hover:bg-tinedy-blue/90 transition-colors"
-        >
-          Go to Login
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="tinedy-crm-theme">
@@ -89,11 +64,11 @@ function App() {
             <Route path="/payment/:bookingId" element={<PaymentPage />} />
             <Route path="/payment/:bookingId/success" element={<PaymentSuccessPage />} />
 
-            {/* Protected Admin routes (includes Manager access) */}
+            {/* Protected Admin routes */}
             <Route
               path="/admin"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <MainLayout />
                 </ProtectedRoute>
               }
@@ -116,6 +91,32 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
             </Route>
 
+            {/* Protected Manager routes (shared pages with admin) */}
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="customers" element={<AdminCustomers />} />
+              <Route path="customers/:id" element={<AdminCustomerDetail />} />
+              <Route path="staff" element={<AdminStaff />} />
+              <Route path="staff/:id" element={<AdminStaffPerformance />} />
+              <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
+              <Route path="calendar" element={<AdminCalendar />} />
+              <Route path="chat" element={<AdminChat />} />
+              <Route path="packages" element={<AdminServicePackages />} />
+              <Route path="packages/:packageId" element={<AdminPackageDetail />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="teams" element={<AdminTeams />} />
+              <Route path="teams/:teamId" element={<AdminTeamDetail />} />
+              <Route path="profile" element={<AdminProfile />} />
+            </Route>
+
             {/* Protected Staff routes */}
             <Route
               path="/staff"
@@ -135,7 +136,28 @@ function App() {
           <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Unauthorized */}
-          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route
+            path="/unauthorized"
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-tinedy-blue via-tinedy-green to-tinedy-yellow">
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+                  <h1 className="text-4xl font-display font-bold text-tinedy-dark">
+                    403
+                  </h1>
+                  <p className="text-lg font-semibold text-tinedy-dark mt-4">Unauthorized</p>
+                  <p className="text-muted-foreground mt-2">
+                    You don't have permission to access this page
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/login'}
+                    className="mt-6 px-6 py-2 bg-tinedy-blue text-white rounded-lg hover:bg-tinedy-blue/90 transition-colors"
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              </div>
+            }
+          />
 
           {/* 404 */}
           <Route
