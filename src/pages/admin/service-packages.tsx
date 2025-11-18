@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
   DialogContent,
@@ -472,24 +473,22 @@ export function AdminServicePackages() {
         {/* Stats cards skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Filters skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-full sm:w-48" />
+          <CardContent className="py-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 w-full sm:w-48" />
+              <Skeleton className="h-8 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -675,76 +674,49 @@ export function AdminServicePackages() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Packages
-            </CardTitle>
-            <Package className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.total}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Packages"
+          value={stats.total}
+          icon={Package}
+          iconColor="text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.active}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Active"
+          value={stats.active}
+          icon={CheckCircle}
+          iconColor="text-green-500"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Inactive
-            </CardTitle>
-            <XCircle className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">
-              {stats.inactive}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Inactive"
+          value={stats.inactive}
+          icon={XCircle}
+          iconColor="text-gray-400"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Price
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {formatCurrency(stats.avgPrice)}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Average Price"
+          value={formatCurrency(stats.avgPrice)}
+          icon={DollarSign}
+          iconColor="text-tinedy-yellow"
+        />
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <Input
                 placeholder="Search packages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 text-xs"
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
@@ -754,7 +726,7 @@ export function AdminServicePackages() {
               </SelectContent>
             </Select>
             <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
                 <SelectValue placeholder="Filter by pricing" />
               </SelectTrigger>
               <SelectContent>

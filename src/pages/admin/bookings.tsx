@@ -14,7 +14,7 @@ import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/useServicePackages'
-import { usePermissions } from '@/hooks/use-permissions'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage } from '@/lib/error-messages'
@@ -57,7 +57,6 @@ export function AdminBookings() {
 
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
   const { packages: servicePackages } = useServicePackages()
-  const { isAdmin } = usePermissions()
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -1147,7 +1146,7 @@ export function AdminBookings() {
         </div>
         <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
-          {isAdmin && (
+          <AdminOnly>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="show-archived-bookings"
@@ -1161,7 +1160,7 @@ export function AdminBookings() {
                 Show archived bookings
               </label>
             </div>
-          )}
+          </AdminOnly>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Booking

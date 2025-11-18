@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
 import {
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
-import { usePermissions } from '@/hooks/use-permissions'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag, RotateCcw } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
@@ -60,7 +61,6 @@ export function AdminCustomers() {
   const [showArchived, setShowArchived] = useState(false)
 
   const { toast } = useToast()
-  const { isAdmin } = usePermissions()
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -355,24 +355,21 @@ export function AdminCustomers() {
         {/* Stats Cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-32" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-3 w-24 mt-1" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Search and Filters skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-full sm:w-48" />
+          <CardContent className="py-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -415,7 +412,7 @@ export function AdminCustomers() {
         </div>
         <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
-          {isAdmin && (
+          <AdminOnly>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="show-archived-customers"
@@ -429,7 +426,7 @@ export function AdminCustomers() {
                 Show archived customers
               </label>
             </div>
-          )}
+          </AdminOnly>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -704,83 +701,55 @@ export function AdminCustomers() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-tinedy-blue">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.totalCustomers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              In your database
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Customers"
+          value={stats.totalCustomers}
+          description="In your database"
+          icon={Users}
+          iconColor="text-tinedy-blue"
+        />
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">VIP Customers</CardTitle>
-            <span className="text-xl">👑</span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.vipCustomers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Premium tier customers
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="VIP Customers"
+          value={stats.vipCustomers}
+          description="Premium tier customers"
+          icon={UserCheck}
+          iconColor="text-amber-500"
+        />
 
-        <Card className="border-l-4 border-l-tinedy-green">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-            <UserCheck className="h-4 w-4 text-tinedy-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.activeCustomers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Not marked as inactive
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Active Customers"
+          value={stats.activeCustomers}
+          description="Not marked as inactive"
+          icon={UserCheck}
+          iconColor="text-tinedy-green"
+        />
 
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-            <UserPlus className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.recentCustomers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Added in last 30 days
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="New This Month"
+          value={stats.recentCustomers}
+          description="Added in last 30 days"
+          icon={UserPlus}
+          iconColor="text-purple-500"
+        />
       </div>
 
       {/* Search and Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search customers by name, email or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-8 text-xs"
               />
             </div>
             <div className="w-full sm:w-48">
               <Select value={relationshipFilter} onValueChange={setRelationshipFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Filter by level" />
                 </SelectTrigger>
                 <SelectContent>

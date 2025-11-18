@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSettings } from '@/hooks/use-settings'
-import { usePermissions } from '@/hooks/use-permissions'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { supabase } from '@/lib/supabase'
 import {
@@ -24,7 +24,6 @@ import {
   MapPin,
   Calendar,
   AlertCircle,
-  ShieldAlert,
   X,
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -32,7 +31,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 export default function AdminSettings() {
   const { toast } = useToast()
   const { settings, loading, error, updateGeneralSettings, updateBookingSettings, updateNotificationSettings } = useSettings()
-  const { isAdmin } = usePermissions()
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -300,28 +298,17 @@ export default function AdminSettings() {
     }
   }
 
-  // Check if user has permission to access settings (Admin only)
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="p-4 sm:p-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <ShieldAlert className="h-16 w-16 text-muted-foreground mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-                <p className="text-sm text-muted-foreground text-center max-w-md">
-                  You do not have permission to access system settings. Only administrators can manage settings.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
+  return (
+    <AdminOnly
+      fallback="alert"
+      fallbackMessage="You do not have permission to access system settings. Only administrators can manage settings."
+    >
+      {renderSettings()}
+    </AdminOnly>
+  )
 
-  // Show error if settings fail to load
+  function renderSettings() {
+    // Show error if settings fail to load
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -800,5 +787,6 @@ export default function AdminSettings() {
         </Tabs>
       </div>
     </div>
-  )
+    )
+  }
 }

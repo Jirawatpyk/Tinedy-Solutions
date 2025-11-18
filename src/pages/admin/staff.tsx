@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { usePermissions } from '@/hooks/use-permissions'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
@@ -63,7 +64,6 @@ export function AdminStaff() {
   const ITEMS_PER_LOAD = 12
 
   const { toast } = useToast()
-  const { isAdmin } = usePermissions()
 
   const [formData, setFormData] = useState({
     email: '',
@@ -355,25 +355,21 @@ export function AdminStaff() {
         {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-12" />
-                <Skeleton className="h-3 w-28" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Search and filter skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-full sm:w-48" />
+          <CardContent className="py-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -540,12 +536,10 @@ export function AdminStaff() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
-                    {isAdmin && (
-                      <>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </>
-                    )}
+                    <AdminOnly>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </AdminOnly>
                   </SelectContent>
                 </Select>
               </div>
@@ -569,82 +563,54 @@ export function AdminStaff() {
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-            <User className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.totalStaff}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All team members
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Staff"
+          value={stats.totalStaff}
+          description="All team members"
+          icon={User}
+          iconColor="text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Administrators</CardTitle>
-            <Shield className="h-4 w-4 text-tinedy-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.admins}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Full access users
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Administrators"
+          value={stats.admins}
+          description="Full access users"
+          icon={Shield}
+          iconColor="text-tinedy-green"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Managers</CardTitle>
-            <Users className="h-4 w-4 text-tinedy-purple" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.managers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Team managers
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Managers"
+          value={stats.managers}
+          description="Team managers"
+          icon={Users}
+          iconColor="text-tinedy-purple"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Staff Members</CardTitle>
-            <User className="h-4 w-4 text-tinedy-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.staffMembers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Regular staff
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Staff Members"
+          value={stats.staffMembers}
+          description="Regular staff"
+          icon={User}
+          iconColor="text-tinedy-yellow"
+        />
       </div>
 
       {/* Search and Filter */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search staff..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-8 text-xs"
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>

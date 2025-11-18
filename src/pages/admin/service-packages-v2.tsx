@@ -6,10 +6,11 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
   DialogContent,
@@ -247,25 +248,22 @@ export function AdminServicePackagesV2() {
         {/* Stats Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Filters Skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-full sm:w-48" />
-              <Skeleton className="h-10 w-full sm:w-48" />
+          <CardContent className="py-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 w-full sm:w-48" />
+              <Skeleton className="h-8 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -305,62 +303,49 @@ export function AdminServicePackagesV2() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Packages"
+          value={stats.total}
+          icon={Package}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Active"
+          value={stats.active}
+          icon={TrendingUp}
+          iconColor="text-green-600"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-400">{stats.inactive}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Inactive"
+          value={stats.inactive}
+          icon={DollarSign}
+          iconColor="text-gray-400"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Tiered Pricing</CardTitle>
-            <Layers className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.tiered}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Tiered Pricing"
+          value={stats.tiered}
+          icon={Layers}
+          iconColor="text-blue-600"
+        />
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
             <Input
               placeholder="Search packages..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
+              className="flex-1 h-8 text-xs"
             />
 
             {/* Service Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -372,7 +357,7 @@ export function AdminServicePackagesV2() {
 
             {/* Pricing Model Filter */}
             <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
                 <SelectValue placeholder="All Pricing" />
               </SelectTrigger>
               <SelectContent>

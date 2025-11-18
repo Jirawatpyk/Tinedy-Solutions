@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { usePermissions } from '@/hooks/use-permissions'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { TeamCard } from '@/components/teams/team-card'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
 
@@ -76,7 +77,6 @@ export function AdminTeams() {
   const [showArchived, setShowArchived] = useState(false)
 
   const { toast } = useToast()
-  const { isAdmin } = usePermissions()
 
   const loadTeams = useCallback(async () => {
     try {
@@ -563,23 +563,19 @@ export function AdminTeams() {
         {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-12" />
-                <Skeleton className="h-3 w-28" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Search skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <Skeleton className="h-10 w-full" />
+          <CardContent className="py-3">
+            <Skeleton className="h-8 w-full" />
           </CardContent>
         </Card>
 
@@ -628,7 +624,7 @@ export function AdminTeams() {
         <p className="text-sm text-muted-foreground">Manage teams and team members</p>
         <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
-          {isAdmin && (
+          <AdminOnly>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="show-archived"
@@ -642,7 +638,7 @@ export function AdminTeams() {
                 Show archived teams
               </label>
             </div>
-          )}
+          </AdminOnly>
           <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
             <Plus className="h-4 w-4 mr-2" />
             New Team
@@ -652,62 +648,41 @@ export function AdminTeams() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
-            <UsersRound className="h-4 w-4 text-tinedy-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.totalTeams}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active teams
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Teams"
+          value={stats.totalTeams}
+          description="Active teams"
+          icon={UsersRound}
+          iconColor="text-tinedy-blue"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Teams with Leads</CardTitle>
-            <Crown className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.teamsWithLeads}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Have team leaders
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Teams with Leads"
+          value={stats.teamsWithLeads}
+          description="Have team leaders"
+          icon={Crown}
+          iconColor="text-amber-600"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-            <Users className="h-4 w-4 text-tinedy-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-tinedy-dark">
-              {stats.totalMembers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across all teams
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Members"
+          value={stats.totalMembers}
+          description="Across all teams"
+          icon={Users}
+          iconColor="text-tinedy-green"
+        />
       </div>
 
       {/* Search Bar */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="py-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search teams..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-8 text-xs"
             />
           </div>
         </CardContent>

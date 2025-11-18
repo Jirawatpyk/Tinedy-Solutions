@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
-import { usePermissions } from '@/hooks/use-permissions'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { ServicePackageV2WithTiers, PackagePricingTier } from '@/types'
@@ -82,7 +82,6 @@ export default function AdminPackageDetail() {
   const { packageId } = useParams<{ packageId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { isAdmin } = usePermissions()
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -424,7 +423,7 @@ export default function AdminPackageDetail() {
         </div>
 
         {/* Action Buttons (Admin Only) */}
-        {isAdmin && (
+        <AdminOnly>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -462,7 +461,7 @@ export default function AdminPackageDetail() {
               Delete
             </Button>
           </div>
-        )}
+        </AdminOnly>
       </div>
 
       {/* Main Content */}
