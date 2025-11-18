@@ -32,6 +32,7 @@ import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringEditScope, RecurringPattern } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
+import { logger } from '@/lib/logger'
 
 interface StaffMember {
   id: string
@@ -221,7 +222,7 @@ export function AdminBookings() {
 
       setBookings(processedData || [])
     } catch (error) {
-      console.error('Error fetching bookings:', error)
+      logger.error('Error fetching bookings', { error }, { context: 'AdminBookings' })
       const errorMessage = getLoadErrorMessage('booking')
       toast({
         title: errorMessage.title,
@@ -291,7 +292,7 @@ export function AdminBookings() {
           table: 'bookings'
         },
         async (payload) => {
-          console.log('Booking inserted:', payload)
+          logger.debug('Booking inserted via realtime', { bookingId: payload.new.id }, { context: 'AdminBookings' })
           // Fetch the new booking with relations
           const { data } = await supabase
             .from('bookings')
@@ -326,7 +327,7 @@ export function AdminBookings() {
           table: 'bookings'
         },
         async (payload) => {
-          console.log('Booking updated:', payload)
+          logger.debug('Booking updated via realtime', { bookingId: payload.new.id }, { context: 'AdminBookings' })
           // Fetch the updated booking with relations
           const { data } = await supabase
             .from('bookings')
@@ -367,7 +368,7 @@ export function AdminBookings() {
           table: 'bookings'
         },
         (payload) => {
-          console.log('Booking deleted:', payload)
+          logger.debug('Booking deleted via realtime', { bookingId: payload.old.id }, { context: 'AdminBookings' })
           // Remove booking from the list
           setBookings(prev => prev.filter(b => b.id !== payload.old.id))
 
@@ -497,17 +498,17 @@ export function AdminBookings() {
 
       // Handle recurring booking data from Quick Availability Check
       if (state.prefilledData.is_recurring && state.prefilledData.recurring_dates && state.prefilledData.recurring_dates.length > 0) {
-        console.log('📥 Bookings page - Received recurring data from Quick Check:', {
+        logger.debug('Received recurring data from Quick Availability Check', {
           is_recurring: state.prefilledData.is_recurring,
           recurring_dates: state.prefilledData.recurring_dates,
           recurring_pattern: state.prefilledData.recurring_pattern
-        })
+        }, { context: 'AdminBookings' })
 
         setCreateEnableRecurring(true)
         setCreateRecurringDates(state.prefilledData.recurring_dates)
         if (state.prefilledData.recurring_pattern) {
           setCreateRecurringPattern(state.prefilledData.recurring_pattern)
-          console.log('✅ Set recurring pattern to:', state.prefilledData.recurring_pattern)
+          logger.debug('Set recurring pattern', { pattern: state.prefilledData.recurring_pattern }, { context: 'AdminBookings' })
         }
       }
 
@@ -582,13 +583,13 @@ export function AdminBookings() {
       if (error) throw error
       setStaffMembers(data || [])
     } catch (error) {
-      console.error('Error fetching staff:', error)
+      logger.error('Error fetching staff', { error }, { context: 'AdminBookings' })
     }
   }
 
   const fetchTeams = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('teams')
         .select('id, name')
         .eq('is_active', true)
@@ -597,7 +598,7 @@ export function AdminBookings() {
       if (error) throw error
       setTeams(data || [])
     } catch (error) {
-      console.error('Error fetching teams:', error)
+      logger.error('Error fetching teams', { error }, { context: 'AdminBookings' })
     }
   }
 
@@ -650,21 +651,24 @@ export function AdminBookings() {
     if (!pendingRecurringBooking) return
 
     try {
-      console.log('🔍 Deleting with:', {
+      logger.debug('Deleting recurring bookings', {
         bookingId: pendingRecurringBooking.id,
         groupId: pendingRecurringBooking.recurring_group_id,
         scope,
         isRecurring: pendingRecurringBooking.is_recurring,
         sequence: pendingRecurringBooking.recurring_sequence,
         total: pendingRecurringBooking.recurring_total
-      })
+      }, { context: 'AdminBookings' })
 
       const result = await deleteRecurringBookings(
         pendingRecurringBooking.id,
         scope
       )
 
-      console.log('📊 Delete result:', result)
+      logger.debug('Delete recurring bookings result', {
+        success: result.success,
+        deletedCount: result.deletedCount
+      }, { context: 'AdminBookings' })
 
       if (!result.success) {
         const errorMsg = getRecurringBookingError('delete')
@@ -685,7 +689,7 @@ export function AdminBookings() {
       setPendingRecurringBooking(null)
       fetchBookings()
     } catch (error) {
-      console.error('Delete recurring booking error:', error)
+      logger.error('Delete recurring booking error', { error }, { context: 'AdminBookings' })
       const errorMsg = getRecurringBookingError('delete')
       toast({
         title: errorMsg.title,
@@ -700,14 +704,14 @@ export function AdminBookings() {
     if (!pendingRecurringBooking) return
 
     try {
-      console.log('🔍 Archiving with:', {
+      logger.debug('Archiving recurring bookings', {
         bookingId: pendingRecurringBooking.id,
         groupId: pendingRecurringBooking.recurring_group_id,
         scope,
         isRecurring: pendingRecurringBooking.is_recurring,
         sequence: pendingRecurringBooking.recurring_sequence,
         total: pendingRecurringBooking.recurring_total
-      })
+      }, { context: 'AdminBookings' })
 
       // Get booking details first
       const { data: booking, error: fetchError } = await supabase
@@ -770,7 +774,10 @@ export function AdminBookings() {
         }
       }
 
-      console.log('📊 Archive result:', { archivedCount, total: bookingIdsToArchive.length })
+      logger.debug('Archive recurring bookings result', {
+        archivedCount,
+        total: bookingIdsToArchive.length
+      }, { context: 'AdminBookings' })
 
       toast({
         title: 'Success',
@@ -781,7 +788,7 @@ export function AdminBookings() {
       setPendingRecurringBooking(null)
       fetchBookings()
     } catch (error) {
-      console.error('Archive recurring booking error:', error)
+      logger.error('Archive recurring booking error', { error }, { context: 'AdminBookings' })
       const errorMsg = getArchiveErrorMessage()
       toast({
         title: errorMsg.title,
@@ -819,7 +826,7 @@ export function AdminBookings() {
       })
       fetchBookings()
     } catch (error) {
-      console.error('Delete booking error:', error)
+      logger.error('Delete booking error', { error }, { context: 'AdminBookings' })
       const errorMsg = getDeleteErrorMessage('booking')
       toast({
         title: errorMsg.title,
@@ -858,7 +865,7 @@ export function AdminBookings() {
       })
       fetchBookings()
     } catch (error) {
-      console.error('Archive booking error:', error)
+      logger.error('Archive booking error', { error }, { context: 'AdminBookings' })
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to archive booking',
@@ -883,7 +890,7 @@ export function AdminBookings() {
       })
       fetchBookings()
     } catch (error) {
-      console.error('Error restoring booking:', error)
+      logger.error('Error restoring booking', { error }, { context: 'AdminBookings' })
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to restore booking',
@@ -895,7 +902,7 @@ export function AdminBookings() {
   // Delete entire recurring group
   const deleteRecurringGroup = useCallback(async (groupId: string) => {
     try {
-      console.log('🔍 Fetching group:', groupId)
+      logger.debug('Fetching recurring group', { groupId }, { context: 'AdminBookings' })
 
       // ดึง booking แรกของ group จาก database (ต้อง select ทุก field รวม recurring fields)
       const { data: firstBooking, error: fetchError } = await supabase
@@ -913,8 +920,10 @@ export function AdminBookings() {
         .limit(1)
         .single()
 
-      console.log('📦 First booking:', firstBooking)
-      console.log('❌ Fetch error:', fetchError)
+      logger.debug('Fetched first booking of group', {
+        hasBooking: !!firstBooking,
+        hasError: !!fetchError
+      }, { context: 'AdminBookings' })
 
       if (fetchError) throw fetchError
       if (!firstBooking) {
@@ -928,20 +937,20 @@ export function AdminBookings() {
         teams: transformTeamsData(firstBooking.teams),
       }
 
-      console.log('✅ Setting pending booking:', {
+      logger.debug('Setting pending recurring booking for deletion', {
         id: processedBooking.id,
         groupId: processedBooking.recurring_group_id,
         isRecurring: processedBooking.is_recurring,
         sequence: processedBooking.recurring_sequence,
         total: processedBooking.recurring_total
-      })
+      }, { context: 'AdminBookings' })
 
       // แสดง RecurringEditDialog เพื่อให้เลือก scope การลบ
       setPendingRecurringBooking(processedBooking as Booking)
       setRecurringEditAction('delete')
       setShowRecurringEditDialog(true)
     } catch (error) {
-      console.error('Delete recurring group error:', error)
+      logger.error('Delete recurring group error', { error }, { context: 'AdminBookings' })
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to delete recurring group',
