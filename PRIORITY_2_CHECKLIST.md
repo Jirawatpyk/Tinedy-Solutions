@@ -169,14 +169,14 @@
 - [ ] เพิ่ม context: 'AdminBookings'
 - [ ] Test การทำงาน
 
-#### File 3: recurring-booking-service.ts (23 occurrences)
-- [ ] Import logger
-- [ ] Replace console.log in validation logic
-- [ ] Replace console.log in calculation logic
-- [ ] Replace console.log in database operations
-- [ ] Replace console.error
-- [ ] เพิ่ม context: 'RecurringBookingService'
-- [ ] Test recurring bookings
+#### File 3: recurring-booking-service.ts (23 occurrences) ✅
+- [x] Import logger
+- [x] Replace console.log in validation logic
+- [x] Replace console.log in calculation logic
+- [x] Replace console.log in database operations
+- [x] Replace console.error
+- [x] เพิ่ม context: 'RecurringBookingService'
+- [x] Test recurring bookings
 
 #### File 4: pricing-utils.ts (15 occurrences)
 - [ ] Import logger
@@ -202,13 +202,15 @@
 - [ ] chat.tsx (staff)
 - [ ] useStaffBookings.ts
 
-### 3.4 Integrate Logger with Error Handling
-- [ ] เปิดไฟล์ `src/lib/error-handling.ts`
-- [ ] Import logger
-- [ ] Replace console.error ใน `logError()`
-- [ ] Replace console.error ใน `reportError()`
-- [ ] เพิ่ม context parameters
-- [ ] Test error logging
+### 3.4 Integrate Logger with Error Handling ✅
+
+- [x] เปิดไฟล์ `src/lib/error-handling.ts`
+- [x] Import logger
+- [x] Replace console.error ใน `logError()` (4 occurrences)
+- [x] Replace console.log ใน `reportError()`
+- [x] เพิ่ม context parameters (ใช้ component:action format)
+- [x] แก้ TypeScript errors (LoggerOptions interface)
+- [x] Test error logging (build passed)
 
 ### 3.5 Production Build Verification
 - [ ] Run `npm run build`

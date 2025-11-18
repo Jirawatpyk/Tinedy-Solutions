@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './supabase'
+import { logger } from './logger'
 import type {
   RecurringGroupInput,
   RecurringCreationResult,
@@ -59,7 +60,7 @@ import {
  * })
  *
  * if (result.success) {
- *   console.log(`Created ${result.bookingIds.length} bookings`)
+ *   // Success: result.bookingIds contains all created booking IDs
  * }
  * ```
  *
@@ -73,12 +74,12 @@ export async function createRecurringGroup(
   const errors: string[] = []
 
   try {
-    console.log('🔄 Creating recurring group:', {
+    logger.debug('Creating recurring group', {
       groupId,
       pattern: input.pattern,
       totalOccurrences: input.totalOccurrences,
       dates: input.dates
-    })
+    }, { context: 'RecurringBookingService' })
 
     // สร้าง booking แรก (parent)
     const parentBooking = {
@@ -99,7 +100,7 @@ export async function createRecurringGroup(
       .single()
 
     if (parentError) {
-      console.error('❌ Error creating parent booking:', parentError)
+      logger.error('Error creating parent booking', { error: parentError }, { context: 'RecurringBookingService' })
       throw parentError
     }
     if (!parent) {
@@ -108,7 +109,7 @@ export async function createRecurringGroup(
 
     const parentId = parent.id
     bookingIds.push(parentId)
-    console.log('✅ Created parent booking:', parentId)
+    logger.debug('Created parent booking', { parentId }, { context: 'RecurringBookingService' })
 
     // สร้าง bookings ที่เหลือ
     if (input.dates.length > 1) {
@@ -129,20 +130,20 @@ export async function createRecurringGroup(
         .select('id')
 
       if (childError) {
-        console.error('❌ Error creating child bookings:', childError)
+        logger.error('Error creating child bookings', { error: childError }, { context: 'RecurringBookingService' })
         throw childError
       }
       if (children) {
         const childIds = children.map(c => c.id)
         bookingIds.push(...childIds)
-        console.log(`✅ Created ${childIds.length} child bookings`)
+        logger.debug('Created child bookings', { count: childIds.length }, { context: 'RecurringBookingService' })
       }
     }
 
-    console.log('✅ Successfully created recurring group:', {
+    logger.debug('Successfully created recurring group', {
       groupId,
       totalBookings: bookingIds.length
-    })
+    }, { context: 'RecurringBookingService' })
 
     return {
       success: true,
@@ -150,18 +151,18 @@ export async function createRecurringGroup(
       bookingIds
     }
   } catch (error) {
-    console.error('❌ Error creating recurring group:', error)
+    logger.error('Error creating recurring group', { error }, { context: 'RecurringBookingService' })
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     errors.push(errorMessage)
 
     // Rollback: ลบ bookings ที่สร้างไปแล้ว
     if (bookingIds.length > 0) {
-      console.log('🔄 Rolling back bookings:', bookingIds)
+      logger.debug('Rolling back bookings', { bookingIds }, { context: 'RecurringBookingService' })
       await supabase
         .from('bookings')
         .delete()
         .in('id', bookingIds)
-      console.log('✅ Rollback complete')
+      logger.debug('Rollback complete', undefined, { context: 'RecurringBookingService' })
     }
 
     return {
@@ -194,11 +195,11 @@ export async function updateRecurringBookings(
   const { bookingId, scope, updates } = request
 
   try {
-    console.log('🔄 Updating recurring bookings:', {
+    logger.debug('Updating recurring bookings', {
       bookingId,
       scope,
       updates
-    })
+    }, { context: 'RecurringBookingService' })
 
     // ดึงข้อมูล booking ปัจจุบัน
     const { data: booking, error: fetchError } = await supabase
@@ -255,14 +256,14 @@ export async function updateRecurringBookings(
 
     if (updateError) throw updateError
 
-    console.log(`✅ Updated ${count || 0} bookings`)
+    logger.debug('Updated recurring bookings', { count: count || 0 }, { context: 'RecurringBookingService' })
 
     return {
       success: true,
       updatedCount: count || 0
     }
   } catch (error) {
-    console.error('❌ Error updating recurring bookings:', error)
+    logger.error('Error updating recurring bookings', { error }, { context: 'RecurringBookingService' })
     return {
       success: false,
       updatedCount: 0,
@@ -288,10 +289,10 @@ export async function deleteRecurringBookings(
   scope: RecurringEditScope
 ): Promise<{ success: boolean; deletedCount: number; error?: string }> {
   try {
-    console.log('🔄 Deleting recurring bookings:', {
+    logger.debug('Deleting recurring bookings', {
       bookingId,
       scope
-    })
+    }, { context: 'RecurringBookingService' })
 
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
@@ -344,14 +345,14 @@ export async function deleteRecurringBookings(
 
     if (deleteError) throw deleteError
 
-    console.log(`✅ Deleted ${count || 0} bookings`)
+    logger.debug('Deleted recurring bookings', { count: count || 0 }, { context: 'RecurringBookingService' })
 
     return {
       success: true,
       deletedCount: count || 0
     }
   } catch (error) {
-    console.error('❌ Error deleting recurring bookings:', error)
+    logger.error('Error deleting recurring bookings', { error }, { context: 'RecurringBookingService' })
     return {
       success: false,
       deletedCount: 0,
@@ -370,8 +371,7 @@ export async function deleteRecurringBookings(
  * ```typescript
  * const group = await getRecurringGroup('uuid-123')
  * if (group) {
- *   console.log(`Total: ${group.totalBookings}`)
- *   console.log(`Completed: ${group.completedCount}`)
+ *   // Access: group.totalBookings, group.completedCount, group.upcomingCount
  * }
  * ```
  */
@@ -379,7 +379,7 @@ export async function getRecurringGroup(
   groupId: string
 ): Promise<RecurringGroup | null> {
   try {
-    console.log('🔄 Fetching recurring group:', groupId)
+    logger.debug('Fetching recurring group', { groupId }, { context: 'RecurringBookingService' })
 
     const { data, error } = await supabase
       .from('bookings')
@@ -403,7 +403,7 @@ export async function getRecurringGroup(
 
     if (error) throw error
     if (!data || data.length === 0) {
-      console.log('❌ Recurring group not found')
+      logger.debug('Recurring group not found', { groupId }, { context: 'RecurringBookingService' })
       return null
     }
 
@@ -422,16 +422,16 @@ export async function getRecurringGroup(
       ).length
     }
 
-    console.log('✅ Fetched recurring group:', {
+    logger.debug('Fetched recurring group', {
       groupId,
       totalBookings: group.totalBookings,
       completed: group.completedCount,
       upcoming: group.upcomingCount
-    })
+    }, { context: 'RecurringBookingService' })
 
     return group
   } catch (error) {
-    console.error('❌ Error fetching recurring group:', error)
+    logger.error('Error fetching recurring group', { error }, { context: 'RecurringBookingService' })
     return null
   }
 }
@@ -450,7 +450,7 @@ export async function recurringGroupExists(groupId: string): Promise<boolean> {
 
     return (count || 0) > 0
   } catch (error) {
-    console.error('❌ Error checking recurring group existence:', error)
+    logger.error('Error checking recurring group existence', { error, groupId }, { context: 'RecurringBookingService' })
     return false
   }
 }

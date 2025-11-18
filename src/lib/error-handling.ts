@@ -14,6 +14,7 @@ import {
   isPermissionError,
   isValidationError,
 } from './error-utils'
+import { logger } from './logger'
 
 /**
  * Error severity levels for logging and reporting
@@ -73,17 +74,21 @@ function logError(error: Error, context?: ErrorContext, severity: ErrorSeverity 
     ...context,
   }
 
-  // Use different console methods based on severity
+  // Use different logger methods based on severity
+  const logContext = context?.component
+    ? (context.action ? `${context.component}:${context.action}` : context.component)
+    : 'ErrorHandler'
+
   switch (severity) {
     case ErrorSeverity.CRITICAL:
     case ErrorSeverity.HIGH:
-      console.error('[ERROR]', logData)
+      logger.error('Error occurred', logData, { context: logContext })
       break
     case ErrorSeverity.MEDIUM:
-      console.warn('[WARNING]', logData)
+      logger.warn('Warning occurred', logData, { context: logContext })
       break
     case ErrorSeverity.LOW:
-      console.log('[INFO]', logData)
+      logger.info('Info event', logData, { context: logContext })
       break
   }
 }
@@ -103,7 +108,14 @@ function reportError(error: Error, context?: ErrorContext, severity: ErrorSeveri
   //   contexts: { custom: context },
   // })
 
-  console.log('[Report to service]', { error, context, severity })
+  logger.debug('Reporting error to external service', {
+    error: {
+      message: error.message,
+      stack: error.stack
+    },
+    context,
+    severity
+  }, { context: 'ErrorReporting' })
 }
 
 /**
