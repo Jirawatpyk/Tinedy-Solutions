@@ -795,6 +795,7 @@ export function AdminWeeklySchedule() {
           value={weekStats.totalBookings}
           description="This week"
           icon={Calendar}
+          iconColor="text-tinedy-blue"
         />
 
         <StatCard
@@ -802,6 +803,7 @@ export function AdminWeeklySchedule() {
           value={weekStats.confirmedBookings}
           description="Active bookings"
           icon={CheckCircle}
+          iconColor="text-tinedy-green"
         />
 
         <StatCard
@@ -809,6 +811,7 @@ export function AdminWeeklySchedule() {
           value={weekStats.completedBookings}
           description="Jobs done"
           icon={TrendingUp}
+          iconColor="text-tinedy-purple"
         />
 
         <StatCard
@@ -816,6 +819,7 @@ export function AdminWeeklySchedule() {
           value={weekStats.busiestDay}
           description={`${weekStats.busiestDayCount} bookings`}
           icon={Clock}
+          iconColor="text-orange-500"
         />
       </div>
 
