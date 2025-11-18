@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag, RotateCcw } from 'lucide-react'
 import { TagInput } from '@/components/customers/tag-input'
 import { formatDate } from '@/lib/utils'
@@ -58,6 +59,7 @@ export function AdminCustomers() {
   const [showArchived, setShowArchived] = useState(false)
 
   const { toast } = useToast()
+  const { isAdmin } = usePermissions()
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -417,19 +419,22 @@ export function AdminCustomers() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-archived-customers"
-              checked={showArchived}
-              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
-            />
-            <label
-              htmlFor="show-archived-customers"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Show archived customers
-            </label>
-          </div>
+          {/* Show archived toggle - Admin only */}
+          {isAdmin && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-archived-customers"
+                checked={showArchived}
+                onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+              />
+              <label
+                htmlFor="show-archived-customers"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show archived customers
+              </label>
+            </div>
+          )}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button

@@ -14,6 +14,7 @@ import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/useServicePackages'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
 import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage } from '@/lib/error-messages'
@@ -55,6 +56,7 @@ export function AdminBookings() {
 
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
   const { packages: servicePackages } = useServicePackages()
+  const { isAdmin } = usePermissions()
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -1141,19 +1143,22 @@ export function AdminBookings() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-archived-bookings"
-              checked={showArchived}
-              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
-            />
-            <label
-              htmlFor="show-archived-bookings"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Show archived bookings
-            </label>
-          </div>
+          {/* Show archived toggle - Admin only */}
+          {isAdmin && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-archived-bookings"
+                checked={showArchived}
+                onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+              />
+              <label
+                htmlFor="show-archived-bookings"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show archived bookings
+              </label>
+            </div>
+          )}
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Booking

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 import { TeamCard } from '@/components/teams/team-card'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
 
@@ -75,6 +76,7 @@ export function AdminTeams() {
   const [showArchived, setShowArchived] = useState(false)
 
   const { toast } = useToast()
+  const { isAdmin } = usePermissions()
 
   const loadTeams = useCallback(async () => {
     try {
@@ -631,19 +633,22 @@ export function AdminTeams() {
           <p className="text-muted-foreground mt-1">Manage teams and team members</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-archived"
-              checked={showArchived}
-              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
-            />
-            <label
-              htmlFor="show-archived"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Show archived teams
-            </label>
-          </div>
+          {/* Show archived toggle - Admin only */}
+          {isAdmin && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+              />
+              <label
+                htmlFor="show-archived"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show archived teams
+              </label>
+            </div>
+          )}
           <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
             <Plus className="h-4 w-4 mr-2" />
             New Team
