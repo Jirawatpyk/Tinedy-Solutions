@@ -419,8 +419,7 @@ export default function AdminPackageDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">{packageData.name}</h1>
-            <p className="text-muted-foreground mt-1">Package Details</p>
+            <p className="text-sm text-muted-foreground">Package Details: {packageData.name}</p>
           </div>
         </div>
 

@@ -546,14 +546,9 @@ export function AdminReports() {
       <div className="space-y-6">
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-              Reports & Analytics
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Revenue insights and business metrics
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Revenue insights and business metrics
+          </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" disabled className="w-full sm:w-48">
               Select period
@@ -618,14 +613,9 @@ export function AdminReports() {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-            Reports & Analytics
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Revenue insights and business metrics
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Revenue insights and business metrics
+        </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-full sm:w-48">

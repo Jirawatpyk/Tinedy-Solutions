@@ -1042,10 +1042,7 @@ export function AdminBookings() {
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-              Bookings
-            </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               Manage all service bookings
             </p>
           </div>
@@ -1144,10 +1141,7 @@ export function AdminBookings() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-            Bookings
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Manage all service bookings
           </p>
         </div>

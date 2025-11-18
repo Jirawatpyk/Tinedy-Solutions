@@ -722,14 +722,9 @@ export function AdminWeeklySchedule() {
       <div className="space-y-6">
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-              Weekly Schedule
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              View weekly booking schedules for staff and teams
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            View weekly booking schedules for staff and teams
+          </p>
           <Button variant="outline" size="sm" disabled>
             <Download className="h-4 w-4 mr-2" />
             Export Schedule
@@ -787,14 +782,9 @@ export function AdminWeeklySchedule() {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-            Weekly Schedule
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            View weekly booking schedules for staff and teams
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          View weekly booking schedules for staff and teams
+        </p>
         <Button variant="outline" size="sm">
           <Download className="h-4 w-4 mr-2" />
           Export Schedule

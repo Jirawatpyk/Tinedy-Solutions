@@ -118,14 +118,9 @@ export default function StaffDashboard() {
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                My Bookings
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage your tasks and check your statistics
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Manage your tasks and check your statistics
+            </p>
             <Button
               onClick={handleRefresh}
               disabled={isRefreshing}

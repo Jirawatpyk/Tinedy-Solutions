@@ -553,10 +553,7 @@ export function AdminTeams() {
       <div className="space-y-6">
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">Teams Management</h1>
-            <p className="text-muted-foreground mt-1">Manage teams and team members</p>
-          </div>
+          <p className="text-sm text-muted-foreground">Manage teams and team members</p>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
             <Plus className="h-4 w-4 mr-2" />
             New Team
@@ -628,10 +625,7 @@ export function AdminTeams() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Teams Management</h1>
-          <p className="text-muted-foreground mt-1">Manage teams and team members</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Manage teams and team members</p>
         <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
           {isAdmin && (

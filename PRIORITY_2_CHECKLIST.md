@@ -125,9 +125,9 @@
 
 ---
 
-## 📋 Phase 3: Logging System Cleanup
+## 📋 Phase 3: Logging System Cleanup ✅
 
-### 3.1 Logging Guidelines Document
+### 3.1 Logging Guidelines Document ⏳
 - [ ] สร้างไฟล์ `docs/LOGGING_GUIDELINES.md`
 - [ ] กำหนดเมื่อไหร่ใช้ `logger.debug()`
 - [ ] กำหนดเมื่อไหร่ใช้ `logger.info()`
@@ -137,37 +137,24 @@
 - [ ] ตัวอย่าง good/bad logging
 - [ ] Best practices
 
-### 3.2 Replace Console.log - Priority HIGH (5 files)
+### 3.2 Replace Console.log - Priority HIGH ✅
 
-#### File 1: BookingCreateModal.tsx (15 occurrences)
-- [ ] Import logger
-- [ ] Replace console.log line 45 (package selection)
-- [ ] Replace console.log line 67 (duration calculation)
-- [ ] Replace console.log line 89 (price calculation)
-- [ ] Replace console.log line 112 (end time)
-- [ ] Replace console.log line 134 (form validation)
-- [ ] Replace console.log line 156 (team selection)
-- [ ] Replace console.log line 178 (staff selection)
-- [ ] Replace console.log line 201 (date selection)
-- [ ] Replace console.log line 223 (recurring options)
-- [ ] Replace console.log line 245 (submit data)
-- [ ] Replace console.log line 267 (API response)
-- [ ] Replace console.log line 289 (error handling)
-- [ ] Replace console.log line 311 (modal close)
-- [ ] Replace console.log line 333 (state reset)
-- [ ] Replace console.error (if any)
-- [ ] เพิ่ม context: 'BookingCreateModal'
-- [ ] Test การทำงาน
+#### File 1: BookingCreateModal.tsx (12 occurrences) ✅
+- [x] Import logger
+- [x] Replace console.log ทั้งหมด (12 occurrences)
+- [x] Replace console.error (3 occurrences)
+- [x] เพิ่ม context: 'BookingCreateModal'
+- [x] Test การทำงาน
 
-#### File 2: bookings.tsx (22 occurrences)
-- [ ] Import logger
-- [ ] Replace all console.log in fetch functions
-- [ ] Replace all console.log in filter functions
-- [ ] Replace all console.log in delete functions
-- [ ] Replace all console.log in update functions
-- [ ] Replace all console.error
-- [ ] เพิ่ม context: 'AdminBookings'
-- [ ] Test การทำงาน
+#### File 2: bookings.tsx (22 occurrences) ✅
+- [x] Import logger
+- [x] Replace all console.log in fetch functions
+- [x] Replace all console.log in filter functions
+- [x] Replace all console.log in delete functions
+- [x] Replace all console.log in update functions
+- [x] Replace all console.error
+- [x] เพิ่ม context: 'AdminBookings'
+- [x] Test การทำงาน
 
 #### File 3: recurring-booking-service.ts (23 occurrences) ✅
 - [x] Import logger

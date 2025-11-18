@@ -130,8 +130,7 @@ export default function StaffProfile() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="px-4 sm:px-6 py-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Profile</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Manage your personal information and view your statistics
           </p>
         </div>

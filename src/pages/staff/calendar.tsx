@@ -70,14 +70,9 @@ export default function StaffCalendar() {
       <div className="bg-white border-b flex-shrink-0">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                My Calendar
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                View your schedule and bookings
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              View your schedule and bookings
+            </p>
             <Button onClick={goToToday} variant="outline">
               <CalendarIcon className="h-4 w-4 mr-2" />
               Today

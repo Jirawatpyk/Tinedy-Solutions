@@ -304,11 +304,6 @@ export default function AdminSettings() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
-          </div>
-        </div>
         <div className="p-4 sm:p-6">
           <Card>
             <CardContent className="pt-6">
@@ -330,11 +325,6 @@ export default function AdminSettings() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
-          </div>
-        </div>
         <div className="p-4 sm:p-6">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -352,8 +342,7 @@ export default function AdminSettings() {
         {/* Header - Always show */}
         <div className="bg-white border-b">
           <div className="px-4 sm:px-6 py-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               Manage your business settings and preferences
             </p>
           </div>
@@ -371,8 +360,7 @@ export default function AdminSettings() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="px-4 sm:px-6 py-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Manage your business settings and preferences
           </p>
         </div>

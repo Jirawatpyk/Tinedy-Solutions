@@ -1100,10 +1100,7 @@ export function AdminCustomerDetail() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-display font-bold text-tinedy-dark">
-              Customer Profile
-            </h1>
-            <p className="text-muted-foreground mt-1">View and manage customer details</p>
+            <p className="text-sm text-muted-foreground">View and manage customer details</p>
           </div>
         </div>
         <div className="flex gap-2">
