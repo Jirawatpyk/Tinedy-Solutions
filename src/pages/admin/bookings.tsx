@@ -1053,30 +1053,30 @@ export function AdminBookings() {
 
         {/* Filters skeleton */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="py-3 space-y-3">
             {/* Quick Filters skeleton */}
             <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-20" />
               <Skeleton className="h-8 w-20" />
               <Skeleton className="h-8 w-24" />
               <Skeleton className="h-8 w-28" />
             </div>
 
             {/* Main Filters skeleton - 4 columns grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Skeleton className="h-8 w-full" />
               <div className="flex gap-2">
-                <Skeleton className="h-10 flex-1" />
-                <Skeleton className="h-10 flex-1" />
+                <Skeleton className="h-8 flex-1" />
+                <Skeleton className="h-8 flex-1" />
               </div>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
             </div>
 
             {/* Additional Filters skeleton - 2 columns grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
             </div>
           </CardContent>
         </Card>

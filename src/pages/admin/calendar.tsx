@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Select,
   SelectContent,
@@ -603,28 +604,24 @@ export function AdminCalendar() {
         {/* Stats Cards skeleton */}
         <div className="grid gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-3 w-24" />
-              </CardContent>
-            </Card>
+            <StatCard
+              key={i}
+              title=""
+              value={0}
+              isLoading={true}
+            />
           ))}
         </div>
 
         {/* Filters skeleton */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <Skeleton className="h-10 flex-1 min-w-[200px]" />
-              <Skeleton className="h-10 flex-1 min-w-[200px]" />
-              <Skeleton className="h-10 flex-1 min-w-[200px]" />
-              <Skeleton className="h-8 w-px" />
-              <Skeleton className="h-10 w-[380px]" />
+          <CardContent className="py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Skeleton className="h-8 w-[380px]" />
+              <Skeleton className="h-6 w-px" />
+              <Skeleton className="h-8 flex-1 min-w-[200px]" />
+              <Skeleton className="h-8 flex-1 min-w-[200px]" />
+              <Skeleton className="h-8 flex-1 min-w-[200px]" />
             </div>
           </CardContent>
         </Card>
@@ -689,64 +686,48 @@ export function AdminCalendar() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{monthStats.totalBookings}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Bookings"
+          value={monthStats.totalBookings}
+          description="This month"
+          icon={CalendarIcon}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{monthStats.confirmedBookings}</div>
-            <p className="text-xs text-muted-foreground">Active bookings</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Confirmed"
+          value={monthStats.confirmedBookings}
+          description="Active bookings"
+          icon={CheckCircle}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{monthStats.completedBookings}</div>
-            <p className="text-xs text-muted-foreground">Jobs done</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Completed"
+          value={monthStats.completedBookings}
+          description="Jobs done"
+          icon={TrendingUp}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(monthStats.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Paid bookings</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Revenue"
+          value={formatCurrency(monthStats.totalRevenue)}
+          description="Paid bookings"
+          icon={DollarSign}
+        />
       </div>
 
       {/* Filters and View Mode */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium whitespace-nowrap">View Mode:</label>
+              <label className="text-xs font-medium whitespace-nowrap">View Mode:</label>
               <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
                 <Button
                   variant={viewMode === 'all' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('all')}
-                  className="rounded-r-none flex-1"
+                  className="rounded-r-none flex-1 h-8 text-xs"
                 >
                   All Bookings
                 </Button>
@@ -754,7 +735,7 @@ export function AdminCalendar() {
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('staff')}
-                  className="rounded-none border-l-0 flex-1"
+                  className="rounded-none border-l-0 flex-1 h-8 text-xs"
                 >
                   Staff View
                 </Button>
@@ -762,7 +743,7 @@ export function AdminCalendar() {
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('team')}
-                  className="rounded-l-none border-l-0 flex-1"
+                  className="rounded-l-none border-l-0 flex-1 h-8 text-xs"
                 >
                   Team View
                 </Button>
@@ -770,17 +751,17 @@ export function AdminCalendar() {
             </div>
 
             {/* Divider */}
-            <div className="h-8 w-px bg-border mx-2"></div>
+            <div className="h-6 w-px bg-border mx-1"></div>
 
             {/* Staff Filter */}
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-sm font-medium whitespace-nowrap">Staff:</label>
+              <label className="text-xs font-medium whitespace-nowrap">Staff:</label>
               <Select
                 value={selectedStaff}
                 onValueChange={setSelectedStaff}
                 disabled={viewMode !== 'staff'}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 text-xs">
                   <SelectValue placeholder="All Staff" />
                 </SelectTrigger>
                 <SelectContent>
@@ -796,13 +777,13 @@ export function AdminCalendar() {
 
             {/* Team Filter */}
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-sm font-medium whitespace-nowrap">Team:</label>
+              <label className="text-xs font-medium whitespace-nowrap">Team:</label>
               <Select
                 value={selectedTeam}
                 onValueChange={setSelectedTeam}
                 disabled={viewMode !== 'team'}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 text-xs">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent>
@@ -818,9 +799,9 @@ export function AdminCalendar() {
 
             {/* Status Filter */}
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-sm font-medium whitespace-nowrap">Status:</label>
+              <label className="text-xs font-medium whitespace-nowrap">Status:</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 text-xs">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>

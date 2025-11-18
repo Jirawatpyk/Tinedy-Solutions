@@ -129,7 +129,6 @@ export const StatCard = ({
   description,
   icon: Icon,
   iconColor = 'text-muted-foreground',
-  iconBgColor,
   trend,
   action,
   isLoading = false,
@@ -165,13 +164,13 @@ export const StatCard = ({
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-4 rounded" />
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="pb-3">
           <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-3 w-32 mt-0" />
         </CardContent>
       </Card>
     )
@@ -181,24 +180,17 @@ export const StatCard = ({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {Icon && (
-          <div
-            className={cn(
-              'rounded-full p-2',
-              iconBgColor
-            )}
-          >
-            <Icon className={cn('h-4 w-4', iconColor)} />
-          </div>
+          <Icon className={cn('h-4 w-4', iconColor)} />
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-3">
         <div className="text-2xl font-bold">{value}</div>
 
         {/* Description or Trend */}
-        <div className="mt-1 flex items-center justify-between">
+        <div className="mt-0 flex items-center justify-between">
           {description && !trend && (
             <p className="text-xs text-muted-foreground">{description}</p>
           )}
@@ -228,7 +220,7 @@ export const StatCard = ({
 
         {/* Action Button */}
         {action && (
-          <div className="mt-4">
+          <div className="mt-3">
             <Button
               variant="outline"
               size="sm"

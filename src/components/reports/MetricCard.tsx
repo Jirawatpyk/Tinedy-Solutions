@@ -40,22 +40,22 @@ export function MetricCard(props: MetricCardProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
         <Icon className={iconClassName} />
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-3">
         <div className={valueClassName}>{value}</div>
 
         {/* Render variant-specific content */}
         {props.variant === 'subtitle' && (
-          <p className="text-xs text-muted-foreground mt-1">{props.subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-0">{props.subtitle}</p>
         )}
 
         {props.variant === 'trend' && (
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-1 mt-0">
             {props.trend.value >= 0 ? (
               <TrendingUp className="h-3 w-3 text-green-500" />
             ) : (

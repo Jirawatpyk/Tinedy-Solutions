@@ -28,15 +28,15 @@ export function BookingFiltersPanel({
 }: BookingFiltersPanelProps) {
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="py-3 space-y-3">
         {/* Quick Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground font-medium">Quick filters:</span>
+          <span className="text-xs text-muted-foreground font-medium">Quick filters:</span>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setQuickFilter('today')}
-            className="h-8"
+            className="h-8 text-xs"
           >
             <Calendar className="h-3 w-3 mr-1" />
             Today
@@ -45,7 +45,7 @@ export function BookingFiltersPanel({
             variant="outline"
             size="sm"
             onClick={() => setQuickFilter('week')}
-            className="h-8"
+            className="h-8 text-xs"
           >
             This Week
           </Button>
@@ -53,7 +53,7 @@ export function BookingFiltersPanel({
             variant="outline"
             size="sm"
             onClick={() => setQuickFilter('month')}
-            className="h-8"
+            className="h-8 text-xs"
           >
             This Month
           </Button>
@@ -62,7 +62,7 @@ export function BookingFiltersPanel({
               variant="ghost"
               size="sm"
               onClick={resetFilters}
-              className="h-8 text-destructive hover:text-destructive"
+              className="h-8 text-xs text-destructive hover:text-destructive"
             >
               <X className="h-3 w-3 mr-1" />
               Clear All ({getActiveFilterCount()})
@@ -71,14 +71,14 @@ export function BookingFiltersPanel({
         </div>
 
         {/* Main Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search customer/service..."
               value={filters.searchQuery}
               onChange={(e) => updateFilter('searchQuery', e.target.value)}
-              className="pl-10"
+              className="pl-10 h-8 text-xs"
             />
           </div>
 
@@ -88,19 +88,19 @@ export function BookingFiltersPanel({
               placeholder="From"
               value={filters.dateFrom}
               onChange={(e) => updateFilter('dateFrom', e.target.value)}
-              className="flex-1"
+              className="flex-1 h-8 text-xs"
             />
             <Input
               type="date"
               placeholder="To"
               value={filters.dateTo}
               onChange={(e) => updateFilter('dateTo', e.target.value)}
-              className="flex-1"
+              className="flex-1 h-8 text-xs"
             />
           </div>
 
           <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -114,7 +114,7 @@ export function BookingFiltersPanel({
           </Select>
 
           <Select value={filters.serviceType} onValueChange={(value) => updateFilter('serviceType', value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="All Services" />
             </SelectTrigger>
             <SelectContent>
@@ -126,9 +126,9 @@ export function BookingFiltersPanel({
         </div>
 
         {/* Additional Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select value={filters.staffId} onValueChange={(value) => updateFilter('staffId', value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="All Staff" />
             </SelectTrigger>
             <SelectContent>
@@ -143,7 +143,7 @@ export function BookingFiltersPanel({
           </Select>
 
           <Select value={filters.teamId} onValueChange={(value) => updateFilter('teamId', value)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="All Teams" />
             </SelectTrigger>
             <SelectContent>
