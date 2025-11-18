@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { usePageMetadata } from '@/hooks/use-page-metadata'
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
 
@@ -12,6 +14,9 @@ export function MainLayout() {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
     return saved ? JSON.parse(saved) : false
   })
+
+  // Get page metadata (automatically updates document.title)
+  const { breadcrumbs } = usePageMetadata()
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
@@ -48,6 +53,14 @@ export function MainLayout() {
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
           <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 flex-1 flex flex-col">
+            {/* Breadcrumbs navigation */}
+            {breadcrumbs.length > 0 && (
+              <div className="mb-4">
+                <Breadcrumbs.Responsive items={breadcrumbs} />
+              </div>
+            )}
+
+            {/* Page content */}
             <Outlet />
           </div>
         </main>
