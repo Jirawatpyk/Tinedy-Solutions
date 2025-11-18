@@ -11,10 +11,10 @@ import logoVertical from '@/assets/logo/logo-vertical.svg'
 
 // Helper function for role-based navigation
 const getNavigationPath = (role: string | undefined, from: string | undefined) => {
-  // Default paths by role
+  // Default paths by role (admin and manager share the same dashboard)
   const defaultPaths = {
     admin: '/admin',
-    manager: '/manager',
+    manager: '/admin',
     staff: '/staff'
   } as const
 
@@ -24,9 +24,10 @@ const getNavigationPath = (role: string | undefined, from: string | undefined) =
   if (!from) return defaultPath
 
   // Check if 'from' path matches user's role
+  // Note: manager can access /admin routes
   const rolePathMatches = {
     admin: from.startsWith('/admin'),
-    manager: from.startsWith('/manager'),
+    manager: from.startsWith('/admin'),
     staff: from.startsWith('/staff')
   }
 
