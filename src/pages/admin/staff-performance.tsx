@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,10 +13,9 @@ import { ErrorBoundary, SectionErrorBoundary } from '@/components/ErrorBoundary'
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   // Use custom hook for data fetching and stats calculation
   const { staff, bookings, stats, monthlyData, loading, error } = useStaffPerformance(id)

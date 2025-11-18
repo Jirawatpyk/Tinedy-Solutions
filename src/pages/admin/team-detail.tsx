@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
@@ -44,11 +44,10 @@ interface TeamStats {
 export function AdminTeamDetail() {
   const { teamId } = useParams<{ teamId: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
   const { toast } = useToast()
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   const [team, setTeam] = useState<Team | null>(null)
   const [stats, setStats] = useState<TeamStats | null>(null)
@@ -139,7 +138,7 @@ export function AdminTeamDetail() {
     } finally {
       setLoading(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [teamId, navigate, toast])
 
   const loadTeamStats = async (teamId: string) => {

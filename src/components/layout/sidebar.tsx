@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
 
+// Admin and Manager share the same dashboard at /admin routes
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Bookings', href: '/admin/bookings', icon: ClipboardList },
@@ -33,20 +34,6 @@ const adminNavItems = [
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'My Profile', href: '/admin/profile', icon: UserCircle },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
-]
-
-const managerNavItems = [
-  { name: 'Dashboard', href: '/manager', icon: LayoutDashboard },
-  { name: 'Bookings', href: '/manager/bookings', icon: ClipboardList },
-  { name: 'Calendar', href: '/manager/calendar', icon: Calendar },
-  { name: 'Weekly Schedule', href: '/manager/weekly-schedule', icon: Calendar },
-  { name: 'Customers', href: '/manager/customers', icon: Users },
-  { name: 'Staff', href: '/manager/staff', icon: UsersRound },
-  { name: 'Teams', href: '/manager/teams', icon: UsersRound },
-  { name: 'Chat', href: '/manager/chat', icon: MessageSquare },
-  { name: 'Service Packages', href: '/manager/packages', icon: Package },
-  { name: 'Reports', href: '/manager/reports', icon: BarChart3 },
-  { name: 'My Profile', href: '/manager/profile', icon: UserCircle },
 ]
 
 const staffNavItems = [
@@ -70,9 +57,9 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
+  // Both admin and manager use the same navigation items (admin routes)
   const navItems =
-    profile?.role === 'admin' ? adminNavItems :
-    profile?.role === 'manager' ? managerNavItems :
+    (profile?.role === 'admin' || profile?.role === 'manager') ? adminNavItems :
     staffNavItems
 
   // Fetch unread message count

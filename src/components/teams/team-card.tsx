@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -55,12 +55,10 @@ const getInitials = (name: string) => {
 
 export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
   const navigate = useNavigate()
-  const location = useLocation()
-
   const isArchived = !!team.deleted_at
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   // Memoize expensive calculations
   const teamInitial = useMemo(() => team.name.charAt(0).toUpperCase(), [team.name])

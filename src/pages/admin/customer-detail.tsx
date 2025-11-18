@@ -1,6 +1,6 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,12 +164,11 @@ interface Team {
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null)
   const [stats, setStats] = useState<CustomerStats | null>(null)

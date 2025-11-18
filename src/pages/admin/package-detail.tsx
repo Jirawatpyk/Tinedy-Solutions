@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -81,12 +81,11 @@ interface BookingWithRelations {
 export default function AdminPackageDetail() {
   const { packageId } = useParams<{ packageId: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
   const { toast } = useToast()
   const { isAdmin } = usePermissions()
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   // Main data
   const [packageData, setPackageData] = useState<ServicePackageV2WithTiers | null>(null)

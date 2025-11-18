@@ -6,6 +6,7 @@ import { NotificationBell } from '@/components/notifications/notification-bell'
 import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import {
   CommandDialog,
   CommandEmpty,
@@ -48,7 +49,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, [profile?.role])
 
   const performSearch = useCallback(async (query: string) => {
-    console.log('Performing search for:', query)
+    logger.debug('Performing search', { query }, { context: 'Header' })
 
     if (!query || query.length < 2) {
       setResults([])
@@ -57,7 +58,8 @@ export function Header({ onMenuClick }: HeaderProps) {
 
     setLoading(true)
     const searchResults: SearchResult[] = []
-    const basePath = profile?.role === 'manager' ? '/manager' : '/admin'
+    // Both admin and manager use /admin routes
+    const basePath = (profile?.role === 'admin' || profile?.role === 'manager') ? '/admin' : '/staff'
 
     try {
       // Search Customers
@@ -139,10 +141,10 @@ export function Header({ onMenuClick }: HeaderProps) {
         })
       })
 
-      console.log('Search results:', searchResults)
+      logger.debug('Search results', { count: searchResults.length }, { context: 'Header' })
       setResults(searchResults)
     } catch (error) {
-      console.error('Search error:', error)
+      logger.error('Search error', { error }, { context: 'Header' })
     } finally {
       setLoading(false)
     }

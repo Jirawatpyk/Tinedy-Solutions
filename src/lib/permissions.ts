@@ -70,31 +70,19 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
  * Used for route protection and navigation
  */
 export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
-  // Admin routes
-  '/admin': ['admin'],
-  '/admin/bookings': ['admin'],
-  '/admin/customers': ['admin'],
-  '/admin/staff': ['admin'],
-  '/admin/teams': ['admin'],
-  '/admin/reports': ['admin'],
-  '/admin/calendar': ['admin'],
-  '/admin/weekly-schedule': ['admin'],
-  '/admin/chat': ['admin'],
-  '/admin/packages': ['admin'],
-  '/admin/settings': ['admin'],
-  '/admin/profile': ['admin'],
-
-  // Manager routes (shared with admin)
-  '/manager': ['admin', 'manager'],
-  '/manager/bookings': ['admin', 'manager'],
-  '/manager/customers': ['admin', 'manager'],
-  '/manager/staff': ['admin', 'manager'],
-  '/manager/teams': ['admin', 'manager'],
-  '/manager/reports': ['admin', 'manager'],
-  '/manager/calendar': ['admin', 'manager'],
-  '/manager/weekly-schedule': ['admin', 'manager'],
-  '/manager/chat': ['admin', 'manager'],
-  '/manager/profile': ['admin', 'manager'],
+  // Admin routes (shared with manager - both use /admin paths)
+  '/admin': ['admin', 'manager'],
+  '/admin/bookings': ['admin', 'manager'],
+  '/admin/customers': ['admin', 'manager'],
+  '/admin/staff': ['admin', 'manager'],
+  '/admin/teams': ['admin', 'manager'],
+  '/admin/reports': ['admin', 'manager'],
+  '/admin/calendar': ['admin', 'manager'],
+  '/admin/weekly-schedule': ['admin', 'manager'],
+  '/admin/chat': ['admin', 'manager'],
+  '/admin/packages': ['admin', 'manager'],
+  '/admin/settings': ['admin', 'manager'],
+  '/admin/profile': ['admin', 'manager'],
 
   // Staff routes
   '/staff': ['admin', 'manager', 'staff'],

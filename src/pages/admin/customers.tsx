@@ -1,6 +1,6 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,13 +36,12 @@ import {
 
 export function AdminCustomers() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [customers, setCustomers] = useState<CustomerRecord[]>([])
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerRecord[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
   const [searchQuery, setSearchQuery] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)

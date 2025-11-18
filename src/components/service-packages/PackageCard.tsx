@@ -11,7 +11,7 @@
  * - Responsive design
  */
 
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -108,12 +108,11 @@ export function PackageCard({
   showActions = true,
 }: PackageCardProps) {
   const navigate = useNavigate()
-  const location = useLocation()
   const isTiered = pkg.pricing_model === PricingModel.Tiered
   const isActive = pkg.is_active
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on buttons or dropdown

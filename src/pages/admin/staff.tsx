@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 
@@ -47,7 +47,6 @@ interface StaffMember {
 
 export function AdminStaff() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,8 +55,8 @@ export function AdminStaff() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
 
-  // Determine base path (admin or manager)
-  const basePath = location.pathname.startsWith('/manager') ? '/manager' : '/admin'
+  // Both admin and manager use /admin routes
+  const basePath = '/admin'
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
