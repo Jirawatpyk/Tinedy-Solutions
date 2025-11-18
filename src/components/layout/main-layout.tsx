@@ -53,8 +53,8 @@ export function MainLayout() {
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
           <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 flex-1 flex flex-col">
-            {/* Breadcrumbs navigation */}
-            {breadcrumbs.length > 0 && (
+            {/* Breadcrumbs navigation - hide on dashboard pages */}
+            {breadcrumbs.length > 1 && (
               <div className="mb-4">
                 <Breadcrumbs.Responsive items={breadcrumbs} />
               </div>

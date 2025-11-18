@@ -92,9 +92,9 @@ function App() {
 
             {/* Protected Admin routes (includes Manager access) */}
             <Route
-              path={ADMIN_ROUTES.DASHBOARD.path}
+              path={ADMIN_ROUTES.ADMIN_DASHBOARD.path}
               element={
-                <ProtectedRoute allowedRoles={ADMIN_ROUTES.DASHBOARD.allowedRoles}>
+                <ProtectedRoute allowedRoles={ADMIN_ROUTES.ADMIN_DASHBOARD.allowedRoles}>
                   <MainLayout />
                 </ProtectedRoute>
               }
@@ -119,9 +119,9 @@ function App() {
 
             {/* Protected Staff routes */}
             <Route
-              path={STAFF_ROUTES.DASHBOARD.path}
+              path={STAFF_ROUTES.STAFF_DASHBOARD.path}
               element={
-                <ProtectedRoute allowedRoles={STAFF_ROUTES.DASHBOARD.allowedRoles}>
+                <ProtectedRoute allowedRoles={STAFF_ROUTES.STAFF_DASHBOARD.allowedRoles}>
                   <MainLayout />
                 </ProtectedRoute>
               }

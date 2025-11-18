@@ -97,7 +97,7 @@ export const PUBLIC_ROUTES = {
  * Admin & Manager Routes (share /admin paths)
  */
 export const ADMIN_ROUTES = {
-  DASHBOARD: {
+  ADMIN_DASHBOARD: {
     key: 'admin-dashboard',
     path: '/admin',
     title: 'Dashboard',
@@ -123,7 +123,7 @@ export const ADMIN_ROUTES = {
     breadcrumbs: ['Dashboard', 'Bookings'],
     showInNav: true,
   },
-  CALENDAR: {
+  ADMIN_CALENDAR: {
     key: 'admin-calendar',
     path: '/admin/calendar',
     title: 'Calendar',
@@ -241,7 +241,7 @@ export const ADMIN_ROUTES = {
     parent: 'admin-teams',
     params: ['teamId'],
   },
-  CHAT: {
+  ADMIN_CHAT: {
     key: 'admin-chat',
     path: '/admin/chat',
     title: 'Chat',
@@ -295,7 +295,7 @@ export const ADMIN_ROUTES = {
     breadcrumbs: ['Dashboard', 'Reports'],
     showInNav: true,
   },
-  PROFILE: {
+  ADMIN_PROFILE: {
     key: 'admin-profile',
     path: '/admin/profile',
     title: 'My Profile',
@@ -305,7 +305,7 @@ export const ADMIN_ROUTES = {
     breadcrumbs: ['Dashboard', 'My Profile'],
     showInNav: true,
   },
-  SETTINGS: {
+  ADMIN_SETTINGS: {
     key: 'admin-settings',
     path: '/admin/settings',
     title: 'Settings',
@@ -325,7 +325,7 @@ export const ADMIN_ROUTES = {
  * Staff Routes
  */
 export const STAFF_ROUTES = {
-  DASHBOARD: {
+  STAFF_DASHBOARD: {
     key: 'staff-dashboard',
     path: '/staff',
     title: 'My Bookings',
@@ -335,7 +335,7 @@ export const STAFF_ROUTES = {
     breadcrumbs: ['My Bookings'],
     showInNav: true,
   },
-  CALENDAR: {
+  STAFF_CALENDAR: {
     key: 'staff-calendar',
     path: '/staff/calendar',
     title: 'My Calendar',
@@ -345,7 +345,7 @@ export const STAFF_ROUTES = {
     breadcrumbs: ['My Bookings', 'My Calendar'],
     showInNav: true,
   },
-  CHAT: {
+  STAFF_CHAT: {
     key: 'staff-chat',
     path: '/staff/chat',
     title: 'Chat',
@@ -355,7 +355,7 @@ export const STAFF_ROUTES = {
     breadcrumbs: ['My Bookings', 'Chat'],
     showInNav: true,
   },
-  PROFILE: {
+  STAFF_PROFILE: {
     key: 'staff-profile',
     path: '/staff/profile',
     title: 'My Profile',

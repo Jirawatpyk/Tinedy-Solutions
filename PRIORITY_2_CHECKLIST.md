@@ -71,39 +71,52 @@
 
 ---
 
-## 📋 Phase 2: Route Metadata & Page Titles
+## 📋 Phase 2: Route Metadata & Page Titles ✅
 
-### 2.1 Page Metadata Hook
-- [ ] สร้างไฟล์ `src/hooks/use-page-metadata.ts`
-- [ ] สร้าง `usePageMetadata()` hook
-- [ ] Get route metadata from pathname
-- [ ] Set document.title automatically
-- [ ] Return metadata object
-- [ ] Handle 404/unknown routes
-- [ ] เพิ่ม TypeScript types
-- [ ] เขียน JSDoc
+### 2.1 Page Metadata Hook ✅
+- [x] สร้างไฟล์ `src/hooks/use-page-metadata.ts`
+- [x] สร้าง `usePageMetadata()` hook
+- [x] Get route metadata from pathname
+- [x] Set document.title automatically
+- [x] Return metadata object
+- [x] Handle 404/unknown routes
+- [x] เพิ่ม TypeScript types
+- [x] เขียน JSDoc
 
-### 2.2 Breadcrumbs Component
-- [ ] สร้างไฟล์ `src/components/ui/breadcrumbs.tsx`
-- [ ] สร้าง `Breadcrumbs` component
-- [ ] รับ breadcrumbs array จาก props
-- [ ] Render clickable links
-- [ ] Highlight current page
-- [ ] เพิ่ม separator icons
-- [ ] Responsive design (collapse on mobile)
-- [ ] Accessibility (ARIA labels)
-- [ ] Styling ตาม theme
+### 2.2 Breadcrumbs Component ✅
+- [x] สร้างไฟล์ `src/components/ui/breadcrumbs.tsx`
+- [x] สร้าง `Breadcrumbs` component
+- [x] รับ breadcrumbs array จาก props
+- [x] Render clickable links
+- [x] Highlight current page
+- [x] เพิ่ม separator icons
+- [x] Responsive design (collapse on mobile)
+- [x] Accessibility (ARIA labels)
+- [x] Styling ตาม theme
 
-### 2.3 Update MainLayout
-- [ ] เปิดไฟล์ `src/components/layout/main-layout.tsx`
-- [ ] Import `usePageMetadata` hook
-- [ ] Import `Breadcrumbs` component
-- [ ] เพิ่ม breadcrumbs display
-- [ ] Optional: เพิ่ม page title display
-- [ ] Test ทุกหน้า
-- [ ] Verify breadcrumbs navigation
+### 2.3 Update MainLayout ✅
+- [x] เปิดไฟล์ `src/components/layout/main-layout.tsx`
+- [x] Import `usePageMetadata` hook
+- [x] Import `Breadcrumbs` component
+- [x] เพิ่ม breadcrumbs display
+- [x] Hide breadcrumbs บน dashboard (breadcrumbs.length > 1)
+- [x] Test ทุกหน้า
+- [x] Verify breadcrumbs navigation
 
-### 2.4 Page Title Testing
+### 2.4 Bug Fix: Route Key Conflicts ✅
+- [x] **Issue:** STAFF_ROUTES และ ADMIN_ROUTES มี key ซ้ำกัน (CALENDAR, CHAT, PROFILE, DASHBOARD)
+- [x] **Root Cause:** `...STAFF_ROUTES` spread ทีหลัง override `...ADMIN_ROUTES`
+- [x] **Fix:** เปลี่ยนชื่อ keys ให้ unique:
+  - [x] `CALENDAR` → `ADMIN_CALENDAR` และ `STAFF_CALENDAR`
+  - [x] `CHAT` → `ADMIN_CHAT` และ `STAFF_CHAT`
+  - [x] `PROFILE` → `ADMIN_PROFILE` และ `STAFF_PROFILE`
+  - [x] `DASHBOARD` → `ADMIN_DASHBOARD` และ `STAFF_DASHBOARD`
+- [x] อัพเดท App.tsx ให้ใช้ชื่อ key ใหม่
+- [x] อัพเดท route-utils.ts (`getDefaultRoute()`)
+- [x] Verify build สำเร็จ
+- [x] Verify breadcrumbs แสดงถูกต้อง
+
+### 2.5 Page Title Testing ⏳
 - [ ] Test ทุกหน้า Admin (16 pages)
 - [ ] Test ทุกหน้า Staff (4 pages)
 - [ ] Test Public pages (3 pages)

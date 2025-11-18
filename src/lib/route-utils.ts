@@ -160,9 +160,9 @@ export function getDefaultRoute(role: UserRole | null): RouteKey {
   switch (role) {
     case 'admin':
     case 'manager':
-      return 'DASHBOARD' // admin dashboard
+      return 'ADMIN_DASHBOARD'
     case 'staff':
-      return 'DASHBOARD' // staff dashboard (different route, same key)
+      return 'STAFF_DASHBOARD'
     default:
       return 'LOGIN'
   }
