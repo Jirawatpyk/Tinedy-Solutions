@@ -11,7 +11,7 @@ import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
 import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
 import { TeamRecentBookings } from '@/components/teams/team-detail/TeamRecentBookings'
 import { TeamPerformanceCharts } from '@/components/teams/team-detail/TeamPerformanceCharts'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 interface TeamMember {
   id: string
@@ -130,9 +130,10 @@ export function AdminTeamDetail() {
       await loadTeamStats(teamId)
     } catch (error) {
       console.error('Error loading team:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {

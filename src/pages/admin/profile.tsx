@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 export default function AdminProfile() {
   const {
@@ -65,9 +65,10 @@ export default function AdminProfile() {
       })
       setEditing(false)
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -104,9 +105,10 @@ export default function AdminProfile() {
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {

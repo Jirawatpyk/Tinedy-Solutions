@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSettings } from '@/hooks/use-settings'
 import { usePermissions } from '@/hooks/use-permissions'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { supabase } from '@/lib/supabase'
 import {
   Building2,
@@ -108,9 +108,10 @@ export default function AdminSettings() {
         description: 'General settings saved successfully',
       })
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -135,9 +136,10 @@ export default function AdminSettings() {
         description: 'Booking settings saved successfully',
       })
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -162,9 +164,10 @@ export default function AdminSettings() {
         description: 'Notification settings saved successfully',
       })
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -236,9 +239,10 @@ export default function AdminSettings() {
       })
     } catch (error) {
       console.error('Error uploading logo:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Upload Failed',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -285,9 +289,10 @@ export default function AdminSettings() {
       })
     } catch (error) {
       console.error('Error removing logo:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Remove Failed',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {

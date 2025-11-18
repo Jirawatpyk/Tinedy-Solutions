@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { useBookingForm, toBookingForm, type BookingFormState } from '@/hooks/useBookingForm'
@@ -765,9 +765,10 @@ export function AdminCustomerDetail() {
       fetchCustomerDetails() // Refresh data
     } catch (error) {
       console.error('Error updating customer:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'customer')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -808,9 +809,10 @@ export function AdminCustomerDetail() {
       fetchCustomerDetails() // Refresh data
     } catch (error) {
       console.error('Error adding note:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'customer')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -831,9 +833,10 @@ export function AdminCustomerDetail() {
       navigate(`${basePath}/customers`)
     } catch (error) {
       console.error('Error deleting customer:', error)
+      const errorMsg = getDeleteErrorMessage('customer')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

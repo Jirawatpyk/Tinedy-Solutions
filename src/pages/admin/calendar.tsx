@@ -19,7 +19,7 @@ import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { CalendarCell } from '@/components/calendar/CalendarCell'
 import { BookingCard } from '@/components/calendar/BookingCard'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
 import type { PackageSelectionData } from '@/components/service-packages'
@@ -485,9 +485,10 @@ export function AdminCalendar() {
         )
       )
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -533,9 +534,10 @@ export function AdminCalendar() {
         } : b)
       )
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
