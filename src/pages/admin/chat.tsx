@@ -104,9 +104,9 @@ export function AdminChat() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
+    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-6">
       {/* Page Header - Hide on mobile when chat is open */}
-      <div className={`mb-6 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
+      <div className={`${selectedUser ? 'hidden lg:block' : 'block'}`}>
         <p className="text-sm text-muted-foreground">Communicate with your team in real-time</p>
       </div>
 
