@@ -1,0 +1,345 @@
+# Priority 2: Quality Improvements - Detailed Checklist
+
+## 📋 Phase 1: Centralized Route Config
+
+### 1.1 Route Configuration System ✅
+- [x] สร้างไฟล์ `src/config/routes.ts`
+- [x] Define `RouteConfig` interface
+- [x] สร้าง `PUBLIC_ROUTES` constant
+- [x] สร้าง `ADMIN_ROUTES` constant (16 routes)
+- [x] สร้าง `STAFF_ROUTES` constant (4 routes)
+- [x] สร้าง `ALL_ROUTES` combined object
+- [x] เพิ่ม route metadata: title, description, icon
+- [x] เพิ่ม permission metadata
+- [x] เพิ่ม breadcrumbs
+- [x] เพิ่ม showInNav flags
+- [x] รองรับ dynamic routes (params)
+
+### 1.2 Route Helper Functions
+- [ ] สร้างไฟล์ `src/lib/route-utils.ts`
+- [ ] สร้าง `getRoutePath(key, params)` - Build path with params
+- [ ] สร้าง `navigateToRoute(navigate, key, params)` - Type-safe navigation
+- [ ] สร้าง `getPageMetadata(pathname)` - Get title, breadcrumbs
+- [ ] สร้าง `canAccessRoute(route, role)` - Permission check
+- [ ] สร้าง `getDefaultRoute(role)` - Get dashboard by role
+- [ ] สร้าง `matchRoute(pathname)` - Match dynamic routes
+- [ ] เพิ่ม TypeScript types สำหรับ type safety
+- [ ] เขียน JSDoc comments
+- [ ] สร้าง unit tests (optional)
+
+### 1.3 Migration - App.tsx
+- [ ] Import route config และ helpers
+- [ ] แทนที่ hard-coded paths ด้วย route config
+- [ ] อัพเดท Public routes (4 routes)
+- [ ] อัพเดท Admin routes (16 routes)
+- [ ] อัพเดท Staff routes (4 routes)
+- [ ] อัพเดท Root redirect route
+- [ ] อัพเดท 404 route
+- [ ] ตรวจสอบ allowedRoles ตรงกับ route config
+- [ ] Test navigation ทุก routes
+- [ ] Verify lazy loading ยังทำงานได้
+
+### 1.4 Migration - Sidebar.tsx
+- [ ] Import `getNavRoutes` จาก route config
+- [ ] ลบ `adminNavItems` array (hard-coded)
+- [ ] ลบ `staffNavItems` array (hard-coded)
+- [ ] ใช้ `getNavRoutes(profile.role)` แทน
+- [ ] อัพเดท nav item rendering
+- [ ] Verify icons แสดงถูกต้อง
+- [ ] Verify active state ทำงานถูกต้อง
+- [ ] Test responsive behavior
+- [ ] Test collapsed mode
+
+### 1.5 Migration - Header.tsx
+- [ ] Import route helpers
+- [ ] แทนที่ `basePath` logic ด้วย `getDefaultRoute()`
+- [ ] อัพเดท search result links
+- [ ] Verify search ทำงานถูกต้อง
+- [ ] Test Quick Cmd+K shortcut
+
+### 1.6 Migration - Other Components
+- [ ] ตรวจสอบ hard-coded paths ใน components (5-10 ไฟล์)
+- [ ] แทนที่ด้วย `getRoutePath()`
+- [ ] ตรวจสอบ navigate() calls
+- [ ] ตรวจสอบ Link components
+
+### 1.7 Sync Permissions
+- [ ] ตรวจสอบ `src/lib/permissions.ts`
+- [ ] Sync `ROUTE_PERMISSIONS` กับ route config
+- [ ] อาจ deprecate ROUTE_PERMISSIONS (ใช้จาก route config)
+- [ ] อัพเดท `canAccessRoute()` function
+
+---
+
+## 📋 Phase 2: Route Metadata & Page Titles
+
+### 2.1 Page Metadata Hook
+- [ ] สร้างไฟล์ `src/hooks/use-page-metadata.ts`
+- [ ] สร้าง `usePageMetadata()` hook
+- [ ] Get route metadata from pathname
+- [ ] Set document.title automatically
+- [ ] Return metadata object
+- [ ] Handle 404/unknown routes
+- [ ] เพิ่ม TypeScript types
+- [ ] เขียน JSDoc
+
+### 2.2 Breadcrumbs Component
+- [ ] สร้างไฟล์ `src/components/ui/breadcrumbs.tsx`
+- [ ] สร้าง `Breadcrumbs` component
+- [ ] รับ breadcrumbs array จาก props
+- [ ] Render clickable links
+- [ ] Highlight current page
+- [ ] เพิ่ม separator icons
+- [ ] Responsive design (collapse on mobile)
+- [ ] Accessibility (ARIA labels)
+- [ ] Styling ตาม theme
+
+### 2.3 Update MainLayout
+- [ ] เปิดไฟล์ `src/components/layout/main-layout.tsx`
+- [ ] Import `usePageMetadata` hook
+- [ ] Import `Breadcrumbs` component
+- [ ] เพิ่ม breadcrumbs display
+- [ ] Optional: เพิ่ม page title display
+- [ ] Test ทุกหน้า
+- [ ] Verify breadcrumbs navigation
+
+### 2.4 Page Title Testing
+- [ ] Test ทุกหน้า Admin (16 pages)
+- [ ] Test ทุกหน้า Staff (4 pages)
+- [ ] Test Public pages (3 pages)
+- [ ] Verify browser tab titles
+- [ ] Test dynamic routes (customer/:id, etc.)
+
+---
+
+## 📋 Phase 3: Logging System Cleanup
+
+### 3.1 Logging Guidelines Document
+- [ ] สร้างไฟล์ `docs/LOGGING_GUIDELINES.md`
+- [ ] กำหนดเมื่อไหร่ใช้ `logger.debug()`
+- [ ] กำหนดเมื่อไหร่ใช้ `logger.info()`
+- [ ] กำหนดเมื่อไหร่ใช้ `logger.warn()`
+- [ ] กำหนดเมื่อไหร่ใช้ `logger.error()`
+- [ ] มาตรฐานการตั้งชื่อ context
+- [ ] ตัวอย่าง good/bad logging
+- [ ] Best practices
+
+### 3.2 Replace Console.log - Priority HIGH (5 files)
+
+#### File 1: BookingCreateModal.tsx (15 occurrences)
+- [ ] Import logger
+- [ ] Replace console.log line 45 (package selection)
+- [ ] Replace console.log line 67 (duration calculation)
+- [ ] Replace console.log line 89 (price calculation)
+- [ ] Replace console.log line 112 (end time)
+- [ ] Replace console.log line 134 (form validation)
+- [ ] Replace console.log line 156 (team selection)
+- [ ] Replace console.log line 178 (staff selection)
+- [ ] Replace console.log line 201 (date selection)
+- [ ] Replace console.log line 223 (recurring options)
+- [ ] Replace console.log line 245 (submit data)
+- [ ] Replace console.log line 267 (API response)
+- [ ] Replace console.log line 289 (error handling)
+- [ ] Replace console.log line 311 (modal close)
+- [ ] Replace console.log line 333 (state reset)
+- [ ] Replace console.error (if any)
+- [ ] เพิ่ม context: 'BookingCreateModal'
+- [ ] Test การทำงาน
+
+#### File 2: bookings.tsx (22 occurrences)
+- [ ] Import logger
+- [ ] Replace all console.log in fetch functions
+- [ ] Replace all console.log in filter functions
+- [ ] Replace all console.log in delete functions
+- [ ] Replace all console.log in update functions
+- [ ] Replace all console.error
+- [ ] เพิ่ม context: 'AdminBookings'
+- [ ] Test การทำงาน
+
+#### File 3: recurring-booking-service.ts (23 occurrences)
+- [ ] Import logger
+- [ ] Replace console.log in validation logic
+- [ ] Replace console.log in calculation logic
+- [ ] Replace console.log in database operations
+- [ ] Replace console.error
+- [ ] เพิ่ม context: 'RecurringBookingService'
+- [ ] Test recurring bookings
+
+#### File 4: pricing-utils.ts (15 occurrences)
+- [ ] Import logger
+- [ ] Replace console.log in price calculation
+- [ ] Replace console.log in discount logic
+- [ ] Replace console.log in tax calculation
+- [ ] Replace console.error
+- [ ] เพิ่ม context: 'PricingUtils'
+- [ ] Test pricing calculations
+
+#### File 5: useDashboardStats.ts (8 occurrences)
+- [ ] Import logger
+- [ ] Replace console.log in data fetching
+- [ ] Replace console.log in real-time subscriptions
+- [ ] Replace console.error
+- [ ] เพิ่ม context: 'DashboardStats'
+- [ ] Test dashboard display
+
+### 3.3 Replace Console.log - Priority MEDIUM (5 files)
+- [ ] customers.tsx (5 occurrences)
+- [ ] auth-context.tsx (3 occurrences)
+- [ ] chat.tsx (admin)
+- [ ] chat.tsx (staff)
+- [ ] useStaffBookings.ts
+
+### 3.4 Integrate Logger with Error Handling
+- [ ] เปิดไฟล์ `src/lib/error-handling.ts`
+- [ ] Import logger
+- [ ] Replace console.error ใน `logError()`
+- [ ] Replace console.error ใน `reportError()`
+- [ ] เพิ่ม context parameters
+- [ ] Test error logging
+
+### 3.5 Production Build Verification
+- [ ] Run `npm run build`
+- [ ] ตรวจสอบ dist/ output
+- [ ] Verify ไม่มี console.log ใน bundle (vite.config.ts drop: ['console'])
+- [ ] Test production mode
+
+---
+
+## 📋 Phase 4: Permission System Refactoring
+
+### 4.1 Create PermissionGuard Component
+- [ ] สร้างไฟล์ `src/components/auth/permission-guard.tsx`
+- [ ] สร้าง `PermissionGuard` component
+- [ ] Props: `requires`, `resource`, `children`, `fallback`
+- [ ] ใช้ `usePermissions()` hook
+- [ ] Conditional rendering logic
+- [ ] TypeScript types
+- [ ] JSDoc comments
+- [ ] Examples ในไฟล์
+
+### 4.2 Replace Inline Role Checks - Priority HIGH (5 files)
+- [ ] teams.tsx - แทนที่ `isAdmin()` (already done)
+- [ ] bookings.tsx - แทนที่ `isAdmin()`
+- [ ] customers.tsx - แทนที่ `isAdmin()`
+- [ ] header.tsx - แทนที่ role checks
+- [ ] sidebar.tsx - verify permission usage
+
+### 4.3 Replace Inline Role Checks - Priority MEDIUM (10 files)
+- [ ] settings.tsx
+- [ ] reports.tsx
+- [ ] staff.tsx
+- [ ] service-packages.tsx
+- [ ] team-detail.tsx
+- [ ] customer-detail.tsx
+- [ ] staff-performance.tsx
+- [ ] package-detail.tsx
+- [ ] weekly-schedule.tsx
+- [ ] calendar.tsx
+
+### 4.4 Create Reusable Permission Patterns
+- [ ] เพิ่ม `useCanAccess(route)` hook
+- [ ] เพิ่ม `useCanModify(resource)` hook
+- [ ] Document patterns ใน PERMISSION_SYSTEM.md
+
+---
+
+## 📋 Phase 5: Testing & Documentation
+
+### 5.1 Route Testing
+- [ ] Test Admin dashboard access (admin role)
+- [ ] Test Admin dashboard access (manager role)
+- [ ] Test Staff dashboard access (staff role)
+- [ ] Test navigation ทุก menu items
+- [ ] Test breadcrumbs ทุกหน้า
+- [ ] Test page titles ทุกหน้า
+- [ ] Test dynamic routes (with IDs)
+- [ ] Test 404 page
+- [ ] Test unauthorized page
+
+### 5.2 Permission Testing
+- [ ] Test admin permissions
+- [ ] Test manager permissions
+- [ ] Test staff permissions
+- [ ] Test permission guards
+- [ ] Test route protection
+- [ ] Test role-based navigation
+
+### 5.3 Logging Testing
+- [ ] Verify ไม่มี console.log ใน priority files
+- [ ] Test logger.debug() ใน dev mode
+- [ ] Test logger.error() แสดง errors
+- [ ] Verify ไม่มี logs ใน production build
+- [ ] Test error handling integration
+
+### 5.4 Documentation
+- [ ] สร้าง `docs/ROUTE_CONFIG_GUIDE.md`
+  - [ ] วิธีเพิ่ม route ใหม่
+  - [ ] วิธีแก้ไข route
+  - [ ] วิธีใช้ route helpers
+  - [ ] ตัวอย่างทุกรูปแบบ
+- [ ] สร้าง `docs/LOGGING_GUIDELINES.md` (done in 3.1)
+- [ ] สร้าง `docs/PERMISSION_SYSTEM.md`
+  - [ ] วิธีใช้ usePermissions
+  - [ ] วิธีใช้ PermissionGuard
+  - [ ] วิธีเช็ค permissions
+  - [ ] ตัวอย่าง patterns
+- [ ] อัพเดท README.md (if needed)
+
+### 5.5 Code Review Checklist
+- [ ] ไม่มี hard-coded route paths
+- [ ] ทุกหน้ามี page title ถูกต้อง
+- [ ] Breadcrumbs แสดงผลถูกต้อง
+- [ ] ไม่มี console.log ในไฟล์ priority (10-15 ไฟล์)
+- [ ] ใช้ permission functions แทน inline checks
+- [ ] Logger มี context ครบทุก calls
+- [ ] TypeScript ไม่มี errors
+- [ ] ESLint ไม่มี warnings
+- [ ] Build สำเร็จไม่มี errors
+
+### 5.6 Performance Check
+- [ ] Bundle size ไม่เพิ่มขึ้นมาก
+- [ ] Navigation speed เหมือนเดิม
+- [ ] Page load time เหมือนเดิม
+- [ ] No memory leaks
+
+---
+
+## 📊 Progress Summary
+
+### Phase 1: Centralized Route Config
+- ✅ 1/6 tasks completed
+- 🔄 In Progress: Route Helper Functions
+- ⏳ Remaining: 5 tasks
+
+### Phase 2: Route Metadata
+- ⏳ 0/4 sections completed
+- Not started
+
+### Phase 3: Logging Cleanup
+- ⏳ 0/5 sections completed
+- Not started
+
+### Phase 4: Permission Refactoring
+- ⏳ 0/4 sections completed
+- Not started
+
+### Phase 5: Testing & Docs
+- ⏳ 0/6 sections completed
+- Not started
+
+---
+
+## 🎯 Next Actions
+
+1. ✅ **NOW:** สร้าง route-utils.ts (Phase 1.2)
+2. ⏭️ **NEXT:** Migration App.tsx (Phase 1.3)
+3. ⏭️ **THEN:** Migration Sidebar/Header (Phase 1.4-1.5)
+
+---
+
+## 📝 Notes
+
+- ทำทีละ phase และ test ให้แน่ใจว่าทำงานได้ก่อนไป phase ถัดไป
+- Commit หลังจากแต่ละ phase เสร็จ
+- เก็บ backup ของไฟล์สำคัญก่อนแก้ไข
+- ทดสอบทั้ง admin, manager, และ staff roles

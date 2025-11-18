@@ -1,17 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
-  LayoutDashboard,
-  Calendar,
-  Users,
-  UsersRound,
-  MessageSquare,
-  Package,
-  BarChart3,
-  Settings,
   LogOut,
-  ClipboardList,
-  UserCircle,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -19,29 +9,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-
-// Admin and Manager share the same dashboard at /admin routes
-const adminNavItems = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Bookings', href: '/admin/bookings', icon: ClipboardList },
-  { name: 'Calendar', href: '/admin/calendar', icon: Calendar },
-  { name: 'Weekly Schedule', href: '/admin/weekly-schedule', icon: Calendar },
-  { name: 'Customers', href: '/admin/customers', icon: Users },
-  { name: 'Staff', href: '/admin/staff', icon: UsersRound },
-  { name: 'Teams', href: '/admin/teams', icon: UsersRound },
-  { name: 'Chat', href: '/admin/chat', icon: MessageSquare },
-  { name: 'Service Packages', href: '/admin/packages', icon: Package },
-  { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  { name: 'My Profile', href: '/admin/profile', icon: UserCircle },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
-]
-
-const staffNavItems = [
-  { name: 'My Bookings', href: '/staff', icon: ClipboardList },
-  { name: 'My Calendar', href: '/staff/calendar', icon: Calendar },
-  { name: 'Chat', href: '/staff/chat', icon: MessageSquare },
-  { name: 'My Profile', href: '/staff/profile', icon: Users },
-]
+import { getNavigationRoutes } from '@/lib/route-utils'
 
 interface SidebarProps {
   isOpen: boolean
@@ -57,10 +25,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // Both admin and manager use the same navigation items (admin routes)
-  const navItems =
-    (profile?.role === 'admin' || profile?.role === 'manager') ? adminNavItems :
-    staffNavItems
+  // Get navigation items from route config based on user role
+  const navItems = getNavigationRoutes(profile?.role || null)
 
   // Fetch unread message count
   useEffect(() => {
@@ -123,9 +89,9 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
       setIsLoggingOut(true)
       await signOut()
     } catch (error) {
-      console.error('[Sidebar] Error signing out:', error)
+      // Ignore error and continue to logout
     } finally {
-      // Navigate to login - component will unmount, no need to reset state
+      // Navigate to login
       navigate('/login', { replace: true })
     }
   }
@@ -208,12 +174,13 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide">
             <ul className="space-y-1 px-3">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.href
-                const isChatItem = item.name === 'Chat'
+                const isActive = location.pathname === item.path
+                const isChatItem = item.title === 'Chat'
+                const Icon = item.icon
                 return (
-                  <li key={item.name}>
+                  <li key={item.key}>
                     <Link
-                      to={item.href}
+                      to={item.path}
                       onClick={onClose}
                       className={cn(
                         'flex items-center rounded-lg text-sm font-medium transition-all duration-300 relative group',
@@ -222,14 +189,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                           ? 'bg-tinedy-green text-white'
                           : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
                       )}
-                      title={isCollapsed ? item.name : undefined}
+                      title={isCollapsed ? item.title : undefined}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
                       <span className={cn(
                         "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
                         isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                       )}>
-                        {item.name}
+                        {item.title}
                       </span>
                       {isChatItem && unreadCount > 0 && (
                         <Badge className={cn(
@@ -246,7 +213,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                       {/* Tooltip on hover when collapsed */}
                       {isCollapsed && (
                         <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                          {item.name}
+                          {item.title}
                           {isChatItem && unreadCount > 0 && ` (${unreadCount > 99 ? '99+' : unreadCount})`}
                         </span>
                       )}

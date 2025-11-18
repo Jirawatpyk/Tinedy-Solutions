@@ -7,6 +7,7 @@ import { RoleBasedRedirect } from './components/auth/role-based-redirect'
 import { MainLayout } from './components/layout/main-layout'
 import { Toaster } from './components/ui/toaster'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PUBLIC_ROUTES, ADMIN_ROUTES, STAFF_ROUTES } from './config/routes'
 
 // Eager load: Login page (first page users see)
 import { LoginPage } from './pages/auth/login'
@@ -83,17 +84,17 @@ function App() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
             {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
+            <Route path={PUBLIC_ROUTES.LOGIN.path} element={<LoginPage />} />
 
             {/* Payment routes (public - no auth required) */}
-            <Route path="/payment/:bookingId" element={<PaymentPage />} />
-            <Route path="/payment/:bookingId/success" element={<PaymentSuccessPage />} />
+            <Route path={PUBLIC_ROUTES.PAYMENT.path} element={<PaymentPage />} />
+            <Route path={PUBLIC_ROUTES.PAYMENT_SUCCESS.path} element={<PaymentSuccessPage />} />
 
             {/* Protected Admin routes (includes Manager access) */}
             <Route
-              path="/admin"
+              path={ADMIN_ROUTES.DASHBOARD.path}
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <ProtectedRoute allowedRoles={ADMIN_ROUTES.DASHBOARD.allowedRoles}>
                   <MainLayout />
                 </ProtectedRoute>
               }
@@ -118,9 +119,9 @@ function App() {
 
             {/* Protected Staff routes */}
             <Route
-              path="/staff"
+              path={STAFF_ROUTES.DASHBOARD.path}
               element={
-                <ProtectedRoute allowedRoles={['staff']}>
+                <ProtectedRoute allowedRoles={STAFF_ROUTES.DASHBOARD.allowedRoles}>
                   <MainLayout />
                 </ProtectedRoute>
               }
@@ -135,7 +136,7 @@ function App() {
           <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Unauthorized */}
-          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path={PUBLIC_ROUTES.UNAUTHORIZED.path} element={<UnauthorizedPage />} />
 
           {/* 404 */}
           <Route
