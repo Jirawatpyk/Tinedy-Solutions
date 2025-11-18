@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
+import { logger } from '@/lib/logger'
 
 // Types for realtime payload
 interface RealtimeBookingPayload {
@@ -96,16 +97,16 @@ export function useStaffBookings() {
       setMyTeamIds(allTeamIds)
       setTeamsLoaded(true)
 
-      console.log('[StaffBookings] Team Membership:', {
+      logger.debug('Team Membership', {
         userId: user.id,
         isLead: leadTeamIds.length > 0,
         memberOfTeams: memberTeamIds.length,
         leadOfTeams: leadTeamIds.length,
         totalTeams: allTeamIds.length,
         teamIds: allTeamIds
-      })
+      }, { context: 'StaffBookings' })
     } catch (err) {
-      console.error('Error checking team membership:', err)
+      logger.error('Error checking team membership', { error: err }, { context: 'StaffBookings' })
       setTeamsLoaded(true) // Still mark as loaded even on error
     }
   }, [user])
@@ -265,7 +266,7 @@ export function useStaffBookings() {
         totalEarnings,
       })
     } catch (err) {
-      console.error('Error calculating stats:', err)
+      logger.error('Error calculating stats', { error: err }, { context: 'StaffBookings' })
     }
   }, [user, myTeamIds])
 
@@ -282,11 +283,11 @@ export function useStaffBookings() {
       // Use local timezone instead of UTC to avoid date shifting
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-      console.log('[StaffBookings] Today:', {
+      logger.debug('Today', {
         todayDate: today,
         todayStr,
         localDate: today.toLocaleDateString('th-TH'),
-      })
+      }, { context: 'StaffBookings' })
 
       const nextWeek = new Date(today)
       nextWeek.setDate(nextWeek.getDate() + 7)
@@ -379,10 +380,10 @@ export function useStaffBookings() {
       if (upcomingResult.error) throw upcomingResult.error
       if (completedResult.error) throw completedResult.error
 
-      console.log('[StaffBookings] Today result:', {
+      logger.debug('Today result', {
         count: todayResult.data?.length || 0,
         bookings: todayResult.data?.map(b => ({ date: b.booking_date, time: b.start_time }))
-      })
+      }, { context: 'StaffBookings' })
 
       // Merge V1 and V2 package data for all results
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -401,7 +402,7 @@ export function useStaffBookings() {
       setUpcomingBookings(upcomingData as StaffBooking[])
       setCompletedBookings(completedData as StaffBooking[])
     } catch (err) {
-      console.error('Error loading bookings:', err)
+      logger.error('Error loading bookings', { error: err }, { context: 'StaffBookings' })
       setError(getErrorMessage(err))
       setLoading(false)
     }
@@ -416,32 +417,32 @@ export function useStaffBookings() {
 
   // Load bookings when teams are loaded or changed
   useEffect(() => {
-    console.log('[StaffBookings] useEffect triggered:', {
+    logger.debug('useEffect triggered', {
       user: !!user,
       teamsLoaded,
       myTeamIds: myTeamIds.length,
       isFetching: isFetchingRef.current
-    })
+    }, { context: 'StaffBookings' })
 
     if (!user || !teamsLoaded) return
 
     const fetchData = async () => {
       // ป้องกันการโหลดซ้ำ - เช็คและตั้งค่าพร้อมกัน
       if (isFetchingRef.current) {
-        console.log('[StaffBookings] Already fetching, skipping...')
+        logger.debug('Already fetching, skipping...', {}, { context: 'StaffBookings' })
         return
       }
 
       isFetchingRef.current = true
-      console.log('[StaffBookings] Start fetching bookings and stats...')
+      logger.debug('Start fetching bookings and stats...', {}, { context: 'StaffBookings' })
 
       try {
         await loadBookings()
         await calculateStats()
-        console.log('[StaffBookings] Fetch complete')
+        logger.debug('Fetch complete', {}, { context: 'StaffBookings' })
         setLoading(false)  // ✅ เซ็ต loading = false หลังจากทุกอย่างเสร็จ
       } catch (error) {
-        console.error('[StaffBookings] Fetch error:', error)
+        logger.error('Fetch error', { error }, { context: 'StaffBookings' })
         setLoading(false)  // เซ็ต false เมื่อเกิด error ด้วย
       } finally {
         // รอสักครู่ก่อน reset flag เพื่อให้ useEffect ครั้งที่ 2 เห็น flag = true
@@ -487,7 +488,7 @@ export function useStaffBookings() {
       .subscribe()
 
     return () => {
-      console.log('[StaffBookings] Cleanup')
+      logger.debug('Cleanup', {}, { context: 'StaffBookings' })
       supabase.removeChannel(channel)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -512,7 +513,7 @@ export function useStaffBookings() {
 
       // Real-time subscription will handle updating other connected clients
     } catch (err) {
-      console.error('Error starting progress:', err)
+      logger.error('Error starting progress', { error: err }, { context: 'StaffBookings' })
       // Revert optimistic update on error
       await loadBookings()
       throw err
@@ -538,7 +539,7 @@ export function useStaffBookings() {
 
       // Real-time subscription will handle updating other connected clients
     } catch (err) {
-      console.error('Error marking as completed:', err)
+      logger.error('Error marking as completed', { error: err }, { context: 'StaffBookings' })
       // Revert optimistic update on error
       await loadBookings()
       throw err
@@ -564,7 +565,7 @@ export function useStaffBookings() {
 
       // Real-time subscription will handle updating other connected clients
     } catch (err) {
-      console.error('Error adding notes:', err)
+      logger.error('Error adding notes', { error: err }, { context: 'StaffBookings' })
       // Revert optimistic update on error
       await loadBookings()
       throw err

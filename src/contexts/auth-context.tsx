@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 type Profile = {
   id: string
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data)
       return data
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      logger.error('Error fetching profile', { error, userId }, { context: 'AuthContext' })
       // Set profile to null instead of throwing
       setProfile(null)
       return null
@@ -155,11 +156,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         // Log but don't throw - we still want to clear local state
-        console.warn('[AuthContext] Sign out warning:', error.message)
+        logger.warn('Sign out warning', { error: error.message }, { context: 'AuthContext' })
       }
     } catch (error) {
       // Network error or other issues - continue with local cleanup
-      console.error('[AuthContext] Sign out error:', error)
+      logger.error('Sign out error', { error }, { context: 'AuthContext' })
     } finally {
       // Always clear local state (this is critical for UX)
       setUser(null)

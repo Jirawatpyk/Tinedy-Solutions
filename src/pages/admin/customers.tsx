@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
+import { logger } from '@/lib/logger'
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,7 @@ export function AdminCustomers() {
       if (error) throw error
       setCustomers(data || [])
     } catch (error) {
-      console.error('Error fetching customers:', error)
+      logger.error('Error fetching customers', { error }, { context: 'AdminCustomers' })
       const errorMessage = getLoadErrorMessage('customer')
       toast({
         title: errorMessage.title,
@@ -189,7 +190,7 @@ export function AdminCustomers() {
       resetForm()
       fetchCustomers()
     } catch (error) {
-      console.error('Error saving customer:', error)
+      logger.error('Error saving customer', { error, editingCustomer: !!editingCustomer }, { context: 'AdminCustomers' })
       const errorMessage = mapErrorToUserMessage(error, 'customer')
       toast({
         title: errorMessage.title,
@@ -214,7 +215,7 @@ export function AdminCustomers() {
       })
       fetchCustomers()
     } catch (error) {
-      console.error('Delete customer error:', error)
+      logger.error('Delete customer error', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getDeleteErrorMessage('customer')
       toast({
         title: errorMessage.title,
@@ -240,7 +241,7 @@ export function AdminCustomers() {
       })
       fetchCustomers()
     } catch (error) {
-      console.error('Archive customer error:', error)
+      logger.error('Archive customer error', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getArchiveErrorMessage()
       toast({
         title: errorMessage.title,
@@ -265,7 +266,7 @@ export function AdminCustomers() {
       })
       fetchCustomers()
     } catch (error) {
-      console.error('Error restoring customer:', error)
+      logger.error('Error restoring customer', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getRestoreErrorMessage()
       toast({
         title: errorMessage.title,

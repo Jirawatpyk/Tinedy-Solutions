@@ -32,7 +32,11 @@ import {
   CheckCircle,
   TrendingUp,
   DollarSign,
+  BarChart3,
+  Filter,
 } from 'lucide-react'
+import { CollapsibleSection } from '@/components/common/CollapsibleSection'
+import { useCollapsible } from '@/hooks/useCollapsible'
 import {
   startOfMonth,
   endOfMonth,
@@ -73,6 +77,10 @@ export function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  // Collapsible state
+  const [isStatsOpen, toggleStats] = useCollapsible('calendar-stats')
+  const [isFiltersOpen, toggleFilters] = useCollapsible('calendar-filters')
 
   // Create Booking Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -684,8 +692,7 @@ export function AdminCalendar() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Calendar</h1>
-          <p className="text-muted-foreground mt-1">View and manage your bookings</p>
+          <p className="text-muted-foreground">View and manage your bookings</p>
         </div>
         <Button onClick={goToToday} variant="outline">
           <CalendarIcon className="h-4 w-4 mr-2" />
@@ -694,7 +701,13 @@ export function AdminCalendar() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <CollapsibleSection
+        title="Statistics"
+        icon={<BarChart3 className="h-5 w-5" />}
+        isOpen={isStatsOpen}
+        onToggle={toggleStats}
+      >
+        <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
@@ -738,10 +751,17 @@ export function AdminCalendar() {
             <p className="text-xs text-muted-foreground">Paid bookings</p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </CollapsibleSection>
 
       {/* Filters and View Mode */}
-      <Card>
+      <CollapsibleSection
+        title="Filters"
+        icon={<Filter className="h-5 w-5" />}
+        isOpen={isFiltersOpen}
+        onToggle={toggleFilters}
+      >
+        <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
             {/* View Mode Toggle */}
@@ -841,7 +861,8 @@ export function AdminCalendar() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </CollapsibleSection>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
