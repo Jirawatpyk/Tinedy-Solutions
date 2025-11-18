@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Info, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage, getValidationErrorMessage, getRecurringBookingError } from '@/lib/error-messages'
 import type { BookingForm } from '@/hooks/useBookingForm'
 import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, sendRecurringBookingConfirmation, type PaymentEmailData, type RecurringBookingEmailData } from '@/lib/email'
@@ -260,7 +260,13 @@ export function BookingCreateModal({
       // Validation: ต้องมี service_package_id หรือ package_v2_id
       const servicePackageId = createForm.formData.service_package_id || createForm.formData.package_v2_id
       if (!servicePackageId) {
-        throw new Error('Please select a service package')
+        const validationError = getValidationErrorMessage()
+        toast({
+          title: validationError.title,
+          description: 'Please select a service package before creating a booking.',
+          variant: 'destructive',
+        })
+        return
       }
 
       // Build base booking data
@@ -289,7 +295,13 @@ export function BookingCreateModal({
       if (enableRecurring && recurringDates.length > 0 && packageSelection?.frequency) {
         // ตรวจสอบว่าเลือกวันครบตามความถี่หรือยัง
         if (recurringDates.length !== packageSelection.frequency) {
-          throw new Error(`Please select ${packageSelection.frequency} dates for recurring bookings`)
+          const validationError = getValidationErrorMessage()
+          toast({
+            title: validationError.title,
+            description: `Please select ${packageSelection.frequency} dates for recurring bookings. You have selected ${recurringDates.length} date(s) so far.`,
+            variant: 'destructive',
+          })
+          return
         }
 
         // ตรวจสอบว่าทุก field ที่จำเป็นมีค่า
@@ -326,7 +338,13 @@ export function BookingCreateModal({
         })
 
         if (!result.success) {
-          throw new Error(result.errors?.join(', ') || 'Failed to create recurring bookings')
+          const errorMsg = getRecurringBookingError('create')
+          toast({
+            title: errorMsg.title,
+            description: errorMsg.description,
+            variant: 'destructive',
+          })
+          return
         }
 
         // ✅ ส่ง email confirmation สำหรับ recurring bookings
@@ -456,9 +474,10 @@ export function BookingCreateModal({
       onSuccess()
     } catch (error) {
       console.error('Error creating booking:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

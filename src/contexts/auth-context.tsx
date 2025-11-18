@@ -82,11 +82,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
+    // Sanitize and validate inputs
+    const sanitizedEmail = email.trim().toLowerCase()
+
+    // Validate email format
+    if (!sanitizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+      throw new Error('Invalid email format')
+    }
+
+    // Validate password
+    if (!password || password.length < 6) {
+      throw new Error('Password must be at least 6 characters')
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: sanitizedEmail,
       password,
     })
-    if (error) throw error
+
+    if (error) {
+      // Provide user-friendly error messages
+      if (error.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password')
+      } else if (error.message.includes('Email not confirmed')) {
+        throw new Error('Please confirm your email before signing in')
+      } else {
+        throw new Error('Failed to sign in. Please try again')
+      }
+    }
 
     // Wait for profile to be fetched before resolving
     if (data.user) {
@@ -126,10 +149,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    // Ignore AuthSessionMissingError since the goal is to sign out anyway
-    if (error && error.name !== 'AuthSessionMissingError') {
-      throw error
+    try {
+      // Attempt to sign out from Supabase (best effort)
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
+
+      if (error) {
+        // Log but don't throw - we still want to clear local state
+        console.warn('[AuthContext] Sign out warning:', error.message)
+      }
+    } catch (error) {
+      // Network error or other issues - continue with local cleanup
+      console.error('[AuthContext] Sign out error:', error)
+    } finally {
+      // Always clear local state (this is critical for UX)
+      setUser(null)
+      setProfile(null)
+
+      // Let Supabase client handle its own storage cleanup
+      // This is more robust than manual localStorage removal
     }
   }
 

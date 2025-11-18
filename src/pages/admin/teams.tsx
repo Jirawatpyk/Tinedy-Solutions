@@ -24,7 +24,7 @@ import {
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { TeamCard } from '@/components/teams/team-card'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
 
 interface TeamMember {
   id: string
@@ -199,9 +199,10 @@ export function AdminTeams() {
       setTeams(formattedTeams)
     } catch (error) {
       console.error('Error loading teams:', error)
+      const errorMessage = getLoadErrorMessage('team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     } finally {
@@ -253,7 +254,7 @@ export function AdminTeams() {
       if (error) throw error
       setAvailableStaff(data || [])
     } catch (error) {
-      console.error('Error loading staff:', getErrorMessage(error))
+      console.error('Error loading staff:', error)
     }
   }
 
@@ -311,9 +312,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error creating team:', error)
+      const errorMessage = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -347,9 +349,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error updating team:', error)
+      const errorMessage = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -372,9 +375,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error deleting team:', error)
+      const errorMessage = getDeleteErrorMessage('team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -398,9 +402,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error archiving team:', error)
+      const errorMessage = getArchiveErrorMessage()
       toast({
-        title: 'Error',
-        description: 'Failed to archive team',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -423,9 +428,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error restoring team:', error)
+      const errorMessage = getRestoreErrorMessage()
       toast({
-        title: 'Error',
-        description: 'Failed to restore team',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -454,9 +460,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error adding member:', error)
+      const errorMessage = getTeamMemberError('add')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -482,9 +489,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error removing member:', error)
+      const errorMessage = getTeamMemberError('remove')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -507,9 +515,10 @@ export function AdminTeams() {
       loadTeams()
     } catch (error) {
       console.error('Error toggling member status:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

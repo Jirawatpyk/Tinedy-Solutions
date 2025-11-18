@@ -29,6 +29,7 @@ import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users
 import { formatDate } from '@/lib/utils'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 
 interface StaffMember {
   id: string
@@ -130,9 +131,10 @@ export function AdminStaff() {
       }
     } catch (error) {
       console.error('Error fetching staff:', error)
+      const errorMessage = getLoadErrorMessage('staff')
       toast({
-        title: 'Error',
-        description: 'Failed to load staff members',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     } finally {
@@ -252,10 +254,10 @@ export function AdminStaff() {
       resetForm()
       fetchStaff()
     } catch (error) {
-      const dbError = error as { message?: string }
+      const errorMessage = mapErrorToUserMessage(error, 'staff')
       toast({
-        title: 'Error',
-        description: dbError.message || 'Failed to save staff member',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -291,9 +293,10 @@ export function AdminStaff() {
       fetchStaff()
     } catch (error) {
       console.error('[Delete Staff] Caught error:', error)
+      const errorMessage = getDeleteErrorMessage('staff')
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete staff member',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }

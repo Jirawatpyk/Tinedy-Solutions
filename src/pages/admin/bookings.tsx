@@ -16,7 +16,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
-import { getErrorMessage } from '@/lib/error-utils'
+import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage } from '@/lib/error-messages'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
 import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
@@ -220,9 +220,10 @@ export function AdminBookings() {
       setBookings(processedData || [])
     } catch (error) {
       console.error('Error fetching bookings:', error)
+      const errorMessage = getLoadErrorMessage('booking')
       toast({
-        title: 'Error',
-        description: 'Failed to load bookings',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     } finally {
@@ -619,9 +620,10 @@ export function AdminBookings() {
       clearConflicts()
       fetchBookings()
     } catch (error) {
+      const errorMsg = getBookingConflictError()
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -663,7 +665,13 @@ export function AdminBookings() {
       console.log('📊 Delete result:', result)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to delete recurring bookings')
+        const errorMsg = getRecurringBookingError('delete')
+        toast({
+          title: errorMsg.title,
+          description: errorMsg.description,
+          variant: 'destructive',
+        })
+        return
       }
 
       toast({
@@ -676,9 +684,10 @@ export function AdminBookings() {
       fetchBookings()
     } catch (error) {
       console.error('Delete recurring booking error:', error)
+      const errorMsg = getRecurringBookingError('delete')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -771,9 +780,10 @@ export function AdminBookings() {
       fetchBookings()
     } catch (error) {
       console.error('Archive recurring booking error:', error)
+      const errorMsg = getArchiveErrorMessage()
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -808,9 +818,10 @@ export function AdminBookings() {
       fetchBookings()
     } catch (error) {
       console.error('Delete booking error:', error)
+      const errorMsg = getDeleteErrorMessage('booking')
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete booking',
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

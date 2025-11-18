@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
 import {
   Dialog,
   DialogContent,
@@ -96,9 +96,10 @@ export function AdminCustomers() {
       setCustomers(data || [])
     } catch (error) {
       console.error('Error fetching customers:', error)
+      const errorMessage = getLoadErrorMessage('customer')
       toast({
-        title: 'Error',
-        description: 'Failed to load customers',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     } finally {
@@ -188,9 +189,10 @@ export function AdminCustomers() {
       fetchCustomers()
     } catch (error) {
       console.error('Error saving customer:', error)
+      const errorMessage = mapErrorToUserMessage(error, 'customer')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -210,10 +212,12 @@ export function AdminCustomers() {
         description: 'Customer deleted successfully',
       })
       fetchCustomers()
-    } catch {
+    } catch (error) {
+      console.error('Delete customer error:', error)
+      const errorMessage = getDeleteErrorMessage('customer')
       toast({
-        title: 'Error',
-        description: 'Failed to delete customer',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -236,9 +240,10 @@ export function AdminCustomers() {
       fetchCustomers()
     } catch (error) {
       console.error('Archive customer error:', error)
+      const errorMessage = getArchiveErrorMessage()
       toast({
-        title: 'Error',
-        description: 'Failed to archive customer',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }
@@ -260,9 +265,10 @@ export function AdminCustomers() {
       fetchCustomers()
     } catch (error) {
       console.error('Error restoring customer:', error)
+      const errorMessage = getRestoreErrorMessage()
       toast({
-        title: 'Error',
-        description: 'Failed to restore customer',
+        title: errorMessage.title,
+        description: errorMessage.description,
         variant: 'destructive',
       })
     }

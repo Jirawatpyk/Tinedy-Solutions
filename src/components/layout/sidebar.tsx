@@ -135,12 +135,10 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
     try {
       setIsLoggingOut(true)
       await signOut()
-      // Let onAuthStateChange handle the redirect naturally
-      // This prevents double redirect
     } catch (error) {
       console.error('[Sidebar] Error signing out:', error)
-      setIsLoggingOut(false)
-      // If there's an error, manually navigate to login
+    } finally {
+      // Navigate to login - component will unmount, no need to reset state
       navigate('/login', { replace: true })
     }
   }
