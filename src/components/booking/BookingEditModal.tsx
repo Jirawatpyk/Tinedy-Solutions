@@ -1,6 +1,6 @@
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { useState } from 'react'
 import {
@@ -166,9 +166,10 @@ export function BookingEditModal({
       clearConflicts()
       onSuccess()
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

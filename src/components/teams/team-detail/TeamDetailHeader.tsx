@@ -7,7 +7,7 @@ import { Edit, Crown, Calendar } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { useToast } from '@/hooks/use-toast'
 import { formatDate } from '@/lib/utils'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 interface TeamMember {
   id: string
@@ -62,9 +62,10 @@ export function TeamDetailHeader({ team, basePath }: TeamDetailHeaderProps) {
       navigate(`${basePath}/teams`)
     } catch (error) {
       console.error('Error deleting team:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

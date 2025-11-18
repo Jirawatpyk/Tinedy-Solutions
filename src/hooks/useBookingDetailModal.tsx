@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getPaymentStatusBadge as getPaymentBadge } from '@/lib/booking-badges'
@@ -86,9 +86,10 @@ export function useBookingDetailModal({
 
         refresh()
       } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
         toast({
-          title: 'Error',
-          description: getErrorMessage(error),
+          title: errorMsg.title,
+          description: errorMsg.description,
           variant: 'destructive',
         })
       }
@@ -125,9 +126,10 @@ export function useBookingDetailModal({
 
         refresh()
       } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
         toast({
-          title: 'Error',
-          description: getErrorMessage(error),
+          title: errorMsg.title,
+          description: errorMsg.description,
           variant: 'destructive',
         })
       }
@@ -164,9 +166,10 @@ export function useBookingDetailModal({
         closeDetail()
         refresh()
       } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
         toast({
-          title: 'Error',
-          description: getErrorMessage(error),
+          title: errorMsg.title,
+          description: errorMsg.description,
           variant: 'destructive',
         })
       }

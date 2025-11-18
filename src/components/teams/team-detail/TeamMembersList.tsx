@@ -7,7 +7,7 @@ import { Crown, UserPlus, Users } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 interface TeamMember {
   id: string
@@ -71,9 +71,10 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
       onUpdate()
     } catch (error) {
       console.error('Error removing member:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -96,9 +97,10 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
       onUpdate()
     } catch (error) {
       console.error('Error toggling member status:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

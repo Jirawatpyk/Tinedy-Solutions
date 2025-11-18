@@ -22,7 +22,7 @@ import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import type { ServicePackage , UserProfile } from '@/types'
 import type { BookingFormState } from '@/hooks/useBookingForm'
@@ -503,9 +503,10 @@ export function AdminWeeklySchedule() {
         setSelectedBooking({ ...selectedBooking, status: newStatus })
       }
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -530,9 +531,10 @@ export function AdminWeeklySchedule() {
       setIsDetailModalOpen(false)
       fetchBookings()
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -577,9 +579,10 @@ export function AdminWeeklySchedule() {
 
       fetchBookings()
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }

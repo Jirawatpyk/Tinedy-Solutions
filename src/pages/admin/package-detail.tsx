@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { ServicePackageV2WithTiers, PackagePricingTier } from '@/types'
@@ -190,7 +190,8 @@ export default function AdminPackageDetail() {
       ])
     } catch (err) {
       console.error('Error fetching package details:', err)
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'general')
+      setError(errorMsg.description)
     } finally {
       setLoading(false)
     }
@@ -284,9 +285,10 @@ export default function AdminPackageDetail() {
         description: `Package ${packageData.is_active ? 'deactivated' : 'activated'} successfully`,
       })
     } catch (err) {
+      const errorMsg = mapErrorToUserMessage(err, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(err),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -335,9 +337,10 @@ export default function AdminPackageDetail() {
       // Navigate back to packages list
       navigate(`${basePath}/packages`)
     } catch (err) {
+      const errorMsg = mapErrorToUserMessage(err, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(err),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {

@@ -30,7 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 export default function StaffProfile() {
   const {
@@ -74,9 +74,10 @@ export default function StaffProfile() {
       })
       setEditing(false)
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
@@ -113,9 +114,10 @@ export default function StaffProfile() {
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'general')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
