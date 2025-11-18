@@ -691,6 +691,7 @@ export function AdminCalendar() {
           value={monthStats.totalBookings}
           description="This month"
           icon={CalendarIcon}
+          iconColor="text-tinedy-blue"
         />
 
         <StatCard
@@ -698,6 +699,7 @@ export function AdminCalendar() {
           value={monthStats.confirmedBookings}
           description="Active bookings"
           icon={CheckCircle}
+          iconColor="text-tinedy-green"
         />
 
         <StatCard
@@ -705,6 +707,7 @@ export function AdminCalendar() {
           value={monthStats.completedBookings}
           description="Jobs done"
           icon={TrendingUp}
+          iconColor="text-tinedy-purple"
         />
 
         <StatCard
@@ -712,6 +715,7 @@ export function AdminCalendar() {
           value={formatCurrency(monthStats.totalRevenue)}
           description="Paid bookings"
           icon={DollarSign}
+          iconColor="text-tinedy-yellow"
         />
       </div>
 

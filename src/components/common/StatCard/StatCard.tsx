@@ -169,8 +169,8 @@ export const StatCard = ({
           <Skeleton className="h-4 w-4 rounded" />
         </CardHeader>
         <CardContent className="pb-3">
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-3 w-32 mt-0" />
+          <Skeleton className="h-8 w-20 mb-0" />
+          <Skeleton className="h-3 w-32" />
         </CardContent>
       </Card>
     )
