@@ -245,20 +245,6 @@ export function useChat() {
     }
   }, [])
 
-  // Get unread count for a specific user
-  const getUnreadCount = useCallback(async (otherUserId: string) => {
-    if (!user) return 0
-
-    const { count } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('sender_id', otherUserId)
-      .eq('recipient_id', user.id)
-      .eq('is_read', false)
-
-    return count || 0
-  }, [user])
-
   // Get total unread count (for sidebar badge)
   const getTotalUnreadCount = useCallback(async () => {
     if (!user) return 0
@@ -284,54 +270,100 @@ export function useChat() {
 
     isLoadingConversationsRef.current = true
 
-    // Only show loading indicator on initial load
-    if (showLoading && conversations.length === 0) {
+    // Only show loading indicator on initial load (use ref to check, not state)
+    if (showLoading && prevMessagesLengthRef.current === 0) {
       setIsLoading(true)
     }
 
     try {
-      const users = await fetchUsers()
+      // OPTIMIZATION: Get all messages with user info in ONE query instead of N queries
+      const { data: allMessages, error: messagesError } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          sender_id,
+          recipient_id,
+          message,
+          is_read,
+          created_at,
+          sender:profiles!sender_id(id, full_name, email, role, avatar_url),
+          recipient:profiles!recipient_id(id, full_name, email, role, avatar_url)
+        `)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
 
-      const conversationsWithData = await Promise.all(
-        users.map(async (otherUser) => {
-          // Get last message
-          const { data: lastMessages } = await supabase
-            .from('messages')
-            .select('*')
-            .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUser.id}),and(sender_id.eq.${otherUser.id},recipient_id.eq.${user.id})`)
-            .order('created_at', { ascending: false })
-            .limit(1)
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError)
+        return
+      }
 
-          // Get unread count
-          const unreadCount = await getUnreadCount(otherUser.id)
+      // Group messages by conversation partner and calculate stats
+      const conversationsMap = new Map<string, {
+        user: Profile
+        lastMessage: Message | null
+        unreadCount: number
+      }>()
 
-          return {
+      allMessages?.forEach((msg) => {
+        // Handle array response from Supabase join query
+        const message = {
+          ...msg,
+          sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
+          recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient,
+        } as Message
+
+        // Determine the other user (conversation partner)
+        const isOutgoing = message.sender_id === user.id
+        const otherUser = isOutgoing ? message.recipient : message.sender
+
+        // Skip if otherUser is undefined (shouldn't happen with proper data)
+        if (!otherUser) {
+          console.warn('[loadConversations] Missing user data for message:', message.id)
+          return
+        }
+
+        const otherUserId = otherUser.id
+
+        // Get or create conversation entry
+        let conv = conversationsMap.get(otherUserId)
+        if (!conv) {
+          conv = {
             user: otherUser,
-            lastMessage: lastMessages && lastMessages.length > 0 ? (lastMessages[0] as Message) : null,
-            unreadCount,
+            lastMessage: null,
+            unreadCount: 0,
           }
-        })
-      )
+          conversationsMap.set(otherUserId, conv)
+        }
 
-      // Filter to show only conversations with messages
-      const activeConversations = conversationsWithData.filter(conv => conv.lastMessage !== null)
+        // Update last message (messages are already sorted by created_at desc)
+        if (!conv.lastMessage) {
+          conv.lastMessage = message
+        }
 
-      // Sort by last message time
-      activeConversations.sort((a, b) => {
-        if (!a.lastMessage && !b.lastMessage) return 0
-        if (!a.lastMessage) return 1
-        if (!b.lastMessage) return -1
-        return new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
+        // Count unread messages (incoming only)
+        if (message.recipient_id === user.id && !message.is_read) {
+          conv.unreadCount++
+        }
       })
 
+      // Convert map to array and sort by last message time
+      const activeConversations = Array.from(conversationsMap.values())
+        .filter(conv => conv.lastMessage !== null)
+        .sort((a, b) => {
+          if (!a.lastMessage || !b.lastMessage) return 0
+          return new Date(b.lastMessage.created_at).getTime() -
+                 new Date(a.lastMessage.created_at).getTime()
+        })
+
       setConversations(activeConversations)
+      prevMessagesLengthRef.current = activeConversations.length
     } catch (error) {
       console.error('Error loading conversations:', error)
     } finally {
       setIsLoading(false)
       isLoadingConversationsRef.current = false
     }
-  }, [user, fetchUsers, getUnreadCount, conversations.length])
+  }, [user])
 
   // Delete conversation (all messages with a specific user)
   const deleteConversation = useCallback(async (otherUserId: string) => {
@@ -587,10 +619,11 @@ export function useChat() {
     }
   }, [user, markAsRead, updateConversationLocally])
 
-  // Load conversations on mount
+  // Load conversations on mount (run once)
   useEffect(() => {
     loadConversations()
-  }, [loadConversations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {

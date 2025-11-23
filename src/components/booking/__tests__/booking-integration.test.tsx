@@ -109,37 +109,6 @@ describe('Booking Integration Tests', () => {
     }
   })
 
-  const mockBookingForm = {
-    formData: {
-      full_name: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      service_package_id: '',
-      booking_date: '',
-      start_time: '',
-      total_price: 0,
-      staff_id: '',
-      team_id: '',
-      notes: '',
-    },
-    handleChange: vi.fn((field, value) => {
-      mockBookingForm.formData[field as keyof typeof mockBookingForm.formData] = value as never
-    }),
-    setValues: vi.fn((values) => {
-      Object.assign(mockBookingForm.formData, values)
-    }),
-    reset: vi.fn(() => {
-      Object.keys(mockBookingForm.formData).forEach((key) => {
-        mockBookingForm.formData[key as keyof typeof mockBookingForm.formData] = '' as never
-      })
-      mockBookingForm.formData.total_price = 0
-    }),
-  }
-
   const mockEditBooking: Booking = {
     id: 'booking-1',
     service_package_id: 'service-1',
@@ -182,7 +151,6 @@ describe('Booking Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockBookingForm.reset()
   })
 
   describe('Booking Creation Flow', () => {
@@ -238,7 +206,6 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={mockBookingForm}
           assignmentType="none"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
@@ -340,7 +307,6 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={mockBookingForm}
           assignmentType="none"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
@@ -394,7 +360,6 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={mockBookingForm}
           assignmentType="staff"
           setAssignmentType={mockSetAssignmentType}
           calculateEndTime={calculateEndTime}
@@ -420,7 +385,6 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={mockBookingForm}
           assignmentType="team"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
@@ -444,19 +408,19 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={{
-            ...mockBookingForm,
-            formData: {
-              ...mockBookingForm.formData,
-              start_time: '10:00',
-              service_package_id: 'service-1', // 120 minutes
-            },
-          }}
           assignmentType="none"
+          defaultStartTime="10:00"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
-          packageSelection={mockPackageSelection}
-          setPackageSelection={mockSetPackageSelection}
+          packageSelection={{
+            packageId: 'service-1',
+            pricingModel: 'fixed',
+            price: 1500,
+            requiredStaff: 1,
+            packageName: 'Basic Cleaning',
+            estimatedHours: 2,
+          }}
+          setPackageSelection={vi.fn()}
         />
       )
 
@@ -475,20 +439,19 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={{
-            ...mockBookingForm,
-            formData: {
-              ...mockBookingForm.formData,
-              booking_date: '2025-02-20',
-              start_time: '10:00',
-              service_package_id: 'service-1',
-            },
-          }}
           assignmentType="staff"
+          defaultDate="2025-02-20"
+          defaultStartTime="10:00"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
-          packageSelection={mockPackageSelection}
-          setPackageSelection={mockSetPackageSelection}
+          packageSelection={{
+            packageId: 'service-1',
+            pricingModel: 'fixed',
+            price: 1500,
+            requiredStaff: 1,
+            packageName: 'Basic Cleaning',
+          }}
+          setPackageSelection={vi.fn()}
         />
       )
 
@@ -506,7 +469,6 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          createForm={mockBookingForm}
           assignmentType="staff"
           setAssignmentType={vi.fn()}
           calculateEndTime={calculateEndTime}
@@ -535,7 +497,7 @@ describe('Booking Integration Tests', () => {
       vi.mocked(supabase.from).mockReturnValue(updateMock as never)
 
       const editForm = {
-        ...mockBookingForm,
+        // mockBookingForm removed - needs refactoring
         formData: {
           service_package_id: 'service-1',
           booking_date: '2025-02-15',
@@ -548,6 +510,9 @@ describe('Booking Integration Tests', () => {
           status: 'confirmed',
           staff_id: 'staff-1',
         },
+        handleChange: vi.fn(),
+        setValues: vi.fn(),
+        reset: vi.fn(),
       }
 
       render(
@@ -590,7 +555,10 @@ describe('Booking Integration Tests', () => {
       vi.mocked(supabase.from).mockReturnValue(updateMock as never)
 
       const editForm = {
-        ...mockBookingForm,
+        // mockBookingForm removed - needs refactoring
+        handleChange: vi.fn(),
+        setValues: vi.fn(),
+        reset: vi.fn(),
         formData: {
           service_package_id: 'service-2', // Changed to Basic Training
           booking_date: '2025-02-15',
@@ -639,9 +607,12 @@ describe('Booking Integration Tests', () => {
       vi.mocked(supabase.from).mockReturnValue(updateMock as never)
 
       const editForm = {
-        ...mockBookingForm,
+        // mockBookingForm removed - needs refactoring
+        handleChange: vi.fn(),
+        setValues: vi.fn(),
+        reset: vi.fn(),
         formData: {
-          ...mockBookingForm.formData,
+          // formData fields
           service_package_id: 'service-1',
           booking_date: '2025-02-16', // Changed date
           start_time: '14:00', // Changed time
@@ -695,7 +666,12 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          editForm={mockBookingForm}
+          editForm={{
+            formData: {},
+            handleChange: vi.fn(),
+            setValues: vi.fn(),
+            reset: vi.fn(),
+          }}
           assignmentType="staff"
           onAssignmentTypeChange={mockOnAssignmentTypeChange}
           calculateEndTime={calculateEndTime}
@@ -714,9 +690,12 @@ describe('Booking Integration Tests', () => {
       const mockOnAssignmentTypeChange = vi.fn()
 
       const editForm = {
-        ...mockBookingForm,
+        // mockBookingForm removed - needs refactoring
+        handleChange: vi.fn(),
+        setValues: vi.fn(),
+        reset: vi.fn(),
         formData: {
-          ...mockBookingForm.formData,
+          // formData fields
           staff_id: 'staff-1',
         },
       }
@@ -760,7 +739,10 @@ describe('Booking Integration Tests', () => {
       vi.mocked(supabase.from).mockReturnValue(updateMock as never)
 
       const editForm = {
-        ...mockBookingForm,
+        // mockBookingForm removed - needs refactoring
+        handleChange: vi.fn(),
+        setValues: vi.fn(),
+        reset: vi.fn(),
         formData: {
           service_package_id: 'service-1',
           booking_date: '2025-02-15',
@@ -818,7 +800,12 @@ describe('Booking Integration Tests', () => {
           staffMembers={mockStaffMembers}
           teams={mockTeams}
           onOpenAvailabilityModal={vi.fn()}
-          editForm={mockBookingForm}
+          editForm={{
+            formData: {},
+            handleChange: vi.fn(),
+            setValues: vi.fn(),
+            reset: vi.fn(),
+          }}
           assignmentType="staff"
           onAssignmentTypeChange={vi.fn()}
           calculateEndTime={calculateEndTime}

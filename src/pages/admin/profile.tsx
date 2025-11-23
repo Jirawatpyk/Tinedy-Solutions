@@ -1,26 +1,24 @@
+/**
+ * Admin Profile Page
+ *
+ * หน้าโปรไฟล์ของ Admin:
+ * - แสดงข้อมูลส่วนตัว
+ * - แก้ไข profile (full_name, phone, avatar)
+ * - เปลี่ยนรหัสผ่าน
+ * - ใช้ ProfileUpdateForm component (Phase 5)
+ */
+
 import { useState } from 'react'
 import { useAdminProfile } from '@/hooks/use-admin-profile'
-import { ProfileAvatar } from '@/components/staff/profile-avatar'
+import { ProfileUpdateForm } from '@/components/profile/ProfileUpdateForm'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  Save,
-  Lock,
-  AlertCircle,
-  Mail,
-  Phone,
-  User,
-  Calendar,
-  Shield,
-} from 'lucide-react'
+import { Lock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { format } from 'date-fns'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 export default function AdminProfile() {
@@ -28,53 +26,15 @@ export default function AdminProfile() {
     adminProfile,
     loading,
     error,
-    updateProfile,
-    uploadAvatar,
+    refresh,
     changePassword,
   } = useAdminProfile()
-
-  const [editing, setEditing] = useState(false)
-  const [fullName, setFullName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [saving, setSaving] = useState(false)
 
   const [changingPassword, setChangingPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
   const { toast } = useToast()
-
-  const handleEditToggle = () => {
-    if (!editing && adminProfile) {
-      setFullName(adminProfile.full_name)
-      setPhone(adminProfile.phone || '')
-    }
-    setEditing(!editing)
-  }
-
-  const handleSaveProfile = async () => {
-    try {
-      setSaving(true)
-      await updateProfile({
-        full_name: fullName,
-        phone: phone || undefined,
-      })
-      toast({
-        title: 'Success',
-        description: 'Your profile has been updated successfully',
-      })
-      setEditing(false)
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -143,133 +103,37 @@ export default function AdminProfile() {
     )
   }
 
+  // Prepare initial data for ProfileUpdateForm
+  const profileInitialData = adminProfile ? {
+    full_name: adminProfile.full_name,
+    phone: adminProfile.phone || undefined, // Convert null to undefined
+    email: adminProfile.email,
+    avatar_url: adminProfile.avatar_url,
+    role: adminProfile.role === 'admin' ? 'Administrator' :
+          adminProfile.role === 'manager' ? 'Manager' : 'Staff',
+    created_at: adminProfile.created_at,
+  } : undefined
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="px-4 sm:px-6 py-4">
+        <div className="px-4 sm:px-6 py-6">
           <p className="text-sm text-muted-foreground">
             Manage your personal information and account settings
           </p>
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-6">
-        {/* Profile Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Manage your profile information</CardDescription>
-              </div>
-              {!editing ? (
-                <Button onClick={handleEditToggle} variant="outline" size="sm">
-                  Edit
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button onClick={handleEditToggle} variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSaveProfile} disabled={saving} size="sm">
-                    <Save className="h-4 w-4 mr-1" />
-                    {saving ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Avatar Section */}
-            <div className="flex justify-center py-4">
-              <ProfileAvatar
-                avatarUrl={adminProfile.avatar_url}
-                userName={adminProfile.full_name}
-                onUpload={uploadAvatar}
-                size="lg"
-              />
-            </div>
-
-            <Separator />
-
-            {/* Role Badge */}
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Account Role</p>
-                  <p className="text-xs text-gray-500">Your access level in the system</p>
-                </div>
-              </div>
-              <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm font-semibold">
-                {adminProfile.role === 'admin' ? 'Administrator' :
-                 adminProfile.role === 'manager' ? 'Manager' : 'Staff'}
-              </Badge>
-            </div>
-
-            <Separator />
-
-            {/* Personal Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                {editing ? (
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Enter full name"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{adminProfile.full_name}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{adminProfile.email}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                {editing ? (
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{adminProfile.phone || 'Not specified'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Join Date</Label>
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {format(new Date(adminProfile.created_at), 'MMMM dd, yyyy')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-4 sm:p-6 space-y-6 max-w-full mx-auto">
+        {/* Profile Update Form */}
+        {adminProfile && (
+          <ProfileUpdateForm
+            initialData={profileInitialData}
+            profileId={adminProfile.id}
+            onSuccess={refresh}
+          />
+        )}
 
         {/* Change Password */}
         <Card>

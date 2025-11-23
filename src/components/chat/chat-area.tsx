@@ -7,6 +7,7 @@ import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { ImageLightbox } from './image-lightbox'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
+import { formatRole } from '@/lib/role-utils'
 import type { Message, Profile } from '@/types/chat'
 
 interface ChatAreaProps {
@@ -102,7 +103,7 @@ export function ChatArea({
             <h3 className="font-semibold text-tinedy-dark truncate">{selectedUser.full_name}</h3>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs">
-                {selectedUser.role === 'admin' ? 'Admin' : 'Staff'}
+                {formatRole(selectedUser.role)}
               </Badge>
               <span className="text-xs text-muted-foreground truncate">{selectedUser.email}</span>
             </div>

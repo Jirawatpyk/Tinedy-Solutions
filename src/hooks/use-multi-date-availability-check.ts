@@ -240,7 +240,7 @@ export function useMultiDateAvailabilityCheck({
     conflictBookings: BookingConflictData[],
     serviceTypeValue: string | null
   ) => {
-    // Get all staff with team memberships
+    // Get all staff with their team memberships
     const { data: allStaff, error: staffError } = await supabase
       .from('profiles')
       .select(`
@@ -249,9 +249,11 @@ export function useMultiDateAvailabilityCheck({
         full_name,
         skills,
         reviews (rating),
-        team_members!staff_id (team_id)
+        team_members!staff_id (
+          team_id
+        )
       `)
-      .in('role', ['staff', 'admin'])
+      .eq('role', 'staff')
       .order('full_name')
 
     if (staffError) throw staffError
@@ -263,7 +265,8 @@ export function useMultiDateAvailabilityCheck({
     // Process each staff member
     const results: MultiDateStaffResult[] = allStaff.map(staff => {
       // Get team IDs for this staff
-      const teamIds = (staff.team_members || []).map((tm: { team_id: string }) => tm.team_id)
+      const teamIds = (staff.team_members || [])
+        .map((tm: { team_id: string }) => tm.team_id)
 
       // Get conflicts for this staff (both individual and team bookings)
       const staffConflicts = conflictBookings.filter(b =>
@@ -349,7 +352,7 @@ export function useMultiDateAvailabilityCheck({
     conflictBookings: BookingConflictData[],
     serviceTypeValue: string | null
   ) => {
-    // Get all teams with members
+    // Get all active teams with their members
     const { data: teams, error: teamsError } = await supabase
       .from('teams')
       .select(`

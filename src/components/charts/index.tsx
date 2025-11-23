@@ -14,6 +14,10 @@ const BookingStatusChartLazy = lazy(() => import('../dashboard/BookingStatusChar
 const PerformanceChartLazy = lazy(() => import('../staff/performance-chart').then(m => ({ default: m.PerformanceChart })))
 const TeamPerformanceChartsLazy = lazy(() => import('../teams/team-detail/TeamPerformanceCharts').then(m => ({ default: m.TeamPerformanceCharts })))
 
+// Dashboard-specific charts
+const BookingStatusPieChartLazy = lazy(() => import('../dashboard/charts/BookingStatusPieChart').then(m => ({ default: m.BookingStatusPieChart })))
+const RevenueLineChartLazy = lazy(() => import('../dashboard/charts/RevenueLineChart').then(m => ({ default: m.RevenueLineChart })))
+
 // Chart loading fallback
 const ChartSkeleton = () => (
   <div className="space-y-3">
@@ -45,6 +49,10 @@ export const RevenueChart = withChartSuspense(RevenueChartLazy)
 export const BookingStatusChart = withChartSuspense(BookingStatusChartLazy)
 export const PerformanceChart = withChartSuspense(PerformanceChartLazy)
 export const TeamPerformanceCharts = withChartSuspense(TeamPerformanceChartsLazy)
+
+// Dashboard-specific chart wrappers
+export const BookingStatusPieChart = withChartSuspense(BookingStatusPieChartLazy)
+export const RevenueLineChart = withChartSuspense(RevenueLineChartLazy)
 
 // Export ChartSkeleton for custom loading states
 export { ChartSkeleton }

@@ -24,7 +24,7 @@ export interface Profile {
   id: string
   full_name: string
   email: string
-  role: 'admin' | 'staff'
+  role: 'admin' | 'manager' | 'staff'
   avatar_url?: string
   is_online?: boolean
 }

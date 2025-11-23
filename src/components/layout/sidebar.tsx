@@ -151,11 +151,19 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               'flex items-center transition-all duration-300',
               isCollapsed ? 'justify-center' : 'space-x-3'
             )}>
-              <div className="w-10 h-10 rounded-full bg-tinedy-green flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-semibold">
-                  {profile?.full_name?.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.full_name || 'User'}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-tinedy-green"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-tinedy-green flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold">
+                    {profile?.full_name?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className={cn(
                 "flex-1 min-w-0 transition-all duration-300 overflow-hidden",
                 isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
@@ -203,7 +211,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                           "bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-300",
                           isCollapsed ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-auto"
                         )}>
-                          {unreadCount > 99 ? '99+' : unreadCount}
+                          {unreadCount > 10 ? '10+' : unreadCount}
                         </Badge>
                       )}
                       {/* Show unread count as dot when collapsed */}
@@ -214,7 +222,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                       {isCollapsed && (
                         <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                           {item.title}
-                          {isChatItem && unreadCount > 0 && ` (${unreadCount > 99 ? '99+' : unreadCount})`}
+                          {isChatItem && unreadCount > 0 && ` (${unreadCount > 10 ? '10+' : unreadCount})`}
                         </span>
                       )}
                     </Link>

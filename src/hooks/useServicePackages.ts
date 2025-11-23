@@ -1,54 +1,26 @@
 /**
  * useServicePackages Hook
  *
- * Hook สำหรับโหลด Service Packages ทั้ง V1 และ V2
+ * Hook สำหรับโหลด Service Packages ทั้ง V1 และ V2 ด้วย React Query
  * รวม packages เข้าด้วยกัน และ normalize field names
  *
  * Features:
+ * - ใช้ React Query สำหรับ caching และ data fetching
+ * - Cache อัตโนมัติ 30 นาที
+ * - แชร์ cache ข้ามหน้าต่างๆ
  * - โหลด V1 packages (service_packages table)
  * - โหลด V2 packages (service_packages_v2 table)
  * - รวม packages เป็น array เดียว
  * - Normalize field names (price -> base_price)
- * - Auto-refresh เมื่อ mount
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import {
+  packageQueryOptions,
+  type ServicePackageV2,
+  type UnifiedServicePackage,
+} from '@/lib/queries/package-queries'
 import type { ServicePackage } from '@/types'
-
-interface ServicePackageV2 {
-  id: string
-  name: string
-  description: string | null
-  service_type: 'cleaning' | 'training'
-  pricing_model: 'fixed' | 'tiered'
-  base_price: number | null
-  category: string | null
-  duration_minutes: number | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-/**
- * Unified package type (รวม V1 + V2)
- */
-export interface UnifiedServicePackage {
-  id: string
-  name: string
-  description: string | null
-  service_type: 'cleaning' | 'training'
-  pricing_model: 'fixed' | 'tiered'
-  base_price: number | null
-  duration_minutes: number | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  // V2-specific fields
-  category?: string | null
-  // Original type marker
-  _source: 'v1' | 'v2'
-}
 
 interface UseServicePackagesReturn {
   /** รวม V1 + V2 packages ทั้งหมด */
@@ -66,98 +38,67 @@ interface UseServicePackagesReturn {
 }
 
 /**
- * Hook สำหรับโหลด Service Packages ทั้ง V1 และ V2
+ * Hook สำหรับโหลด Service Packages ทั้ง V1 และ V2 ด้วย React Query
+ *
+ * @example
+ * ```tsx
+ * const { packages, loading, error, refresh } = useServicePackages()
+ *
+ * if (loading) return <div>Loading...</div>
+ * if (error) return <div>Error: {error}</div>
+ *
+ * return (
+ *   <div>
+ *     {packages.map(pkg => (
+ *       <div key={pkg.id}>{pkg.name}</div>
+ *     ))}
+ *     <button onClick={refresh}>Refresh</button>
+ *   </div>
+ * )
+ * ```
  */
 export function useServicePackages(): UseServicePackagesReturn {
-  const [packagesV1, setPackagesV1] = useState<ServicePackage[]>([])
-  const [packagesV2, setPackagesV2] = useState<ServicePackageV2[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  /**
-   * Fetch packages from both tables
-   */
-  const fetchPackages = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      // Fetch V1 packages
-      const { data: dataV1, error: errorV1 } = await supabase
-        .from('service_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (errorV1) throw new Error(`V1 Error: ${errorV1.message}`)
-
-      // Fetch V2 packages
-      const { data: dataV2, error: errorV2 } = await supabase
-        .from('service_packages_v2')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (errorV2) throw new Error(`V2 Error: ${errorV2.message}`)
-
-      setPackagesV1(dataV1 || [])
-      setPackagesV2(dataV2 || [])
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch packages'
-      setError(message)
-      console.error('Error fetching service packages:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Auto-fetch on mount
-  useEffect(() => {
-    fetchPackages()
-  }, [fetchPackages])
-
-  /**
-   * Normalize V1 package to unified format
-   */
-  const normalizeV1Package = (pkg: ServicePackage): UnifiedServicePackage => ({
-    id: pkg.id,
-    name: pkg.name,
-    description: pkg.description,
-    service_type: pkg.service_type,
-    pricing_model: 'fixed',
-    base_price: pkg.price, // V1 uses 'price' field
-    duration_minutes: pkg.duration_minutes,
-    is_active: pkg.is_active,
-    created_at: pkg.created_at,
-    updated_at: pkg.created_at, // V1 ไม่มี updated_at ใช้ created_at แทน
-    _source: 'v1',
+  // Fetch V1 packages
+  const {
+    data: packagesV1 = [],
+    isLoading: loadingV1,
+    error: errorV1,
+    refetch: refetchV1,
+  } = useQuery({
+    ...packageQueryOptions.v1,
   })
 
-  /**
-   * Normalize V2 package to unified format
-   */
-  const normalizeV2Package = (pkg: ServicePackageV2): UnifiedServicePackage => ({
-    id: pkg.id,
-    name: pkg.name,
-    description: pkg.description,
-    service_type: pkg.service_type,
-    pricing_model: pkg.pricing_model,
-    base_price: pkg.base_price,
-    duration_minutes: pkg.duration_minutes,
-    is_active: pkg.is_active,
-    created_at: pkg.created_at,
-    updated_at: pkg.updated_at,
-    category: pkg.category,
-    _source: 'v2',
+  // Fetch V2 packages
+  const {
+    data: packagesV2 = [],
+    isLoading: loadingV2,
+    error: errorV2,
+    refetch: refetchV2,
+  } = useQuery({
+    ...packageQueryOptions.v2,
   })
 
-  /**
-   * รวม V1 + V2 packages เป็น array เดียว
-   */
-  const packages: UnifiedServicePackage[] = [
-    ...packagesV1.map(normalizeV1Package),
-    ...packagesV2.map(normalizeV2Package),
-  ]
+  // Fetch unified packages (V1 + V2 combined)
+  const {
+    data: packages = [],
+    isLoading: loadingUnified,
+    error: errorUnified,
+    refetch: refetchUnified,
+  } = useQuery({
+    ...packageQueryOptions.unified,
+  })
+
+  // Combined loading state
+  const loading = loadingV1 || loadingV2 || loadingUnified
+
+  // Combined error state
+  const error =
+    errorV1?.message || errorV2?.message || errorUnified?.message || null
+
+  // Refresh function - refetch ทั้งหมด
+  const refresh = async () => {
+    await Promise.all([refetchV1(), refetchV2(), refetchUnified()])
+  }
 
   return {
     packages,
@@ -165,6 +106,9 @@ export function useServicePackages(): UseServicePackagesReturn {
     packagesV2,
     loading,
     error,
-    refresh: fetchPackages,
+    refresh,
   }
 }
+
+// Re-export types for convenience
+export type { ServicePackageV2, UnifiedServicePackage } from '@/lib/queries/package-queries'

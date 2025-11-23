@@ -177,10 +177,18 @@ export function useBookingStatusManager<T extends BookingBase>({
 
   const markAsPaid = async (bookingId: string, method: string = 'cash') => {
     try {
-      // ✅ ตรวจสอบว่าเป็น recurring booking หรือไม่
+      // ✅ ตรวจสอบว่าเป็น recurring booking หรือไม่ และดึงข้อมูล customer, staff
       const { data: booking, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, recurring_group_id, is_recurring, total_price')
+        .select(`
+          id,
+          recurring_group_id,
+          is_recurring,
+          total_price,
+          staff_id,
+          team_id,
+          customers!inner(full_name)
+        `)
         .eq('id', bookingId)
         .single()
 
@@ -227,6 +235,9 @@ export function useBookingStatusManager<T extends BookingBase>({
           description: 'Booking marked as paid',
         })
       }
+
+      // ✅ Notification จะถูกสร้างอัตโนมัติโดย Database Trigger
+      // (trigger_payment_notification จะสร้าง notification เมื่อ payment_status เปลี่ยนเป็น 'paid')
 
       // Update selected booking in state
       if (selectedBooking) {

@@ -13,11 +13,16 @@ interface TodayAppointmentsListProps {
   loading: boolean
 }
 
-export function TodayAppointmentsList({
+/**
+ * TodayAppointmentsList Component
+ *
+ * แสดงรายการ appointments วันนี้พร้อม pagination
+ */
+export const TodayAppointmentsList = ({
   bookings,
   onBookingClick,
   loading,
-}: TodayAppointmentsListProps) {
+}: TodayAppointmentsListProps) => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 

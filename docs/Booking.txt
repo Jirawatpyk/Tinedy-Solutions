@@ -1,0 +1,618 @@
+diff --git a/src/pages/admin/bookings.tsx b/src/pages/admin/bookings.tsx
+index 2ee7297..ba89466 100644
+--- a/src/pages/admin/bookings.tsx
++++ b/src/pages/admin/bookings.tsx
+@@ -11,6 +11,8 @@ import { useConflictDetection } from '@/hooks/useConflictDetection'
+ import { useBookingForm, toBookingForm } from '@/hooks/useBookingForm'
+ import { useBulkActions } from '@/hooks/useBulkActions'
+ import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
++import { useBookings } from '@/hooks/useBookings'
++import { useStaffList } from '@/hooks/useStaff'
+ import { useToast } from '@/hooks/use-toast'
+ import { useDebounce } from '@/hooks/use-debounce'
+ import { useServicePackages } from '@/hooks/useServicePackages'
+@@ -34,13 +36,6 @@ import type { RecurringEditScope, RecurringPattern } from '@/types/recurring-boo
+ import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
+ import { logger } from '@/lib/logger'
+ 
+-interface StaffMember {
+-  id: string
+-  full_name: string
+-  email: string
+-  role: string
+-}
+-
+ interface Team {
+   id: string
+   name: string
+@@ -48,17 +43,22 @@ interface Team {
+ 
+ export function AdminBookings() {
+   const location = useLocation()
+-  const [bookings, setBookings] = useState<Booking[]>([])
+-  const [loading, setLoading] = useState(true)
+   const [isDialogOpen, setIsDialogOpen] = useState(false)
+ 
+   // Archive filter
+   const [showArchived, setShowArchived] = useState(false)
+ 
++  // Use React Query hook for bookings data
++  const { bookings, loading, refresh, error: bookingsError } = useBookings({
++    showArchived,
++    enableRealtime: true
++  })
++
+   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+   const { packages: servicePackages } = useServicePackages()
++  // โหลดเฉพาะ staff role (ไม่รวม admin และ manager)
++  const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
+ 
+-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+   const [teams, setTeams] = useState<Team[]>([])
+   const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
+@@ -174,7 +174,6 @@ export function AdminBookings() {
+ 
+   // Recurring Bookings State (for Create Modal)
+   const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
+-  const [createEnableRecurring, setCreateEnableRecurring] = useState(false)
+   const [createRecurringPattern, setCreateRecurringPattern] = useState<RecurringPattern>('auto-monthly' as RecurringPattern)
+ 
+   // Recurring Edit Dialog State
+@@ -189,50 +188,6 @@ export function AdminBookings() {
+     }
+   })
+ 
+-  const fetchBookings = useCallback(async () => {
+-    try {
+-      let query = supabase
+-        .from('bookings')
+-        .select(`
+-          *,
+-          customers (id, full_name, email),
+-          service_packages (name, service_type),
+-          service_packages_v2:package_v2_id (name, service_type),
+-          profiles!bookings_staff_id_fkey (full_name),
+-          ${TEAMS_WITH_LEAD_QUERY}
+-        `)
+-
+-      // Filter by archived status
+-      if (!showArchived) {
+-        query = query.is('deleted_at', null)
+-      }
+-
+-      const { data, error } = await query.order('created_at', { ascending: false })
+-
+-      if (error) throw error
+-
+-      // Merge V1 and V2 package data into service_packages field for compatibility
+-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+-      const processedData = (data || []).map((booking: any) => ({
+-        ...booking,
+-        service_packages: booking.service_packages || booking.service_packages_v2,
+-        teams: transformTeamsData(booking.teams),
+-      }))
+-
+-      setBookings(processedData || [])
+-    } catch (error) {
+-      logger.error('Error fetching bookings', { error }, { context: 'AdminBookings' })
+-      const errorMessage = getLoadErrorMessage('booking')
+-      toast({
+-        title: errorMessage.title,
+-        description: errorMessage.description,
+-        variant: 'destructive',
+-      })
+-    } finally {
+-      setLoading(false)
+-    }
+-  }, [toast, showArchived])
+-
+   // Bulk Actions (using hook)
+   const {
+     selectedBookings,
+@@ -246,7 +201,7 @@ export function AdminBookings() {
+   } = useBulkActions({
+     bookings,
+     filteredBookings,
+-    onSuccess: fetchBookings,
++    onSuccess: refresh,
+   })
+ 
+   // Status Manager (using hook)
+@@ -265,126 +220,38 @@ export function AdminBookings() {
+   } = useBookingStatusManager({
+     selectedBooking,
+     setSelectedBooking,
+-    onSuccess: fetchBookings,
++    onSuccess: refresh,
+   })
+ 
+   useEffect(() => {
+     // OPTIMIZE: Run all queries in parallel for better performance
++    // Bookings โหลดผ่าน useBookings hook อัตโนมัติแล้ว
+     // Service packages โหลดผ่าน useServicePackages hook อัตโนมัติแล้ว
+-    Promise.all([
+-      fetchBookings(),
+-      fetchStaffMembers(),
+-      fetchTeams()
+-    ])
+-  }, [fetchBookings])
+-
+-  // OPTIMIZED: Real-time subscription with optimistic updates (80-90% reduction in network requests)
+-  // Instead of fetching all bookings on every change, update only the changed booking
++    // Staff list โหลดผ่าน useStaffList hook อัตโนมัติแล้ว
++    fetchTeams()
++  }, [])
++
++  // Sync selectedBooking with bookings array when realtime updates occur
+   useEffect(() => {
+-    const channel = supabase
+-      .channel('bookings_changes')
+-      .on(
+-        'postgres_changes',
+-        {
+-          event: 'INSERT',
+-          schema: 'public',
+-          table: 'bookings'
+-        },
+-        async (payload) => {
+-          logger.debug('Booking inserted via realtime', { bookingId: payload.new.id }, { context: 'AdminBookings' })
+-          // Fetch the new booking with relations
+-          const { data } = await supabase
+-            .from('bookings')
+-            .select(`
+-              *,
+-              customers (id, full_name, email),
+-              service_packages (name, service_type),
+-              service_packages_v2:package_v2_id (name, service_type),
+-              profiles!bookings_staff_id_fkey (full_name),
+-              ${TEAMS_WITH_LEAD_QUERY}
+-            `)
+-            .eq('id', payload.new.id)
+-            .single()
+-
+-          if (data) {
+-            // Merge V1 and V2 package data for compatibility
+-            const processedBooking = {
+-              ...data,
+-              service_packages: data.service_packages || data.service_packages_v2,
+-              teams: transformTeamsData(data.teams),
+-            }
+-            // Add new booking to the beginning of the list
+-            setBookings(prev => [processedBooking as Booking, ...prev])
+-          }
+-        }
+-      )
+-      .on(
+-        'postgres_changes',
+-        {
+-          event: 'UPDATE',
+-          schema: 'public',
+-          table: 'bookings'
+-        },
+-        async (payload) => {
+-          logger.debug('Booking updated via realtime', { bookingId: payload.new.id }, { context: 'AdminBookings' })
+-          // Fetch the updated booking with relations
+-          const { data } = await supabase
+-            .from('bookings')
+-            .select(`
+-              *,
+-              customers (id, full_name, email),
+-              service_packages (name, service_type),
+-              service_packages_v2:package_v2_id (name, service_type),
+-              profiles!bookings_staff_id_fkey (full_name),
+-              ${TEAMS_WITH_LEAD_QUERY}
+-            `)
+-            .eq('id', payload.new.id)
+-            .single()
+-
+-          if (data) {
+-            // Merge V1 and V2 package data for compatibility
+-            const processedBooking = {
+-              ...data,
+-              service_packages: data.service_packages || data.service_packages_v2,
+-              teams: transformTeamsData(data.teams),
+-            } as Booking
+-
+-            // Update the booking in the list
+-            setBookings(prev => prev.map(b => b.id === processedBooking.id ? processedBooking : b))
+-
+-            // If the updated booking is currently selected in detail modal, refresh it
+-            if (selectedBooking && selectedBooking.id === processedBooking.id) {
+-              setSelectedBooking(processedBooking)
+-            }
+-          }
+-        }
+-      )
+-      .on(
+-        'postgres_changes',
+-        {
+-          event: 'DELETE',
+-          schema: 'public',
+-          table: 'bookings'
+-        },
+-        (payload) => {
+-          logger.debug('Booking deleted via realtime', { bookingId: payload.old.id }, { context: 'AdminBookings' })
+-          // Remove booking from the list
+-          setBookings(prev => prev.filter(b => b.id !== payload.old.id))
+-
+-          // Close detail modal if the deleted booking is currently selected
+-          if (selectedBooking && selectedBooking.id === payload.old.id) {
+-            setSelectedBooking(null)
+-            setIsDetailOpen(false)
+-          }
+-        }
+-      )
+-      .subscribe()
++    if (selectedBooking) {
++      const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
++      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(selectedBooking)) {
++        setSelectedBooking(updatedBooking)
++      }
++    }
++  }, [bookings, selectedBooking])
+ 
+-    // Cleanup subscription on unmount
+-    return () => {
+-      supabase.removeChannel(channel)
++  // Handle bookings error
++  useEffect(() => {
++    if (bookingsError) {
++      const errorMessage = getLoadErrorMessage('booking')
++      toast({
++        title: errorMessage.title,
++        description: bookingsError,
++        variant: 'destructive',
++      })
+     }
+-  }, [selectedBooking])
++  }, [bookingsError, toast])
+ 
+   // Reset to page 1 when filters change
+   // Using primitive dependencies to prevent unnecessary re-renders
+@@ -571,20 +438,7 @@ export function AdminBookings() {
+   }, [location.state, bookings, servicePackages, loading])
+ 
+   // Service packages โหลดผ่าน useServicePackages hook แล้ว (ไม่ต้องมี fetchServicePackages อีกต่อไป)
+-
+-  const fetchStaffMembers = async () => {
+-    try {
+-      const { data, error } = await supabase
+-        .from('profiles')
+-        .select('id, full_name, email, role')
+-        .order('full_name')
+-
+-      if (error) throw error
+-      setStaffMembers(data || [])
+-    } catch (error) {
+-      logger.error('Error fetching staff', { error }, { context: 'AdminBookings' })
+-    }
+-  }
++  // Staff list โหลดผ่าน useStaffList hook แล้ว (ไม่ต้องมี fetchStaffMembers อีกต่อไป)
+ 
+   const fetchTeams = async () => {
+     try {
+@@ -620,7 +474,7 @@ export function AdminBookings() {
+       resetForm()
+       setPendingBookingData(null)
+       clearConflicts()
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       const errorMsg = getBookingConflictError()
+       toast({
+@@ -686,7 +540,7 @@ export function AdminBookings() {
+ 
+       setShowRecurringEditDialog(false)
+       setPendingRecurringBooking(null)
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       logger.error('Delete recurring booking error', { error }, { context: 'AdminBookings' })
+       const errorMsg = getRecurringBookingError('delete')
+@@ -696,7 +550,7 @@ export function AdminBookings() {
+         variant: 'destructive',
+       })
+     }
+-  }, [pendingRecurringBooking, toast, fetchBookings])
++  }, [pendingRecurringBooking, toast, refresh])
+ 
+   // Handle Recurring Archive Confirmation
+   const handleRecurringArchive = useCallback(async (scope: RecurringEditScope) => {
+@@ -785,7 +639,7 @@ export function AdminBookings() {
+ 
+       setShowRecurringEditDialog(false)
+       setPendingRecurringBooking(null)
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       logger.error('Archive recurring booking error', { error }, { context: 'AdminBookings' })
+       const errorMsg = getArchiveErrorMessage()
+@@ -795,7 +649,7 @@ export function AdminBookings() {
+         variant: 'destructive',
+       })
+     }
+-  }, [pendingRecurringBooking, toast, fetchBookings])
++  }, [pendingRecurringBooking, toast, refresh])
+ 
+   // OPTIMIZED: Wrap event handlers with useCallback to prevent unnecessary re-renders
+   const deleteBooking = useCallback(async (bookingId: string) => {
+@@ -823,7 +677,7 @@ export function AdminBookings() {
+         title: 'Success',
+         description: 'Booking deleted successfully',
+       })
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       logger.error('Delete booking error', { error }, { context: 'AdminBookings' })
+       const errorMsg = getDeleteErrorMessage('booking')
+@@ -833,7 +687,7 @@ export function AdminBookings() {
+         variant: 'destructive',
+       })
+     }
+-  }, [bookings, toast, fetchBookings])
++  }, [bookings, toast, refresh])
+ 
+   // Archive booking (soft delete)
+   const archiveBooking = useCallback(async (bookingId: string) => {
+@@ -862,7 +716,7 @@ export function AdminBookings() {
+         title: 'Success',
+         description: 'Booking archived successfully',
+       })
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       logger.error('Archive booking error', { error }, { context: 'AdminBookings' })
+       toast({
+@@ -871,7 +725,7 @@ export function AdminBookings() {
+         variant: 'destructive',
+       })
+     }
+-  }, [bookings, toast, fetchBookings])
++  }, [bookings, toast, refresh])
+ 
+   // Restore archived booking
+   const restoreBooking = useCallback(async (bookingId: string) => {
+@@ -887,7 +741,7 @@ export function AdminBookings() {
+         title: 'Success',
+         description: 'Booking restored successfully',
+       })
+-      fetchBookings()
++      refresh()
+     } catch (error) {
+       logger.error('Error restoring booking', { error }, { context: 'AdminBookings' })
+       toast({
+@@ -896,7 +750,7 @@ export function AdminBookings() {
+         variant: 'destructive',
+       })
+     }
+-  }, [toast, fetchBookings])
++  }, [toast, refresh])
+ 
+   // Delete entire recurring group
+   const deleteRecurringGroup = useCallback(async (groupId: string) => {
+@@ -973,8 +827,8 @@ export function AdminBookings() {
+       staff_id: booking.staff_id || '',
+       team_id: booking.team_id || '',
+       booking_date: booking.booking_date,
+-      start_time: booking.start_time,
+-      end_time: booking.end_time,
++      start_time: formatTime(booking.start_time),
++      end_time: formatTime(booking.end_time),
+       address: booking.address,
+       city: booking.city || '',
+       state: booking.state || '',
+@@ -993,30 +847,25 @@ export function AdminBookings() {
+       setEditAssignmentType('none')
+     }
+ 
+-    // Set package selection for PackageSelector component
++    // Set package selection BEFORE opening modal to prevent flicker
+     if (booking.service_package_id || ('package_v2_id' in booking && booking.package_v2_id)) {
+       const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+-
+-      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
+       const pkg = servicePackages.find(p => p.id === packageId)
+ 
+       if (pkg) {
+-        // Check if this is a V2 Tiered Pricing package
+         const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
+ 
+         if (isTiered && 'area_sqm' in booking && 'frequency' in booking && booking.area_sqm && booking.frequency) {
+-          // V2 Tiered Pricing - restore area and frequency
+           setEditPackageSelection({
+             packageId: pkg.id,
+             pricingModel: 'tiered',
+             areaSqm: Number(booking.area_sqm) || 0,
+             frequency: (booking.frequency as 1 | 2 | 4 | 8) || 1,
+             price: booking.total_price || 0,
+-            requiredStaff: 1, // Will be recalculated by PackageSelector
++            requiredStaff: 1,
+             packageName: pkg.name,
+           })
+         } else {
+-          // Fixed Pricing (V1 หรือ V2)
+           setEditPackageSelection({
+             packageId: pkg.id,
+             pricingModel: 'fixed',
+@@ -1029,12 +878,13 @@ export function AdminBookings() {
+       }
+     }
+ 
+-    setIsEditOpen(true)
+-    setIsDetailOpen(false)
++    // Small delay to ensure state is updated before modal opens
++    setTimeout(() => {
++      setIsEditOpen(true)
++      setIsDetailOpen(false)
++    }, 0)
+   }, [editForm, servicePackages])
+ 
+-
+-
+   if (loading) {
+     return (
+       <div className="space-y-6">
+@@ -1170,38 +1020,71 @@ export function AdminBookings() {
+         <BookingCreateModal
+           isOpen={isDialogOpen}
+           onClose={() => {
+-            setIsDialogOpen(false); setCreatePackageSelection(null);
++            setIsDialogOpen(false)
++            setCreatePackageSelection(null)
++            // Clear form data and recurring state
++            createForm.reset()
++            setCreateRecurringDates([])
++            setCreateRecurringPattern('auto-monthly' as RecurringPattern)
+           }}
+           onSuccess={() => {
+             // Realtime subscription will update the list automatically
+             setIsDialogOpen(false)
+-            setCreatePackageSelection(null) // Clear selection after success
++            setCreatePackageSelection(null)
++            // Clear form data and recurring state
++            createForm.reset()
++            setCreateRecurringDates([])
++            setCreateRecurringPattern('auto-monthly' as RecurringPattern)
+           }}
+           servicePackages={servicePackages}
+-          staffMembers={staffMembers}
++          staffMembers={staffList}
+           teams={teams}
+           onOpenAvailabilityModal={() => {
+             setIsDialogOpen(false)
+             setIsAvailabilityModalOpen(true)
+           }}
+-          createForm={toBookingForm(createForm)}
++          onBeforeOpenAvailability={(formData) => {
++            // Calculate end_time if not set (fallback)
++            let endTime = formData.end_time || ''
++            if (!endTime && formData.start_time && createPackageSelection?.estimatedHours) {
++              const durationMinutes = Math.round(createPackageSelection.estimatedHours * 60)
++              endTime = calculateEndTime(formData.start_time, durationMinutes)
++            }
++
++            // Sync form data from BookingCreateModal to createForm before opening availability modal
++            createForm.setValues({
++              booking_date: formData.booking_date || '',
++              start_time: formData.start_time || '',
++              end_time: endTime,
++              service_package_id: formData.service_package_id || '',
++              package_v2_id: formData.package_v2_id || '',
++              staff_id: formData.staff_id || '',
++              team_id: formData.team_id || '',
++              total_price: formData.total_price || 0,
++              area_sqm: formData.area_sqm || null,
++              frequency: formData.frequency || null,
++            })
++          }}
+           assignmentType={createAssignmentType}
+           setAssignmentType={setCreateAssignmentType}
+           calculateEndTime={calculateEndTime}
+           packageSelection={createPackageSelection}
+           setPackageSelection={setCreatePackageSelection}
++          defaultDate={createForm.formData.booking_date}
++          defaultStartTime={createForm.formData.start_time}
++          defaultEndTime={createForm.formData.end_time}
++          defaultStaffId={createForm.formData.staff_id}
++          defaultTeamId={createForm.formData.team_id}
+           recurringDates={createRecurringDates}
+           setRecurringDates={setCreateRecurringDates}
+-          enableRecurring={createEnableRecurring}
+-          setEnableRecurring={setCreateEnableRecurring}
+           recurringPattern={createRecurringPattern}
+           setRecurringPattern={setCreateRecurringPattern}
+         />
+ 
+         {/* Staff Availability Modal - Create Form */}
+         {(createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
+-          // ถ้าเป็น recurring ใช้ recurringDates[0], ถ้าไม่ใช่ใช้ booking_date
+-          (createEnableRecurring ? createRecurringDates.length > 0 : createForm.formData.booking_date) &&
++          // ต้องมีวันที่ (recurring หรือ single booking) และเวลาเริ่มต้น
++          (createRecurringDates.length > 0 || createForm.formData.booking_date) &&
+           createForm.formData.start_time && (
+           <StaffAvailabilityModal
+             isOpen={isAvailabilityModalOpen}
+@@ -1212,6 +1095,7 @@ export function AdminBookings() {
+             assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
+             onSelectStaff={(staffId) => {
+               createForm.handleChange('staff_id', staffId)
++              createForm.handleChange('team_id', '') // Clear team when staff is selected
+               setIsAvailabilityModalOpen(false)
+               setIsDialogOpen(true)
+               toast({
+@@ -1221,6 +1105,7 @@ export function AdminBookings() {
+             }}
+             onSelectTeam={(teamId) => {
+               createForm.handleChange('team_id', teamId)
++              createForm.handleChange('staff_id', '') // Clear staff when team is selected
+               setIsAvailabilityModalOpen(false)
+               setIsDialogOpen(true)
+               toast({
+@@ -1229,8 +1114,8 @@ export function AdminBookings() {
+               })
+             }}
+             // Recurring: ส่ง dates array, Non-recurring: ส่ง date เดี่ยว
+-            date={!createEnableRecurring ? createForm.formData.booking_date : undefined}
+-            dates={createEnableRecurring && createRecurringDates.length > 0 ? createRecurringDates : undefined}
++            date={createRecurringDates.length === 0 ? createForm.formData.booking_date : undefined}
++            dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
+             startTime={createForm.formData.start_time}
+             endTime={createForm.formData.end_time || ''}
+             servicePackageId={createForm.formData.service_package_id || createForm.formData.package_v2_id || ''}
+@@ -1293,7 +1178,7 @@ export function AdminBookings() {
+         hasActiveFilters={hasActiveFilters}
+         getActiveFilterCount={getActiveFilterCount}
+         setQuickFilter={setQuickFilter}
+-        staffMembers={staffMembers}
++        staffMembers={staffList}
+         teams={teams}
+       />
+ 
+@@ -1318,20 +1203,44 @@ export function AdminBookings() {
+         isOpen={isEditOpen}
+         onClose={() => setIsEditOpen(false)}
+         booking={selectedBooking}
+-        onSuccess={fetchBookings}
++        onSuccess={refresh}
+         servicePackages={servicePackages}
+-        staffMembers={staffMembers}
++        staffMembers={staffList}
+         teams={teams}
+         onOpenAvailabilityModal={() => {
+           setIsEditOpen(false)
+           setIsEditAvailabilityModalOpen(true)
+         }}
++        onBeforeOpenAvailability={(formData) => {
++          // Calculate end_time if not set (fallback)
++          let endTime = formData.end_time || ''
++          if (!endTime && formData.start_time && editPackageSelection?.estimatedHours) {
++            const durationMinutes = Math.round(editPackageSelection.estimatedHours * 60)
++            endTime = calculateEndTime(formData.start_time, durationMinutes)
++          }
++
++          // Sync form data from BookingEditModal to editForm before opening availability modal
++          editForm.setValues({
++            booking_date: formData.booking_date || '',
++            start_time: formData.start_time || '',
++            end_time: endTime,
++            service_package_id: formData.service_package_id || '',
++            package_v2_id: formData.package_v2_id || '',
++            staff_id: formData.staff_id || '',
++            team_id: formData.team_id || '',
++            total_price: formData.total_price || 0,
++            area_sqm: formData.area_sqm || null,
++            frequency: formData.frequency || null,
++          })
++        }}
+         editForm={toBookingForm(editForm)}
+         assignmentType={editAssignmentType}
+         onAssignmentTypeChange={setEditAssignmentType}
+         calculateEndTime={calculateEndTime}
+         packageSelection={editPackageSelection}
+         setPackageSelection={setEditPackageSelection}
++        defaultStaffId={editForm.formData.staff_id}
++        defaultTeamId={editForm.formData.team_id}
+       />
+ 
+       {/* Status Change Confirmation Dialog */}

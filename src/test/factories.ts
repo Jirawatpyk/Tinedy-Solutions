@@ -33,6 +33,7 @@ export const createMockCustomer = (overrides: Partial<CustomerRecord> = {}): Cus
   preferred_contact_method: faker.helpers.arrayElement(['phone', 'email', 'line', 'sms'] as const),
   tags: faker.datatype.boolean() ? faker.helpers.arrayElements(['VIP', 'Regular', 'New'], { min: 1, max: 3 }) : null,
   source: faker.helpers.arrayElement(['facebook', 'instagram', 'google', 'website', 'referral', 'walk-in', 'other'] as const),
+  source_other: null,
   birthday: faker.date.past({ years: 30 }).toISOString().split('T')[0],
   company_name: faker.datatype.boolean() ? faker.company.name() : null,
   tax_id: faker.datatype.boolean() ? faker.string.numeric(13) : null,

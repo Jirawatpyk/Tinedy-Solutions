@@ -107,12 +107,12 @@ export function TieredPricingCard({
         <CardHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
-            <CardTitle className="text-base text-red-900">ไม่พบราคาสำหรับพื้นที่นี้</CardTitle>
+            <CardTitle className="text-base text-red-900">No pricing found for this area</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-red-800 font-medium">
-            พื้นที่ <span className="font-bold">{areaSqm} ตร.ม.</span> อาจเกินขอบเขตที่กำหนดไว้
+            Area <span className="font-bold">{areaSqm} sqm</span> may exceed the defined pricing range
           </p>
         </CardContent>
       </Card>

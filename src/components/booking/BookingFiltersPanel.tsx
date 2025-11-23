@@ -1,8 +1,11 @@
+import { memo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, X, Calendar } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Search, X, Calendar, SlidersHorizontal } from 'lucide-react'
+import { AdvancedFiltersModal } from './AdvancedFiltersModal'
 import type { BookingFilterState } from '@/hooks/useBookingFilters'
 
 interface BookingFiltersPanelProps {
@@ -16,7 +19,22 @@ interface BookingFiltersPanelProps {
   teams: Array<{ id: string; name: string }>
 }
 
-export function BookingFiltersPanel({
+/**
+ * BookingFiltersPanel Component (Two-Tier Filter System)
+ *
+ * Primary Filters (Always Visible):
+ * - Quick Filters (Today/Week/Month)
+ * - Search (Customer/Service)
+ * - Status
+ *
+ * Advanced Filters (Modal):
+ * - Custom Date Range
+ * - Assigned To (Staff + Team combined)
+ * - Service Type
+ *
+ * @performance Memoized - re-render เฉพาะเมื่อ props เปลี่ยน
+ */
+const BookingFiltersPanelComponent = ({
   filters,
   updateFilter,
   resetFilters,
@@ -25,138 +43,187 @@ export function BookingFiltersPanel({
   setQuickFilter,
   staffMembers,
   teams
-}: BookingFiltersPanelProps) {
+}: BookingFiltersPanelProps) => {
+  // Advanced Filters Modal state
+  const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false)
+
+  /**
+   * Count active advanced filters (not including search and status)
+   */
+  const getAdvancedFilterCount = () => {
+    let count = 0
+    if (filters.dateFrom !== '' || filters.dateTo !== '') count++
+    if (filters.staffId !== 'all' || filters.teamId !== 'all') count++
+    if (filters.serviceType !== 'all') count++
+    return count
+  }
+
+  /**
+   * Handle advanced filters apply
+   */
+  const handleAdvancedApply = () => {
+    // Modal will close automatically via onApply prop
+  }
+
+  /**
+   * Handle advanced filters reset
+   */
+  const handleAdvancedReset = () => {
+    updateFilter('dateFrom', '')
+    updateFilter('dateTo', '')
+    updateFilter('staffId', 'all')
+    updateFilter('teamId', 'all')
+    updateFilter('serviceType', 'all')
+  }
+
+  const advancedFilterCount = getAdvancedFilterCount()
+
   return (
-    <Card>
-      <CardContent className="py-3 space-y-3">
-        {/* Quick Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground font-medium">Quick filters:</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickFilter('today')}
-            className="h-8 text-xs"
-          >
-            <Calendar className="h-3 w-3 mr-1" />
-            Today
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickFilter('week')}
-            className="h-8 text-xs"
-          >
-            This Week
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickFilter('month')}
-            className="h-8 text-xs"
-          >
-            This Month
-          </Button>
-          {hasActiveFilters() && (
+    <>
+      <Card>
+        <CardContent className="py-3 space-y-3">
+          {/* Quick Filters + More Filters Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Quick filters:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickFilter('today')}
+                className="h-8 text-xs"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickFilter('week')}
+                className="h-8 text-xs"
+              >
+                This Week
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickFilter('month')}
+                className="h-8 text-xs"
+              >
+                This Month
+              </Button>
+
+              {hasActiveFilters() && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-8 text-xs text-destructive hover:text-destructive"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear All ({getActiveFilterCount()})
+                </Button>
+              )}
+            </div>
+
+            {/* More Filters Button - ด้านขวาสุด */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={resetFilters}
-              className="h-8 text-xs text-destructive hover:text-destructive"
+              onClick={() => setIsAdvancedModalOpen(true)}
+              className="h-8 text-xs"
             >
-              <X className="h-3 w-3 mr-1" />
-              Clear All ({getActiveFilterCount()})
+              <SlidersHorizontal className="h-3 w-3 mr-1" />
+              More Filters
+              {advancedFilterCount > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[10px]">
+                  {advancedFilterCount}
+                </Badge>
+              )}
             </Button>
-          )}
-        </div>
-
-        {/* Main Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search customer/service..."
-              value={filters.searchQuery}
-              onChange={(e) => updateFilter('searchQuery', e.target.value)}
-              className="pl-10 h-8 text-xs"
-            />
           </div>
 
-          <div className="flex gap-2">
-            <Input
-              type="date"
-              placeholder="From"
-              value={filters.dateFrom}
-              onChange={(e) => updateFilter('dateFrom', e.target.value)}
-              className="flex-1 h-8 text-xs"
-            />
-            <Input
-              type="date"
-              placeholder="To"
-              value={filters.dateTo}
-              onChange={(e) => updateFilter('dateTo', e.target.value)}
-              className="flex-1 h-8 text-xs"
-            />
+          {/* Primary Filters: Search + Status */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search customer/service..."
+                value={filters.searchQuery}
+                onChange={(e) => updateFilter('searchQuery', e.target.value)}
+                className="pl-10 h-9 text-sm"
+              />
+            </div>
+
+            {/* Status */}
+            <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
+              <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filters.serviceType} onValueChange={(value) => updateFilter('serviceType', value)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="All Services" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Services</SelectItem>
-              <SelectItem value="cleaning">Cleaning</SelectItem>
-              <SelectItem value="training">Training</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Additional Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select value={filters.staffId} onValueChange={(value) => updateFilter('staffId', value)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="All Staff" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Staff</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              {staffMembers.map((staff) => (
-                <SelectItem key={staff.id} value={staff.id}>
-                  {staff.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filters.teamId} onValueChange={(value) => updateFilter('teamId', value)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="All Teams" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {teams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Advanced Filters Modal */}
+      <AdvancedFiltersModal
+        open={isAdvancedModalOpen}
+        onOpenChange={setIsAdvancedModalOpen}
+        filters={filters}
+        updateFilter={updateFilter}
+        staffMembers={staffMembers}
+        teams={teams}
+        onApply={handleAdvancedApply}
+        onReset={handleAdvancedReset}
+      />
+    </>
   )
 }
+
+/**
+ * Memoized BookingFiltersPanel (Two-Tier System)
+ *
+ * Custom comparison function เพื่อ optimize re-renders
+ * Re-render เฉพาะเมื่อ:
+ * - Primary filters เปลี่ยน (searchQuery, status)
+ * - Advanced filters เปลี่ยน (dateFrom, dateTo, staffId, teamId, serviceType)
+ * - staffMembers หรือ teams เปลี่ยน
+ * - callback functions เปลี่ยน (ควร wrap ด้วย useCallback ฝั่ง parent)
+ */
+export const BookingFiltersPanel = memo(
+  BookingFiltersPanelComponent,
+  (prevProps, nextProps) => {
+    // Compare all filter values (both primary and advanced)
+    const filtersEqual =
+      prevProps.filters.searchQuery === nextProps.filters.searchQuery &&
+      prevProps.filters.status === nextProps.filters.status &&
+      prevProps.filters.dateFrom === nextProps.filters.dateFrom &&
+      prevProps.filters.dateTo === nextProps.filters.dateTo &&
+      prevProps.filters.staffId === nextProps.filters.staffId &&
+      prevProps.filters.teamId === nextProps.filters.teamId &&
+      prevProps.filters.serviceType === nextProps.filters.serviceType
+
+    // Compare staff members array (shallow comparison by length and first item)
+    const staffEqual =
+      prevProps.staffMembers.length === nextProps.staffMembers.length &&
+      (prevProps.staffMembers.length === 0 ||
+        prevProps.staffMembers[0].id === nextProps.staffMembers[0].id)
+
+    // Compare teams array (shallow comparison by length and first item)
+    const teamsEqual =
+      prevProps.teams.length === nextProps.teams.length &&
+      (prevProps.teams.length === 0 ||
+        prevProps.teams[0].id === nextProps.teams[0].id)
+
+    // Return true to skip re-render, false to re-render
+    return filtersEqual && staffEqual && teamsEqual
+  }
+)

@@ -242,15 +242,15 @@ export const getDateRangePreset = (preset: string): { start: Date; end: Date } =
     case 'last30days':
       return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) }
     case 'thisWeek':
-      return { start: startOfWeek(now), end: endOfWeek(now) }
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) }
     case 'lastWeek':
-      return { start: startOfWeek(subWeeks(now, 1)), end: endOfWeek(subWeeks(now, 1)) }
+      return { start: startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), end: endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }) }
     case 'thisMonth':
       return { start: startOfMonth(now), end: endOfMonth(now) }
     case 'lastMonth':
       return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) }
     case 'last3months':
-      return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) }
+      return { start: startOfMonth(subMonths(now, 3)), end: endOfMonth(subMonths(now, 1)) }
     default:
       return { start: startOfMonth(now), end: endOfMonth(now) }
   }
@@ -325,7 +325,7 @@ export interface TopCustomer {
 }
 
 /**
- * Calculate customer metrics
+ * Calculate customer metrics (All-time data, not filtered by date range)
  */
 export const calculateCustomerMetrics = (
   customers: CustomerWithBookings[],
@@ -333,35 +333,41 @@ export const calculateCustomerMetrics = (
 ): CustomerMetrics => {
   const now = new Date()
   const thisMonthStart = startOfMonth(now)
+  const thisMonthEnd = endOfMonth(now)
+
+  // Filter paid bookings (all-time)
   const paidBookings = bookings.filter((b: BookingForAnalytics) => {
     const paymentStatus = (b as { payment_status?: string }).payment_status
     return paymentStatus === 'paid'
   })
 
+  // Total customers (all customers in system)
   const total = customers.length
+
+  // New customers created THIS MONTH (not based on date range filter)
   const newThisMonth = customers.filter((c) =>
     isWithinInterval(new Date(c.created_at), {
       start: thisMonthStart,
-      end: endOfMonth(now),
+      end: thisMonthEnd,
     })
   ).length
 
-  // Count customers with more than one booking
-  const customerBookingCounts = bookings.reduce((acc, booking) => {
-    const customerId = (booking.customers?.id || booking.customer_id)
-    if (customerId) {
-      acc[customerId] = (acc[customerId] || 0) + 1
+  // Returning customers (customers with more than one booking - all time)
+  const customerBookingCounts = customers.reduce((acc, customer) => {
+    const customerId = customer.id
+    if (customerId && customer.bookings.length > 0) {
+      acc[customerId] = customer.bookings.length
     }
     return acc
   }, {} as Record<string, number>)
 
   const returning = Object.values(customerBookingCounts).filter((count) => count > 1).length
 
-  // Calculate average CLV (Customer Lifetime Value)
+  // Calculate average CLV based on ALL-TIME revenue
   const totalRevenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
   const averageCLV = total > 0 ? totalRevenue / total : 0
 
-  // Retention rate: % of customers with more than one booking
+  // Retention rate: % of customers with more than one booking (all-time)
   const retentionRate = total > 0 ? (returning / total) * 100 : 0
 
   return {
@@ -374,32 +380,36 @@ export const calculateCustomerMetrics = (
 }
 
 /**
- * Get top customers by revenue
+ * Get top customers by revenue (within date range)
  */
 export const getTopCustomers = (
   customers: CustomerWithBookings[],
   limit: number = 10
 ): TopCustomer[] => {
-  const customerStats = customers.map((customer) => {
-    const paidBookings = customer.bookings.filter((b: BookingForAnalytics) => {
-      const paymentStatus = (b as { payment_status?: string }).payment_status
-      return paymentStatus === 'paid'
-    })
-    const totalRevenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
-    const totalBookings = customer.bookings.length
-    const lastBooking = customer.bookings.sort(
-      (a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
-    )[0]
+  const customerStats = customers
+    .filter((customer) => customer.bookings.length > 0) // Only customers with bookings in range
+    .map((customer) => {
+      // Filter paid bookings (already filtered by date range in filteredCustomersWithBookings)
+      const paidBookings = customer.bookings.filter((b: BookingForAnalytics) => {
+        const paymentStatus = (b as { payment_status?: string }).payment_status
+        return paymentStatus === 'paid'
+      })
 
-    return {
-      id: customer.id,
-      name: customer.full_name,
-      email: customer.email,
-      totalBookings,
-      totalRevenue,
-      lastBookingDate: lastBooking ? lastBooking.booking_date : customer.created_at,
-    }
-  })
+      const totalRevenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+      const totalBookings = customer.bookings.length
+      const lastBooking = customer.bookings.sort(
+        (a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
+      )[0]
+
+      return {
+        id: customer.id,
+        name: customer.full_name,
+        email: customer.email,
+        totalBookings,
+        totalRevenue,
+        lastBookingDate: lastBooking ? lastBooking.booking_date : customer.created_at,
+      }
+    })
 
   return customerStats
     .sort((a, b) => b.totalRevenue - a.totalRevenue)
@@ -407,26 +417,25 @@ export const getTopCustomers = (
 }
 
 /**
- * Get customer acquisition trend (monthly new customers)
+ * Get customer acquisition trend (daily new customers)
  */
 export const getCustomerAcquisitionTrend = (
   customers: CustomerWithBookings[],
   startDate: Date,
   endDate: Date
 ): { date: string; count: number }[] => {
-  const months = eachDayOfInterval({ start: startDate, end: endDate })
-    .filter((d) => d.getDate() === 1) // First day of each month
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
 
-  return months.map((month) => {
-    const monthStart = startOfMonth(month)
-    const monthEnd = endOfMonth(month)
+  return days.map((day) => {
+    const dayStart = startOfDay(day)
+    const dayEnd = endOfDay(day)
 
     const count = customers.filter((c) =>
-      isWithinInterval(new Date(c.created_at), { start: monthStart, end: monthEnd })
+      isWithinInterval(new Date(c.created_at), { start: dayStart, end: dayEnd })
     ).length
 
     return {
-      date: format(month, 'MMM yyyy'),
+      date: format(day, 'MMM dd'),
       count,
     }
   })
@@ -495,36 +504,35 @@ export const getCustomerSegmentation = (
 }
 
 /**
- * Get repeat customer rate trend (monthly)
+ * Get repeat customer rate trend (daily)
  */
 export const getRepeatCustomerRateTrend = (
   customers: CustomerWithBookings[],
   startDate: Date,
   endDate: Date
 ): { date: string; rate: number }[] => {
-  const months = eachDayOfInterval({ start: startDate, end: endDate })
-    .filter((d) => d.getDate() === 1) // First day of each month
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
 
-  return months.map((month) => {
-    const monthStart = startOfMonth(month)
-    const monthEnd = endOfMonth(month)
+  return days.map((day) => {
+    const dayStart = startOfDay(day)
+    const dayEnd = endOfDay(day)
 
-    // Customers who had bookings in this month
-    const customersThisMonth = customers.filter((c) =>
+    // Customers who had bookings on this day
+    const customersThisDay = customers.filter((c) =>
       c.bookings.some((b) =>
-        isWithinInterval(new Date(b.booking_date), { start: monthStart, end: monthEnd })
+        isWithinInterval(new Date(b.booking_date), { start: dayStart, end: dayEnd })
       )
     )
 
     // Customers who had more than one booking (ever)
-    const repeatCustomers = customersThisMonth.filter((c) => c.bookings.length > 1)
+    const repeatCustomers = customersThisDay.filter((c) => c.bookings.length > 1)
 
-    const rate = customersThisMonth.length > 0
-      ? (repeatCustomers.length / customersThisMonth.length) * 100
+    const rate = customersThisDay.length > 0
+      ? (repeatCustomers.length / customersThisDay.length) * 100
       : 0
 
     return {
-      date: format(month, 'MMM yyyy'),
+      date: format(day, 'MMM dd'),
       rate: Math.round(rate * 10) / 10, // Round to 1 decimal
     }
   })
@@ -574,7 +582,7 @@ export const calculateStaffMetrics = (
   staff: Staff[],
   staffWithBookings: StaffWithBookings[]
 ): StaffMetrics => {
-  // Calculate total revenue from all staff (with team revenue divided)
+  // Calculate total revenue from all staff (revenue already divided for team bookings)
   const totalRevenue = staffWithBookings.reduce((sum, staffMember) => {
     const staffRevenue = staffMember.bookings
       .filter((b: BookingForAnalytics) => {
@@ -582,18 +590,7 @@ export const calculateStaffMetrics = (
         return paymentStatus === 'paid'
       })
       .reduce((bookingSum: number, b: BookingForAnalytics) => {
-        const bookingRevenue = Number(b.total_price)
-        const teamId = (b as { team_id?: string }).team_id
-        const staffId = (b as { staff_id?: string }).staff_id
-        const teamMemberCount = (b as { team_member_count?: number }).team_member_count
-
-        // If this is a team booking WITHOUT staff assignment, divide revenue by team member count
-        if (teamId && !staffId && teamMemberCount) {
-          return bookingSum + (bookingRevenue / teamMemberCount)
-        }
-
-        // Direct staff booking gets full amount
-        return bookingSum + bookingRevenue
+        return bookingSum + Number(b.total_price)
       }, 0)
     return sum + staffRevenue
   }, 0)
@@ -632,32 +629,18 @@ export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPer
     const totalJobs = staff.bookings.length
     const completedJobs = staff.bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
 
-    // Calculate both revenue and weighted job count
-    let revenue = 0
-    let weightedPaidJobs = 0
-
-    staff.bookings.forEach((b: BookingForAnalytics) => {
+    // Calculate revenue from paid bookings (revenue already divided for team bookings)
+    const paidBookings = staff.bookings.filter((b: BookingForAnalytics) => {
       const paymentStatus = (b as { payment_status?: string }).payment_status
-      if (paymentStatus === 'paid') {
-        const bookingRevenue = Number(b.total_price)
-        const teamId = (b as { team_id?: string }).team_id
-        const staffId = (b as { staff_id?: string }).staff_id
-        const teamMemberCount = (b as { team_member_count?: number }).team_member_count
-
-        // If this is a team booking WITHOUT staff assignment, divide by member count
-        if (teamId && !staffId && teamMemberCount) {
-          revenue += bookingRevenue / teamMemberCount
-          weightedPaidJobs += 1 / teamMemberCount
-        } else {
-          // Direct staff booking gets full amount
-          revenue += bookingRevenue
-          weightedPaidJobs += 1
-        }
-      }
+      return paymentStatus === 'paid'
     })
 
+    const revenue = paidBookings.reduce((sum: number, b: BookingForAnalytics) => {
+      return sum + Number(b.total_price)
+    }, 0)
+
     const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
-    const avgJobValue = weightedPaidJobs > 0 ? revenue / weightedPaidJobs : 0
+    const avgJobValue = paidBookings.length > 0 ? revenue / paidBookings.length : 0
 
     // Utilization rate: assume 160 working hours per month (8h * 20 days)
     // Calculate based on completed jobs and estimated 2 hours per job

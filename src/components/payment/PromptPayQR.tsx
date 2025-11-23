@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import generatePayload from 'promptpay-qr'
-import * as QRCode from 'qrcode'
+import { toDataURL } from 'qrcode'
 
 interface PromptPayQRProps {
   amount: number
@@ -29,7 +29,7 @@ export function PromptPayQR({ amount }: PromptPayQRProps) {
       const payload = generatePayload(promptPayId, { amount })
 
       // Generate QR code image
-      const qrImage = await QRCode.toDataURL(payload, {
+      const qrImage = await toDataURL(payload, {
         width: 300,
         margin: 2,
         color: {

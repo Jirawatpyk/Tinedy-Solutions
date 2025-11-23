@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,30 +31,29 @@ import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
-
-interface StaffMember {
-  id: string
-  email: string
-  full_name: string
-  avatar_url: string | null
-  role: 'admin' | 'manager' | 'staff'
-  phone: string | null
-  staff_number: string | null
-  skills: string[] | null
-  created_at: string
-  updated_at: string
-  average_rating?: number
-}
+import { useAuth } from '@/contexts/auth-context'
+import { useStaffWithRatings } from '@/hooks/useStaff'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  StaffCreateSchema,
+  StaffUpdateSchema,
+  StaffCreateWithSkillsSchema,
+  StaffUpdateWithSkillsSchema,
+  type StaffCreateFormData,
+  type StaffUpdateFormData,
+} from '@/schemas'
 
 export function AdminStaff() {
   const navigate = useNavigate()
-  const [staff, setStaff] = useState<StaffMember[]>([])
-  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user, profile } = useAuth()
+  const { staff, loading,refresh, error: staffError} = useStaffWithRatings({
+    enableRealtime: true,
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
+  const [editingStaff, setEditingStaff] = useState<(typeof staff)[0] | null>(null)
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -65,83 +64,34 @@ export function AdminStaff() {
 
   const { toast } = useToast()
 
-  const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    phone: '',
-    role: 'staff' as 'admin' | 'manager' | 'staff',
-    password: '',
-    staff_number: '',
-    skills: '',
+  // React Hook Form - Create Form (uses base schema, transforms on submit)
+  const createForm = useForm<StaffCreateFormData>({
+    resolver: zodResolver(StaffCreateSchema),
+    defaultValues: {
+      email: '',
+      full_name: '',
+      phone: '',
+      role: 'staff',
+      password: '',
+      staff_number: '',
+      skills: '',
+    },
   })
 
-  const fetchStaff = useCallback(async () => {
-    try {
-      const { data, error} = await supabase
-        .from('profiles')
-        .select('id, email, full_name, avatar_url, role, phone, staff_number, skills, created_at, updated_at')
-        .in('role', ['admin', 'manager', 'staff']) // ดึงทุก role เพื่อนับสถิติ
-        .order('created_at', { ascending: false })
+  // React Hook Form - Update Form (uses base schema, transforms on submit)
+  const updateForm = useForm<StaffUpdateFormData>({
+    resolver: zodResolver(StaffUpdateSchema),
+    defaultValues: {
+      full_name: '',
+      phone: '',
+      role: 'staff',
+      staff_number: '',
+      skills: '',
+    },
+  })
 
-      if (error) throw error
-
-      // Fetch ratings for all staff
-      const staffData = data || []
-      const staffIds = staffData.map(s => s.id)
-
-      if (staffIds.length > 0) {
-        interface ReviewData {
-          rating: number
-          bookings: { staff_id: string } | { staff_id: string }[]
-        }
-
-        const { data: ratingsData } = await supabase
-          .from('reviews')
-          .select('rating, bookings!inner(staff_id)')
-          .in('bookings.staff_id', staffIds)
-
-        // Group ratings by staff_id
-        const staffRatings: Record<string, number[]> = {}
-
-        ratingsData?.forEach((review: ReviewData) => {
-          const bookings = Array.isArray(review.bookings) ? review.bookings[0] : review.bookings
-          const staffId = bookings?.staff_id
-          if (staffId) {
-            if (!staffRatings[staffId]) {
-              staffRatings[staffId] = []
-            }
-            staffRatings[staffId].push(review.rating)
-          }
-        })
-
-        // Calculate average rating for each staff
-        const staffWithRatings = staffData.map(staff => {
-          const ratings = staffRatings[staff.id]
-          if (ratings && ratings.length > 0) {
-            const average = ratings.reduce((a, b) => a + b, 0) / ratings.length
-            return { ...staff, average_rating: average }
-          }
-          return staff
-        })
-
-        setStaff(staffWithRatings)
-      } else {
-        setStaff(staffData)
-      }
-    } catch (error) {
-      console.error('Error fetching staff:', error)
-      const errorMessage = getLoadErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  const filterStaff = useCallback(() => {
+  // Filter staff with useMemo for better performance
+  const filteredStaff = useMemo(() => {
     let filtered = staff
 
     if (searchQuery) {
@@ -156,39 +106,52 @@ export function AdminStaff() {
       filtered = filtered.filter((member) => member.role === roleFilter)
     }
 
-    setFilteredStaff(filtered)
-    // Reset display count when filter changes
+    return filtered
+  }, [staff, searchQuery, roleFilter])
+
+  // Reset display count when filter changes
+  useEffect(() => {
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [staff, searchQuery, roleFilter, ITEMS_PER_LOAD])
+  }, [filteredStaff, ITEMS_PER_LOAD])
 
+  // Error handling for staff loading
   useEffect(() => {
-    fetchStaff()
-  }, [fetchStaff])
+    if (staffError) {
+      const errorMessage = getLoadErrorMessage('staff')
+      toast({
+        title: errorMessage.title,
+        description: staffError,
+        variant: 'destructive',
+      })
+    }
+  }, [staffError, toast])
 
-  useEffect(() => {
-    filterStaff()
-  }, [filterStaff])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const onSubmit = async (data: StaffCreateFormData | StaffUpdateFormData) => {
     try {
-      // Convert skills string to array
-      const skillsArray = formData.skills
-        .split(',')
-        .map(skill => skill.trim())
-        .filter(skill => skill.length > 0)
-
       if (editingStaff) {
-        // Update existing staff
+        // Update existing staff - transform form data to WithSkills type
+        const updateData = StaffUpdateWithSkillsSchema.parse(data)
+
+        // Manager ไม่สามารถแก้ไข role ได้ - ส่งเฉพาะ fields ที่อนุญาต
+        const updatePayload = profile?.role === 'admin'
+          ? {
+              full_name: updateData.full_name,
+              phone: updateData.phone,
+              role: updateData.role, // Admin เท่านั้นที่สามารถเปลี่ยน role
+              staff_number: updateData.staff_number,
+              skills: updateData.skills && updateData.skills.length > 0 ? updateData.skills : null,
+            }
+          : {
+              full_name: updateData.full_name,
+              phone: updateData.phone,
+              // Manager ไม่ส่ง role field เพื่อป้องกัน RLS policy error
+              staff_number: updateData.staff_number,
+              skills: updateData.skills && updateData.skills.length > 0 ? updateData.skills : null,
+            }
+
         const { error } = await supabase
           .from('profiles')
-          .update({
-            full_name: formData.full_name,
-            phone: formData.phone,
-            role: formData.role,
-            skills: skillsArray.length > 0 ? skillsArray : null,
-          })
+          .update(updatePayload)
           .eq('id', editingStaff.id)
 
         if (error) throw error
@@ -198,6 +161,9 @@ export function AdminStaff() {
           description: 'Staff member updated successfully',
         })
       } else {
+        // Create new staff - transform form data to WithSkills type
+        const createData = StaffCreateWithSkillsSchema.parse(data)
+
         // Get auth token for Edge Function
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.access_token) {
@@ -214,22 +180,22 @@ export function AdminStaff() {
               'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
-              email: formData.email,
-              password: formData.password,
-              full_name: formData.full_name,
-              phone: formData.phone,
-              role: formData.role,
-              staff_number: formData.staff_number || undefined,
-              skills: skillsArray.length > 0 ? skillsArray : undefined,
+              email: createData.email,
+              password: createData.password,
+              full_name: createData.full_name,
+              phone: createData.phone || null,
+              role: createData.role,
+              staff_number: createData.staff_number || null,
+              skills: createData.skills && createData.skills.length > 0 ? createData.skills : null,
             }),
           }
         )
 
-        const data = await response.json()
-        console.log('Edge Function Response:', { status: response.status, data })
+        const responseData = await response.json()
+        console.log('Edge Function Response:', { status: response.status, data: responseData })
 
-        if (!response.ok || !data?.success) {
-          const errorMsg = data?.error || 'Failed to create staff member'
+        if (!response.ok || !responseData?.success) {
+          const errorMsg = responseData?.error || 'Failed to create staff member'
           console.log('Error message from Edge Function:', errorMsg)
 
           // Check for duplicate email error
@@ -251,7 +217,7 @@ export function AdminStaff() {
 
       setIsDialogOpen(false)
       resetForm()
-      fetchStaff()
+      refresh()
     } catch (error) {
       const errorMessage = mapErrorToUserMessage(error, 'staff')
       toast({
@@ -264,6 +230,16 @@ export function AdminStaff() {
 
   const deleteStaff = async (staffId: string) => {
     try {
+      // ป้องกันการลบโปรไฟล์ตัวเอง
+      if (user?.id === staffId) {
+        toast({
+          title: 'Cannot delete your own profile',
+          description: 'You cannot delete your own account. Please contact another administrator.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       console.log('[Delete Staff] Starting deletion for userId:', staffId)
 
       // Call Edge Function to delete user from auth.users (will cascade to profiles)
@@ -289,7 +265,7 @@ export function AdminStaff() {
         title: 'Success',
         description: data.message || 'Staff member deleted successfully',
       })
-      fetchStaff()
+      refresh()
     } catch (error) {
       console.error('[Delete Staff] Caught error:', error)
       const errorMessage = getDeleteErrorMessage('staff')
@@ -301,14 +277,12 @@ export function AdminStaff() {
     }
   }
 
-  const openEditDialog = (staffMember: StaffMember) => {
+  const openEditDialog = (staffMember: typeof staff[0]) => {
     setEditingStaff(staffMember)
-    setFormData({
-      email: staffMember.email,
+    updateForm.reset({
       full_name: staffMember.full_name,
       phone: staffMember.phone || '',
-      role: staffMember.role,
-      password: '', // Don't show existing password
+      role: staffMember.role as 'admin' | 'manager' | 'staff',
       staff_number: staffMember.staff_number || '',
       skills: staffMember.skills ? staffMember.skills.join(', ') : '',
     })
@@ -317,12 +291,19 @@ export function AdminStaff() {
 
   const resetForm = () => {
     setEditingStaff(null)
-    setFormData({
+    createForm.reset({
       email: '',
       full_name: '',
       phone: '',
       role: 'staff',
       password: '',
+      staff_number: '',
+      skills: '',
+    })
+    updateForm.reset({
+      full_name: '',
+      phone: '',
+      role: 'staff',
       staff_number: '',
       skills: '',
     })
@@ -408,7 +389,7 @@ export function AdminStaff() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">
           Manage your team members
         </p>
@@ -433,130 +414,322 @@ export function AdminStaff() {
                   : 'Create a new staff account'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  disabled={!!editingStaff}
-                  required
-                />
-              </div>
 
-              {!editingStaff && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
+            {!editingStaff ? (
+              // CREATE FORM
+              <form onSubmit={createForm.handleSubmit(onSubmit)} className="space-y-4">
+                <Controller
+                  name="email"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="password"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Minimum 6 characters
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="full_name"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input
+                        id="full_name"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="phone"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="staff_number"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="staff_number">Staff Number</Label>
+                      <Input
+                        id="staff_number"
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="Auto-generated if left empty"
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty for auto-generation
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="skills"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="skills">Skills</Label>
+                      <Textarea
+                        id="skills"
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
+                        rows={3}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Enter skills separated by commas
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="role"
+                  control={createForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role *</Label>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="staff">Staff</SelectItem>
+                          <AdminOnly>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </AdminOnly>
+                        </SelectContent>
+                      </Select>
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-tinedy-blue">
+                    Create
+                  </Button>
+                </DialogFooter>
+              </form>
+            ) : (
+              // UPDATE FORM
+              <form onSubmit={updateForm.handleSubmit(onSubmit)} className="space-y-4">
+                <Controller
+                  name="full_name"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input
+                        id="full_name"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="phone"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="staff_number"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="staff_number">Staff Number</Label>
+                      <Input
+                        id="staff_number"
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="STF0001"
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Format: STF#### (e.g. STF0001)
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="skills"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="skills">Skills</Label>
+                      <Textarea
+                        id="skills"
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
+                        rows={3}
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Enter skills separated by commas
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="role"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => {
+                    const isAdmin = profile?.role === 'admin'
+
+                    if (!isAdmin) {
+                      // Manager view: Read-only
+                      return (
+                        <div className="space-y-2">
+                          <Label htmlFor="role">Role</Label>
+                          <Input
+                            id="role"
+                            value={field.value.charAt(0).toUpperCase() + field.value.slice(1)}
+                            disabled
+                            className="bg-muted cursor-not-allowed"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Role cannot be changed. Contact admin if role change is needed.
+                          </p>
+                        </div>
+                      )
                     }
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Minimum 6 characters
-                  </p>
-                </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, full_name: e.target.value })
-                  }
-                  required
+                    // Admin view: Editable
+                    return (
+                      <div className="space-y-2">
+                        <Label htmlFor="role">Role *</Label>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )
+                  }}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="staff_number">Staff Number</Label>
-                <Input
-                  id="staff_number"
-                  value={formData.staff_number}
-                  onChange={(e) =>
-                    setFormData({ ...formData, staff_number: e.target.value })
-                  }
-                  placeholder="Auto-generated if left empty"
-                  disabled={!!editingStaff}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty for auto-generation
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="skills">Skills</Label>
-                <Textarea
-                  id="skills"
-                  value={formData.skills}
-                  onChange={(e) =>
-                    setFormData({ ...formData, skills: e.target.value })
-                  }
-                  placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter skills separated by commas
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Role *</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: 'admin' | 'manager' | 'staff') =>
-                    setFormData({ ...formData, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <AdminOnly>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </AdminOnly>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-tinedy-blue">
-                  {editingStaff ? 'Update' : 'Create'}
-                </Button>
-              </DialogFooter>
-            </form>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-tinedy-blue">
+                    Update
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -645,9 +818,17 @@ export function AdminStaff() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
-                        {member.full_name.charAt(0).toUpperCase()}
-                      </div>
+                      {member.avatar_url ? (
+                        <img
+                          src={member.avatar_url}
+                          alt={member.full_name}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-tinedy-blue"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
+                          {member.full_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <CardTitle className="text-lg font-display">
                           {member.full_name}
@@ -671,18 +852,26 @@ export function AdminStaff() {
                       </div>
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(member)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <PermissionAwareDeleteButton
-                        resource="staff"
-                        itemName={member.full_name}
-                        onDelete={() => deleteStaff(member.id)}
-                      />
+                      {/* Admin: แก้ไขได้ทุกคน | Manager: แก้ไขได้ตัวเอง + Staff | Staff: แก้ไขได้ตัวเอง */}
+                      {(profile?.role === 'admin' ||
+                        member.id === user?.id ||
+                        (profile?.role === 'manager' && member.role === 'staff')) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(member)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {/* ซ่อนปุ่ม Delete ถ้าเป็นโปรไฟล์ตัวเอง */}
+                      {user?.id !== member.id && (
+                        <PermissionAwareDeleteButton
+                          resource="staff"
+                          itemName={member.full_name}
+                          onDelete={() => deleteStaff(member.id)}
+                        />
+                      )}
                     </div>
                   </div>
                 </CardHeader>

@@ -83,7 +83,6 @@ export type BookingFrequency = typeof BookingFrequency[keyof typeof BookingFrequ
  * @property {number | null} duration_minutes - For fixed pricing only
  * @property {number | null} base_price - For fixed pricing only
  * @property {boolean} is_active - Whether package is available
- * @property {number} display_order - Sort order for UI display
  * @property {string} created_at - ISO 8601 timestamp
  * @property {string} updated_at - ISO 8601 timestamp
  *
@@ -99,7 +98,6 @@ export type BookingFrequency = typeof BookingFrequency[keyof typeof BookingFrequ
  *   duration_minutes: 120,
  *   base_price: 2500,
  *   is_active: true,
- *   display_order: 0,
  *   created_at: "2024-01-01T00:00:00Z",
  *   updated_at: "2024-01-01T00:00:00Z"
  * }
@@ -116,7 +114,6 @@ export type BookingFrequency = typeof BookingFrequency[keyof typeof BookingFrequ
  *   duration_minutes: null,
  *   base_price: null,
  *   is_active: true,
- *   display_order: 1,
  *   created_at: "2024-01-01T00:00:00Z",
  *   updated_at: "2024-01-01T00:00:00Z"
  * }
@@ -131,7 +128,6 @@ export interface ServicePackageV2 {
   duration_minutes: number | null
   base_price: number | null
   is_active: boolean
-  display_order: number
   created_at: string
   updated_at: string
 }
@@ -246,8 +242,7 @@ export interface ServicePackageV2WithTiers extends ServicePackageV2 {
  *   pricing_model: "tiered",
  *   duration_minutes: null,
  *   base_price: null,
- *   is_active: true,
- *   display_order: 0
+ *   is_active: true
  * }
  */
 export type ServicePackageV2Input = Omit<

@@ -65,15 +65,15 @@ const getDateRangePreset = (preset: string): { start: Date; end: Date } => {
     case 'last30days':
       return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) }
     case 'thisWeek':
-      return { start: startOfWeek(now), end: endOfWeek(now) }
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) }
     case 'lastWeek':
-      return { start: startOfWeek(subWeeks(now, 1)), end: endOfWeek(subWeeks(now, 1)) }
+      return { start: startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), end: endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }) }
     case 'thisMonth':
       return { start: startOfMonth(now), end: endOfMonth(now) }
     case 'lastMonth':
       return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) }
     case 'last3months':
-      return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) }
+      return { start: startOfMonth(subMonths(now, 3)), end: endOfMonth(subMonths(now, 1)) }
     default:
       return { start: startOfMonth(now), end: endOfMonth(now) }
   }
@@ -130,13 +130,14 @@ export const downloadCSV = (csvContent: string, filename: string): void => {
 
 /**
  * Export Revenue & Bookings data
+ * @returns true if export successful, false if no data
  */
 export const exportRevenueBookings = (
   bookings: BookingForExport[],
   dateRange: string,
   exportType: 'summary' | 'detailed' | 'all',
   role: 'admin' | 'manager' | 'staff' | null = null
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
@@ -147,9 +148,10 @@ export const exportRevenueBookings = (
   })
 
   if (filteredBookings.length === 0) {
-    console.warn('No bookings found in the selected date range')
-    return
+    return false  // No data to export
   }
+
+  let exported = false  // Track if any file was actually exported
 
   if (exportType === 'summary' || exportType === 'all') {
     // Export revenue summary (completed bookings only)
@@ -181,6 +183,7 @@ export const exportRevenueBookings = (
 
       const csvContent = convertToCSV(revenueData, headers)
       downloadCSV(csvContent, `revenue-summary_${dateRange}_${timestamp}.csv`)
+      exported = true  // Mark as exported
     }
   }
 
@@ -218,17 +221,21 @@ export const exportRevenueBookings = (
 
     const csvContent = convertToCSV(detailedData, headers)
     downloadCSV(csvContent, `bookings-detailed_${dateRange}_${timestamp}.csv`)
+    exported = true  // Mark as exported
   }
+
+  return exported  // Return true only if actually exported
 }
 
 /**
  * Export Revenue by Service Type
+ * @returns true if export successful, false if no data
  */
 export const exportRevenueByServiceType = (
   bookings: BookingForExport[],
   dateRange: string,
   role: 'admin' | 'manager' | 'staff' | null = null
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
@@ -239,8 +246,7 @@ export const exportRevenueByServiceType = (
   })
 
   if (filteredBookings.length === 0) {
-    console.warn('No completed bookings found in the selected date range')
-    return
+    return false  // No data to export
   }
 
   // Group by service type
@@ -279,15 +285,18 @@ export const exportRevenueByServiceType = (
 
   const csvContent = convertToCSV(exportData, headers)
   downloadCSV(csvContent, `revenue-by-service-type_${dateRange}_${timestamp}.csv`)
+
+  return true  // Export successful
 }
 
 /**
  * Export Peak Hours data
+ * @returns true if export successful, false if no data
  */
 export const exportPeakHours = (
   bookings: BookingForExport[],
   dateRange: string
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
@@ -298,8 +307,7 @@ export const exportPeakHours = (
   })
 
   if (filteredBookings.length === 0) {
-    console.warn('No bookings found in the selected date range')
-    return
+    return false  // No data to export
   }
 
   // Group by day and hour
@@ -329,16 +337,19 @@ export const exportPeakHours = (
 
   const csvContent = convertToCSV(exportData, ['Day & Time', 'Booking Count'])
   downloadCSV(csvContent, `peak-hours_${dateRange}_${timestamp}.csv`)
+
+  return true  // Export successful
 }
 
 /**
  * Export Top Service Packages
+ * @returns true if export successful, false if no data
  */
 export const exportTopServicePackages = (
   bookings: BookingForExport[],
   dateRange: string,
   limit: number = 10
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
@@ -349,8 +360,7 @@ export const exportTopServicePackages = (
   })
 
   if (filteredBookings.length === 0) {
-    console.warn('No bookings found in the selected date range')
-    return
+    return false  // No data to export
   }
 
   // Group by package name
@@ -386,17 +396,25 @@ export const exportTopServicePackages = (
     'Avg Price (฿)'
   ])
   downloadCSV(csvContent, `top-service-packages_${dateRange}_${timestamp}.csv`)
+
+  return true  // Export successful
 }
 
 /**
  * Export Customers data
+ * @returns true if export successful, false if no data
  */
 export const exportCustomers = (
   customers: CustomerForExport[],
   topCustomers: TopCustomerForExport[],
   exportType: 'all-customers' | 'top-customers' | 'all'
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
+
+  // Check if there's any data to export
+  if (customers.length === 0) {
+    return false  // No data to export
+  }
 
   if (exportType === 'all-customers' || exportType === 'all') {
     const customerData = customers.map(c => ({
@@ -431,16 +449,24 @@ export const exportCustomers = (
     ])
     downloadCSV(csvContent, `customers-top10_${timestamp}.csv`)
   }
+
+  return true  // Export successful
 }
 
 /**
  * Export Staff Performance data
+ * @returns true if export successful, false if no data
  */
 export const exportStaffPerformance = (
   staffPerformance: StaffPerformanceForExport[],
   role: 'admin' | 'manager' | 'staff' | null = null
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
+
+  // Check if there's any data to export
+  if (staffPerformance.length === 0) {
+    return false  // No data to export
+  }
 
   const staffData = staffPerformance.map(s => {
     const baseData = {
@@ -469,16 +495,24 @@ export const exportStaffPerformance = (
 
   const csvContent = convertToCSV(staffData, headers)
   downloadCSV(csvContent, `staff-performance_${timestamp}.csv`)
+
+  return true  // Export successful
 }
 
 /**
  * Export Team Performance data
+ * @returns true if export successful, false if no data
  */
 export const exportTeamPerformance = (
   teamsData: TeamForExport[],
   role: 'admin' | 'manager' | 'staff' | null = null
-): void => {
+): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
+
+  // Check if there's any data to export
+  if (teamsData.length === 0) {
+    return false  // No data to export
+  }
 
   const teamData = teamsData.map((team, index) => {
     const totalJobs = team.bookings.length
@@ -519,4 +553,6 @@ export const exportTeamPerformance = (
 
   const csvContent = convertToCSV(teamData, headers)
   downloadCSV(csvContent, `team-performance_${timestamp}.csv`)
+
+  return true  // Export successful
 }

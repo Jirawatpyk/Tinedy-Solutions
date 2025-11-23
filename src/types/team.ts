@@ -111,3 +111,43 @@ export interface TeamSelectOption {
   is_active: boolean
   member_count?: number
 }
+
+/**
+ * Team member for React Query (used in teams page)
+ */
+export interface TeamMember {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  avatar_url: string | null
+  role: string
+  is_active?: boolean
+  membership_id?: string
+}
+
+/**
+ * Team with full details (for Teams management page)
+ * Includes team_lead, members, ratings, soft delete
+ */
+export interface TeamWithDetails {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+  deleted_at?: string | null
+  team_lead_id: string | null
+  team_lead?: TeamMember | null
+  member_count?: number
+  members?: TeamMember[]
+  average_rating?: number
+}
+
+/**
+ * Simple team list item (for dropdowns in Bookings, Calendar, etc.)
+ */
+export interface TeamListItem {
+  id: string
+  name: string
+  is_active?: boolean
+}

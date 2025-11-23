@@ -1,7 +1,9 @@
 import { Bell, BellOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts/auth-context'
+import { isNotificationPromptHidden, setNotificationPromptHidden } from '@/hooks/use-notifications'
 
 interface NotificationPromptProps {
   onRequest: () => Promise<boolean>
@@ -9,7 +11,22 @@ interface NotificationPromptProps {
 }
 
 export function NotificationPrompt({ onRequest, isRequesting }: NotificationPromptProps) {
+  const { user } = useAuth()
   const [dismissed, setDismissed] = useState(false)
+
+  // Check if user has permanently hidden the prompt
+  useEffect(() => {
+    if (user && isNotificationPromptHidden(user.id)) {
+      setDismissed(true)
+    }
+  }, [user])
+
+  const handleDismiss = () => {
+    if (user) {
+      setNotificationPromptHidden(user.id, true)
+    }
+    setDismissed(true)
+  }
 
   if (dismissed) return null
 
@@ -20,10 +37,10 @@ export function NotificationPrompt({ onRequest, isRequesting }: NotificationProm
         <div className="flex-1">
           <AlertDescription className="text-sm">
             <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-              เปิดการแจ้งเตือน
+              Enable Notifications
             </p>
             <p className="text-blue-700 dark:text-blue-300">
-              รับการแจ้งเตือนเมื่อมีงานใหม่หรืองานที่กำลังจะถึง
+              Get notified about new bookings and upcoming appointments
             </p>
           </AlertDescription>
           <div className="flex gap-2 mt-3">
@@ -37,19 +54,19 @@ export function NotificationPrompt({ onRequest, isRequesting }: NotificationProm
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Bell className="h-3 w-3 mr-1" />
-              {isRequesting ? 'กำลังขอสิทธิ์...' : 'เปิดการแจ้งเตือน'}
+              {isRequesting ? 'Requesting...' : 'Enable Notifications'}
             </Button>
             <Button
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
               variant="outline"
               size="sm"
             >
-              ภายหลัง
+              Later
             </Button>
           </div>
         </div>
         <Button
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           variant="ghost"
           size="icon"
           className="h-6 w-6 flex-shrink-0"
@@ -66,7 +83,7 @@ export function NotificationStatus({ hasPermission }: { hasPermission: boolean }
     return (
       <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
         <Bell className="h-3 w-3" />
-        <span>การแจ้งเตือนเปิดอยู่</span>
+        <span>Notifications Enabled</span>
       </div>
     )
   }
@@ -74,7 +91,7 @@ export function NotificationStatus({ hasPermission }: { hasPermission: boolean }
   return (
     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
       <BellOff className="h-3 w-3" />
-      <span>การแจ้งเตือนปิดอยู่</span>
+      <span>Notifications Disabled</span>
     </div>
   )
 }

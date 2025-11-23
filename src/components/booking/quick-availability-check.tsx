@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -44,13 +43,26 @@ export function QuickAvailabilityCheck() {
   const [areaSqm, setAreaSqm] = useState<number | null>(null)
   const [frequency, setFrequency] = useState<1 | 2 | 4 | 8>(1)
 
-  // Recurring state
-  const [isRecurring, setIsRecurring] = useState(false)
+  // Recurring state (auto-enabled when frequency > 1)
   const [recurringDates, setRecurringDates] = useState<string[]>([])
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern>(Pattern.AutoMonthly)
 
   const { packages } = useServicePackages()
   const selectedService = packages.find((s: UnifiedServicePackage) => s.id === servicePackageId)
+
+  // Reset form to initial values
+  const resetForm = () => {
+    setDate(format(new Date(), 'yyyy-MM-dd'))
+    setStartTime('09:00')
+    setEndTime('11:00')
+    setServicePackageId('')
+    setAssignmentType('individual')
+    setAreaSqm(null)
+    setFrequency(1)
+    setRecurringDates([])
+    setRecurringPattern(Pattern.AutoMonthly)
+    setShowResults(false)
+  }
 
   // Auto-calculate end time when service or start time changes
   useEffect(() => {
@@ -91,8 +103,8 @@ export function QuickAvailabilityCheck() {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (!open) {
-      // Reset when closing
-      setShowResults(false)
+      // Reset form when closing
+      resetForm()
     }
   }
 
@@ -102,7 +114,8 @@ export function QuickAvailabilityCheck() {
       return
     }
 
-    // Validate dates
+    // Validate dates based on frequency
+    const isRecurring = frequency > 1
     if (isRecurring) {
       if (recurringDates.length === 0) {
         toast({
@@ -124,7 +137,7 @@ export function QuickAvailabilityCheck() {
 
   return (
     <>
-      {/* Quick Access Button */}
+      {/* Quick Access Button - icon on mobile, text on tablet+ */}
       <Button
         variant="outline"
         size="sm"
@@ -132,7 +145,7 @@ export function QuickAvailabilityCheck() {
         className="gap-2"
       >
         <CalendarCheck className="h-4 w-4" />
-        <span className="hidden xl:inline">Check Availability</span>
+        <span className="hidden md:inline">Check Availability</span>
       </Button>
 
       {/* Step 1: Input Dialog */}
@@ -200,29 +213,8 @@ export function QuickAvailabilityCheck() {
               </>
             )}
 
-            {/* Recurring Checkbox - Show only if service is selected and frequency > 1 */}
-            {servicePackageId && frequency > 1 && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="recurring"
-                  checked={isRecurring}
-                  onCheckedChange={(checked) => {
-                    setIsRecurring(checked as boolean)
-                    if (!checked) {
-                      // Reset recurring state
-                      setRecurringDates([])
-                      setRecurringPattern(Pattern.AutoMonthly)
-                    }
-                  }}
-                />
-                <Label htmlFor="recurring" className="cursor-pointer font-normal">
-                  Create Recurring Bookings ({frequency} times)
-                </Label>
-              </div>
-            )}
-
-            {/* Date / Recurring Dates */}
-            {isRecurring ? (
+            {/* Recurring Schedule Selector - แสดงอัตโนมัติเมื่อ frequency > 1 */}
+            {servicePackageId && frequency > 1 ? (
               <>
                 <div className="space-y-2">
                   <RecurringScheduleSelector
@@ -233,10 +225,11 @@ export function QuickAvailabilityCheck() {
                     onPatternChange={setRecurringPattern}
                   />
                 </div>
-                {/* Time Range for Recurring */}
+
+                {/* Time Range for Recurring - 2 columns */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start-time">Start Time</Label>
+                    <Label htmlFor="start-time">Start Time *</Label>
                     <Input
                       id="start-time"
                       type="time"
@@ -257,10 +250,11 @@ export function QuickAvailabilityCheck() {
                 </div>
               </>
             ) : (
+              /* Date/Time for Non-Recurring - 3 columns */
               <div className="grid grid-cols-3 gap-4">
                 {/* Date */}
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">Date *</Label>
                   <Input
                     id="date"
                     type="date"
@@ -270,7 +264,7 @@ export function QuickAvailabilityCheck() {
                 </div>
                 {/* Start Time */}
                 <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time</Label>
+                  <Label htmlFor="start-time">Start Time *</Label>
                   <Input
                     id="start-time"
                     type="time"
@@ -318,8 +312,8 @@ export function QuickAvailabilityCheck() {
               onClick={handleCheckAvailability}
               disabled={
                 !servicePackageId ||
-                (!isRecurring && !date) ||
-                (isRecurring && recurringDates.length === 0) ||
+                (frequency === 1 && !date) ||
+                (frequency > 1 && recurringDates.length === 0) ||
                 !startTime ||
                 !endTime ||
                 (selectedService?.pricing_model === 'tiered' && (!areaSqm || !frequency))
@@ -339,8 +333,7 @@ export function QuickAvailabilityCheck() {
           assignmentType={assignmentType}
           onSelectStaff={(staffId) => {
             // Navigate to bookings page and trigger create modal with prefilled data
-            setShowResults(false)
-            setIsOpen(false)
+            const isRecurring = frequency > 1
 
             // Debug: Log recurring pattern
             console.log('🔍 Quick Availability Check - Sending recurring data:', {
@@ -378,11 +371,13 @@ export function QuickAvailabilityCheck() {
                 }
               }
             })
+
+            // Reset form after navigation
+            resetForm()
           }}
           onSelectTeam={(teamId) => {
             // Navigate to bookings page and trigger create modal with prefilled data
-            setShowResults(false)
-            setIsOpen(false)
+            const isRecurring = frequency > 1
 
             // Show success message
             toast({
@@ -412,9 +407,12 @@ export function QuickAvailabilityCheck() {
                 }
               }
             })
+
+            // Reset form after navigation
+            resetForm()
           }}
-          date={!isRecurring ? date : undefined}
-          dates={isRecurring ? recurringDates : undefined}
+          date={frequency === 1 ? date : undefined}
+          dates={frequency > 1 ? recurringDates : undefined}
           startTime={startTime}
           endTime={endTime}
           servicePackageId={servicePackageId}

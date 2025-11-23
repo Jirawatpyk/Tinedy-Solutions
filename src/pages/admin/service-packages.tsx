@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,27 +22,29 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { Package, Plus, DollarSign, CheckCircle, XCircle } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { Package, Plus, CheckCircle, XCircle } from 'lucide-react'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
-import { getPackagesOverview } from '@/lib/pricing-utils'
-import { PricingModel } from '@/types'
+import { PricingModel, ServiceCategory } from '@/types'
+import { useServicePackages } from '@/hooks/useServicePackages'
 
 export function AdminServicePackages() {
   // Permission checks
   const { can, canDelete } = usePermissions()
-  // V1 Packages (Legacy)
-  const [packages, setPackages] = useState<ServicePackage[]>([])
 
-  // V2 Packages (Tiered Pricing)
-  const [packagesV2, setPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
+  // React Query - Fetch packages (V1 + V2 unified)
+  const { packages: unifiedPackages, loading, error, refresh } = useServicePackages()
 
-  // Combined & Filtered
-  const [filteredPackages, setFilteredPackages] = useState<ServicePackage[]>([])
-  const [filteredPackagesV2, setFilteredPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
+  // Separate V1 and V2 packages (keep as UnifiedServicePackage for type safety)
+  const packagesV1Unified = useMemo(() => {
+    return unifiedPackages.filter(pkg => pkg.pricing_model === PricingModel.Fixed)
+  }, [unifiedPackages])
 
-  const [loading, setLoading] = useState(true)
+  const packagesV2Unified = useMemo(() => {
+    return unifiedPackages.filter(pkg => pkg.pricing_model === PricingModel.Tiered)
+  }, [unifiedPackages])
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all') // 'all', 'fixed', 'tiered'
@@ -56,12 +58,6 @@ export function AdminServicePackages() {
     duration_minutes: '',
     price: '',
   })
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    avgPrice: 0,
-  })
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
@@ -69,74 +65,30 @@ export function AdminServicePackages() {
 
   const { toast } = useToast()
 
-  // Fetch V1 Packages (Legacy)
-  const fetchPackages = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('service_packages')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setPackages(data || [])
-    } catch (error) {
-      console.error('Error fetching V1 packages:', error)
+  // Show error toast
+  useEffect(() => {
+    if (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load V1 service packages',
+        description: error,
         variant: 'destructive',
       })
     }
-  }, [toast])
+  }, [error, toast])
 
-  // Fetch V2 Packages (Tiered Pricing)
-  const fetchPackagesV2 = useCallback(async () => {
-    try {
-      const data = await getPackagesOverview()
-      setPackagesV2(data || [])
-    } catch (error) {
-      console.error('Error fetching V2 packages:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load V2 service packages',
-        variant: 'destructive',
-      })
-    }
-  }, [toast])
-
-  // Fetch Both V1 and V2
-  const fetchAllPackages = useCallback(async () => {
-    setLoading(true)
-    await Promise.all([fetchPackages(), fetchPackagesV2()])
-    setLoading(false)
-  }, [fetchPackages, fetchPackagesV2])
-
-  const calculateStats = useCallback(() => {
-    // Combine V1 and V2 for stats
-    const totalV1 = packages.length
-    const totalV2 = packagesV2.length
-    const total = totalV1 + totalV2
-
-    const activeV1 = packages.filter((p) => p.is_active).length
-    const activeV2 = packagesV2.filter((p) => p.is_active).length
-    const active = activeV1 + activeV2
-
+  // Calculate stats (moved to useMemo for better performance)
+  const stats = useMemo(() => {
+    const total = unifiedPackages.length
+    const active = unifiedPackages.filter((p) => p.is_active).length
     const inactive = total - active
 
-    // Calculate average price (V1 fixed + V2 min price)
-    const v1Prices = packages.map(p => Number(p.price))
-    const v2Prices = packagesV2.map(p => p.min_price || 0)
-    const allPrices = [...v1Prices, ...v2Prices]
-    const avgPrice = allPrices.length > 0
-      ? allPrices.reduce((sum, p) => sum + p, 0) / allPrices.length
-      : 0
+    return { total, active, inactive }
+  }, [unifiedPackages])
 
-    setStats({ total, active, inactive, avgPrice })
-  }, [packages, packagesV2])
-
-  const filterPackages = useCallback(() => {
+  // Filter packages (moved to useMemo)
+  const { filteredPackages, filteredPackagesV2 } = useMemo(() => {
     // Filter V1 Packages
-    let filteredV1 = packages
+    let filteredV1 = packagesV1Unified
 
     if (searchQuery) {
       filteredV1 = filteredV1.filter((pkg) =>
@@ -155,7 +107,7 @@ export function AdminServicePackages() {
     }
 
     // Filter V2 Packages
-    let filteredV2 = packagesV2
+    let filteredV2 = packagesV2Unified
 
     if (searchQuery) {
       filteredV2 = filteredV2.filter((pkg) =>
@@ -174,20 +126,13 @@ export function AdminServicePackages() {
       filteredV2 = filteredV2.filter((pkg) => pkg.pricing_model === PricingModel.Tiered)
     }
 
-    setFilteredPackages(filteredV1)
-    setFilteredPackagesV2(filteredV2)
-    // Reset display count when filter changes
+    return { filteredPackages: filteredV1, filteredPackagesV2: filteredV2 }
+  }, [packagesV1Unified, packagesV2Unified, searchQuery, typeFilter, pricingModelFilter])
+
+  // Reset display count when filters change
+  useEffect(() => {
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [packages, packagesV2, searchQuery, typeFilter, pricingModelFilter, ITEMS_PER_LOAD])
-
-  useEffect(() => {
-    fetchAllPackages()
-  }, [fetchAllPackages])
-
-  useEffect(() => {
-    filterPackages()
-    calculateStats()
-  }, [filterPackages, calculateStats])
+  }, [searchQuery, typeFilter, pricingModelFilter, ITEMS_PER_LOAD])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -229,7 +174,7 @@ export function AdminServicePackages() {
 
       setIsDialogOpen(false)
       resetForm()
-      fetchPackages()
+      refresh()
     } catch {
       toast({
         title: 'Error',
@@ -254,7 +199,7 @@ export function AdminServicePackages() {
         title: 'Success',
         description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
       })
-      fetchPackages()
+      refresh()
     } catch {
       toast({
         title: 'Error',
@@ -277,7 +222,7 @@ export function AdminServicePackages() {
         title: 'Success',
         description: 'Package deleted successfully',
       })
-      fetchPackages()
+      refresh()
     } catch (error) {
       console.error('Delete package error:', error)
       const dbError = error as { code?: string }
@@ -344,7 +289,7 @@ export function AdminServicePackages() {
         description: 'Package deleted successfully',
       })
 
-      fetchAllPackages()
+      refresh()
     } catch (error) {
       console.error('Delete V2 package error:', error)
       const dbError = error as { code?: string }
@@ -380,7 +325,7 @@ export function AdminServicePackages() {
         title: 'Success',
         description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
       })
-      fetchAllPackages()
+      refresh()
     } catch {
       toast({
         title: 'Error',
@@ -443,7 +388,7 @@ export function AdminServicePackages() {
   const handleFormSuccess = () => {
     setIsDialogOpen(false)
     resetForm()
-    fetchAllPackages()
+    refresh()
   }
 
   /**
@@ -471,8 +416,8 @@ export function AdminServicePackages() {
         </div>
 
         {/* Stats cards skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <StatCard
               key={i}
               title=""
@@ -530,7 +475,7 @@ export function AdminServicePackages() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">
           Manage cleaning and training service packages
         </p>
@@ -673,7 +618,7 @@ export function AdminServicePackages() {
       </Dialog>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="Total Packages"
           value={stats.total}
@@ -693,13 +638,6 @@ export function AdminServicePackages() {
           value={stats.inactive}
           icon={XCircle}
           iconColor="text-gray-400"
-        />
-
-        <StatCard
-          title="Average Price"
-          value={formatCurrency(stats.avgPrice)}
-          icon={DollarSign}
-          iconColor="text-tinedy-yellow"
         />
       </div>
 
@@ -753,16 +691,36 @@ export function AdminServicePackages() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* V2 Packages - Display using PackageCard component */}
-            {filteredPackagesV2.slice(0, displayCount).map((pkg) => (
-              <PackageCard
-                key={pkg.id}
-                package={pkg}
-                onEdit={handleEditV2}
-                onDelete={deletePackageV2}
-                onToggleActive={toggleActiveV2}
-                showActions={can('update', 'service_packages') || canDelete('service_packages')}
-              />
-            ))}
+            {filteredPackagesV2.slice(0, displayCount).map((pkg) => {
+              // Convert UnifiedServicePackage to ServicePackageV2WithTiers
+              const pkgV2: ServicePackageV2WithTiers = {
+                id: pkg.id,
+                name: pkg.name,
+                description: pkg.description,
+                service_type: pkg.service_type,
+                category: pkg.category as ServiceCategory | null,
+                pricing_model: pkg.pricing_model,
+                duration_minutes: pkg.duration_minutes,
+                base_price: Number(pkg.base_price || 0),
+                is_active: pkg.is_active,
+                created_at: pkg.created_at,
+                updated_at: pkg.updated_at,
+                tier_count: pkg.tier_count || 0,
+                min_price: pkg.min_price,
+                max_price: pkg.max_price,
+                tiers: pkg.tiers || [],
+              }
+              return (
+                <PackageCard
+                  key={pkg.id}
+                  package={pkgV2}
+                  onEdit={handleEditV2}
+                  onDelete={deletePackageV2}
+                  onToggleActive={toggleActiveV2}
+                  showActions={can('update', 'service_packages') || canDelete('service_packages')}
+                />
+              )
+            })}
 
             {/* V1 Packages - Convert to V2 format for PackageCard */}
             {filteredPackages.slice(0, Math.max(0, displayCount - filteredPackagesV2.length)).map((pkg) => {
@@ -775,15 +733,14 @@ export function AdminServicePackages() {
                 category: null,
                 pricing_model: PricingModel.Fixed,
                 duration_minutes: pkg.duration_minutes,
-                base_price: Number(pkg.price),
+                base_price: Number(pkg.base_price || 0),
                 is_active: pkg.is_active,
-                display_order: 0,
                 created_at: pkg.created_at,
                 updated_at: pkg.created_at, // V1 doesn't have updated_at, use created_at
-                tier_count: 0,
-                min_price: Number(pkg.price),
-                max_price: Number(pkg.price),
-                tiers: [],
+                tier_count: pkg.tier_count || 0,
+                min_price: pkg.min_price,
+                max_price: pkg.max_price,
+                tiers: pkg.tiers || [],
               }
               return (
                 <PackageCard

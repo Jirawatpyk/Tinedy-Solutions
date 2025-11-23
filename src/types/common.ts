@@ -234,7 +234,7 @@ export interface DateRangeISO {
  * @property {'lastWeek'} lastWeek - Previous week (Sunday to Saturday)
  * @property {'thisMonth'} thisMonth - Current calendar month
  * @property {'lastMonth'} lastMonth - Previous calendar month
- * @property {'last3months'} last3months - Last 3 months including current month
+ * @property {'last3months'} last3months - Last 3 complete months (excluding current month)
  * @property {'custom'} custom - User-defined custom date range
  */
 export type DateRangePreset =

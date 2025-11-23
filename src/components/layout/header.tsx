@@ -24,6 +24,7 @@ interface SearchResult {
   title: string
   subtitle: string
   link: string
+  bookingId?: string
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
@@ -62,6 +63,12 @@ export function Header({ onMenuClick }: HeaderProps) {
     const basePath = (profile?.role === 'admin' || profile?.role === 'manager') ? '/admin' : '/staff'
 
     try {
+      // Remove # prefix if present (users often copy ID with # from UI)
+      const cleanedQuery = query.startsWith('#') ? query.substring(1) : query
+
+      // Check if cleaned query matches UUID pattern (with or without dashes, partial or full)
+      const isUuidPattern = /^[0-9a-f]{8}(-?[0-9a-f]{4}){0,3}(-?[0-9a-f]{0,12})?$/i.test(cleanedQuery)
+
       // Search Customers
       const { data: customers } = await supabase
         .from('customers')
@@ -96,33 +103,74 @@ export function Header({ onMenuClick }: HeaderProps) {
         })
       })
 
-      // Search Bookings (by customer name)
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_date,
-          status,
-          customers (full_name)
-        `)
-        .limit(5)
+      // Search Bookings - ปรับปรุงใหม่: รองรับค้นหาด้วย ID และชื่อลูกค้า
+      if (isUuidPattern) {
+        // ค้นหาด้วย Booking ID - ดึงทั้งหมดแล้วกรองที่ client
+        const { data: bookingsByID, error: bookingError } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            booking_date,
+            status,
+            customers (full_name)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(500)
 
-      bookings?.forEach((booking) => {
-        const customers = booking.customers as { full_name: string } | { full_name: string }[] | null
-        const customerName = Array.isArray(customers)
-          ? customers[0]?.full_name
-          : customers?.full_name
+        if (bookingError) {
+          console.error('Booking search error:', bookingError)
+        }
 
-        if (customerName?.toLowerCase().includes(query.toLowerCase())) {
+        // Filter bookings by ID at client side (case-insensitive)
+        const filteredBookings = bookingsByID?.filter(booking =>
+          booking.id.toLowerCase().includes(cleanedQuery.toLowerCase())
+        ).slice(0, 5) || []
+
+        filteredBookings.forEach((booking) => {
+          const customers = booking.customers as { full_name: string } | { full_name: string }[] | null
+          const customerName = Array.isArray(customers)
+            ? customers[0]?.full_name || 'Unknown'
+            : customers?.full_name || 'Unknown'
+
           searchResults.push({
             id: booking.id,
             type: 'booking',
             title: `Booking - ${customerName}`,
-            subtitle: `${booking.booking_date} • ${booking.status}`,
+            subtitle: `ID: #${booking.id.substring(0, 8)} • ${booking.booking_date} • ${booking.status}`,
             link: `${basePath}/bookings`,
+            bookingId: booking.id,
           })
-        }
-      })
+        })
+      } else {
+        // ค้นหาด้วยชื่อลูกค้า - ใช้ server-side filtering
+        const { data: bookingsByCustomer } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            booking_date,
+            status,
+            customers!inner (full_name)
+          `)
+          .ilike('customers.full_name', `%${query}%`)
+          .is('deleted_at', null)
+          .limit(5)
+
+        bookingsByCustomer?.forEach((booking) => {
+          const customers = booking.customers as { full_name: string } | { full_name: string }[] | null
+          const customerName = Array.isArray(customers)
+            ? customers[0]?.full_name || 'Unknown'
+            : customers?.full_name || 'Unknown'
+
+          searchResults.push({
+            id: booking.id,
+            type: 'booking',
+            title: `Booking - ${customerName}`,
+            subtitle: `ID: #${booking.id.substring(0, 8)} • ${booking.booking_date} • ${booking.status}`,
+            link: `${basePath}/bookings`,
+            bookingId: booking.id,
+          })
+        })
+      }
 
       // Search Service Packages
       const { data: services } = await supabase
@@ -137,11 +185,11 @@ export function Header({ onMenuClick }: HeaderProps) {
           type: 'service',
           title: service.name,
           subtitle: `฿${service.price?.toLocaleString() ?? '0'}`,
-          link: `${basePath}/packages`,
+          link: `${basePath}/packages/${service.id}`,
         })
       })
 
-      logger.debug('Search results', { count: searchResults.length }, { context: 'Header' })
+      logger.debug('Search results', { count: searchResults.length, isUuidPattern, cleanedQuery }, { context: 'Header' })
       setResults(searchResults)
     } catch (error) {
       logger.error('Search error', { error }, { context: 'Header' })
@@ -158,11 +206,17 @@ export function Header({ onMenuClick }: HeaderProps) {
     return () => clearTimeout(timer)
   }, [searchQuery, performSearch])
 
-  const handleSelect = (link: string) => {
+  const handleSelect = (result: SearchResult) => {
     setOpen(false)
     setSearchQuery('')
     setResults([])
-    navigate(link)
+
+    // For bookings, pass bookingId in navigation state to trigger modal
+    if (result.type === 'booking' && result.bookingId) {
+      navigate(result.link, { state: { viewBookingId: result.bookingId } })
+    } else {
+      navigate(result.link)
+    }
   }
 
   // Reset search when dialog closes
@@ -202,28 +256,25 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </Button>
 
-          {/* Search bar - Admin & Manager, hidden on mobile */}
+          {/* Search bar - Admin & Manager, icon on mobile, full on tablet+ */}
           {(profile?.role === 'admin' || profile?.role === 'manager') && (
-            <div className="hidden md:flex items-center relative">
-              <Button
-                variant="outline"
-                className="w-64 lg:w-96 justify-start text-muted-foreground"
-                onClick={() => setOpen(true)}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Search...
-                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="md:w-64 lg:w-96 md:justify-start text-muted-foreground md:px-3"
+              onClick={() => setOpen(true)}
+            >
+              <Search className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Search...</span>
+              <kbd className="hidden md:inline-flex pointer-events-none ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
           )}
 
-          {/* Quick Availability Check - Admin & Manager, hidden on mobile */}
+          {/* Quick Availability Check - Admin & Manager, show on all screens */}
           {(profile?.role === 'admin' || profile?.role === 'manager') && (
-            <div className="hidden lg:block">
-              <QuickAvailabilityCheck />
-            </div>
+            <QuickAvailabilityCheck />
           )}
         </div>
 
@@ -236,7 +287,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       {/* Search Dialog */}
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="Search customers, staff, bookings, services..."
+          placeholder="Search customers, staff, bookings (by ID or name), services..."
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
@@ -271,7 +322,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     {typeResults.map((result) => (
                       <div
                         key={result.id}
-                        onClick={() => handleSelect(result.link)}
+                        onClick={() => handleSelect(result)}
                         className="flex items-center px-2 py-2 hover:bg-accent rounded-sm cursor-pointer transition-colors"
                       >
                         <div className="mr-2">{getIcon(result.type)}</div>

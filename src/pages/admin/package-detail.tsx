@@ -15,6 +15,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { PackageFormV2 } from '@/components/service-packages/PackageFormV2'
 import {
   Table,
   TableBody,
@@ -102,6 +110,7 @@ export default function AdminPackageDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [bookingsPage, setBookingsPage] = useState(1)
   const BOOKINGS_PER_PAGE = 10
@@ -169,7 +178,6 @@ export default function AdminPackageDetail() {
           duration_minutes: v1Package.duration_minutes,
           base_price: Number(v1Package.price),
           is_active: v1Package.is_active,
-          display_order: 0,
           created_at: v1Package.created_at,
           updated_at: v1Package.created_at,
           tiers: [],
@@ -446,6 +454,7 @@ export default function AdminPackageDetail() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setIsEditDialogOpen(true)}
               className="gap-2"
             >
               <Edit className="h-4 w-4" />
@@ -803,6 +812,27 @@ export default function AdminPackageDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Package Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Package</DialogTitle>
+            <DialogDescription>
+              Update package information and pricing tiers
+            </DialogDescription>
+          </DialogHeader>
+          <PackageFormV2
+            package={packageData}
+            onSuccess={() => {
+              setIsEditDialogOpen(false)
+              fetchPackageDetails() // Refresh package data
+            }}
+            onCancel={() => setIsEditDialogOpen(false)}
+            showCancel={true}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -39,19 +39,28 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if the user is an admin
+    // Check if the user is an admin or manager
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
-      throw new Error('Only admins can create staff members')
+    if (profile?.role !== 'admin' && profile?.role !== 'manager') {
+      throw new Error('Only admins and managers can create staff members')
     }
 
     // Get request body
     const { email, password, full_name, phone, role, staff_number, skills } = await req.json()
+
+    console.log('[Create Staff] Received request body:', {
+      email,
+      full_name,
+      skills,
+      skillsType: typeof skills,
+      skillsIsArray: Array.isArray(skills),
+      skillsLength: Array.isArray(skills) ? skills.length : 'N/A',
+    })
 
     if (!email || !password || !full_name) {
       throw new Error('Missing required fields: email, password, full_name')
@@ -76,15 +85,19 @@ serve(async (req) => {
     }
 
     // Create profile for the new user
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+    const profileData = {
       id: newUser.user.id,
       email,
       full_name,
       phone: phone || null,
       role: role || 'staff',
       staff_number: staff_number || null,
-      skills: skills || null,
-    })
+      skills: Array.isArray(skills) && skills.length > 0 ? skills : null,
+    }
+
+    console.log('[Create Staff] Inserting profile:', profileData)
+
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
 
     if (profileError) {
       // If profile creation fails, delete the user

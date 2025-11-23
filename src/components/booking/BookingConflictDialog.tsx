@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -18,18 +18,26 @@ interface BookingConflictDialogProps {
   onProceed: () => void
   conflicts: BookingConflict[]
   isEdit?: boolean
-  getStatusBadge: (status: string) => React.ReactElement
+  getStatusBadge: (status: string) => JSX.Element
   formatTime: (time: string) => string
 }
 
-export function BookingConflictDialog({
+/**
+ * BookingConflictDialog Component
+ *
+ * แสดง dialog เมื่อมี booking conflicts (staff/team ซ้ำเวลา)
+ * ใช้ React.memo เพื่อป้องกัน unnecessary re-renders
+ *
+ * @performance Memoized - re-render เฉพาะเมื่อ props เปลี่ยน
+ */
+const BookingConflictDialogComponent = ({
   isOpen,
   onClose,
   onProceed,
   conflicts,
   getStatusBadge,
   formatTime,
-}: BookingConflictDialogProps) {
+}: BookingConflictDialogProps): JSX.Element => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -99,3 +107,32 @@ export function BookingConflictDialog({
     </Dialog>
   )
 }
+
+/**
+ * Memoized BookingConflictDialog
+ *
+ * Custom comparison function เพื่อ optimize re-renders
+ * Re-render เฉพาะเมื่อ:
+ * - isOpen เปลี่ยน
+ * - conflicts array เปลี่ยน (ความยาวหรือ item แรก)
+ * - callback functions เปลี่ยน (ควร wrap ด้วย useCallback ฝั่ง parent)
+ */
+export const BookingConflictDialog = memo(
+  BookingConflictDialogComponent,
+  (prevProps, nextProps) => {
+    // Compare isOpen first (most important)
+    if (prevProps.isOpen !== nextProps.isOpen) return false
+
+    // If dialog is closed, skip further comparison
+    if (!nextProps.isOpen) return true
+
+    // Compare conflicts array (shallow comparison)
+    const conflictsEqual =
+      prevProps.conflicts.length === nextProps.conflicts.length &&
+      (prevProps.conflicts.length === 0 ||
+        prevProps.conflicts[0].booking.id === nextProps.conflicts[0].booking.id)
+
+    // Return true to skip re-render, false to re-render
+    return conflictsEqual
+  }
+)

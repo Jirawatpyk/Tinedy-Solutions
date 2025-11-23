@@ -44,9 +44,13 @@ interface BookingRawFromDB {
   created_at: string
   staff_id: string | null
   team_id: string | null
+  address: string
+  city: string
+  state: string
+  zip_code: string
   service_packages: { name: string; price?: number; service_type?: string }[] | { name: string; price?: number; service_type?: string } | null
   service_packages_v2: { name: string; service_type?: string }[] | { name: string; service_type?: string } | null
-  customers: { full_name: string }[] | { full_name: string } | null
+  customers: { id: string; full_name: string; email: string; phone: string | null }[] | { id: string; full_name: string; email: string; phone: string | null } | null
 }
 
 export function useStaffPerformance(staffId: string | undefined) {
@@ -122,9 +126,13 @@ export function useStaffPerformance(staffId: string | undefined) {
           created_at,
           staff_id,
           team_id,
+          address,
+          city,
+          state,
+          zip_code,
           service_packages (name, price, service_type),
           service_packages_v2:package_v2_id (name, service_type),
-          customers (full_name)
+          customers (id, full_name, email, phone)
         `)
         .is('deleted_at', null)
         .order('booking_date', { ascending: false })
@@ -159,10 +167,10 @@ export function useStaffPerformance(staffId: string | undefined) {
             service_type: pkg.service_type || 'general'
           } : null,
           customers: customerData ? {
-            id: '',
+            id: customerData.id || '',
             full_name: customerData.full_name,
-            email: '',
-            phone: null
+            email: customerData.email || '',
+            phone: customerData.phone || null
           } : null,
         } as unknown as Booking
       })

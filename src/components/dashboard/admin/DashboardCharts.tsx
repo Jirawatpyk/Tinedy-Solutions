@@ -1,5 +1,4 @@
-import { BookingStatusPieChart } from '@/components/dashboard/charts/BookingStatusPieChart'
-import { RevenueLineChart } from '@/components/dashboard/charts/RevenueLineChart'
+import { BookingStatusPieChart, RevenueLineChart } from '@/components/charts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { BookingStatus, DailyRevenue } from '@/types/dashboard'

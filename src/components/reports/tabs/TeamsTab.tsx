@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
 import { CHART_COLORS } from '@/types/reports'
+import { useChartAnimation } from '@/hooks/useChartAnimation'
 import type { TeamMetrics, TeamPerformance } from '@/lib/analytics'
 import {
   BarChart,
@@ -37,6 +38,24 @@ function TeamsTabComponent({
   teamMetrics,
   teamPerformance,
 }: TeamsTabProps) {
+  // Prepare workload data for animation
+  const workloadData = React.useMemo(() =>
+    teamPerformance
+      .map((team: TeamPerformance) => ({
+        name: team.name,
+        value: team.totalJobs,
+      }))
+      .filter((t: { value: number }) => t.value > 0),
+    [teamPerformance]
+  )
+
+  // Chart animation
+  const workloadChart = useChartAnimation(workloadData, {
+    initialDelay: 50,
+    animationDuration: 800,
+    enabled: true
+  })
+
   return (
     <div className="space-y-6">
       {/* Team Metrics Cards */}
@@ -146,25 +165,22 @@ function TeamsTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={teamPerformance
-                    .map((team: TeamPerformance) => ({
-                      name: team.name,
-                      value: team.totalJobs,
-                    }))
-                    .filter((t: { value: number }) => t.value > 0)
-                  }
+                  data={workloadData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(props: { name?: string; percent?: number }) => {
+                  labelLine={workloadChart.showLabels}
+                  label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
                     const percent = Number(props.percent || 0)
                     return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
-                  }}
+                  } : false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  animationBegin={0}
+                  animationDuration={workloadChart.isReady ? 800 : 0}
+                  opacity={workloadChart.isReady ? 1 : 0}
                 >
-                  {teamPerformance.map((_: TeamPerformance, index: number) => (
+                  {workloadData.map((_: { name: string; value: number }, index: number) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={[

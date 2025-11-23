@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { format, startOfMonth, endOfMonth, startOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { useStaffCalendar, type CalendarEvent } from '@/hooks/use-staff-calendar'
+import { useStaffCalendar } from '@/hooks/useStaffCalendar'
+import { type CalendarEvent } from '@/lib/queries/staff-calendar-queries'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Calendar as CalendarIcon, Clock, User, Briefcase, Users, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useStaffBookings } from '@/hooks/use-staff-bookings'
+import { useStaffDashboard } from '@/hooks/useStaffDashboard'
 import { formatTime } from '@/lib/booking-utils'
 import './calendar.css'
 
@@ -30,7 +31,7 @@ const STATUS_DOTS = {
 
 export default function StaffCalendar() {
   const { events, loading, error } = useStaffCalendar()
-  const { startProgress, markAsCompleted, addNotes } = useStaffBookings()
+  const { startProgress, markAsCompleted, addNotes } = useStaffDashboard()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -69,11 +70,11 @@ export default function StaffCalendar() {
       {/* Header */}
       <div className="bg-white border-b flex-shrink-0">
         <div className="px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-muted-foreground">
               View your schedule and bookings
             </p>
-            <Button onClick={goToToday} variant="outline">
+            <Button onClick={goToToday} variant="outline" size="sm" className="sm:size-default w-full sm:w-auto">
               <CalendarIcon className="h-4 w-4 mr-2" />
               Today
             </Button>
@@ -87,7 +88,7 @@ export default function StaffCalendar() {
           <div className="p-4 sm:p-6">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Error: {error}</AlertDescription>
+              <AlertDescription>Error: {error.message}</AlertDescription>
             </Alert>
           </div>
         )}
@@ -134,41 +135,42 @@ export default function StaffCalendar() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Calendar */}
             <Card className="lg:col-span-2">
-              <CardHeader>
+              <CardHeader className="py-3 sm:py-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl">
+                  <CardTitle className="text-lg sm:text-xl md:text-2xl">
                     {format(currentDate, 'MMMM yyyy', { locale: enUS })}
                   </CardTitle>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5 sm:gap-2">
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={goToPreviousMonth}
-                      className="h-8 w-8"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={goToNextMonth}
-                      className="h-8 w-8"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
                 {/* Day headers */}
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
                   <div
                     key={day}
-                    className="text-center text-xs font-semibold text-muted-foreground py-2"
+                    className="text-center text-[10px] sm:text-xs font-semibold text-muted-foreground py-1 sm:py-1.5"
                   >
-                    {day}
+                    <span className="sm:hidden">{['S', 'M', 'T', 'W', 'T', 'F', 'S'][index]}</span>
+                    <span className="hidden sm:inline">{day}</span>
                   </div>
                 ))}
 
@@ -183,32 +185,32 @@ export default function StaffCalendar() {
                     <div
                       key={index}
                       className={`
-                        relative min-h-20 p-2 border rounded-lg transition-all cursor-pointer
+                        relative min-h-12 sm:min-h-16 md:min-h-20 p-0.5 sm:p-1.5 border rounded transition-all cursor-pointer
                         ${!isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-background'}
-                        ${isSelected ? 'ring-2 ring-primary bg-blue-50' : ''}
-                        ${isTodayDate && !isSelected ? 'ring-2 ring-yellow-400' : ''}
+                        ${isSelected ? 'ring-1 sm:ring-2 ring-primary bg-blue-50' : ''}
+                        ${isTodayDate && !isSelected ? 'ring-1 sm:ring-2 ring-yellow-400' : ''}
                         hover:bg-accent/50
                       `}
                       onClick={() => setSelectedDate(day)}
                     >
                       <div className="flex items-start justify-between">
                         <span
-                          className={`text-sm font-medium ${
+                          className={`text-[11px] sm:text-xs md:text-sm font-medium ${
                             isTodayDate ? 'text-primary font-bold' : ''
                           }`}
                         >
                           {format(day, 'd')}
                         </span>
                         {dayEvents.length > 0 && (
-                          <span className="text-xs bg-primary text-white rounded-full px-1.5">
+                          <span className="text-[9px] sm:text-[10px] bg-primary text-white rounded-full px-0.5 sm:px-1 leading-tight">
                             {dayEvents.length}
                           </span>
                         )}
                       </div>
 
-                      {/* Booking dots */}
+                      {/* Booking dots - ซ่อนบน mobile */}
                       {dayEvents.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
+                        <div className="hidden sm:flex mt-1 flex-wrap gap-1">
                           {dayEvents.slice(0, 3).map((event) => (
                             <div
                               key={event.booking_id}
@@ -219,7 +221,7 @@ export default function StaffCalendar() {
                             />
                           ))}
                           {dayEvents.length > 3 && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">
                               +{dayEvents.length - 3}
                             </span>
                           )}
@@ -231,27 +233,27 @@ export default function StaffCalendar() {
               </div>
 
               {/* Legend */}
-              <div className="mt-6 pt-4 border-t">
-                <p className="text-sm font-semibold mb-2">Status:</p>
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+                <p className="text-[10px] sm:text-xs font-semibold mb-1.5 sm:mb-2">Status:</p>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 text-[9px] sm:text-[10px]">
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-yellow-500" />
                     <span>Pending</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500" />
                     <span>Confirmed</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-purple-500" />
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-purple-500" />
                     <span>In Progress</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500" />
                     <span>Completed</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500" />
                     <span>Cancelled</span>
                   </div>
                 </div>
@@ -285,23 +287,23 @@ export default function StaffCalendar() {
                   <p className="text-muted-foreground">No tasks on this day</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                <div className="space-y-2 sm:space-y-3 max-h-[50vh] sm:max-h-[600px] overflow-y-auto">
                   {selectedDateEvents.map((event) => (
                     <div
                       key={event.booking_id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`p-3 rounded-lg border-2 cursor-pointer hover:opacity-80 transition-opacity ${
+                      className={`p-2 sm:p-3 rounded-lg border-2 cursor-pointer hover:opacity-80 transition-opacity ${
                         STATUS_COLORS[event.status as keyof typeof STATUS_COLORS]
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span className="font-semibold">
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="font-semibold text-xs sm:text-sm truncate">
                             {formatTime(format(event.start, 'HH:mm:ss'))} - {formatTime(format(event.end, 'HH:mm:ss'))}
                           </span>
                         </div>
-                        <span className="text-xs font-medium uppercase px-2 py-0.5 rounded">
+                        <span className="text-[10px] sm:text-xs font-medium uppercase px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0">
                           {event.status === 'pending' && 'Pending'}
                           {event.status === 'confirmed' && 'Confirmed'}
                           {event.status === 'in_progress' && 'In Progress'}
@@ -310,25 +312,25 @@ export default function StaffCalendar() {
                         </span>
                       </div>
 
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{event.customer_name}</span>
+                      <div className="space-y-1 text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <User className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{event.customer_name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{event.service_name}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{event.service_name}</span>
                         </div>
                         {event.staff_id && event.staff_name && (
-                          <div className="flex items-center gap-2 text-blue-600">
-                            <User className="h-3.5 w-3.5" />
-                            <span>Staff: {event.staff_name}</span>
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-blue-600">
+                            <User className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                            <span className="truncate">Staff: {event.staff_name}</span>
                           </div>
                         )}
                         {event.team_id && event.team_name && (
-                          <div className="flex items-center gap-2 text-green-600">
-                            <Users className="h-3.5 w-3.5" />
-                            <span>Team: {event.team_name}</span>
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-green-600">
+                            <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                            <span className="truncate">Team: {event.team_name}</span>
                           </div>
                         )}
                       </div>
@@ -352,11 +354,16 @@ export default function StaffCalendar() {
             start_time: format(selectedEvent.start, 'HH:mm'),
             end_time: format(selectedEvent.end, 'HH:mm'),
             status: selectedEvent.status,
+            payment_status: 'unpaid',
+            total_price: selectedEvent.service_price,
             notes: selectedEvent.notes,
             address: selectedEvent.address,
             city: selectedEvent.city,
             state: selectedEvent.state,
             zip_code: selectedEvent.zip_code,
+            customer_id: '',
+            service_package_id: '',
+            package_v2_id: null,
             created_at: new Date().toISOString(),
             staff_id: selectedEvent.staff_id || null,
             team_id: selectedEvent.team_id || null,
@@ -371,9 +378,11 @@ export default function StaffCalendar() {
             service_packages: {
               id: '',
               name: selectedEvent.service_name,
+              service_type: 'cleaning', // Default service type
               duration_minutes: selectedEvent.service_duration,
               price: selectedEvent.service_price,
             },
+            service_packages_v2: null,
           }}
           open={!!selectedEvent}
           onClose={() => setSelectedEvent(null)}

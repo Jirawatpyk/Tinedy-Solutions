@@ -104,6 +104,10 @@ export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: 
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowSuggestions(true)}
+            onBlur={() => {
+              // Delay to allow click on suggestion to register
+              setTimeout(() => setShowSuggestions(false), 200)
+            }}
             placeholder="Type to add tags or select from suggestions..."
             className="flex-1"
           />

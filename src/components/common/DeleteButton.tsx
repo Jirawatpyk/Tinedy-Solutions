@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, forwardRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -11,13 +11,13 @@ interface DeleteButtonProps {
   className?: string
 }
 
-export function DeleteButton({
+export const DeleteButton = forwardRef<HTMLButtonElement, DeleteButtonProps>(({
   itemName,
   onDelete,
   variant = 'icon',
   size = 'icon',
   className = '',
-}: DeleteButtonProps) {
+}, ref) => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -36,6 +36,7 @@ export function DeleteButton({
   return (
     <>
       <Button
+        ref={ref}
         variant="ghost"
         size={size}
         onClick={(e) => {
@@ -67,4 +68,6 @@ export function DeleteButton({
       />
     </>
   )
-}
+})
+
+DeleteButton.displayName = 'DeleteButton'

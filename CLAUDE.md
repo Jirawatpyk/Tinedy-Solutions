@@ -64,23 +64,46 @@ The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()
 
 ### Role-Based Access Control & Routing
 
-**Two Roles with Separate Portals:**
-- **Admin**: Full system access at `/admin/*` routes
-- **Staff**: Limited access at `/staff/*` routes
+**Three Roles with Separate Portals:**
+- **Admin**: Full system access at `/admin/*` routes with all privileges
+- **Manager**: Operational access at `/admin/*` routes with limited privileges (no hard delete, no settings)
+- **Staff**: Limited access at `/staff/*` routes for personal work
+
+**Permission System:**
+The application implements a comprehensive RBAC system via `src/lib/permissions.ts`:
+- **Permission Matrix**: Defines granular permissions (create, read, update, delete, export) for each role and resource
+- **Permission Checking**: Use `usePermissions()` hook or `hasPermission()`, `canPerformAction()` utilities
+- **Protected Routes**: Use `ProtectedRoute` component with `allowedRoles` prop
+- **Soft Delete**: Managers can archive (soft delete) records; only admins can permanently delete
+- **157 Tests**: Comprehensive test coverage for all permission checks
+
+**Role Capabilities:**
+
+| Feature | Admin | Manager | Staff |
+|---------|-------|---------|-------|
+| Bookings (CRUD) | ✅ Full | ✅ CRU only | ❌ Read assigned only |
+| Customers (CRUD) | ✅ Full | ✅ CRU only | ❌ Read only |
+| Staff Management | ✅ Full | ✅ Update only | ❌ Own profile only |
+| Teams | ✅ Full | ✅ CRU only | ❌ Read only |
+| Reports | ✅ Full | ✅ View/Export | ❌ None |
+| Settings | ✅ Full | ❌ None | ❌ None |
+| Hard Delete | ✅ Yes | ❌ No | ❌ No |
+| Soft Delete/Archive | ✅ Yes | ✅ Yes | ❌ No |
 
 **Authentication:**
 - Flows through `AuthContext` (`src/contexts/auth-context.tsx`)
 - Manages `user` (Supabase auth) and `profile` (custom profiles table)
 - Profile includes: `role`, `staff_number`, `skills`, etc.
-- Protected routes use `ProtectedRoute` component with `allowedRoles` prop
+- Permission checking via `PermissionContext` (`src/contexts/permission-context.tsx`)
 
 **Auth Flow:**
 1. User logs in → `signIn()` authenticates with Supabase
 2. On success → Fetches profile from `profiles` table
-3. Profile role determines route access (admin vs staff)
+3. Profile role determines permissions and route access
 4. `ProtectedRoute` checks `profile.role` against `allowedRoles`
-5. Unauthorized users redirected to `/unauthorized` or `/login`
-6. Auth state persists via Supabase session (localStorage)
+5. Permission checks throughout UI (buttons, features, actions)
+6. Unauthorized users redirected to `/unauthorized` or `/login`
+7. Auth state persists via Supabase session (localStorage)
 
 **Route Structure** (defined in `src/App.tsx`):
 
@@ -113,22 +136,36 @@ The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()
 ### Database Architecture
 
 **Core Tables:**
-- `profiles` - User profiles (extends Supabase auth.users)
-- `customers` - Customer records with tags and analytics
+- `profiles` - User profiles (extends Supabase auth.users) with role field
+- `customers` - Customer records with tags, analytics, and avatar support
 - `service_packages` - Service offerings (cleaning, training, etc.)
-- `bookings` - Main booking records with team/staff assignment
+- `bookings` - Main booking records with team/staff assignment and soft delete support
+- `recurring_bookings` - Recurring booking schedules (migration exists)
+- `booking_status_history` - Audit trail for booking status changes
 - `teams` - Staff team organization with team leads
 - `team_members` - Many-to-many team membership
-- `messages` - Internal chat system
-- `settings` - Application settings (notifications, business hours)
+- `messages` - Internal chat system with file attachments
+- `notifications` - In-app notification system with realtime
+- `settings` - Application settings (notifications, business hours, logo)
 - `reviews` - Customer ratings for staff (may not exist in all deployments)
+- `staff_availability` - Staff schedule and availability tracking
 
 **Key Patterns:**
-- All tables use Row Level Security (RLS) policies
-- Bookings can be assigned to either `staff_id` OR `team_id` (not both)
-- Team bookings are visible to all team members
-- Auto-generated fields: `staff_number` (STF0001, STF0002...)
-- Timestamps: `created_at`, `updated_at` (auto-managed)
+- **Row Level Security (RLS)**: All tables enforce role-based access via RLS policies
+  - Admins have full access
+  - Managers have read/write access (no hard delete)
+  - Staff have limited access to assigned/owned records only
+  - ⚠️ **CRITICAL**: RLS must be manually enabled - see `supabase/migrations/enable_rls_policies_v2.sql`
+- **Soft Delete System**: Records have `deleted_at` and `deleted_by` fields for recovery
+  - Managers can archive (set deleted_at) and restore (clear deleted_at)
+  - Admins can hard delete (permanent removal)
+  - Queries exclude soft-deleted records by default: `is('deleted_at', null)`
+- **Auto-generated Fields**:
+  - `staff_number` (STF0001, STF0002...) via trigger
+  - Customer analytics views auto-update
+- **Timestamps**: `created_at`, `updated_at` (auto-managed via triggers)
+- **Payment Tracking**: Bookings have `payment_status`, `payment_method`, `payment_slip_url`
+- **Team Assignment**: Bookings assigned to `staff_id` OR `team_id` (not both)
 
 ### Booking System
 
@@ -268,13 +305,24 @@ return () => supabase.removeChannel(channel)
 
 Migration files in `supabase/migrations/` are manually run in Supabase Dashboard SQL Editor.
 
-**Recent migrations in `supabase/migrations/`:**
+**Critical Migrations:**
+- `enable_rls_policies_v2.sql` - ⚠️ **MUST RUN** before production (enables RLS on all tables)
+- `20250116_add_manager_role.sql` - Adds manager role to user roles enum
+- `20250116_manager_rls_policies.sql` - Manager-specific RLS policies
+- `20250116_soft_delete_system.sql` - Soft delete infrastructure (deleted_at, deleted_by)
+- `20250112_add_recurring_bookings.sql` - Recurring booking schedules
+- `20250128_create_notifications_table.sql` - In-app notifications with realtime
+- `20250121_create_booking_status_history.sql` - Audit trail for booking status changes
+- `20250121_add_payment_fields.sql` - Payment tracking fields
+
+**Common Migrations:**
 - `add_team_lead.sql` - Team leadership functionality
 - `create_settings_table.sql` - Application settings
 - `customer_analytics_views.sql` - Customer analytics views
-- `enhance_customers_table.sql` - Enhanced customer fields
+- `enhance_customers_table.sql` - Enhanced customer fields with tags
 
 **Migration Pattern:**
+
 ```sql
 -- Add columns
 ALTER TABLE table_name ADD COLUMN IF NOT EXISTS column_name TYPE;
@@ -327,28 +375,39 @@ DO $$ ... $$;
 - Local component state for UI-only concerns
 
 **Custom Hooks** (`src/hooks/`):
-- `use-staff-bookings.ts` - Staff booking data with realtime updates
-- `use-staff-calendar.ts` - Calendar view for staff
+
+*Permission & Auth:*
+- `use-permissions.ts` - ⭐ **Permission checking hook** (hasPermission, canPerformAction, canDelete, etc.)
 - `use-staff-profile.ts` - Staff profile management
 - `use-admin-profile.ts` - Admin profile management
-- `use-chat.ts` - Chat functionality with realtime
-- `use-notifications.ts` - Notification system
-- `use-in-app-notifications.ts` - In-app notification UI
-- `use-staff-availability-check.ts` - Staff availability validation
-- `use-settings.ts` - Application settings management
-- `use-toast.ts` - Toast notification hook
-- `useDashboardData.ts` - Dashboard data aggregation
+
+*Booking Management:*
+- `use-staff-bookings.ts` - Staff booking data with realtime updates
+- `use-staff-calendar.ts` - Calendar view for staff
 - `useBookingForm.ts` - Booking form state and validation
 - `useBookingFilters.ts` - Booking filtering logic
 - `useBookingPagination.ts` - Pagination for booking lists
 - `useBookingStatusManager.tsx` - Booking status updates
 - `useBulkActions.ts` - Bulk operations on bookings
 - `useConflictDetection.ts` - Booking conflict detection
+- `use-staff-availability-check.ts` - Staff availability validation
+
+*Communication & Notifications:*
+- `use-chat.ts` - Chat functionality with realtime
+- `use-notifications.ts` - Notification system
+- `use-in-app-notifications.ts` - In-app notification UI
+
+*Dashboard & Analytics:*
+- `useDashboardData.ts` - Dashboard data aggregation
+- `dashboard/useDashboardStats.ts` - Dashboard statistics
+- `dashboard/useDashboardCharts.ts` - Chart data processing
 - `useChartAnimation.ts` - Chart animation utilities
+
+*Settings & Utilities:*
+- `use-settings.ts` - Application settings management
+- `use-toast.ts` - Toast notification hook
 - `use-debounce.ts` - Debounce utility hook
 - `use-error-handler.ts` - Error handling utilities
-- `dashboard/useDashboardStats.ts` - Dashboard statistics
-- `dashboard/useDashboardCharts.ts` - Dashboard charts data
 - `chat/useChatMessages.ts` - Chat messaging functionality
 
 **Error Boundaries:**
@@ -399,6 +458,16 @@ DO $$ ... $$;
 9. **Chart Performance**: For charts with large datasets, implement data sampling or virtualization
 
 10. **State Management**: For components with 5+ useState, consider using useReducer for better organization
+
+11. **Permission Checks**: ALWAYS check permissions before showing UI elements or performing actions
+    - Use `usePermissions()` hook: `const { canDelete, hasPermission } = usePermissions()`
+    - Example: `{canDelete('bookings') && <DeleteButton />}`
+
+12. **Soft Delete Pattern**: Always exclude soft-deleted records in queries: `.is('deleted_at', null)`
+    - For archive view: `.not('deleted_at', 'is', null)`
+    - Managers can soft delete; only admins can hard delete
+
+13. **RLS Security**: ⚠️ **CRITICAL** - Never bypass RLS. Always run `enable_rls_policies_v2.sql` before production
 
 ### Git Workflow
 
@@ -475,40 +544,58 @@ Dashboard ได้ถูก refactor เป็น modular components:
 
 ### Feature Status
 
-**Implemented:**
-- Admin Dashboard with stats and charts ([dashboard.tsx](src/pages/admin/dashboard.tsx))
-  - Modular component architecture
-  - Real-time statistics
-  - Interactive charts with animation
-- Booking Management with calendar ([bookings.tsx](src/pages/admin/bookings.tsx), [calendar.tsx](src/pages/admin/calendar.tsx))
-- Customer Management with detailed profiles ([customers.tsx](src/pages/admin/customers.tsx), [customer-detail.tsx](src/pages/admin/customer-detail.tsx))
-- Staff Management with auto-generated staff numbers ([staff.tsx](src/pages/admin/staff.tsx))
-- Team Management ([teams.tsx](src/pages/admin/teams.tsx))
-- Chat system with realtime updates ([chat.tsx](src/pages/admin/chat.tsx))
-- Staff Portal (dashboard, calendar, profile) ([src/pages/staff/](src/pages/staff/))
-- Staff Availability and performance tracking
-- Service Packages V1 & V2 ([service-packages.tsx](src/pages/admin/service-packages.tsx), [service-packages-v2.tsx](src/pages/admin/service-packages-v2.tsx))
-- Reports & analytics with export ([reports.tsx](src/pages/admin/reports.tsx))
+**Fully Implemented (✅):**
+
+*Access Control & Security:*
+- Three-tier RBAC (Admin, Manager, Staff) with 157 comprehensive tests
+- Soft Delete System with archive/restore functionality
+- Row Level Security (RLS) policies for all roles
+- Permission checking system via `usePermissions` hook
+
+*Dashboard & Analytics:*
+- Admin Dashboard with modular components ([dashboard.tsx](src/pages/admin/dashboard.tsx))
+- Real-time statistics and interactive charts
+- Reports & analytics with CSV/PDF export ([reports.tsx](src/pages/admin/reports.tsx))
+
+*Booking Management:*
+- Full CRUD with calendar view ([bookings.tsx](src/pages/admin/bookings.tsx))
+- Team and individual staff assignment
+- Booking status history (audit trail)
 - Weekly schedule view ([weekly-schedule.tsx](src/pages/admin/weekly-schedule.tsx))
-- Settings & notifications ([settings.tsx](src/pages/admin/settings.tsx))
-- Payment UI ([src/pages/payment/](src/pages/payment/))
+- Staff availability tracking
 
-**Partially Implemented:**
-- Payment Integration (UI ready, backend pending)
-- SMS/Email Notifications (Edge function exists but not fully integrated)
+*Customer & Staff Management:*
+- Customer profiles with tags and analytics ([customers.tsx](src/pages/admin/customers.tsx))
+- Staff Management with auto-generated numbers ([staff.tsx](src/pages/admin/staff.tsx))
+- Team Management with team leads ([teams.tsx](src/pages/admin/teams.tsx))
+- Staff Portal (dashboard, calendar, profile)
 
-**Not Implemented:**
-- Customer Portal (customers cannot self-service)
-- Complete Payment Gateway Integration (Stripe/Omise)
-- Recurring Bookings (planned - see [RECURRING_BOOKINGS_PLAN.md](../RECURRING_BOOKINGS_PLAN.md))
+*Communication:*
+- Chat system with realtime updates and file attachments ([chat.tsx](src/pages/admin/chat.tsx))
+- In-app notification system with realtime
+- Settings management ([settings.tsx](src/pages/admin/settings.tsx))
+
+*Services & Payments:*
+- Service Packages V1 & V2
+- Payment UI with PromptPay QR code generation
+- Payment slip upload functionality
+
+**Partially Implemented (⚠️):**
+- Recurring Bookings (database schema ready, UI pending)
+- Payment Gateway Integration (UI complete, Stripe/Omise backend pending)
+- SMS/Email Notifications (Edge functions exist, not fully integrated)
+
+**Not Implemented (❌):**
+- Customer Portal (customers cannot self-service booking/tracking)
+- Automated booking reminders via cron jobs
 
 **Planned Improvements:**
-- See [OPTIMIZATION_ROADMAP.md](../OPTIMIZATION_ROADMAP.md) for refactoring and performance optimization plans
-  - God component refactoring
-  - Type safety improvements
-  - React Query integration
-  - Performance optimization with memoization
-  - Testing strategy
+See [OPTIMIZATION_ROADMAP.md](../OPTIMIZATION_ROADMAP.md):
+- Large component refactoring
+- Type safety improvements
+- React Query integration
+- Performance optimization
+- Extended test coverage
 
 ### Platform Notes
 
@@ -530,11 +617,27 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.
 
 **Additional Documentation:**
+
+*Setup & Migration:*
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Initial setup instructions
 - [DATABASE_MIGRATION_GUIDE.md](DATABASE_MIGRATION_GUIDE.md) - Database migration procedures
+- [PRE_PRODUCTION_CHECKLIST.md](PRE_PRODUCTION_CHECKLIST.md) - Pre-deployment checklist (RLS, security)
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
+- [RLS_SECURITY_SETUP.md](RLS_SECURITY_SETUP.md) - Row Level Security setup
+
+*Manager Role System:*
+- [USER_GUIDE_MANAGER_ROLE.md](USER_GUIDE_MANAGER_ROLE.md) - Manager role user guide
+- [ADMIN_GUIDE_USER_MANAGEMENT.md](ADMIN_GUIDE_USER_MANAGEMENT.md) - Admin user management guide
+- [MANAGER_ROLE_MIGRATION_GUIDE.md](MANAGER_ROLE_MIGRATION_GUIDE.md) - Manager role migration guide
+
+*Feature Documentation:*
 - [EPIC_*.md](.) - Feature epic documentation (Booking, Customer, Staff, Chat)
 - [SMART_BOOKING_IMPLEMENTATION.md](SMART_BOOKING_IMPLEMENTATION.md) - Smart booking features
 - [BOOKING_FORM_IMPROVEMENTS.md](BOOKING_FORM_IMPROVEMENTS.md) - Booking form enhancements
+- [RECURRING_BOOKINGS_PLAN.md](RECURRING_BOOKINGS_PLAN.md) - Recurring bookings (planned feature)
+
+*Optimization & Refactoring:*
+- [OPTIMIZATION_ROADMAP.md](OPTIMIZATION_ROADMAP.md) - Performance and refactoring roadmap
 
 ### Deployment
 

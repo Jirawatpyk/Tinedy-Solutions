@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Switch } from '@/components/ui/switch'
 import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
@@ -16,8 +15,6 @@ interface TeamMember {
   phone: string | null
   avatar_url: string | null
   role: string
-  is_active?: boolean
-  membership_id?: string
 }
 
 interface Team {
@@ -41,7 +38,6 @@ interface TeamCardProps {
   onRestore?: (teamId: string) => void
   onAddMember: (team: Team) => void
   onRemoveMember: (teamId: string, staffId: string) => void
-  onToggleMemberStatus: (membershipId: string, currentStatus: boolean) => void
 }
 
 // Helper function moved outside component
@@ -53,7 +49,7 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember, onToggleMemberStatus }: TeamCardProps) {
+export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember }: TeamCardProps) {
   const navigate = useNavigate()
   const isArchived = !!team.deleted_at
 
@@ -66,18 +62,11 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
   const displayedMembers = useMemo(() => {
     if (!team.members) return []
 
-    // Sort members: Team Lead first, then active members, then inactive members
+    // Sort members: Team Lead first, then by name
     const sorted = [...team.members].sort((a, b) => {
-      // Team Lead always first (don't check active status for lead)
+      // Team Lead always first
       if (a.id === team.team_lead_id) return -1
       if (b.id === team.team_lead_id) return 1
-
-      // For non-lead members, sort by active status (active before inactive)
-      const aActive = a.is_active !== false
-      const bActive = b.is_active !== false
-
-      if (aActive && !bActive) return -1
-      if (!aActive && bActive) return 1
 
       return 0
     })
@@ -214,7 +203,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm font-medium truncate ${member.is_active === false ? 'text-muted-foreground line-through' : ''}`}>
+                      <p className="text-sm font-medium truncate">
                         {member.full_name}
                       </p>
                       {team.team_lead_id === member.id && (
@@ -222,22 +211,10 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                           <Crown className="h-3 w-3 text-amber-600" />
                         </Badge>
                       )}
-                      {member.is_active === false && (
-                        <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                          Inactive
-                        </Badge>
-                      )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {member.membership_id && (
-                      <Switch
-                        checked={member.is_active !== false}
-                        onCheckedChange={() => onToggleMemberStatus(member.membership_id!, member.is_active !== false)}
-                        className="scale-75"
-                      />
-                    )}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <DeleteButton
                       itemName={member.full_name}
                       onDelete={() => onRemoveMember(team.id, member.id)}

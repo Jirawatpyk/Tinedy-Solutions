@@ -9,6 +9,7 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import type { Conversation } from '@/types/chat'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { formatRole } from '@/lib/role-utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -140,7 +141,7 @@ export function UserList({
                     {conversation.unreadCount > 0 && (
                       <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
                         <span className="text-xs text-white font-semibold">
-                          {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                          {conversation.unreadCount > 10 ? '10+' : conversation.unreadCount}
                         </span>
                       </div>
                     )}
@@ -175,7 +176,7 @@ export function UserList({
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
-                        {conversation.user.role === 'admin' ? 'Admin' : 'Staff'}
+                        {formatRole(conversation.user.role)}
                       </Badge>
                       {conversation.lastMessage && (
                         <p className={cn(

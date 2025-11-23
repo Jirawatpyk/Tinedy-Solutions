@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
+import { useTeamsWithDetails } from '@/hooks/useTeams'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +30,16 @@ import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { TeamCard } from '@/components/teams/team-card'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
+import {
+  TeamCreateSchema,
+  TeamUpdateSchema,
+  TeamCreateTransformSchema,
+  TeamUpdateTransformSchema,
+  AddTeamMemberSchema,
+  type TeamCreateFormData,
+  type TeamUpdateFormData,
+  type AddTeamMemberFormData,
+} from '@/schemas'
 
 interface TeamMember {
   id: string
@@ -35,8 +48,6 @@ interface TeamMember {
   phone: string | null
   avatar_url: string | null
   role: string
-  is_active?: boolean
-  membership_id?: string
 }
 
 interface Team {
@@ -53,166 +64,73 @@ interface Team {
 }
 
 export function AdminTeams() {
-  const [teams, setTeams] = useState<Team[]>([])
-  const [filteredTeams, setFilteredTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
+  // Archive filter - ต้องประกาศก่อน useTeamsWithDetails
+  const [showArchived, setShowArchived] = useState(false)
+
+  const { teams, loading, refresh, error: teamsError } = useTeamsWithDetails({
+    showArchived,
+    enableRealtime: true,
+  })
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const [teamName, setTeamName] = useState('')
-  const [teamDescription, setTeamDescription] = useState('')
-  const [teamLeadId, setTeamLeadId] = useState<string>('')
-
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
-  const [selectedStaffId, setSelectedStaffId] = useState('')
+
+  // React Hook Form - Create Team (uses base schema, transforms on submit)
+  const createTeamForm = useForm<TeamCreateFormData>({
+    resolver: zodResolver(TeamCreateSchema),
+    defaultValues: {
+      name: '',
+      description: null,
+      team_lead_id: null,
+      is_active: true,
+    },
+  })
+
+  // React Hook Form - Update Team (uses base schema, transforms on submit)
+  const updateTeamForm = useForm<TeamUpdateFormData>({
+    resolver: zodResolver(TeamUpdateSchema),
+    defaultValues: {
+      name: '',
+      description: null,
+      team_lead_id: null,
+    },
+  })
+
+  // React Hook Form - Add Member
+  const addMemberForm = useForm<AddTeamMemberFormData>({
+    resolver: zodResolver(AddTeamMemberSchema),
+    defaultValues: {
+      team_id: '',
+      staff_id: '',
+      role: 'member',
+    },
+  })
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
-  // Archive filter
-  const [showArchived, setShowArchived] = useState(false)
-
   const { toast } = useToast()
 
-  const loadTeams = useCallback(async () => {
-    try {
-      // Fetch teams with member count and team lead
-      let query = supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          description,
-          created_at,
-          deleted_at,
-          team_lead_id,
-          team_lead:profiles!teams_team_lead_id_fkey (
-            id,
-            full_name,
-            email,
-            phone,
-            avatar_url,
-            role
-          ),
-          team_members (
-            id,
-            is_active,
-            profiles (
-              id,
-              full_name,
-              email,
-              phone,
-              avatar_url,
-              role
-            )
-          )
-        `)
-
-      // Filter by archived status
-      if (!showArchived) {
-        query = query.is('deleted_at', null)
-      }
-
-      const { data: teamsData, error: teamsError } = await query.order('created_at', { ascending: false })
-
-      if (teamsError) throw teamsError
-
-      interface TeamData {
-        id: string
-        name: string
-        description: string | null
-        created_at: string
-        deleted_at: string | null
-        team_lead_id: string | null
-        team_lead: TeamMember[] | TeamMember | null
-        team_members: Array<{
-          id: string
-          is_active: boolean
-          profiles: TeamMember[] | TeamMember
-        }> | null
-      }
-
-      const formattedTeams: Team[] = (teamsData || []).map((team: TeamData) => {
-        // Handle team_lead as array or single object
-        const teamLead = Array.isArray(team.team_lead) ? team.team_lead[0] : team.team_lead
-
-        return {
-          id: team.id,
-          name: team.name,
-          description: team.description,
-          created_at: team.created_at,
-          deleted_at: team.deleted_at,
-          team_lead_id: team.team_lead_id,
-          team_lead: teamLead,
-          member_count: team.team_members?.length || 0,
-          members: team.team_members?.map((tm) => {
-            // Handle profiles as array or single object
-            const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
-            return {
-              ...profile,
-              is_active: tm.is_active,
-              membership_id: tm.id,
-            }
-          }).filter(Boolean) || [],
-          average_rating: undefined,
-        }
-      })
-
-      // Fetch ratings for all teams
-      const teamIds = formattedTeams.map(t => t.id)
-      if (teamIds.length > 0) {
-        const { data: ratingsData } = await supabase
-          .from('reviews')
-          .select('rating, bookings!inner(team_id)')
-          .in('bookings.team_id', teamIds)
-
-        // Calculate average rating for each team
-        const teamRatings: Record<string, number[]> = {}
-
-        interface ReviewData {
-          rating: number
-          bookings: { team_id: string } | { team_id: string }[]
-        }
-
-        ratingsData?.forEach((review: ReviewData) => {
-          const bookings = Array.isArray(review.bookings) ? review.bookings[0] : review.bookings
-          if (bookings && bookings.team_id) {
-            const teamId = bookings.team_id
-            if (!teamRatings[teamId]) {
-              teamRatings[teamId] = []
-            }
-            teamRatings[teamId].push(review.rating)
-          }
-        })
-
-        // Add average rating to teams
-        formattedTeams.forEach(team => {
-          const ratings = teamRatings[team.id]
-          if (ratings && ratings.length > 0) {
-            team.average_rating = ratings.reduce((a, b) => a + b, 0) / ratings.length
-          }
-        })
-      }
-
-      setTeams(formattedTeams)
-    } catch (error) {
-      console.error('Error loading teams:', error)
+  // Error handling for teams loading
+  useEffect(() => {
+    if (teamsError) {
       const errorMessage = getLoadErrorMessage('team')
       toast({
         title: errorMessage.title,
-        description: errorMessage.description,
+        description: teamsError,
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }, [showArchived, toast])
+  }, [teamsError, toast])
 
-  const filterTeams = useCallback(() => {
+  // Filter teams with useMemo for better performance
+  const filteredTeams = useMemo(() => {
     let filtered = teams
 
     if (searchQuery) {
@@ -222,28 +140,35 @@ export function AdminTeams() {
       )
     }
 
-    setFilteredTeams(filtered)
-    // Reset display count when filter changes
+    return filtered
+  }, [searchQuery, teams])
+
+  // Reset display count when filter changes
+  useEffect(() => {
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [searchQuery, teams, ITEMS_PER_LOAD])
+  }, [filteredTeams, ITEMS_PER_LOAD])
 
   const getTeamStats = () => {
     const totalTeams = teams.length
     const teamsWithLeads = teams.filter(t => t.team_lead_id).length
-    const totalMembers = teams.reduce((sum, team) => sum + (team.member_count || 0), 0)
+
+    // นับ unique members - ไม่นับซ้ำถ้าสมาชิกอยู่หลายทีม
+    const uniqueMemberIds = new Set<string>()
+    teams.forEach(team => {
+      team.members?.forEach(member => {
+        uniqueMemberIds.add(member.id)
+      })
+    })
+    const totalMembers = uniqueMemberIds.size
+
     return { totalTeams, teamsWithLeads, totalMembers }
   }
 
   const stats = getTeamStats()
 
   useEffect(() => {
-    loadTeams()
     loadAvailableStaff()
-  }, [loadTeams])
-
-  useEffect(() => {
-    filterTeams()
-  }, [filterTeams])
+  }, [])
 
   async function loadAvailableStaff() {
     try {
@@ -260,24 +185,19 @@ export function AdminTeams() {
     }
   }
 
-  const handleCreateTeam = async () => {
-    if (!teamName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a team name',
-        variant: 'destructive',
-      })
-      return
-    }
-
+  const onSubmitCreateTeam = async (data: TeamCreateFormData) => {
     try {
+      // Transform form data (empty string → null)
+      const transformedData = TeamCreateTransformSchema.parse(data)
+
       // Create the team
       const { data: newTeam, error: teamError } = await supabase
         .from('teams')
         .insert({
-          name: teamName,
-          description: teamDescription || null,
-          team_lead_id: teamLeadId || null,
+          name: transformedData.name,
+          description: transformedData.description,
+          team_lead_id: transformedData.team_lead_id,
+          is_active: transformedData.is_active,
         })
         .select()
         .single()
@@ -285,13 +205,12 @@ export function AdminTeams() {
       if (teamError) throw teamError
 
       // If a team lead was selected, automatically add them as a member
-      if (teamLeadId && newTeam) {
+      if (transformedData.team_lead_id && newTeam) {
         const { error: memberError } = await supabase
           .from('team_members')
           .insert({
             team_id: newTeam.id,
-            staff_id: teamLeadId,
-            is_active: true,
+            staff_id: transformedData.team_lead_id,
           })
 
         if (memberError) {
@@ -302,16 +221,14 @@ export function AdminTeams() {
 
       toast({
         title: 'Success',
-        description: teamLeadId
+        description: transformedData.team_lead_id
           ? 'Team created and team lead added as member'
           : 'Team created successfully',
       })
 
       setDialogOpen(false)
-      setTeamName('')
-      setTeamDescription('')
-      setTeamLeadId('')
-      loadTeams()
+      createTeamForm.reset()
+      refresh()
     } catch (error) {
       console.error('Error creating team:', error)
       const errorMessage = mapErrorToUserMessage(error, 'team')
@@ -323,16 +240,19 @@ export function AdminTeams() {
     }
   }
 
-  const handleUpdateTeam = async () => {
-    if (!editingTeam || !teamName.trim()) return
+  const onSubmitUpdateTeam = async (data: TeamUpdateFormData) => {
+    if (!editingTeam) return
 
     try {
+      // Transform form data (empty string → null)
+      const transformedData = TeamUpdateTransformSchema.parse(data)
+
       const { error } = await supabase
         .from('teams')
         .update({
-          name: teamName,
-          description: teamDescription || null,
-          team_lead_id: teamLeadId || null,
+          name: transformedData.name,
+          description: transformedData.description,
+          team_lead_id: transformedData.team_lead_id,
         })
         .eq('id', editingTeam.id)
 
@@ -345,10 +265,8 @@ export function AdminTeams() {
 
       setDialogOpen(false)
       setEditingTeam(null)
-      setTeamName('')
-      setTeamDescription('')
-      setTeamLeadId('')
-      loadTeams()
+      updateTeamForm.reset()
+      refresh()
     } catch (error) {
       console.error('Error updating team:', error)
       const errorMessage = mapErrorToUserMessage(error, 'team')
@@ -374,7 +292,7 @@ export function AdminTeams() {
         description: 'Team deleted successfully',
       })
 
-      loadTeams()
+      refresh()
     } catch (error) {
       console.error('Error deleting team:', error)
       const errorMessage = getDeleteErrorMessage('team')
@@ -401,7 +319,7 @@ export function AdminTeams() {
         description: 'Team archived successfully',
       })
 
-      loadTeams()
+      refresh()
     } catch (error) {
       console.error('Error archiving team:', error)
       const errorMessage = getArchiveErrorMessage()
@@ -427,7 +345,7 @@ export function AdminTeams() {
         description: 'Team restored successfully',
       })
 
-      loadTeams()
+      refresh()
     } catch (error) {
       console.error('Error restoring team:', error)
       const errorMessage = getRestoreErrorMessage()
@@ -439,15 +357,13 @@ export function AdminTeams() {
     }
   }
 
-  const handleAddMember = async () => {
-    if (!selectedTeam || !selectedStaffId) return
-
+  const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
     try {
       const { error } = await supabase
         .from('team_members')
         .insert({
-          team_id: selectedTeam.id,
-          staff_id: selectedStaffId,
+          team_id: data.team_id,
+          staff_id: data.staff_id,
         })
 
       if (error) throw error
@@ -458,8 +374,8 @@ export function AdminTeams() {
       })
 
       setMemberDialogOpen(false)
-      setSelectedStaffId('')
-      loadTeams()
+      addMemberForm.reset()
+      refresh()
     } catch (error) {
       console.error('Error adding member:', error)
       const errorMessage = getTeamMemberError('add')
@@ -488,7 +404,7 @@ export function AdminTeams() {
         description: 'Member removed successfully',
       })
 
-      loadTeams()
+      refresh()
     } catch (error) {
       console.error('Error removing member:', error)
       const errorMessage = getTeamMemberError('remove')
@@ -500,51 +416,35 @@ export function AdminTeams() {
     }
   }
 
-  const handleToggleMemberStatus = async (membershipId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ is_active: !currentStatus })
-        .eq('id', membershipId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Member ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
-      })
-
-      loadTeams()
-    } catch (error) {
-      console.error('Error toggling member status:', error)
-      const errorMsg = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
-  }
 
   const openCreateDialog = () => {
     setEditingTeam(null)
-    setTeamName('')
-    setTeamDescription('')
-    setTeamLeadId('')
+    createTeamForm.reset({
+      name: '',
+      description: null,
+      team_lead_id: null,
+      is_active: true,
+    })
     setDialogOpen(true)
   }
 
   const openEditDialog = (team: Team) => {
     setEditingTeam(team)
-    setTeamName(team.name)
-    setTeamDescription(team.description || '')
-    setTeamLeadId(team.team_lead_id || '')
+    updateTeamForm.reset({
+      name: team.name,
+      description: team.description,
+      team_lead_id: team.team_lead_id,
+    })
     setDialogOpen(true)
   }
 
   const openMemberDialog = (team: Team) => {
     setSelectedTeam(team)
-    setSelectedStaffId('')
+    addMemberForm.reset({
+      team_id: team.id,
+      staff_id: '',
+      role: 'member',
+    })
     setMemberDialogOpen(true)
   }
 
@@ -620,7 +520,7 @@ export function AdminTeams() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">Manage teams and team members</p>
         <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
@@ -720,7 +620,6 @@ export function AdminTeams() {
                 onRestore={restoreTeam}
                 onAddMember={openMemberDialog}
                 onRemoveMember={handleRemoveMember}
-                onToggleMemberStatus={handleToggleMemberStatus}
               />
             ))}
           </div>
@@ -747,7 +646,13 @@ export function AdminTeams() {
       )}
 
       {/* Create/Edit Team Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open)
+        if (!open) {
+          createTeamForm.reset()
+          updateTeamForm.reset()
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingTeam ? 'Edit Team' : 'Create New Team'}</DialogTitle>
@@ -755,54 +660,95 @@ export function AdminTeams() {
               {editingTeam ? 'Update team information' : 'Create a new team for your staff'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="teamName">Team Name *</Label>
-              <Input
-                id="teamName"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="e.g., Sales Team, Support Team"
+          <form onSubmit={editingTeam ?
+            updateTeamForm.handleSubmit(onSubmitUpdateTeam) :
+            createTeamForm.handleSubmit(onSubmitCreateTeam)
+          }>
+            <div className="space-y-4 py-4">
+              <Controller
+                name="name"
+                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamName">Team Name *</Label>
+                    <Input
+                      id="teamName"
+                      {...field}
+                      placeholder="e.g., Sales Team, Support Team"
+                    />
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+
+              <Controller
+                name="description"
+                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamDescription">Description</Label>
+                    <Input
+                      id="teamDescription"
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="Brief description of the team"
+                    />
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+
+              <Controller
+                name="team_lead_id"
+                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamLead">Team Lead</Label>
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team lead (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStaff.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="teamDescription">Description</Label>
-              <Input
-                id="teamDescription"
-                value={teamDescription}
-                onChange={(e) => setTeamDescription(e.target.value)}
-                placeholder="Brief description of the team"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="teamLead">Team Lead</Label>
-              <Select value={teamLeadId || undefined} onValueChange={setTeamLeadId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team lead (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={editingTeam ? handleUpdateTeam : handleCreateTeam}>
-              {editingTeam ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {editingTeam ? 'Update' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Add Member Dialog */}
-      <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+      <Dialog open={memberDialogOpen} onOpenChange={(open) => {
+        setMemberDialogOpen(open)
+        if (!open) {
+          addMemberForm.reset()
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
@@ -810,35 +756,46 @@ export function AdminTeams() {
               Add a staff member to {selectedTeam?.name}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="staffSelect">Select Staff Member</Label>
-              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStaff
-                    .filter((staff) =>
-                      !selectedTeam?.members?.some((m) => m.id === staff.id)
-                    )
-                    .map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id}>
-                        {staff.full_name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+          <form onSubmit={addMemberForm.handleSubmit(onSubmitAddMember)}>
+            <div className="space-y-4 py-4">
+              <Controller
+                name="staff_id"
+                control={addMemberForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="staffSelect">Select Staff Member</Label>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a staff member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStaff
+                          .filter((staff) =>
+                            !selectedTeam?.members?.some((m) => m.id === staff.id)
+                          )
+                          .map((staff) => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              {staff.full_name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddMember} disabled={!selectedStaffId}>
-              Add Member
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setMemberDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Add Member
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Select,
   SelectContent,
@@ -21,18 +20,17 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { CalendarCell } from '@/components/calendar/CalendarCell'
 import { BookingCard } from '@/components/calendar/BookingCard'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
-import { formatCurrency, getBangkokDateString } from '@/lib/utils'
+import { getBangkokDateString } from '@/lib/utils'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import { useServicePackages } from '@/hooks/useServicePackages'
+import { useStaffList } from '@/hooks/useStaff'
+import { useTeamsList } from '@/hooks/useTeams'
+import { useBookingsByDateRange } from '@/hooks/useBookings'
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  CheckCircle,
-  TrendingUp,
-  DollarSign,
 } from 'lucide-react'
 import {
   startOfMonth,
@@ -45,38 +43,21 @@ import {
   subMonths,
 } from 'date-fns'
 
-interface Team {
-  id: string
-  name: string
-}
-
-interface Staff {
-  id: string
-  full_name: string
-  email: string
-  role: string
-}
-
 // BookingFormData replaced with BookingFormState from @/hooks/useBookingForm
 
 export function AdminCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
-  const [staffMembers, setStaffMembers] = useState<Staff[]>([])
-  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
-  const { packages: servicePackages } = useServicePackages()
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('all')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   // Create Booking Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [selectedCreateDate, setSelectedCreateDate] = useState<string>('')
   const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [createFormData, setCreateFormData] = useState<BookingFormState>({})
   const [isCreateAvailabilityOpen, setIsCreateAvailabilityOpen] = useState(false)
@@ -91,133 +72,51 @@ export function AdminCalendar() {
   const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
 
+  // Loading States for mutations
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
-  const fetchTeams = useCallback(async () => {
-    try {
-      const { data, error} = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name')
+  // ใช้ custom hooks สำหรับโหลดข้อมูล
+  const { packages: servicePackages } = useServicePackages()
+  const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
+  const { teamsList: teams } = useTeamsList({ enableRealtime: false })
 
-      if (error) throw error
-      setTeams(data || [])
-    } catch (error) {
-      console.error('Error fetching teams:', error)
-    }
-  }, [])
+  // คำนวณ date range สำหรับ month view
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
 
-  const fetchStaffMembers = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role')
-        .eq('role', 'staff')
-        .order('full_name')
+  // โหลด bookings ตาม date range และ filters
+  const {
+    bookings,
+    isLoading,
+    refetch: refetchBookings,
+  } = useBookingsByDateRange({
+    dateRange: {
+      start: format(monthStart, 'yyyy-MM-dd'),
+      end: format(monthEnd, 'yyyy-MM-dd'),
+    },
+    filters: {
+      viewMode,
+      staffId: selectedStaff !== 'all' ? selectedStaff : undefined,
+      teamId: selectedTeam !== 'all' ? selectedTeam : undefined,
+      status: selectedStatus !== 'all' ? selectedStatus : undefined,
+    },
+    enableRealtime: true,
+  })
 
-      if (error) throw error
-      setStaffMembers(data || [])
-    } catch (error) {
-      console.error('Error fetching staff members:', error)
-    }
-  }, [])
+  // Service packages โหลดผ่าน useServicePackages hook แล้ว
+  // Staff list โหลดผ่าน useStaffList hook แล้ว
+  // Teams list โหลดผ่าน useTeamsList hook แล้ว
+  // Bookings โหลดผ่าน useBookingsByDateRange hook แล้ว (พร้อม filters ทั้งหมดใน query)
 
-  // Service packages โหลดผ่าน useServicePackages hook แล้ว (ไม่ต้องมี fetchServicePackages อีกต่อไป)
-
-  const fetchBookings = useCallback(async () => {
-    try {
-      setLoading(true)
-      const monthStart = startOfMonth(currentDate)
-      const monthEnd = endOfMonth(currentDate)
-
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          customers!inner (
-            id,
-            full_name,
-            phone,
-            email
-          ),
-          profiles!bookings_staff_id_fkey (
-            full_name
-          ),
-          ${TEAMS_WITH_LEAD_QUERY},
-          service_packages (
-            name,
-            service_type
-          ),
-          service_packages_v2:package_v2_id (
-            name,
-            service_type
-          )
-        `)
-        .gte('booking_date', format(monthStart, 'yyyy-MM-dd'))
-        .lte('booking_date', format(monthEnd, 'yyyy-MM-dd'))
-        .order('start_time')
-
-      if (error) throw error
-      // Transform array relations to single objects and merge V1/V2 packages
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const transformedData = (data || []).map((booking: any) => {
-        const servicePackages = booking.service_packages || booking.service_packages_v2
-
-        return {
-          ...booking,
-          customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-          teams: transformTeamsData(booking.teams),
-          service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
-        }
-      })
-      setBookings(transformedData as Booking[])
-    } catch (error) {
-      console.error('Error fetching bookings:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load calendar bookings',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [currentDate, toast])
-
-  // OPTIMIZATION 1: Memoize filtered bookings instead of using useCallback + useEffect
-  const filteredBookings = useMemo(() => {
-    let filtered = bookings
-
-    // Filter by view mode
-    if (viewMode === 'staff') {
-      // Staff view - only show bookings with staff_id (exclude team bookings)
-      filtered = filtered.filter(b => b.staff_id !== null)
-      if (selectedStaff !== 'all') {
-        filtered = filtered.filter(b => b.staff_id === selectedStaff)
-      }
-    } else if (viewMode === 'team') {
-      // Team view - only show bookings with teams
-      filtered = filtered.filter(b => b.team_id !== null)
-      if (selectedTeam !== 'all') {
-        filtered = filtered.filter(b => b.team_id === selectedTeam)
-      }
-    }
-    // If viewMode === 'all', no filtering by staff/team (show all bookings)
-
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(b => b.status === selectedStatus)
-    }
-
-    return filtered
-  }, [bookings, selectedTeam, selectedStaff, selectedStatus, viewMode])
-
-  // OPTIMIZATION 2: Pre-calculate bookings grouped by date for O(1) lookup
+  // OPTIMIZATION: Pre-calculate bookings grouped by date for O(1) lookup
   const bookingsByDate = useMemo(() => {
     const map = new Map<string, Booking[]>()
-    filteredBookings.forEach(booking => {
+    bookings.forEach(booking => {
       const dateKey = booking.booking_date // Already in 'yyyy-MM-dd' format
       const existing = map.get(dateKey)
       if (existing) {
@@ -227,26 +126,7 @@ export function AdminCalendar() {
       }
     })
     return map
-  }, [filteredBookings])
-
-  // OPTIMIZATION 3: Memoize month stats calculation
-  const monthStats = useMemo(() => {
-    const totalBookings = filteredBookings.length
-    const confirmedBookings = filteredBookings.filter(
-      b => b.status === 'confirmed' || b.status === 'in_progress'
-    ).length
-    const completedBookings = filteredBookings.filter(b => b.status === 'completed').length
-    const totalRevenue = filteredBookings
-      .filter(b => b.payment_status === 'paid')
-      .reduce((sum, b) => sum + b.total_price, 0)
-
-    return {
-      totalBookings,
-      confirmedBookings,
-      completedBookings,
-      totalRevenue
-    }
-  }, [filteredBookings])
+  }, [bookings])
 
   // Helper function: Get bookings for a specific date using O(1) Map lookup
   const getBookingsForDate = useCallback((date: Date): Booking[] => {
@@ -254,15 +134,110 @@ export function AdminCalendar() {
     return bookingsByDate.get(dateKey) || []
   }, [bookingsByDate])
 
-  useEffect(() => {
-    // OPTIMIZE: Run all queries in parallel for better performance
-    // Service packages โหลดผ่าน useServicePackages hook อัตโนมัติแล้ว
-    Promise.all([
-      fetchBookings(),
-      fetchTeams(),
-      fetchStaffMembers()
-    ])
-  }, [currentDate, fetchBookings, fetchTeams, fetchStaffMembers])
+  // Helper function: Check if two time ranges overlap
+  const checkTimeOverlap = useCallback((
+    start1: string,
+    end1: string,
+    start2: string,
+    end2: string
+  ): boolean => {
+    const toMinutes = (time: string): number => {
+      const [hours, minutes] = time.split(':').map(Number)
+      return hours * 60 + minutes
+    }
+
+    const s1 = toMinutes(start1)
+    const e1 = toMinutes(end1)
+    const s2 = toMinutes(start2)
+    const e2 = toMinutes(end2)
+
+    return s1 < e2 && e1 > s2
+  }, [])
+
+  // CONFLICT DETECTION: Pre-calculate conflicts for all bookings
+  // Optimized with sorted time check for better performance
+  const conflictMap = useMemo(() => {
+    const map = new Map<string, Set<string>>() // Map<bookingId, Set<conflictingBookingIds>>
+
+    bookings.forEach((booking) => {
+      // Skip cancelled and no_show bookings
+      if (booking.status === 'cancelled' || booking.status === 'no_show') return
+
+      const conflicts = new Set<string>()
+
+      // Find other bookings on the same date
+      const sameDayBookings = bookingsByDate.get(booking.booking_date) || []
+
+      // Sort by start time for early termination optimization
+      const sortedBookings = [...sameDayBookings].sort((a, b) =>
+        a.start_time.localeCompare(b.start_time)
+      )
+
+      const bookingEndTime = booking.end_time || booking.start_time
+
+      sortedBookings.forEach((other) => {
+        // Skip self, cancelled, and no_show
+        if (
+          other.id === booking.id ||
+          other.status === 'cancelled' ||
+          other.status === 'no_show'
+        ) return
+
+        // Early termination: if other booking starts after current booking ends, no more overlaps possible
+        if (other.start_time > bookingEndTime) return
+
+        // Check if assigned to same staff or team
+        const sameStaff = booking.staff_id && booking.staff_id === other.staff_id
+        const sameTeam = booking.team_id && booking.team_id === other.team_id
+
+        if (!sameStaff && !sameTeam) return
+
+        // Check time overlap
+        const overlap = checkTimeOverlap(
+          booking.start_time,
+          bookingEndTime,
+          other.start_time,
+          other.end_time || other.start_time
+        )
+
+        if (overlap) {
+          conflicts.add(other.id)
+        }
+      })
+
+      if (conflicts.size > 0) {
+        map.set(booking.id, conflicts)
+      }
+    })
+
+    return map
+  }, [bookings, bookingsByDate, checkTimeOverlap])
+
+  // Pre-calculate conflict IDs grouped by date for efficient calendar rendering
+  const conflictIdsByDate = useMemo(() => {
+    const dateMap = new Map<string, Set<string>>() // Map<date, Set<conflictingBookingIds>>
+
+    conflictMap.forEach((conflicts, bookingId) => {
+      // Find the booking to get its date
+      const booking = bookings.find(b => b.id === bookingId)
+      if (!booking) return
+
+      const date = booking.booking_date
+
+      // Initialize Set for this date if not exists
+      if (!dateMap.has(date)) {
+        dateMap.set(date, new Set<string>())
+      }
+
+      const dateConflicts = dateMap.get(date)!
+
+      // Add the booking itself and all its conflicts
+      dateConflicts.add(bookingId)
+      conflicts.forEach(id => dateConflicts.add(id))
+    })
+
+    return dateMap
+  }, [conflictMap, bookings])
 
   // Helper function: Calculate end time from start time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -306,7 +281,9 @@ export function AdminCalendar() {
 
   const handleCreateBooking = (date: Date) => {
     // Pre-fill booking date
-    setCreateFormData({ booking_date: format(date, 'yyyy-MM-dd') })
+    const formattedDate = format(date, 'yyyy-MM-dd')
+    setSelectedCreateDate(formattedDate)
+    setCreateFormData({ booking_date: formattedDate })
     setIsCreateOpen(true)
   }
 
@@ -432,18 +409,6 @@ export function AdminCalendar() {
     }
   }
 
-  const getAvailableStatuses = (currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['pending', 'confirmed', 'cancelled'],
-      confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-      in_progress: ['in_progress', 'completed', 'cancelled'],
-      completed: ['completed'],
-      cancelled: ['cancelled'],
-      no_show: ['no_show'],
-    }
-    return transitions[currentStatus] || [currentStatus]
-  }
-
   const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
       pending: 'Pending',
@@ -458,6 +423,8 @@ export function AdminCalendar() {
 
   const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
+
+    setIsUpdatingStatus(true)
 
     try {
       const { error } = await supabase
@@ -477,14 +444,8 @@ export function AdminCalendar() {
         setSelectedBooking({ ...selectedBooking, status: newStatus })
       }
 
-      // Update bookings in state without full refetch (ป้องกัน modal reload)
-      setBookings(prevBookings =>
-        prevBookings.map(booking =>
-          booking.id === bookingId
-            ? { ...booking, status: newStatus }
-            : booking
-        )
-      )
+      // Refetch bookings to update data
+      await refetchBookings()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
@@ -492,10 +453,52 @@ export function AdminCalendar() {
         description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
+  // Status transition validation (from useBookingStatusManager logic)
+  const getValidTransitions = useCallback((currentStatus: string): string[] => {
+    const transitions: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['in_progress', 'cancelled', 'no_show'],
+      in_progress: ['completed', 'cancelled'],
+      completed: [], // Final state
+      cancelled: [], // Final state
+      no_show: [], // Final state
+    }
+    return transitions[currentStatus] || []
+  }, [])
+
+  // Get available statuses (current + valid transitions)
+  const getAvailableStatuses = useCallback((currentStatus: string): string[] => {
+    const validTransitions = getValidTransitions(currentStatus)
+    return [currentStatus, ...validTransitions]
+  }, [getValidTransitions])
+
+  // Inline status change handler for BookingCard (without currentStatus parameter)
+  const handleInlineStatusChange = useCallback(async (bookingId: string, newStatus: string) => {
+    const booking = bookings.find(b => b.id === bookingId)
+    if (!booking) return
+
+    // Validate transition before making the change
+    const validTransitions = getValidTransitions(booking.status)
+    if (!validTransitions.includes(newStatus) && booking.status !== newStatus) {
+      toast({
+        title: 'Invalid Status Transition',
+        description: `Cannot change from "${booking.status}" to "${newStatus}".`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    await handleStatusChange(bookingId, booking.status, newStatus)
+  }, [bookings, handleStatusChange, getValidTransitions, toast])
+
   const handleMarkAsPaid = async (bookingId: string, method: string = 'cash') => {
+    setIsUpdatingPayment(true)
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -524,16 +527,8 @@ export function AdminCalendar() {
         })
       }
 
-      // Update bookings list without refetching all data
-      setBookings(prev =>
-        prev.map(b => b.id === bookingId ? {
-          ...b,
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: b.total_price,
-          payment_date: getBangkokDateString(),
-        } : b)
-      )
+      // Refetch bookings to update data
+      await refetchBookings()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
@@ -541,10 +536,14 @@ export function AdminCalendar() {
         description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      setIsUpdatingPayment(false)
     }
   }
 
   const handleDelete = async (bookingId: string) => {
+    setIsDeleting(true)
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -559,14 +558,17 @@ export function AdminCalendar() {
       })
       setIsDetailOpen(false)
 
-      // Remove booking from state without refetch
-      setBookings(prevBookings => prevBookings.filter(b => b.id !== bookingId))
-    } catch {
+      // Refetch bookings to update data
+      await refetchBookings()
+    } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: 'Failed to delete booking',
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -574,22 +576,24 @@ export function AdminCalendar() {
     const result = await softDelete(bookingId)
     if (result.success) {
       setIsDetailOpen(false)
-      // Remove booking from state without refetch
-      setBookings(prevBookings => prevBookings.filter(b => b.id !== bookingId))
+      // Refetch bookings after delete
+      refetchBookings()
     }
   }
 
+  // Generate calendar days (Memoized to prevent recalculation on every render)
+  const calendarDays = useMemo(() => {
+    const calendarStart = startOfWeek(monthStart)
+    const calendarEnd = endOfWeek(monthEnd)
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+  }, [monthStart, monthEnd])
 
-  // Generate calendar days
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = endOfWeek(monthEnd)
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+  // Memoize selected date bookings to prevent recalculation
+  const selectedDateBookings = useMemo(() => {
+    return selectedDate ? getBookingsForDate(selectedDate) : []
+  }, [selectedDate, getBookingsForDate])
 
-  const selectedDateBookings = selectedDate ? getBookingsForDate(selectedDate) : []
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         {/* Page Header - Always show */}
@@ -599,18 +603,6 @@ export function AdminCalendar() {
             <CalendarIcon className="h-4 w-4 mr-2" />
             Today
           </Button>
-        </div>
-
-        {/* Stats Cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCard
-              key={i}
-              title=""
-              value={0}
-              isLoading={true}
-            />
-          ))}
         </div>
 
         {/* Filters skeleton */}
@@ -676,47 +668,12 @@ export function AdminCalendar() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">View and manage your bookings</p>
         <Button onClick={goToToday} variant="outline">
           <CalendarIcon className="h-4 w-4 mr-2" />
           Today
         </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          title="Total Bookings"
-          value={monthStats.totalBookings}
-          description="This month"
-          icon={CalendarIcon}
-          iconColor="text-tinedy-blue"
-        />
-
-        <StatCard
-          title="Confirmed"
-          value={monthStats.confirmedBookings}
-          description="Active bookings"
-          icon={CheckCircle}
-          iconColor="text-tinedy-green"
-        />
-
-        <StatCard
-          title="Completed"
-          value={monthStats.completedBookings}
-          description="Jobs done"
-          icon={TrendingUp}
-          iconColor="text-tinedy-purple"
-        />
-
-        <StatCard
-          title="Revenue"
-          value={formatCurrency(monthStats.totalRevenue)}
-          description="Paid bookings"
-          icon={DollarSign}
-          iconColor="text-tinedy-yellow"
-        />
       </div>
 
       {/* Filters and View Mode */}
@@ -770,7 +727,7 @@ export function AdminCalendar() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Staff</SelectItem>
-                  {staffMembers.map((staff) => (
+                  {staffList.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.full_name}
                     </SelectItem>
@@ -864,17 +821,26 @@ export function AdminCalendar() {
               ))}
 
               {/* Calendar days - OPTIMIZED: Use memoized CalendarCell component */}
-              {calendarDays.map((day, index) => (
-                <CalendarCell
-                  key={index}
-                  day={day}
-                  currentDate={currentDate}
-                  selectedDate={selectedDate}
-                  dayBookings={getBookingsForDate(day)}
-                  onDateClick={setSelectedDate}
-                  onCreateBooking={handleCreateBooking}
-                />
-              ))}
+              {calendarDays.map((day, index) => {
+                const dayBookings = getBookingsForDate(day)
+                const dateStr = format(day, 'yyyy-MM-dd')
+
+                // Get pre-calculated conflict IDs for this date (OPTIMIZED)
+                const dayConflictIds = conflictIdsByDate.get(dateStr) || new Set<string>()
+
+                return (
+                  <CalendarCell
+                    key={index}
+                    day={day}
+                    currentDate={currentDate}
+                    selectedDate={selectedDate}
+                    dayBookings={dayBookings}
+                    conflictingBookingIds={dayConflictIds}
+                    onDateClick={setSelectedDate}
+                    onCreateBooking={handleCreateBooking}
+                  />
+                )
+              })}
             </div>
 
             {/* Legend */}
@@ -933,13 +899,22 @@ export function AdminCalendar() {
               </div>
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {selectedDateBookings.map((booking) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    onClick={openBookingDetail}
-                  />
-                ))}
+                {selectedDateBookings.map((booking) => {
+                  const conflicts = conflictMap.get(booking.id)
+                  const availableStatuses = getAvailableStatuses(booking.status)
+
+                  return (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      onClick={openBookingDetail}
+                      hasConflict={!!conflicts && conflicts.size > 0}
+                      conflictCount={conflicts?.size || 0}
+                      onStatusChange={handleInlineStatusChange}
+                      availableStatuses={availableStatuses}
+                    />
+                  )
+                })}
               </div>
             )}
           </CardContent>
@@ -960,6 +935,9 @@ export function AdminCalendar() {
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
+        isUpdatingStatus={isUpdatingStatus}
+        isUpdatingPayment={isUpdatingPayment}
+        isDeleting={isDeleting}
       />
 
       {/* Create Booking Modal */}
@@ -967,24 +945,42 @@ export function AdminCalendar() {
         isOpen={isCreateOpen && !isCreateAvailabilityOpen}
         onClose={() => {
           setIsCreateOpen(false)
+          setSelectedCreateDate('')
           setCreatePackageSelection(null); createForm.reset();
         }}
         onSuccess={() => {
-          fetchBookings()
+          refetchBookings()
           setCreatePackageSelection(null) // Clear selection after success
         }}
         servicePackages={servicePackages}
-        staffMembers={staffMembers}
+        staffMembers={staffList}
         teams={teams}
         onOpenAvailabilityModal={() => {
           setIsCreateAvailabilityOpen(true)
         }}
-        createForm={createForm}
+        onBeforeOpenAvailability={(formData) => {
+          // Sync form data from BookingCreateModal to createForm before opening availability modal
+          createForm.setValues({
+            booking_date: formData.booking_date || '',
+            start_time: formData.start_time || '',
+            end_time: formData.end_time || '',
+            service_package_id: formData.service_package_id || '',
+            package_v2_id: formData.package_v2_id || '',
+            staff_id: formData.staff_id || '',
+            team_id: formData.team_id || '',
+            total_price: formData.total_price || 0,
+            area_sqm: formData.area_sqm || null,
+            frequency: formData.frequency || null,
+          })
+        }}
         assignmentType={createAssignmentType}
         setAssignmentType={setCreateAssignmentType}
         calculateEndTime={calculateEndTime}
         packageSelection={createPackageSelection}
         setPackageSelection={setCreatePackageSelection}
+        defaultDate={selectedCreateDate}
+        defaultStaffId={createForm.formData.staff_id}
+        defaultTeamId={createForm.formData.team_id}
       />
 
       {/* Edit Booking Modal */}
@@ -997,14 +993,29 @@ export function AdminCalendar() {
           }}
           booking={selectedBooking}
           onSuccess={() => {
-            fetchBookings()
+            refetchBookings()
             setEditPackageSelection(null) // Clear selection after success
           }}
           servicePackages={servicePackages}
-          staffMembers={staffMembers}
+          staffMembers={staffList}
           teams={teams}
           onOpenAvailabilityModal={() => {
             setIsEditAvailabilityOpen(true)
+          }}
+          onBeforeOpenAvailability={(formData) => {
+            // Sync form data from BookingEditModal to editForm before opening availability modal
+            editForm.setValues({
+              booking_date: formData.booking_date || '',
+              start_time: formData.start_time || '',
+              end_time: formData.end_time || '',
+              service_package_id: formData.service_package_id || '',
+              package_v2_id: formData.package_v2_id || '',
+              staff_id: formData.staff_id || '',
+              team_id: formData.team_id || '',
+              total_price: formData.total_price || 0,
+              area_sqm: formData.area_sqm || null,
+              frequency: formData.frequency || null,
+            })
           }}
           editForm={editForm}
           assignmentType={editAssignmentType}
@@ -1012,6 +1023,8 @@ export function AdminCalendar() {
           calculateEndTime={calculateEndTime}
           packageSelection={editPackageSelection}
           setPackageSelection={setEditPackageSelection}
+          defaultStaffId={editForm.formData.staff_id}
+          defaultTeamId={editForm.formData.team_id}
         />
       )}
 
@@ -1026,6 +1039,7 @@ export function AdminCalendar() {
           assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
             createForm.handleChange('staff_id', staffId)
+            createForm.handleChange('team_id', '') // Clear team when staff is selected
             setIsCreateAvailabilityOpen(false)
             setIsCreateOpen(true)
             toast({
@@ -1035,6 +1049,7 @@ export function AdminCalendar() {
           }}
           onSelectTeam={(teamId) => {
             createForm.handleChange('team_id', teamId)
+            createForm.handleChange('staff_id', '') // Clear staff when team is selected
             setIsCreateAvailabilityOpen(false)
             setIsCreateOpen(true)
             toast({
@@ -1071,6 +1086,7 @@ export function AdminCalendar() {
           assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
             editForm.handleChange('staff_id', staffId)
+            editForm.handleChange('team_id', '') // Clear team when staff is selected
             setIsEditAvailabilityOpen(false)
             setIsEditOpen(true)
             toast({
@@ -1080,6 +1096,7 @@ export function AdminCalendar() {
           }}
           onSelectTeam={(teamId) => {
             editForm.handleChange('team_id', teamId)
+            editForm.handleChange('staff_id', '') // Clear staff when team is selected
             setIsEditAvailabilityOpen(false)
             setIsEditOpen(true)
             toast({

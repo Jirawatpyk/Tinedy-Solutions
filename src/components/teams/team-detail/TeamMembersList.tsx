@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { Crown, UserPlus, Users } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { supabase } from '@/lib/supabase'
@@ -16,8 +15,6 @@ interface TeamMember {
   phone: string | null
   avatar_url: string | null
   role: string
-  is_active?: boolean
-  membership_id?: string
 }
 
 interface Team {
@@ -80,31 +77,6 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
     }
   }
 
-  const handleToggleMemberStatus = async (membershipId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ is_active: !currentStatus })
-        .eq('id', membershipId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Member ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
-      })
-
-      onUpdate()
-    } catch (error) {
-      console.error('Error toggling member status:', error)
-      const errorMsg = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
-  }
 
   return (
     <Card>
@@ -156,17 +128,12 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`font-medium truncate ${member.is_active === false ? 'text-muted-foreground line-through' : ''}`}>
+                    <p className="font-medium truncate">
                       {member.full_name}
                     </p>
                     {team.team_lead_id === member.id && (
                       <Badge variant="secondary" className="h-5 px-1.5">
                         <Crown className="h-3 w-3 text-amber-600" />
-                      </Badge>
-                    )}
-                    {member.is_active === false && (
-                      <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                        Inactive
                       </Badge>
                     )}
                   </div>
@@ -176,23 +143,12 @@ export function TeamMembersList({ team, onUpdate }: TeamMembersListProps) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {member.membership_id && (
-                    <>
-                      <Switch
-                        checked={member.is_active !== false}
-                        onCheckedChange={() =>
-                          handleToggleMemberStatus(member.membership_id!, member.is_active !== false)
-                        }
-                        className="scale-75"
-                      />
-                      <DeleteButton
-                        itemName={member.full_name}
-                        onDelete={() => handleRemoveMember(member.id)}
-                        size="sm"
-                      />
-                    </>
-                  )}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <DeleteButton
+                    itemName={member.full_name}
+                    onDelete={() => handleRemoveMember(member.id)}
+                    size="sm"
+                  />
                 </div>
               </div>
             ))}

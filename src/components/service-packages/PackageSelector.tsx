@@ -277,8 +277,14 @@ export function PackageSelector({
 
   /**
    * Restore state from value prop (when modal reopens)
+   * Skip restoration in Edit mode (disabled) - will use value prop directly for display
    */
   useEffect(() => {
+    // ข้าม restore ถ้าอยู่ใน Edit mode (disabled) - จะใช้ value prop แสดงผลโดยตรง
+    if (disabled) {
+      return
+    }
+
     if (value && packages.length > 0) {
       // สร้าง signature ของ value เพื่อเช็คว่าเปลี่ยนจริงหรือไม่
       const valueSignature = JSON.stringify({
@@ -325,7 +331,7 @@ export function PackageSelector({
       setPricingResult(null)
       setIsRestoring(false)
     }
-  }, [value, packages, selectedPackage])
+  }, [value, packages, selectedPackage, disabled])
 
   /**
    * Calculate price when inputs change (for tiered pricing)
@@ -335,6 +341,11 @@ export function PackageSelector({
     // ข้ามถ้ากำลัง restore หรือยัง loading packages
     if (isRestoring || loading) {
       console.log('⏭️ Skipping calculation: isRestoring or loading')
+      return
+    }
+    // ข้ามถ้า disabled (Edit mode) - ใช้ราคาเดิมจาก value.price
+    if (disabled) {
+      console.log('⏭️ Skipping calculation: disabled (Edit mode)')
       return
     }
     if (!selectedPackage || selectedPackage.pricing_model !== PricingModel.Tiered) return
@@ -416,7 +427,7 @@ export function PackageSelector({
       isCancelled = true
       isCalculatingRef.current = false
     }
-  }, [selectedPackage, debouncedAreaSqm, frequency, isRestoring, loading])
+  }, [selectedPackage, debouncedAreaSqm, frequency, isRestoring, loading, disabled])
 
   /**
    * Emit Fixed pricing selection when package is selected
@@ -439,6 +450,7 @@ export function PackageSelector({
 
   /**
    * Emit Tiered pricing selection when calculation is complete
+   * หรือเมื่อ disabled (Edit mode) ให้ใช้ราคาจาก value
    */
   useEffect(() => {
     // Guard clauses
@@ -449,9 +461,27 @@ export function PackageSelector({
 
     const pkg = selectedPackageRef.current
     if (!pkg || pkg.pricing_model !== PricingModel.Tiered) return
+
+    // Edit mode (disabled): ใช้ราคาจาก value แทนการคำนวณใหม่
+    if (disabled && value && value.pricingModel === 'tiered') {
+      console.log('📤 Emitting tiered selection (Edit mode - using existing price)')
+      emitSelection({
+        packageId: pkg.id,
+        pricingModel: 'tiered',
+        areaSqm: value.areaSqm || 0,
+        frequency: value.frequency || 1,
+        price: value.price, // ใช้ราคาเดิมจาก booking
+        requiredStaff: value.requiredStaff,
+        packageName: pkg.name,
+        estimatedHours: value.estimatedHours,
+      })
+      return
+    }
+
+    // Create mode: ใช้ pricingResult ที่คำนวณได้
     if (!pricingResult || !pricingResult.found) return
 
-    console.log('📤 Preparing to emit tiered selection')
+    console.log('📤 Preparing to emit tiered selection (Create mode - calculated price)')
 
     emitSelection({
       packageId: pkg.id,
@@ -463,7 +493,7 @@ export function PackageSelector({
       packageName: pkg.name,
       estimatedHours: pricingResult.tier?.estimated_hours ?? undefined,
     })
-  }, [pricingResult, isRestoring, calculating, loading, emitSelection]) // ใช้ ref แทน direct state
+  }, [pricingResult, isRestoring, calculating, loading, disabled, value, emitSelection]) // เพิ่ม disabled และ value
 
   /**
    * Handle package selection
@@ -505,64 +535,73 @@ export function PackageSelector({
       {/* Package Selection */}
       <div>
         <Label htmlFor="package">Service Package *</Label>
-        <Select
-          value={selectedPackage?.id || ''}
-          onValueChange={handlePackageChange}
-          disabled={disabled || loading}
-        >
-          <SelectTrigger id="package">
-            <SelectValue placeholder={loading ? 'Loading...' : 'Select a package'} />
-          </SelectTrigger>
-          <SelectContent>
-            {/* Fixed Pricing Packages */}
-            {fixedPackages.length > 0 && (
-              <SelectGroup>
-                <SelectLabel>Fixed Price Packages</SelectLabel>
-                {fixedPackages.map((pkg) => (
-                  <SelectItem key={pkg.id} value={pkg.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{pkg.name}</span>
-                      {pkg.base_price && (
-                        <span className="text-muted-foreground text-sm">
-                          ({formatPrice(pkg.base_price)})
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
+        {disabled && value ? (
+          // Edit mode: แสดง package name จาก value prop โดยตรง (ไม่ต้องรอ packages load)
+          <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed">
+            <span>{value.packageName}</span>
+          </div>
+        ) : (
+          // Create mode: แสดง Select dropdown ปกติ
+          <Select
+            value={selectedPackage?.id || ''}
+            onValueChange={handlePackageChange}
+            disabled={disabled || loading}
+          >
+            <SelectTrigger id="package">
+              <SelectValue placeholder={loading ? 'Loading...' : 'Select a package'} />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Fixed Pricing Packages */}
+              {fixedPackages.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Fixed Price Packages</SelectLabel>
+                  {fixedPackages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{pkg.name}</span>
+                        {pkg.base_price && (
+                          <span className="text-muted-foreground text-sm">
+                            ({formatPrice(pkg.base_price)})
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
 
-            {/* Tiered Pricing Packages */}
-            {tieredPackages.length > 0 && (
-              <SelectGroup>
-                <SelectLabel>Area-Based Pricing Packages</SelectLabel>
-                {tieredPackages.map((pkg) => (
-                  <SelectItem key={pkg.id} value={pkg.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{pkg.name}</span>
-                      {pkg.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {pkg.category}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
+              {/* Tiered Pricing Packages */}
+              {tieredPackages.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Area-Based Pricing Packages</SelectLabel>
+                  {tieredPackages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{pkg.name}</span>
+                        {pkg.category && (
+                          <Badge variant="outline" className="text-xs">
+                            {pkg.category}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
 
-            {packages.length === 0 && !loading && (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No available packages found
-              </div>
-            )}
-          </SelectContent>
-        </Select>
+              {packages.length === 0 && !loading && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No available packages found
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Tiered Pricing Inputs */}
-      {selectedPackage && selectedPackage.pricing_model === PricingModel.Tiered && (
+      {/* แสดงทันทีเมื่อ: (1) Create mode + selected tiered package OR (2) Edit mode + value with tiered */}
+      {((selectedPackage && selectedPackage.pricing_model === PricingModel.Tiered) || (disabled && value && value.pricingModel === 'tiered')) && (
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-blue-900 mb-3">
@@ -578,7 +617,7 @@ export function PackageSelector({
                   id="area"
                   type="number"
                   min="1"
-                  value={areaSqm || ''}
+                  value={(disabled && value ? value.areaSqm : areaSqm) || ''}
                   onChange={(e) => setAreaSqm(parseInt(e.target.value) || 0)}
                   placeholder="e.g. 150"
                   disabled={disabled}
@@ -588,21 +627,29 @@ export function PackageSelector({
               {/* Frequency Selector */}
               <div>
                 <Label htmlFor="frequency">Frequency *</Label>
-                <Select
-                  value={frequency.toString()}
-                  onValueChange={(value) => setFrequency(parseInt(value) as BookingFrequency)}
-                  disabled={disabled}
-                >
-                  <SelectTrigger id="frequency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">{getFrequencyLabel(1)}</SelectItem>
-                    <SelectItem value="2">{getFrequencyLabel(2)}</SelectItem>
-                    <SelectItem value="4">{getFrequencyLabel(4)}</SelectItem>
-                    <SelectItem value="8">{getFrequencyLabel(8)}</SelectItem>
-                  </SelectContent>
-                </Select>
+                {disabled && value ? (
+                  // Edit mode: แสดง frequency เป็น disabled input
+                  <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed">
+                    <span>{getFrequencyLabel(value.frequency || 1)}</span>
+                  </div>
+                ) : (
+                  // Create mode: แสดง Select dropdown
+                  <Select
+                    value={frequency.toString()}
+                    onValueChange={(value) => setFrequency(parseInt(value) as BookingFrequency)}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger id="frequency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">{getFrequencyLabel(1)}</SelectItem>
+                      <SelectItem value="2">{getFrequencyLabel(2)}</SelectItem>
+                      <SelectItem value="4">{getFrequencyLabel(4)}</SelectItem>
+                      <SelectItem value="8">{getFrequencyLabel(8)}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
           </CardContent>
@@ -610,10 +657,11 @@ export function PackageSelector({
       )}
 
       {/* Pricing Result */}
-      {selectedPackage && (
+      {/* แสดงทันทีเมื่อ: (1) Create mode + selectedPackage OR (2) Edit mode + value */}
+      {(selectedPackage || (disabled && value)) && (
         <>
           {/* Fixed Pricing Display */}
-          {selectedPackage.pricing_model === PricingModel.Fixed && selectedPackage.base_price && (
+          {((selectedPackage && selectedPackage.pricing_model === PricingModel.Fixed && selectedPackage.base_price) || (disabled && value && value.pricingModel === 'fixed')) && (
             <Card
               className={cn(
                 'border-2',
@@ -629,10 +677,10 @@ export function PackageSelector({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Total Price:</span>
                     <span className="text-2xl font-bold text-tinedy-blue">
-                      {formatPrice(selectedPackage.base_price)}
+                      {disabled && value ? formatPrice(value.price) : formatPrice(selectedPackage?.base_price || 0)}
                     </span>
                   </div>
-                  {selectedPackage.duration_minutes && (
+                  {selectedPackage?.duration_minutes && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Duration:</span>
                       <span className="font-medium">{selectedPackage.duration_minutes} minutes</span>
@@ -644,12 +692,52 @@ export function PackageSelector({
           )}
 
           {/* Tiered Pricing Display */}
-          {selectedPackage.pricing_model === PricingModel.Tiered && (
-            <TieredPricingCard
-              servicePackageId={selectedPackage.id}
-              areaSqm={areaSqm}
-              frequency={frequency}
-            />
+          {((selectedPackage && selectedPackage.pricing_model === PricingModel.Tiered) || (disabled && value && value.pricingModel === 'tiered')) && (
+            <>
+              {disabled && value ? (
+                // Edit mode: แสดงราคาเดิมจาก booking ทันที
+                <Card className="border-blue-200 bg-gradient-to-br from-blue-50/30 to-transparent">
+                  <CardContent className="pt-4 pb-3 space-y-2.5">
+                    <div className="flex items-baseline justify-between">
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-tinedy-blue">
+                          ฿{value.price.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Per booking
+                        </div>
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs">
+                        {value.frequency && value.frequency > 1 ? `${value.frequency}x recurring` : 'One-time'}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Area</span>
+                        <span className="font-medium text-foreground">{value.areaSqm} sqm</span>
+                      </div>
+                    </div>
+
+                    {value.requiredStaff && (
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5">
+                        <span>Required Staff</span>
+                        <span className="font-medium text-foreground">{value.requiredStaff} staff</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                // Create mode: คำนวณราคาใหม่
+                selectedPackage && (
+                  <TieredPricingCard
+                    servicePackageId={selectedPackage.id}
+                    areaSqm={areaSqm}
+                    frequency={frequency}
+                  />
+                )
+              )}
+            </>
           )}
         </>
       )}

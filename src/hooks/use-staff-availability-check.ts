@@ -180,7 +180,7 @@ export function useStaffAvailabilityCheck({
           skills,
           reviews (rating)
         `)
-        .in('role', ['staff', 'admin'])
+        .eq('role', 'staff')
         .order('full_name')
 
       if (!allStaff) return
@@ -432,7 +432,7 @@ export function useStaffAvailabilityCheck({
 
       setServiceType(serviceTypeValue)
 
-      // 2. Get all active teams
+      // 2. Get all active teams with their members
       const { data: teams } = await supabase
         .from('teams')
         .select(`

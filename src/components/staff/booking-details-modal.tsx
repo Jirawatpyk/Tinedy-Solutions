@@ -22,15 +22,25 @@ import {
   Save,
   MapPin,
   Play,
+  Star,
 } from 'lucide-react'
-import { type StaffBooking } from '@/hooks/use-staff-bookings'
+import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
 import { formatFullAddress } from '@/lib/booking-utils'
+import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatTime } from '@/lib/booking-utils'
 import { BookingTimeline } from './booking-timeline'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { supabase } from '@/lib/supabase'
+
+interface Review {
+  id: string
+  booking_id: string
+  rating: number
+  created_at: string
+}
 
 interface BookingDetailsModalProps {
   booking: StaffBooking | null
@@ -54,6 +64,8 @@ export function BookingDetailsModal({
   const [isSaving, setIsSaving] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
+  const [review, setReview] = useState<Review | null>(null)
+  const [_loadingReview, setLoadingReview] = useState(false)
   const { toast } = useToast()
 
   // Update currentBooking when booking prop changes (from optimistic update or real-time)
@@ -68,6 +80,33 @@ export function BookingDetailsModal({
     if (open && booking) {
       setNotes('')
     }
+  }, [open, booking])
+
+  // Fetch review data when modal opens
+  useEffect(() => {
+    const fetchReview = async () => {
+      if (!open || !booking) return
+
+      try {
+        setLoadingReview(true)
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('id, booking_id, rating, created_at')
+          .eq('booking_id', booking.id)
+          .maybeSingle()
+
+        if (error) throw error
+
+        setReview(data)
+      } catch (error) {
+        console.error('[BookingDetails] Error fetching review:', error)
+        setReview(null)
+      } finally {
+        setLoadingReview(false)
+      }
+    }
+
+    fetchReview()
   }, [open, booking])
 
   if (!currentBooking) return null
@@ -144,7 +183,7 @@ export function BookingDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Booking Details</span>
@@ -159,7 +198,7 @@ export function BookingDetailsModal({
 
         <div className="space-y-6">
           {/* Date and Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
@@ -236,7 +275,7 @@ export function BookingDetailsModal({
               Service Information
             </h3>
             <div className="ml-6 space-y-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Service Name</p>
                   <p className="font-medium">
@@ -270,7 +309,7 @@ export function BookingDetailsModal({
               </div>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {((currentBooking as any).area_sqm || (currentBooking as any).frequency) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {(currentBooking as any).area_sqm && (
                     <div>
@@ -285,13 +324,7 @@ export function BookingDetailsModal({
                       <p className="text-sm text-muted-foreground">Frequency</p>
                       <p className="font-medium">
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(currentBooking as any).frequency === 1 && 'Once'}
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(currentBooking as any).frequency === 2 && 'Twice a month'}
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(currentBooking as any).frequency === 4 && 'Weekly'}
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(currentBooking as any).frequency === 8 && 'Twice a week'}
+                        {getFrequencyLabel((currentBooking as any).frequency)}
                       </p>
                     </div>
                   )}
@@ -325,6 +358,42 @@ export function BookingDetailsModal({
             </>
           )}
 
+          {/* Service Rating - Read Only */}
+          {review && (currentBooking.staff_id || currentBooking.team_id) && currentBooking.status === 'completed' && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  Service Rating
+                </h3>
+                <div className="ml-6 space-y-2">
+                  {/* Read-only Star Display */}
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-5 w-5 ${
+                          star <= review.rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                    <span className="ml-2 text-sm font-medium">
+                      {review.rating}/5
+                    </span>
+                  </div>
+
+                  {/* Last Updated */}
+                  <p className="text-xs text-muted-foreground">
+                    Last updated: {format(new Date(review.created_at), 'dd MMM yyyy', { locale: enUS })}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Timeline */}
           <Separator />
           <BookingTimeline bookingId={currentBooking.id} />
@@ -351,7 +420,7 @@ export function BookingDetailsModal({
           )}
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-2 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-4">
             <Button onClick={onClose} variant="outline" className="flex-1">
               Close
             </Button>

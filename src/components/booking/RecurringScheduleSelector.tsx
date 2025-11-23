@@ -1,12 +1,4 @@
-/**
- * RecurringScheduleSelector Component
- *
- * Component สำหรับเลือกรูปแบบการสร้างตาราง recurring
- * - Auto mode: สร้างตารางอัตโนมัติ (weekly/bi-weekly/twice)
- * - Custom mode: เลือกวันเองทั้งหมด
- */
-
-import { useState, useEffect } from 'react'
+import { memo, useState, useEffect, useCallback } from 'react'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
@@ -45,13 +37,22 @@ interface RecurringScheduleSelectorProps {
   onPatternChange: (pattern: RecurringPattern) => void
 }
 
-export function RecurringScheduleSelector({
+/**
+ * RecurringScheduleSelector Component
+ *
+ * Component สำหรับเลือกรูปแบบการสร้างตาราง recurring
+ * - Auto mode: สร้างตารางอัตโนมัติ (monthly intervals)
+ * - Custom mode: เลือกวันเองทั้งหมด
+ *
+ * @performance Memoized - re-render เฉพาะเมื่อ props เปลี่ยน
+ */
+const RecurringScheduleSelectorComponent = ({
   frequency,
   selectedDates,
   onDatesChange,
   pattern,
   onPatternChange
-}: RecurringScheduleSelectorProps) {
+}: RecurringScheduleSelectorProps) => {
   const [mode, setMode] = useState<'auto' | 'custom'>('auto')
   const [startDate, setStartDate] = useState<string>('')
   const [customDates, setCustomDates] = useState<string[]>([])
@@ -81,15 +82,17 @@ export function RecurringScheduleSelector({
   const autoPattern: RecurringPattern = Pattern.AutoMonthly
 
   // Generate dates แบบ auto ด้วย interval
-  const handleAutoGenerate = (date: string, interval: number) => {
+  const handleAutoGenerate = useCallback((date: string, interval: number) => {
     try {
       const dates: string[] = []
       const start = new Date(date)
 
       for (let i = 0; i < frequency; i++) {
         const newDate = new Date(start)
-        newDate.setMonth(start.getMonth() + (i * interval))
-        dates.push(newDate.toISOString().split('T')[0])
+        const monthsToAdd = i * interval
+        newDate.setMonth(start.getMonth() + monthsToAdd)
+        const dateStr = newDate.toISOString().split('T')[0]
+        dates.push(dateStr)
       }
 
       onDatesChange(dates)
@@ -97,18 +100,17 @@ export function RecurringScheduleSelector({
       console.error('Error generating dates:', error)
       onDatesChange([])
     }
-  }
+  }, [frequency, onDatesChange])
 
-  // Auto-regenerate dates เมื่อ frequency หรือ interval เปลี่ยน (ใน auto mode)
+  // Auto-regenerate dates เมื่อ frequency, interval, หรือ startDate เปลี่ยน (ใน auto mode)
   useEffect(() => {
     if (mode === 'auto' && startDate) {
       handleAutoGenerate(startDate, monthInterval)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frequency, mode, monthInterval])
+  }, [mode, monthInterval, startDate, handleAutoGenerate])
 
   // จัดการการเปลี่ยน mode
-  const handleModeChange = (newMode: 'auto' | 'custom') => {
+  const handleModeChange = useCallback((newMode: 'auto' | 'custom') => {
     setMode(newMode)
     if (newMode === 'custom') {
       onPatternChange(Pattern.Custom)
@@ -121,24 +123,24 @@ export function RecurringScheduleSelector({
         handleAutoGenerate(startDate, monthInterval)
       }
     }
-  }
+  }, [autoPattern, onPatternChange, onDatesChange, startDate, monthInterval, handleAutoGenerate])
 
   // จัดการการเปลี่ยนวันที่เริ่มต้น (auto mode)
-  const handleStartDateChange = (date: string) => {
+  const handleStartDateChange = useCallback((date: string) => {
     setStartDate(date)
     if (date) {
       handleAutoGenerate(date, monthInterval)
     }
-  }
+  }, [monthInterval, handleAutoGenerate])
 
   // จัดการการเปลี่ยน interval
-  const handleIntervalChange = (interval: string) => {
+  const handleIntervalChange = useCallback((interval: string) => {
     const newInterval = parseInt(interval)
     setMonthInterval(newInterval)
     if (startDate) {
       handleAutoGenerate(startDate, newInterval)
     }
-  }
+  }, [startDate, handleAutoGenerate])
 
   // จัดการการเพิ่มวันที่ (custom mode)
   const handleAddCustomDate = (date: string) => {
@@ -349,3 +351,32 @@ export function RecurringScheduleSelector({
     </div>
   )
 }
+
+/**
+ * Memoized RecurringScheduleSelector
+ *
+ * Custom comparison function เพื่อ optimize re-renders
+ * Re-render เฉพาะเมื่อ:
+ * - frequency เปลี่ยน (2, 4, 8)
+ * - selectedDates array เปลี่ยน (ความยาวหรือ item แรก)
+ * - pattern เปลี่ยน (Auto/Custom)
+ * - callback functions เปลี่ยน (ควร wrap ด้วย useCallback ฝั่ง parent)
+ */
+export const RecurringScheduleSelector = memo(
+  RecurringScheduleSelectorComponent,
+  (prevProps, nextProps) => {
+    // Compare frequency
+    if (prevProps.frequency !== nextProps.frequency) return false
+
+    // Compare pattern
+    if (prevProps.pattern !== nextProps.pattern) return false
+
+    // Compare selectedDates array (deep comparison - check all elements)
+    const datesEqual =
+      prevProps.selectedDates.length === nextProps.selectedDates.length &&
+      prevProps.selectedDates.every((date, index) => date === nextProps.selectedDates[index])
+
+    // Return true to skip re-render, false to re-render
+    return datesEqual
+  }
+)

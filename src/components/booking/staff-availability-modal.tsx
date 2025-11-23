@@ -380,7 +380,7 @@ export function StaffAvailabilityModal({
                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-red-600">
                     ❌ Unavailable ({unavailable.length})
                   </h3>
-                  <div className="space-y-3 opacity-60">
+                  <div className="space-y-3">
                     {assignmentType === 'individual'
                       ? isMultiDateMode
                         ? (unavailable as MultiDateStaffResult[]).map((staff) => (
@@ -398,7 +398,7 @@ export function StaffAvailabilityModal({
                               key={staff.staffId}
                               staff={staff}
                               onSelect={() => handleSelect(staff.staffId, staff.conflicts, staff.fullName)}
-                              isUnavailable
+                              isUnavailable={false}
                               isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                             />
                           ))
@@ -422,7 +422,7 @@ export function StaffAvailabilityModal({
                                 key={team.teamId}
                                 team={team}
                                 onSelect={() => handleSelect(team.teamId, teamConflicts, team.teamName)}
-                                isUnavailable
+                                isUnavailable={false}
                                 isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
                               />
                             )

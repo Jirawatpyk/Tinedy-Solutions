@@ -45,6 +45,9 @@ interface BookingDetailModalProps {
   getPaymentStatusBadge: (status?: string) => React.ReactNode
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
+  isUpdatingStatus?: boolean
+  isUpdatingPayment?: boolean
+  isDeleting?: boolean
   actionLoading?: {
     statusChange: boolean
     delete: boolean

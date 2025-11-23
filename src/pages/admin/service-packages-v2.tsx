@@ -4,7 +4,7 @@
  * Hybrid management page supporting both V1 (Fixed) and V2 (Tiered) pricing models
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,66 +29,52 @@ import { useToast } from '@/hooks/use-toast'
 import { Package, Plus, Layers, TrendingUp, DollarSign } from 'lucide-react'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
-import { getPackagesOverview } from '@/lib/pricing-utils'
 import { PricingModel } from '@/types'
+import { useServicePackages } from '@/hooks/useServicePackages'
 
 export function AdminServicePackagesV2() {
   const { toast } = useToast()
 
-  // State
-  const [packagesV2, setPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
-  const [filteredPackagesV2, setFilteredPackagesV2] = useState<ServicePackageV2WithTiers[]>([])
-  const [loading, setLoading] = useState(true)
+  // React Query - Fetch packages (V1 + V2 unified)
+  const { packages: unifiedPackages, loading, error, refresh } = useServicePackages()
+
+  // Filter to V2 packages only (Tiered pricing model)
+  const packagesV2 = useMemo(() => {
+    return unifiedPackages.filter(pkg =>
+      pkg.pricing_model === PricingModel.Tiered
+    ) as unknown as ServicePackageV2WithTiers[]
+  }, [unifiedPackages])
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackageV2WithTiers | null>(null)
 
-  // Stats
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    tiered: 0,
-  })
-
-  /**
-   * Fetch V2 Packages
-   */
-  const fetchPackages = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await getPackagesOverview()
-      setPackagesV2(data || [])
-    } catch (error) {
-      console.error('Error fetching packages:', error)
+  // Show error toast
+  useEffect(() => {
+    if (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load service packages',
+        description: error,
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }, [toast])
+  }, [error, toast])
 
-  /**
-   * Calculate Statistics
-   */
-  const calculateStats = useCallback(() => {
+  // Calculate statistics (useMemo)
+  const stats = useMemo(() => {
     const total = packagesV2.length
     const active = packagesV2.filter((p) => p.is_active).length
     const inactive = total - active
     const tiered = packagesV2.filter((p) => p.pricing_model === PricingModel.Tiered).length
 
-    setStats({ total, active, inactive, tiered })
+    return { total, active, inactive, tiered }
   }, [packagesV2])
 
-  /**
-   * Filter Packages
-   */
-  const filterPackages = useCallback(() => {
+  // Filter packages (useMemo)
+  const filteredPackagesV2 = useMemo(() => {
     let filtered = packagesV2
 
     // Search filter
@@ -111,19 +97,8 @@ export function AdminServicePackagesV2() {
       filtered = filtered.filter((pkg) => pkg.pricing_model === PricingModel.Tiered)
     }
 
-    setFilteredPackagesV2(filtered)
+    return filtered
   }, [packagesV2, searchQuery, typeFilter, pricingModelFilter])
-
-  // Load packages on mount
-  useEffect(() => {
-    fetchPackages()
-  }, [fetchPackages])
-
-  // Update filters when data changes
-  useEffect(() => {
-    filterPackages()
-    calculateStats()
-  }, [filterPackages, calculateStats])
 
   /**
    * Handle Create Package
@@ -167,7 +142,7 @@ export function AdminServicePackagesV2() {
         description: 'Package deleted successfully',
       })
 
-      fetchPackages()
+      refresh()
     } catch (error) {
       console.error('Error deleting package:', error)
       const dbError = error as { code?: string }
@@ -204,7 +179,7 @@ export function AdminServicePackagesV2() {
         description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
       })
 
-      fetchPackages()
+      refresh()
     } catch (error) {
       toast({
         title: 'Error',
@@ -220,7 +195,7 @@ export function AdminServicePackagesV2() {
   const handleFormSuccess = () => {
     setIsDialogOpen(false)
     setEditingPackage(null)
-    fetchPackages()
+    refresh()
   }
 
   /**
@@ -288,7 +263,7 @@ export function AdminServicePackagesV2() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">
           Manage cleaning service packages with tiered pricing
         </p>

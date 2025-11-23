@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
 import { logger } from '@/lib/logger'
+import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
 // Types for realtime payload
 interface RealtimeBookingPayload {
@@ -15,35 +16,8 @@ interface ReviewData {
   rating: number
 }
 
-export interface StaffBooking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  notes: string | null
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  created_at: string
-  staff_id: string | null
-  team_id: string | null
-  area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
-  customers: {
-    id: string
-    full_name: string
-    phone: string
-    avatar_url: string | null
-  } | null
-  service_packages: {
-    id: string
-    name: string
-    duration_minutes: number
-    price: number
-  } | null
-}
+// Re-export StaffBooking from queries for backward compatibility
+export type { StaffBooking }
 
 export interface StaffStats {
   jobsToday: number
@@ -310,7 +284,7 @@ export function useStaffBookings() {
             .from('bookings')
             .select(`
               *,
-              customers (id, full_name, phone, avatar_url),
+              customers!customer_id (id, full_name, phone, avatar_url),
               service_packages (id, name, duration_minutes, price),
               service_packages_v2:package_v2_id (id, name)
             `)
@@ -332,7 +306,7 @@ export function useStaffBookings() {
             .from('bookings')
             .select(`
               *,
-              customers (id, full_name, phone, avatar_url),
+              customers!customer_id (id, full_name, phone, avatar_url),
               service_packages (id, name, duration_minutes, price),
               service_packages_v2:package_v2_id (id, name)
             `)
@@ -356,7 +330,7 @@ export function useStaffBookings() {
             .from('bookings')
             .select(`
               *,
-              customers (id, full_name, phone, avatar_url),
+              customers!customer_id (id, full_name, phone, avatar_url),
               service_packages (id, name, duration_minutes, price),
               service_packages_v2:package_v2_id (id, name)
             `)

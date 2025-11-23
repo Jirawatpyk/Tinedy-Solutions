@@ -1,15 +1,22 @@
 import type { Booking } from '@/types'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { PromptPayQR } from '@/components/payment/PromptPayQR'
-import { SlipUpload } from '@/components/payment/SlipUpload'
+import { PaymentMethodSkeleton } from '@/components/skeletons/lazy-loading-skeletons'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
+
+// Lazy load payment components to reduce initial bundle size
+const PromptPayQR = lazy(() =>
+  import('@/components/payment/PromptPayQR').then((m) => ({ default: m.PromptPayQR }))
+)
+const SlipUpload = lazy(() =>
+  import('@/components/payment/SlipUpload').then((m) => ({ default: m.SlipUpload }))
+)
 
 type PaymentMethod = 'promptpay' | 'slip' | null
 
@@ -321,20 +328,24 @@ export function PaymentPage() {
 
             {/* Payment Method Content */}
             {paymentMethod === 'promptpay' && (
-              <PromptPayQR
-                amount={totalAmount}
-                bookingId={booking.id}
-                recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
-              />
+              <Suspense fallback={<PaymentMethodSkeleton />}>
+                <PromptPayQR
+                  amount={totalAmount}
+                  bookingId={booking.id}
+                  recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
+                />
+              </Suspense>
             )}
 
             {paymentMethod === 'slip' && (
-              <SlipUpload
-                bookingId={booking.id}
-                amount={totalAmount}
-                recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
-                onSuccess={() => navigate(`/payment/${booking.id}/success`)}
-              />
+              <Suspense fallback={<PaymentMethodSkeleton />}>
+                <SlipUpload
+                  bookingId={booking.id}
+                  amount={totalAmount}
+                  recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
+                  onSuccess={() => navigate(`/payment/${booking.id}/success`)}
+                />
+              </Suspense>
             )}
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Calendar, DollarSign, Users, Clock } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { Stats, StatsChange } from '@/types/dashboard'
@@ -9,7 +10,15 @@ interface DashboardStatsProps {
   loading: boolean
 }
 
-export function DashboardStats({ stats, statsChange, loading }: DashboardStatsProps) {
+/**
+ * DashboardStats Component
+ *
+ * แสดง stats cards สำหรับ dashboard (Total Bookings, Revenue, Customers, Pending)
+ * ใช้ React.memo เพื่อป้องกัน re-render เมื่อ stats ไม่เปลี่ยน
+ *
+ * @performance Memoized - re-render เฉพาะเมื่อ stats/statsChange/loading เปลี่ยน
+ */
+const DashboardStatsComponent = ({ stats, statsChange, loading }: DashboardStatsProps) => {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -77,3 +86,41 @@ export function DashboardStats({ stats, statsChange, loading }: DashboardStatsPr
     </div>
   )
 }
+
+/**
+ * Memoized DashboardStats
+ *
+ * Custom comparison เพื่อเทียบ stats และ statsChange objects
+ * Re-render เฉพาะเมื่อค่าเปลี่ยนจริงๆ
+ */
+export const DashboardStats = memo(
+  DashboardStatsComponent,
+  (prevProps, nextProps) => {
+    // If loading state changed, re-render
+    if (prevProps.loading !== nextProps.loading) {
+      return false
+    }
+
+    // If loading, skip other comparisons
+    if (nextProps.loading) {
+      return true
+    }
+
+    // Compare stats object
+    const statsEqual =
+      prevProps.stats.totalBookings === nextProps.stats.totalBookings &&
+      prevProps.stats.totalRevenue === nextProps.stats.totalRevenue &&
+      prevProps.stats.totalCustomers === nextProps.stats.totalCustomers &&
+      prevProps.stats.pendingBookings === nextProps.stats.pendingBookings
+
+    // Compare statsChange object
+    const statsChangeEqual =
+      prevProps.statsChange.bookingsChange === nextProps.statsChange.bookingsChange &&
+      prevProps.statsChange.revenueChange === nextProps.statsChange.revenueChange &&
+      prevProps.statsChange.customersChange === nextProps.statsChange.customersChange &&
+      prevProps.statsChange.pendingChange === nextProps.statsChange.pendingChange
+
+    // Return true to skip re-render
+    return statsEqual && statsChangeEqual
+  }
+)

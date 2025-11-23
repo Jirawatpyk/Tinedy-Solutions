@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useStaffBookings, type StaffBooking } from '@/hooks/use-staff-bookings'
+import { useStaffDashboard } from '@/hooks/useStaffDashboard'
 import { useNotifications } from '@/hooks/use-notifications'
+import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { StatsCard } from '@/components/staff/stats-card'
 import { BookingCard } from '@/components/staff/booking-card'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
@@ -27,13 +28,13 @@ export default function StaffDashboard() {
     upcomingBookings,
     completedBookings,
     stats,
-    loading,
+    isLoading: loading,
     error,
     startProgress,
     markAsCompleted,
     addNotes,
-    refresh,
-  } = useStaffBookings()
+    refetch: refresh,
+  } = useStaffDashboard()
 
   const {
     hasPermission,
@@ -44,6 +45,8 @@ export default function StaffDashboard() {
 
   const [selectedBooking, setSelectedBooking] = useState<StaffBooking | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [startingBookingId, setStartingBookingId] = useState<string | null>(null)
+  const [completingBookingId, setCompletingBookingId] = useState<string | null>(null)
   const [todayLimit, setTodayLimit] = useState(6)
   const [upcomingLimit, setUpcomingLimit] = useState(6)
   const [completedLimit, setCompletedLimit] = useState(6)
@@ -63,8 +66,13 @@ export default function StaffDashboard() {
   }
 
   const handleStartProgress = async (bookingId: string) => {
+    setStartingBookingId(bookingId)
     try {
-      await startProgress(bookingId)
+      // รอให้ loading แสดงอย่างน้อย 500ms เพื่อให้ผู้ใช้เห็น loading state
+      await Promise.all([
+        startProgress(bookingId),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ])
       toast({
         title: 'Started',
         description: 'Task has been started successfully',
@@ -75,12 +83,19 @@ export default function StaffDashboard() {
         description: 'Could not start the task',
         variant: 'destructive',
       })
+    } finally {
+      setStartingBookingId(null)
     }
   }
 
   const handleMarkCompleted = async (bookingId: string) => {
+    setCompletingBookingId(bookingId)
     try {
-      await markAsCompleted(bookingId)
+      // รอให้ loading แสดงอย่างน้อย 500ms เพื่อให้ผู้ใช้เห็น loading state
+      await Promise.all([
+        markAsCompleted(bookingId),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ])
       toast({
         title: 'Completed',
         description: 'Task marked as completed successfully',
@@ -91,6 +106,8 @@ export default function StaffDashboard() {
         description: 'Could not mark task as completed',
         variant: 'destructive',
       })
+    } finally {
+      setCompletingBookingId(null)
     }
   }
 
@@ -106,7 +123,7 @@ export default function StaffDashboard() {
       <div className="p-4 sm:p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Error: {error}</AlertDescription>
+          <AlertDescription>Error: {error.message}</AlertDescription>
         </Alert>
       </div>
     )
@@ -116,11 +133,9 @@ export default function StaffDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
-        <div className="px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Manage your tasks and check your statistics
-            </p>
+        <div className="px-4 sm:px-6 py-6">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
             <Button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -131,6 +146,9 @@ export default function StaffDashboard() {
               <span className="hidden sm:inline ml-2">Refresh</span>
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Manage your tasks and check your statistics
+          </p>
         </div>
       </div>
 
@@ -156,7 +174,7 @@ export default function StaffDashboard() {
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '0ms' }}>
                 <StatsCard
                   title="Today's Tasks"
-                  value={stats.jobsToday}
+                  value={stats?.jobsToday ?? 0}
                   icon={Briefcase}
                   description="Tasks to do today"
                 />
@@ -164,7 +182,7 @@ export default function StaffDashboard() {
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '100ms' }}>
                 <StatsCard
                   title="This Week's Tasks"
-                  value={stats.jobsThisWeek}
+                  value={stats?.jobsThisWeek ?? 0}
                   icon={Calendar}
                   description="All tasks this week"
                 />
@@ -172,7 +190,7 @@ export default function StaffDashboard() {
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '200ms' }}>
                 <StatsCard
                   title="Completion Rate"
-                  value={`${stats.completionRate}%`}
+                  value={`${stats?.completionRate ?? 0}%`}
                   icon={TrendingUp}
                   description="Last 30 days"
                 />
@@ -180,7 +198,7 @@ export default function StaffDashboard() {
               <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-300" style={{ animationDelay: '300ms' }}>
                 <StatsCard
                   title="This Month's Earnings"
-                  value={`฿${stats.totalEarnings.toLocaleString()}`}
+                  value={`฿${stats?.totalEarnings.toLocaleString() ?? '0'}`}
                   icon={DollarSign}
                   description="Earnings from completed tasks"
                 />
@@ -239,6 +257,8 @@ export default function StaffDashboard() {
                         onStartProgress={handleStartProgress}
                         onMarkCompleted={handleMarkCompleted}
                         showDate={false}
+                        isStartingProgress={startingBookingId === booking.id}
+                        isCompletingProgress={completingBookingId === booking.id}
                       />
                     ))}
                   </div>
@@ -307,6 +327,8 @@ export default function StaffDashboard() {
                     onStartProgress={handleStartProgress}
                     onMarkCompleted={handleMarkCompleted}
                     showDate={true}
+                    isStartingProgress={startingBookingId === booking.id}
+                    isCompletingProgress={completingBookingId === booking.id}
                   />
                 ))}
               </div>
@@ -373,6 +395,8 @@ export default function StaffDashboard() {
                     onStartProgress={handleStartProgress}
                     onMarkCompleted={handleMarkCompleted}
                     showDate={true}
+                    isStartingProgress={startingBookingId === booking.id}
+                    isCompletingProgress={completingBookingId === booking.id}
                   />
                 ))}
               </div>

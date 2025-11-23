@@ -1,6 +1,8 @@
-import type { CustomerRecord, Booking } from '@/types'
+import type { Booking } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTeamsList } from '@/hooks/useTeams'
+import { useBookingsByDateRange } from '@/hooks/useBookings'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
@@ -22,79 +24,15 @@ import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
-import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
-import type { ServicePackage , UserProfile } from '@/types'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
-
-interface Staff {
-  id: string
-  full_name: string
-  email: string
-  role: string
-}
-
-interface Team {
-  id: string
-  name: string
-}
+import { useStaffList } from '@/hooks/useStaff'
+import * as XLSX from 'xlsx'
 
 // BookingFormState imported from @/hooks/useBookingForm
-
-interface BookingRaw {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  staff_id: string | null
-  team_id: string | null
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  service_package_id: string
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  service_packages: ServicePackage[] | ServicePackage | null
-  customers: CustomerRecord[] | CustomerRecord | null
-  profiles: UserProfile[] | UserProfile | null
-  teams: {
-    name: string
-    team_lead?: {
-      id: string
-      full_name: string
-      email: string
-      avatar_url: string | null
-    }[] | {
-      id: string
-      full_name: string
-      email: string
-      avatar_url: string | null
-    } | null
-  }[] | {
-    name: string
-    team_lead?: {
-      id: string
-      full_name: string
-      email: string
-      avatar_url: string | null
-    }[] | {
-      id: string
-      full_name: string
-      email: string
-      avatar_url: string | null
-    } | null
-  } | null
-}
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -112,13 +50,9 @@ const TIME_SLOTS = [
 ]
 
 export function AdminWeeklySchedule() {
-  const [staffMembers, setStaffMembers] = useState<Staff[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
   const [selectedStaff, setSelectedStaff] = useState<string>('all')
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('all')
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -134,8 +68,10 @@ export function AdminWeeklySchedule() {
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
-  // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
+  // ใช้ custom hooks สำหรับโหลดข้อมูล
   const { packages: servicePackages } = useServicePackages()
+  const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
+  const { teamsList: teams } = useTeamsList({ enableRealtime: false })
 
   // Calculate week dates based on currentWeekStart
   const calculateWeekDates = useCallback((weekStart: Date) => {
@@ -164,146 +100,35 @@ export function AdminWeeklySchedule() {
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
   }
 
-  const fetchStaffMembers = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role')
-        .eq('role', 'staff')
-        .order('full_name')
+  // Helper function สำหรับ format date
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
-      if (error) throw error
-      setStaffMembers(data || [])
-    } catch (error) {
-      console.error('Error fetching staff:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load staff members',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
+  // โหลด bookings ตาม week date range และ filters
+  const {
+    bookings,
+    isLoading,
+    refetch: refetchBookings,
+  } = useBookingsByDateRange({
+    dateRange: {
+      start: weekDates.length > 0 ? formatLocalDate(weekDates[0]) : '',
+      end: weekDates.length > 0 ? formatLocalDate(weekDates[6]) : '',
+    },
+    filters: {
+      viewMode,
+      staffId: selectedStaff !== 'all' ? selectedStaff : undefined,
+      teamId: selectedTeam !== 'all' ? selectedTeam : undefined,
+    },
+    enableRealtime: true,
+    enabled: weekDates.length === 7, // Only fetch when weekDates is ready
+  })
 
-  const fetchTeams = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('id, name')
-        .order('name')
-
-      if (error) throw error
-      setTeams(data || [])
-    } catch (error) {
-      console.error('Error fetching teams:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load teams',
-        variant: 'destructive',
-      })
-    }
-  }, [toast])
-
-  const fetchBookings = useCallback(async () => {
-    if (weekDates.length === 0) return
-
-    try {
-      // Format dates in local timezone YYYY-MM-DD
-      const formatLocalDate = (date: Date) => {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
-      }
-
-      const startDate = formatLocalDate(weekDates[0])
-      const endDate = formatLocalDate(weekDates[6])
-
-      let query = supabase
-        .from('bookings')
-        .select(`
-          *,
-          service_packages (name, service_type),
-          service_packages_v2:package_v2_id (name, service_type),
-          customers (id, full_name, email),
-          profiles!bookings_staff_id_fkey (full_name),
-          ${TEAMS_WITH_LEAD_QUERY}
-        `)
-        .gte('booking_date', startDate)
-        .lte('booking_date', endDate)
-        .order('booking_date')
-        .order('start_time')
-
-      // Filter based on view mode
-      if (viewMode === 'staff') {
-        // Staff view - only show bookings with staff_id (exclude team bookings)
-        query = query.not('staff_id', 'is', null)
-
-        if (selectedStaff && selectedStaff !== 'all') {
-          query = query.eq('staff_id', selectedStaff)
-        }
-      } else if (viewMode === 'team') {
-        // Team view mode - only show bookings that have a team
-        query = query.not('team_id', 'is', null)
-
-        if (selectedTeam && selectedTeam !== 'all') {
-          query = query.eq('team_id', selectedTeam)
-        }
-      }
-      // If viewMode === 'all', no filter - show everything
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      const transformedData = (data || []).map((booking: BookingRaw): Booking => {
-        // Merge V1 and V2 package data for compatibility
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const servicePackages = booking.service_packages || (booking as any).service_packages_v2
-
-        return {
-          ...booking,
-          service_packages: Array.isArray(servicePackages)
-            ? servicePackages[0] || null
-            : servicePackages,
-          customers: Array.isArray(booking.customers)
-            ? booking.customers[0] || null
-            : booking.customers,
-          profiles: Array.isArray(booking.profiles)
-            ? booking.profiles[0] || null
-            : booking.profiles,
-          teams: transformTeamsData(booking.teams) as {
-            name: string
-            team_lead?: {
-              id: string
-              full_name: string
-              email: string
-              avatar_url: string | null
-            } | null
-          } | null,
-        }
-      })
-
-      setBookings(transformedData)
-    } catch (error) {
-      console.error('Error fetching bookings:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load bookings',
-        variant: 'destructive',
-      })
-    }
-  }, [selectedStaff, selectedTeam, weekDates, viewMode, toast])
-
-  useEffect(() => {
-    fetchStaffMembers()
-    fetchTeams()
-  }, [fetchStaffMembers, fetchTeams])
-
-  useEffect(() => {
-    fetchBookings()
-  }, [fetchBookings])
+  // Service packages, staff, teams โหลดผ่าน hooks แล้ว
+  // Bookings โหลดผ่าน useBookingsByDateRange hook แล้ว
 
   const calculateBookingPosition = (startTime: string, endTime: string) => {
     const [startHour, startMin] = startTime.split(':').map(Number)
@@ -411,8 +236,11 @@ export function AdminWeeklySchedule() {
 
   const handleEditBooking = (booking: Booking) => {
     // Populate edit form with booking data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bookingAny = booking as any
     setEditFormData({
       service_package_id: booking.service_package_id,
+      package_v2_id: bookingAny.package_v2_id || undefined,
       booking_date: booking.booking_date,
       start_time: booking.start_time,
       end_time: booking.end_time,
@@ -425,6 +253,8 @@ export function AdminWeeklySchedule() {
       staff_id: booking.staff_id || '',
       team_id: booking.team_id || '',
       status: booking.status,
+      area_sqm: bookingAny.area_sqm || undefined,
+      frequency: bookingAny.frequency || undefined,
     })
 
     // Set assignment type based on booking data
@@ -497,7 +327,7 @@ export function AdminWeeklySchedule() {
       })
 
       // Refresh bookings
-      fetchBookings()
+      refetchBookings()
 
       // Update selected booking if it's open
       if (selectedBooking && selectedBooking.id === bookingId) {
@@ -530,7 +360,7 @@ export function AdminWeeklySchedule() {
       })
 
       setIsDetailModalOpen(false)
-      fetchBookings()
+      refetchBookings()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
@@ -545,7 +375,7 @@ export function AdminWeeklySchedule() {
     const result = await softDelete(bookingId)
     if (result.success) {
       setIsDetailModalOpen(false)
-      fetchBookings()
+      refetchBookings()
     }
   }
 
@@ -578,7 +408,7 @@ export function AdminWeeklySchedule() {
         })
       }
 
-      fetchBookings()
+      refetchBookings()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
@@ -644,7 +474,97 @@ export function AdminWeeklySchedule() {
     return labels[status] || status
   }
 
-  const selectedStaffData = staffMembers.find((s) => s.id === selectedStaff)
+  const handleExportSchedule = () => {
+    try {
+      // เตรียมข้อมูลสำหรับ Excel
+      const data = bookings.map(booking => {
+        const date = new Date(booking.booking_date)
+        const dayName = format(date, 'EEEE')
+        const dateStr = format(date, 'MMM dd, yyyy')
+
+        // หา staff/team name
+        let assignedTo = 'Unassigned'
+        if (booking.staff_id) {
+          const staff = staffList.find(s => s.id === booking.staff_id)
+          assignedTo = staff ? `${staff.full_name} (Staff)` : 'Unknown Staff'
+        } else if (booking.team_id) {
+          const team = teams.find(t => t.id === booking.team_id)
+          assignedTo = team ? `${team.name} (Team)` : 'Unknown Team'
+        }
+
+        return {
+          'Date': dateStr,
+          'Day': dayName,
+          'Start Time': booking.start_time,
+          'End Time': booking.end_time,
+          'Customer': booking.customers?.full_name || 'N/A',
+          'Service': booking.service_packages?.name || booking.service_packages_v2?.name || 'N/A',
+          'Staff/Team': assignedTo,
+          'Status': getStatusLabel(booking.status),
+          'Payment': booking.payment_status === 'paid' ? 'Paid' : 'Unpaid',
+          'Price (฿)': booking.total_price
+        }
+      })
+
+      // สร้าง worksheet
+      const worksheet = XLSX.utils.json_to_sheet(data)
+
+      // กำหนด column widths
+      worksheet['!cols'] = [
+        { wch: 15 }, // Date
+        { wch: 12 }, // Day
+        { wch: 12 }, // Start Time
+        { wch: 12 }, // End Time
+        { wch: 20 }, // Customer
+        { wch: 25 }, // Service
+        { wch: 20 }, // Staff/Team
+        { wch: 12 }, // Status
+        { wch: 10 }, // Payment
+        { wch: 12 }, // Price
+      ]
+
+      // สร้าง workbook
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Weekly Schedule')
+
+      // เพิ่ม Summary sheet
+      const summaryData = [
+        { 'Metric': 'Week Range', 'Value': `${weekStart} - ${weekEnd}` },
+        { 'Metric': 'Total Bookings', 'Value': weekStats.totalBookings },
+        { 'Metric': 'Confirmed', 'Value': weekStats.confirmedBookings },
+        { 'Metric': 'Completed', 'Value': weekStats.completedBookings },
+        { 'Metric': 'Busiest Day', 'Value': `${weekStats.busiestDay} (${weekStats.busiestDayCount} bookings)` },
+      ]
+
+      if (viewMode === 'staff' && selectedStaff !== 'all') {
+        summaryData.push({ 'Metric': 'Staff', 'Value': selectedStaffData?.full_name || 'Unknown' })
+      } else if (viewMode === 'team' && selectedTeam !== 'all') {
+        summaryData.push({ 'Metric': 'Team', 'Value': selectedTeamData?.name || 'Unknown' })
+      }
+
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData)
+      summarySheet['!cols'] = [{ wch: 20 }, { wch: 40 }]
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary')
+
+      // Download file
+      const fileName = `weekly-schedule-${weekStart.replace(' ', '-')}-${weekEnd.replace(', ', '-').replace(' ', '-')}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+
+      toast({
+        title: 'Export Successful',
+        description: 'Schedule exported to Excel file',
+      })
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export schedule',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const selectedStaffData = staffList.find((s) => s.id === selectedStaff)
   const selectedTeamData = teams.find((t) => t.id === selectedTeam)
 
   // OPTIMIZATION 2: Pre-calculate bookings grouped by date for O(1) lookup (เหมือน Calendar)
@@ -718,57 +638,110 @@ export function AdminWeeklySchedule() {
   const weekStart = weekDates[0] ? format(weekDates[0], 'MMM dd') : ''
   const weekEnd = weekDates[6] ? format(weekDates[6], 'MMM dd, yyyy') : ''
 
-  if (loading) {
+  // Show loading state until bookings are ready (not just isLoading from hook)
+  // This prevents showing 0 values while useMemo calculations are pending
+  if (isLoading || weekDates.length === 0) {
     return (
       <div className="space-y-6">
-        {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Page header skeleton - ตรงกับของจริง */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <p className="text-sm text-muted-foreground">
             View weekly booking schedules for staff and teams
           </p>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" disabled>
             <Download className="h-4 w-4 mr-2" />
             Export Schedule
           </Button>
         </div>
 
-        {/* Week Stats skeleton */}
+        {/* Week Stats skeleton - ตรงกับของจริง */}
         <div className="grid gap-4 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCard
-              key={i}
-              title=""
-              value={0}
-              isLoading={true}
-            />
-          ))}
+          <StatCard
+            title="Total Bookings"
+            value={0}
+            description="This week"
+            icon={Calendar}
+            iconColor="text-tinedy-blue"
+            isLoading={true}
+          />
+          <StatCard
+            title="Confirmed"
+            value={0}
+            description="Active bookings"
+            icon={CheckCircle}
+            iconColor="text-tinedy-green"
+            isLoading={true}
+          />
+          <StatCard
+            title="Completed"
+            value={0}
+            description="Jobs done"
+            icon={TrendingUp}
+            iconColor="text-tinedy-purple"
+            isLoading={true}
+          />
+          <StatCard
+            title="Busiest Day"
+            value="-"
+            description="0 bookings"
+            icon={Clock}
+            iconColor="text-orange-500"
+            isLoading={true}
+          />
         </div>
 
-        {/* Filters skeleton */}
+        {/* Filters skeleton - ตรงกับของจริง */}
         <Card>
           <CardContent className="py-3">
             <div className="flex flex-wrap items-center gap-3">
-              <Skeleton className="h-8 w-[380px]" />
-              <Skeleton className="h-6 w-px" />
-              <Skeleton className="h-8 flex-1 min-w-[250px]" />
-              <Skeleton className="h-8 flex-1 min-w-[250px]" />
+              {/* View Mode Toggle skeleton */}
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-[380px]" />
+              </div>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-border mx-1"></div>
+
+              {/* Staff Filter skeleton */}
+              <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 flex-1" />
+              </div>
+
+              {/* Team Filter skeleton */}
+              <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 flex-1" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Week navigation skeleton */}
+        {/* Week navigation and calendar skeleton - ตรงกับของจริง */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <Skeleton className="h-6 w-48" />
               <div className="flex gap-2">
-                <Skeleton className="h-9 w-9" />
-                <Skeleton className="h-9 w-9" />
+                <Skeleton className="h-9 w-9 rounded-md" />
+                <Skeleton className="h-9 w-9 rounded-md" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-96 w-full" />
+            {/* 7-day grid skeleton */}
+            <div className="grid grid-cols-7 gap-2 min-h-[600px]">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  {/* Day header */}
+                  <Skeleton className="h-16 w-full rounded-md" />
+                  {/* Booking slots */}
+                  <Skeleton className="h-24 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -778,11 +751,11 @@ export function AdminWeeklySchedule() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <p className="text-sm text-muted-foreground">
           View weekly booking schedules for staff and teams
         </p>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" onClick={handleExportSchedule}>
           <Download className="h-4 w-4 mr-2" />
           Export Schedule
         </Button>
@@ -876,7 +849,7 @@ export function AdminWeeklySchedule() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Staff</SelectItem>
-                  {staffMembers.map((staff) => (
+                  {staffList.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.full_name}
                     </SelectItem>
@@ -1039,20 +1012,36 @@ export function AdminWeeklySchedule() {
       {/* Edit Booking Modal */}
       {selectedBooking && (
         <BookingEditModal
-          isOpen={isEditOpen && !isEditAvailabilityOpen}
+          isOpen={isEditOpen}
           onClose={() => {
             setIsEditOpen(false)
             editForm.reset()
           }}
           booking={selectedBooking}
           onSuccess={() => {
-            fetchBookings()
+            refetchBookings()
           }}
           servicePackages={servicePackages}
-          staffMembers={staffMembers}
+          staffMembers={staffList}
           teams={teams}
           onOpenAvailabilityModal={() => {
+            setIsEditOpen(false)
             setIsEditAvailabilityOpen(true)
+          }}
+          onBeforeOpenAvailability={(formData) => {
+            // Sync form data from BookingEditModal to editForm before opening availability modal
+            editForm.setValues({
+              booking_date: formData.booking_date || '',
+              start_time: formData.start_time || '',
+              end_time: formData.end_time || '',
+              service_package_id: formData.service_package_id || '',
+              package_v2_id: formData.package_v2_id || '',
+              staff_id: formData.staff_id || '',
+              team_id: formData.team_id || '',
+              total_price: formData.total_price || 0,
+              area_sqm: formData.area_sqm || null,
+              frequency: formData.frequency || null,
+            })
           }}
           editForm={editForm}
           assignmentType={editAssignmentType}
@@ -1060,20 +1049,25 @@ export function AdminWeeklySchedule() {
           calculateEndTime={calculateEndTime}
           packageSelection={editPackageSelection}
           setPackageSelection={setEditPackageSelection}
+          defaultStaffId={editForm.formData.staff_id}
+          defaultTeamId={editForm.formData.team_id}
         />
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {editFormData.service_package_id && editFormData.booking_date && editFormData.start_time && (
+      {(editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditAvailabilityOpen}
           onClose={() => {
             setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
           }}
           assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
             editForm.handleChange('staff_id', staffId)
+            editForm.handleChange('team_id', '') // Clear team when staff is selected
             setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
             toast({
               title: 'Staff Selected',
               description: 'Staff member has been assigned to the booking',
@@ -1081,7 +1075,9 @@ export function AdminWeeklySchedule() {
           }}
           onSelectTeam={(teamId) => {
             editForm.handleChange('team_id', teamId)
+            editForm.handleChange('staff_id', '') // Clear staff when team is selected
             setIsEditAvailabilityOpen(false)
+            setIsEditOpen(true)
             toast({
               title: 'Team Selected',
               description: 'Team has been assigned to the booking',
@@ -1090,16 +1086,16 @@ export function AdminWeeklySchedule() {
           date={editFormData.booking_date || ''}
           startTime={editFormData.start_time || ''}
           endTime={
-            editFormData.service_package_id && editFormData.start_time
+            (editFormData.service_package_id || editFormData.package_v2_id) && editFormData.start_time
               ? calculateEndTime(
                   editFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                  servicePackages.find(pkg => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))?.duration_minutes || 0
                 )
               : (editFormData.end_time || '')
           }
-          servicePackageId={editFormData.service_package_id || ''}
+          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))?.name
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}

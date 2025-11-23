@@ -159,6 +159,19 @@ class NotificationService {
       }
     })
   }
+
+  async notifyPaymentReceived(customerName: string, amount: number, bookingId: string): Promise<void> {
+    await this.show({
+      title: '💰 Payment Received',
+      body: `Payment received from ${customerName}: ฿${amount.toLocaleString()}`,
+      tag: `payment-${bookingId}`,
+      data: {
+        type: 'payment_received',
+        bookingId,
+        url: '/admin/bookings'
+      }
+    })
+  }
 }
 
 // Export singleton instance

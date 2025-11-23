@@ -61,13 +61,13 @@ export function AdminChat() {
     try {
       await deleteConversation(userId)
       toast({
-        title: 'สำเร็จ',
-        description: 'ลบการสนทนาเรียบร้อยแล้ว',
+        title: 'Success',
+        description: 'Conversation deleted successfully',
       })
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถลบการสนทนาได้ กรุณาลองใหม่อีกครั้ง',
+        title: 'Error',
+        description: 'Could not delete conversation. Please try again.',
         variant: 'destructive',
       })
     }
@@ -86,8 +86,8 @@ export function AdminChat() {
       setNewChatModalOpen(true)
     } catch (error) {
       toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถโหลดรายชื่อผู้ใช้ได้',
+        title: 'Error',
+        description: 'Could not load user list',
         variant: 'destructive',
       })
     } finally {
@@ -106,7 +106,7 @@ export function AdminChat() {
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col space-y-6">
       {/* Page Header - Hide on mobile when chat is open */}
-      <div className={`${selectedUser ? 'hidden lg:block' : 'block'}`}>
+      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px] ${selectedUser ? 'hidden lg:flex' : 'flex'}`}>
         <p className="text-sm text-muted-foreground">Communicate with your team in real-time</p>
       </div>
 

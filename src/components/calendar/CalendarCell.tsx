@@ -9,12 +9,14 @@ import React from 'react'
 import { format, isSameMonth, isSameDay, isToday } from 'date-fns'
 import type { Booking } from '@/types/booking'
 import { STATUS_DOTS } from '@/constants/booking-status'
+import { AlertTriangle } from 'lucide-react'
 
 interface CalendarCellProps {
   day: Date
   currentDate: Date
   selectedDate: Date | null
   dayBookings: Booking[]
+  conflictingBookingIds?: Set<string>
   onDateClick: (date: Date) => void
   onCreateBooking: (date: Date) => void
 }
@@ -24,12 +26,18 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
   currentDate,
   selectedDate,
   dayBookings,
+  conflictingBookingIds,
   onDateClick,
   onCreateBooking,
 }) => {
   const isCurrentMonth = isSameMonth(day, currentDate)
   const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
   const isTodayDate = isToday(day)
+
+  // Check if this day has any conflicting bookings
+  const hasConflicts = dayBookings.some(booking =>
+    conflictingBookingIds?.has(booking.id)
+  )
 
   return (
     <div
@@ -38,10 +46,21 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
         ${!isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-background'}
         ${isSelected ? 'ring-2 ring-tinedy-blue bg-blue-50' : ''}
         ${isTodayDate && !isSelected ? 'ring-2 ring-tinedy-yellow' : ''}
+        ${hasConflicts ? 'ring-2 ring-red-500 bg-red-50/50' : ''}
         hover:bg-accent/50
       `}
       onClick={() => onDateClick(day)}
     >
+      {/* Conflict warning badge */}
+      {hasConflicts && (
+        <div
+          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 shadow-md z-10"
+          title="Schedule conflicts detected"
+        >
+          <AlertTriangle className="h-3 w-3" />
+        </div>
+      )}
+
       <div className="flex items-start justify-between">
         <span
           className={`text-sm font-medium ${
@@ -103,7 +122,8 @@ export const CalendarCell = React.memo(CalendarCellComponent, (prevProps, nextPr
     prevProps.currentDate.getTime() === nextProps.currentDate.getTime() &&
     prevProps.selectedDate?.getTime() === nextProps.selectedDate?.getTime() &&
     prevProps.dayBookings.length === nextProps.dayBookings.length &&
-    prevProps.dayBookings === nextProps.dayBookings // Reference equality check for bookings array
+    prevProps.dayBookings === nextProps.dayBookings && // Reference equality check for bookings array
+    prevProps.conflictingBookingIds === nextProps.conflictingBookingIds // Reference equality check for conflict IDs
   )
 })
 

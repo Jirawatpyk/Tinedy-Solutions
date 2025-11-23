@@ -1,9 +1,9 @@
-import { memo, useState, useMemo, useCallback } from 'react'
+import { memo, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, Play, Users, Loader2 } from 'lucide-react'
-import { type StaffBooking } from '@/hooks/use-staff-bookings'
+import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
@@ -16,6 +16,8 @@ interface BookingCardProps {
   onStartProgress?: (bookingId: string) => void
   onMarkCompleted?: (bookingId: string) => void
   showDate?: boolean
+  isStartingProgress?: boolean
+  isCompletingProgress?: boolean
 }
 
 export const BookingCard = memo(function BookingCard({
@@ -23,11 +25,11 @@ export const BookingCard = memo(function BookingCard({
   onViewDetails,
   onStartProgress,
   onMarkCompleted,
-  showDate = false
+  showDate = false,
+  isStartingProgress = false,
+  isCompletingProgress = false
 }: BookingCardProps) {
   const { user } = useAuth()
-  const [isStarting, setIsStarting] = useState(false)
-  const [isCompleting, setIsCompleting] = useState(false)
 
   // Memoize expensive calculations
   const isTeamBooking = useMemo(
@@ -185,22 +187,17 @@ export const BookingCard = memo(function BookingCard({
             {canStartProgress && onStartProgress && (
               <Button
                 type="button"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation()
                   e.preventDefault()
-                  setIsStarting(true)
-                  try {
-                    await onStartProgress(booking.id)
-                  } finally {
-                    setIsStarting(false)
-                  }
+                  onStartProgress(booking.id)
                 }}
-                disabled={isStarting}
+                disabled={isStartingProgress}
                 variant="default"
                 className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
                 size="sm"
               >
-                {isStarting ? (
+                {isStartingProgress ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                     Starting...
@@ -216,22 +213,17 @@ export const BookingCard = memo(function BookingCard({
             {canMarkCompleted && onMarkCompleted && (
               <Button
                 type="button"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation()
                   e.preventDefault()
-                  setIsCompleting(true)
-                  try {
-                    await onMarkCompleted(booking.id)
-                  } finally {
-                    setIsCompleting(false)
-                  }
+                  onMarkCompleted(booking.id)
                 }}
-                disabled={isCompleting}
+                disabled={isCompletingProgress}
                 variant="default"
                 className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg"
                 size="sm"
               >
-                {isCompleting ? (
+                {isCompletingProgress ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                     Saving...

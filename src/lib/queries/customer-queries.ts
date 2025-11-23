@@ -1,0 +1,79 @@
+/**
+ * Customer Query Functions
+ *
+ * React Query functions สำหรับ Customers
+ *
+ * Features:
+ * - Automatic caching (3 minutes stale time)
+ * - Support archived customers filter
+ * - Shared cache across pages
+ * - Type-safe query keys
+ */
+
+import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
+import type { CustomerRecord } from '@/types/customer'
+
+/**
+ * Fetch Customers List
+ *
+ * @param showArchived - Include archived (soft-deleted) customers
+ * @returns Promise<CustomerRecord[]>
+ */
+export async function fetchCustomers(showArchived: boolean = false): Promise<CustomerRecord[]> {
+  let query = supabase
+    .from('customers')
+    .select('*')
+
+  // Filter by archived status
+  if (!showArchived) {
+    query = query.is('deleted_at', null)
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false })
+
+  if (error) throw new Error(`Failed to fetch customers: ${error.message}`)
+
+  return data || []
+}
+
+/**
+ * Fetch Single Customer Detail
+ *
+ * @param id - Customer ID
+ * @returns Promise<CustomerRecord>
+ */
+export async function fetchCustomerDetail(id: string): Promise<CustomerRecord> {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw new Error(`Failed to fetch customer detail: ${error.message}`)
+
+  return data
+}
+
+/**
+ * Query Options สำหรับ Customers
+ */
+export const customerQueryOptions = {
+  /**
+   * List of all customers
+   */
+  list: (showArchived: boolean = false) => ({
+    queryKey: queryKeys.customers.list(showArchived),
+    queryFn: () => fetchCustomers(showArchived),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+  }),
+
+  /**
+   * Single customer detail
+   */
+  detail: (id: string) => ({
+    queryKey: queryKeys.customers.detail(id),
+    queryFn: () => fetchCustomerDetail(id),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  }),
+}

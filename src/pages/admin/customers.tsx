@@ -1,6 +1,9 @@
 import type { CustomerRecord } from '@/types'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useCustomers } from '@/hooks/useCustomers'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +14,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
+import {
+  customerCreateSchema,
+  customerUpdateSchema,
+  type CustomerCreateFormData,
+  type CustomerUpdateFormData,
+} from '@/schemas'
 import {
   Dialog,
   DialogContent,
@@ -39,14 +48,20 @@ import {
 
 export function AdminCustomers() {
   const navigate = useNavigate()
-  const [customers, setCustomers] = useState<CustomerRecord[]>([])
-  const [filteredCustomers, setFilteredCustomers] = useState<CustomerRecord[]>([])
-  const [loading, setLoading] = useState(true)
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
   const [searchQuery, setSearchQuery] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all')
+
+  // Archive filter
+  const [showArchived, setShowArchived] = useState(false)
+
+  // Use React Query hook for customers data
+  const { customers, loading, refresh, error: customersError } = useCustomers({
+    showArchived,
+    enableRealtime: true
+  })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<CustomerRecord | null>(null)
 
@@ -57,59 +72,33 @@ export function AdminCustomers() {
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
-  // Archive filter
-  const [showArchived, setShowArchived] = useState(false)
-
   const { toast } = useToast()
 
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    line_id: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    relationship_level: 'new' as 'new' | 'regular' | 'vip' | 'inactive',
-    preferred_contact_method: 'phone' as 'phone' | 'email' | 'line' | 'sms',
-    tags: [] as string[],
-    source: '',
-    birthday: '',
-    company_name: '',
-    tax_id: '',
-    notes: '',
+  // React Hook Form with Zod validation
+  const form = useForm<CustomerCreateFormData | CustomerUpdateFormData>({
+    resolver: zodResolver(editingCustomer ? customerUpdateSchema : customerCreateSchema),
+    defaultValues: {
+      full_name: '',
+      email: '',
+      phone: '',
+      line_id: '',
+      address: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      relationship_level: 'new',
+      preferred_contact_method: 'phone',
+      tags: [],
+      source: undefined,
+      birthday: '',
+      company_name: '',
+      tax_id: '',
+      notes: '',
+    },
   })
 
-  const fetchCustomers = useCallback(async () => {
-    try {
-      let query = supabase
-        .from('customers')
-        .select('*')
-
-      // Filter by archived status
-      if (!showArchived) {
-        query = query.is('deleted_at', null)
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false })
-
-      if (error) throw error
-      setCustomers(data || [])
-    } catch (error) {
-      logger.error('Error fetching customers', { error }, { context: 'AdminCustomers' })
-      const errorMessage = getLoadErrorMessage('customer')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast, showArchived])
-
-  const filterCustomers = useCallback(() => {
+  // Filter customers using useMemo for better performance
+  const filteredCustomers = useMemo(() => {
     let filtered = customers
 
     // Filter by search query (using debounced value)
@@ -130,37 +119,42 @@ export function AdminCustomers() {
       )
     }
 
-    setFilteredCustomers(filtered)
-    // Reset display count when filter changes
+    return filtered
+  }, [customers, debouncedSearchQuery, relationshipFilter])
+
+  // Reset display count when filters change
+  useEffect(() => {
     setDisplayCount(ITEMS_PER_LOAD)
-  }, [customers, debouncedSearchQuery, relationshipFilter, ITEMS_PER_LOAD])
+  }, [debouncedSearchQuery, relationshipFilter, ITEMS_PER_LOAD])
 
+  // Handle customers error
   useEffect(() => {
-    fetchCustomers()
-  }, [fetchCustomers])
+    if (customersError) {
+      const errorMessage = getLoadErrorMessage('customer')
+      toast({
+        title: errorMessage.title,
+        description: customersError,
+        variant: 'destructive',
+      })
+    }
+  }, [customersError, toast])
 
-  useEffect(() => {
-    filterCustomers()
-  }, [filterCustomers])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const onSubmit = async (data: CustomerCreateFormData | CustomerUpdateFormData) => {
     try {
       // Clean up form data - convert empty strings to null for optional fields
       const cleanedData = {
-        ...formData,
-        line_id: formData.line_id || null,
-        address: formData.address || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        zip_code: formData.zip_code || null,
-        source: formData.source || null,
-        birthday: formData.birthday || null, // Convert empty string to null for date field
-        company_name: formData.company_name || null,
-        tax_id: formData.tax_id || null,
-        notes: formData.notes || null,
-        tags: formData.tags && formData.tags.length > 0 ? formData.tags : null,
+        ...data,
+        line_id: data.line_id || null,
+        address: data.address || null,
+        city: data.city || null,
+        state: data.state || null,
+        zip_code: data.zip_code || null,
+        source: data.source || null,
+        birthday: data.birthday || null,
+        company_name: data.company_name || null,
+        tax_id: data.tax_id || null,
+        notes: data.notes || null,
+        tags: data.tags && data.tags.length > 0 ? data.tags : null,
       }
 
       if (editingCustomer) {
@@ -173,7 +167,7 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'CustomerRecord updated successfully',
+          description: 'Customer updated successfully',
         })
       } else {
         const { error } = await supabase.from('customers').insert(cleanedData)
@@ -182,13 +176,13 @@ export function AdminCustomers() {
 
         toast({
           title: 'Success',
-          description: 'CustomerRecord created successfully',
+          description: 'Customer created successfully',
         })
       }
 
       setIsDialogOpen(false)
       resetForm()
-      fetchCustomers()
+      refresh()
     } catch (error) {
       logger.error('Error saving customer', { error, editingCustomer: !!editingCustomer }, { context: 'AdminCustomers' })
       const errorMessage = mapErrorToUserMessage(error, 'customer')
@@ -213,7 +207,7 @@ export function AdminCustomers() {
         title: 'Success',
         description: 'Customer deleted successfully',
       })
-      fetchCustomers()
+      refresh()
     } catch (error) {
       logger.error('Delete customer error', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getDeleteErrorMessage('customer')
@@ -239,7 +233,7 @@ export function AdminCustomers() {
         title: 'Success',
         description: 'Customer archived successfully',
       })
-      fetchCustomers()
+      refresh()
     } catch (error) {
       logger.error('Archive customer error', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getArchiveErrorMessage()
@@ -264,7 +258,7 @@ export function AdminCustomers() {
         title: 'Success',
         description: 'Customer restored successfully',
       })
-      fetchCustomers()
+      refresh()
     } catch (error) {
       logger.error('Error restoring customer', { error, customerId }, { context: 'AdminCustomers' })
       const errorMessage = getRestoreErrorMessage()
@@ -278,7 +272,7 @@ export function AdminCustomers() {
 
   const openEditDialog = (customer: CustomerRecord) => {
     setEditingCustomer(customer)
-    setFormData({
+    form.reset({
       full_name: customer.full_name,
       email: customer.email,
       phone: customer.phone,
@@ -290,18 +284,18 @@ export function AdminCustomers() {
       relationship_level: customer.relationship_level || 'new',
       preferred_contact_method: customer.preferred_contact_method || 'phone',
       tags: customer.tags || [],
-      source: customer.source || '',
+      source: customer.source || undefined,
       birthday: customer.birthday || '',
       company_name: customer.company_name || '',
       tax_id: customer.tax_id || '',
       notes: customer.notes || '',
-    })
+    } as CustomerUpdateFormData)
     setIsDialogOpen(true)
   }
 
   const resetForm = () => {
     setEditingCustomer(null)
-    setFormData({
+    form.reset({
       full_name: '',
       email: '',
       phone: '',
@@ -313,7 +307,7 @@ export function AdminCustomers() {
       relationship_level: 'new',
       preferred_contact_method: 'phone',
       tags: [],
-      source: '',
+      source: undefined,
       birthday: '',
       company_name: '',
       tax_id: '',
@@ -404,7 +398,7 @@ export function AdminCustomers() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <div>
           <p className="text-sm text-muted-foreground">
             Manage your customer database
@@ -448,30 +442,34 @@ export function AdminCustomers() {
                   : 'Add a new customer to your database'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="full_name">Full Name *</Label>
                   <Input
                     id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, full_name: e.target.value })
-                    }
-                    required
+                    {...form.register('full_name')}
+                    aria-invalid={!!form.formState.errors.full_name}
                   />
+                  {form.formState.errors.full_name && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.full_name.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    required
+                    {...form.register('email')}
+                    aria-invalid={!!form.formState.errors.email}
                   />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.email.message}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -480,23 +478,28 @@ export function AdminCustomers() {
                   <Input
                     id="phone"
                     type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    required
+                    {...form.register('phone')}
+                    placeholder="0812345678"
+                    aria-invalid={!!form.formState.errors.phone}
                   />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.phone.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="line_id">LINE ID</Label>
                   <Input
                     id="line_id"
-                    value={formData.line_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, line_id: e.target.value })
-                    }
+                    {...form.register('line_id')}
                     placeholder="@username"
                   />
+                  {form.formState.errors.line_id && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.line_id.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -506,89 +509,114 @@ export function AdminCustomers() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="relationship_level">Relationship Level</Label>
-                    <Select
-                      value={formData.relationship_level}
-                      onValueChange={(value: 'new' | 'regular' | 'vip' | 'inactive') =>
-                        setFormData({ ...formData, relationship_level: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">🆕 New Customer</SelectItem>
-                        <SelectItem value="regular">💚 Regular Customer</SelectItem>
-                        <SelectItem value="vip">👑 VIP Customer</SelectItem>
-                        <SelectItem value="inactive">💤 Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      name="relationship_level"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">🆕 New Customer</SelectItem>
+                            <SelectItem value="regular">💚 Regular Customer</SelectItem>
+                            <SelectItem value="vip">👑 VIP Customer</SelectItem>
+                            <SelectItem value="inactive">💤 Inactive</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="preferred_contact_method">Preferred Contact</Label>
-                    <Select
-                      value={formData.preferred_contact_method}
-                      onValueChange={(value: 'phone' | 'email' | 'line' | 'sms') =>
-                        setFormData({ ...formData, preferred_contact_method: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="phone">📱 Phone</SelectItem>
-                        <SelectItem value="email">✉️ Email</SelectItem>
-                        <SelectItem value="line">💬 LINE</SelectItem>
-                        <SelectItem value="sms">💌 SMS</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      name="preferred_contact_method"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="phone">📱 Phone</SelectItem>
+                            <SelectItem value="email">✉️ Email</SelectItem>
+                            <SelectItem value="line">💬 LINE</SelectItem>
+                            <SelectItem value="sms">💌 SMS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="source">How did they find us?</Label>
-                    <Select
-                      value={formData.source || undefined}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, source: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="facebook">Facebook</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="google">Google Search</SelectItem>
-                        <SelectItem value="website">Website</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="walk-in">Walk-in</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      name="source"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="facebook">Facebook</SelectItem>
+                            <SelectItem value="instagram">Instagram</SelectItem>
+                            <SelectItem value="google">Google Search</SelectItem>
+                            <SelectItem value="website">Website</SelectItem>
+                            <SelectItem value="referral">Referral</SelectItem>
+                            <SelectItem value="walk-in">Walk-in</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="birthday">Birthday</Label>
                     <Input
                       id="birthday"
                       type="date"
-                      value={formData.birthday}
-                      onChange={(e) =>
-                        setFormData({ ...formData, birthday: e.target.value })
-                      }
+                      {...form.register('birthday')}
                     />
+                    {form.formState.errors.birthday && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.birthday.message}
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {/* Show additional input when "Other" is selected */}
+                {form.watch('source') === 'other' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="source_other">Please specify</Label>
+                    <Input
+                      id="source_other"
+                      placeholder="How did they find us?"
+                      {...form.register('source_other')}
+                    />
+                    {form.formState.errors.source_other && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.source_other.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Tags Section */}
               <div className="border-t pt-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-tinedy-blue" />
-                  <Label htmlFor="tags">CustomerRecord Tags</Label>
+                  <Label htmlFor="tags">Customer Tags</Label>
                 </div>
-                <TagInput
-                  tags={formData.tags}
-                  onChange={(newTags) => setFormData({ ...formData, tags: newTags })}
+                <Controller
+                  name="tags"
+                  control={form.control}
+                  render={({ field }) => (
+                    <TagInput tags={field.value || []} onChange={field.onChange} />
+                  )}
                 />
               </div>
 
@@ -600,23 +628,27 @@ export function AdminCustomers() {
                     <Label htmlFor="company_name">Company Name</Label>
                     <Input
                       id="company_name"
-                      value={formData.company_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, company_name: e.target.value })
-                      }
+                      {...form.register('company_name')}
                       placeholder="ABC Company Ltd."
                     />
+                    {form.formState.errors.company_name && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.company_name.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tax_id">Tax ID</Label>
                     <Input
                       id="tax_id"
-                      value={formData.tax_id}
-                      onChange={(e) =>
-                        setFormData({ ...formData, tax_id: e.target.value })
-                      }
+                      {...form.register('tax_id')}
                       placeholder="0-0000-00000-00-0"
                     />
+                    {form.formState.errors.tax_id && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.tax_id.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -628,10 +660,7 @@ export function AdminCustomers() {
                 <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                  {...form.register('address')}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -639,30 +668,22 @@ export function AdminCustomers() {
                   <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
-                    value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
+                    {...form.register('city')}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">State</Label>
                   <Input
                     id="state"
-                    value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
+                    {...form.register('state')}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zip_code">Zip Code</Label>
                   <Input
                     id="zip_code"
-                    value={formData.zip_code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, zip_code: e.target.value })
-                    }
+                    {...form.register('zip_code')}
+                    placeholder="10110"
                   />
                 </div>
               </div>
@@ -673,13 +694,15 @@ export function AdminCustomers() {
                 <Label htmlFor="notes">Notes</Label>
                 <textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
+                  {...form.register('notes')}
                   placeholder="Add any additional notes about this customer..."
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+                {form.formState.errors.notes && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.notes.message}
+                  </p>
+                )}
               </div>
               <DialogFooter>
                 <Button

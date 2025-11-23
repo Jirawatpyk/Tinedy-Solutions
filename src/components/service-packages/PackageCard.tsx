@@ -176,6 +176,7 @@ export function PackageCard({
                   <DeleteButton
                     itemName={pkg.name}
                     onDelete={() => onDelete?.(pkg.id)}
+                    variant="default"
                     size="sm"
                     className="w-full justify-start text-red-600"
                   />
@@ -269,62 +270,6 @@ export function PackageCard({
               </div>
             )}
           </div>
-        )}
-
-        {/* Tier Details (Expandable) */}
-        {isTiered && pkg.tiers && pkg.tiers.length > 0 && (
-          <details className="pt-2 border-t">
-            <summary className="text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground">
-              Tier Details ({pkg.tiers.length} tiers)
-            </summary>
-            <div className="mt-3 space-y-2">
-              {pkg.tiers.map((tier, index) => (
-                <div
-                  key={index}
-                  className="bg-muted rounded-md p-3 text-sm space-y-1"
-                >
-                  <div className="flex items-center justify-between font-medium">
-                    <span>
-                      Tier {index + 1}: {tier.area_min}-{tier.area_max} sqm
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {tier.required_staff} staff
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <div>1 time:</div>
-                    <div className="text-right font-medium">
-                      {formatPrice(tier.price_1_time)}
-                    </div>
-                    {tier.price_2_times && (
-                      <>
-                        <div>2 times pack:</div>
-                        <div className="text-right font-medium">
-                          {formatPrice(tier.price_2_times)}
-                        </div>
-                      </>
-                    )}
-                    {tier.price_4_times && (
-                      <>
-                        <div>4 times pack:</div>
-                        <div className="text-right font-medium">
-                          {formatPrice(tier.price_4_times)}
-                        </div>
-                      </>
-                    )}
-                    {tier.price_8_times && (
-                      <>
-                        <div>8 times pack:</div>
-                        <div className="text-right font-medium">
-                          {formatPrice(tier.price_8_times)}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
         )}
 
         {/* Created Date */}

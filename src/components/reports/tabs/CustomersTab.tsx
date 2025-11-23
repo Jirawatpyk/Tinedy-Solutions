@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset, type CustomerWithBookings } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
+import { useChartAnimation } from '@/hooks/useChartAnimation'
 import {
   LineChart,
   Line,
@@ -60,6 +61,19 @@ function CustomersTabComponent({
   topCustomers,
   dateRange,
 }: CustomersTabProps) {
+  // Prepare segmentation data for animation
+  const segmentationData = React.useMemo(
+    () => getCustomerSegmentation(customersWithBookings),
+    [customersWithBookings]
+  )
+
+  // Chart animation
+  const segmentationChart = useChartAnimation(segmentationData, {
+    initialDelay: 50,
+    animationDuration: 800,
+    enabled: true
+  })
+
   return (
     <div className="space-y-6">
       {/* Customer Metrics Cards */}
@@ -200,19 +214,22 @@ function CustomersTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={getCustomerSegmentation(customersWithBookings)}
+                  data={segmentationData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(props: PieLabelRenderProps) => {
+                  labelLine={segmentationChart.showLabels}
+                  label={segmentationChart.showLabels ? (props: PieLabelRenderProps) => {
                     const percent = Number(props.percent || 0)
                     return percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
-                  }}
+                  } : false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  animationBegin={0}
+                  animationDuration={segmentationChart.isReady ? 800 : 0}
+                  opacity={segmentationChart.isReady ? 1 : 0}
                 >
-                  {getCustomerSegmentation(customersWithBookings).map((entry, index) => (
+                  {segmentationData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -220,7 +237,7 @@ function CustomersTabComponent({
               </PieChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-1 gap-2 mt-4">
-              {getCustomerSegmentation(customersWithBookings).map((item, index) => (
+              {segmentationData.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div

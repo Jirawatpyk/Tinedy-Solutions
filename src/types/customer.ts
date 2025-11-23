@@ -93,6 +93,7 @@ export type CustomerSource = typeof CustomerSource[keyof typeof CustomerSource]
  * @property {PreferredContactMethod} preferred_contact_method - How customer prefers to be contacted
  * @property {string[] | null} tags - Array of custom tags for categorization, null if no tags
  * @property {CustomerSource | null} source - How customer found the business, null if unknown
+ * @property {string | null} source_other - Additional details when source is "other", null if not applicable
  * @property {string | null} birthday - Customer's birthday in ISO 8601 format (YYYY-MM-DD), null if not provided
  * @property {string | null} company_name - Company name for corporate customers, null if individual
  * @property {string | null} tax_id - Tax ID for invoicing, null if not provided
@@ -114,6 +115,7 @@ export interface CustomerRecord {
   preferred_contact_method: PreferredContactMethod
   tags: string[] | null
   source: CustomerSource | null
+  source_other: string | null
   birthday: string | null
   company_name: string | null
   tax_id: string | null
@@ -216,6 +218,7 @@ export interface CustomerFormData {
   preferred_contact_method: PreferredContactMethod
   tags?: string[]
   source?: CustomerSource
+  source_other?: string
   birthday?: string
   company_name?: string
   tax_id?: string

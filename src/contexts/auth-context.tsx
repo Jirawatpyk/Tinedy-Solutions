@@ -59,6 +59,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Realtime subscription for profile updates
+  useEffect(() => {
+    if (!user) return
+
+    const profileSubscription = supabase
+      .channel(`profile-updates:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            setProfile((prev) => {
+              if (!prev) return null
+
+              return {
+                ...prev,
+                full_name: payload.new.full_name || prev.full_name,
+                phone: payload.new.phone ?? prev.phone,
+                avatar_url: payload.new.avatar_url ?? prev.avatar_url,
+                updated_at: payload.new.updated_at || prev.updated_at,
+              }
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      profileSubscription.unsubscribe()
+    }
+  }, [user])
+
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase

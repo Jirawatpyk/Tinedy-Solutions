@@ -11,6 +11,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,13 +28,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { TierEditor, type TierFormData } from './TierEditor'
-import { AlertCircle, Save, X } from 'lucide-react'
+import { Save, X } from 'lucide-react'
 import {
   PricingModel,
   ServiceCategory,
   type ServicePackageV2,
-  type ServicePackageV2Input,
 } from '@/types'
+import {
+  ServicePackageV2FormSchema,
+  type ServicePackageV2CompleteFormData,
+  validateTiersNoOverlap,
+} from '@/schemas'
 
 interface PackageFormV2Props {
   /** Package to edit (null for create mode) */
@@ -56,28 +62,35 @@ export function PackageFormV2({
 }: PackageFormV2Props) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [showErrors, setShowErrors] = useState(false)
-
-  // Form state
-  const [formData, setFormData] = useState<ServicePackageV2Input>({
-    name: '',
-    description: null,
-    service_type: 'cleaning',
-    category: ServiceCategory.Office,
-    pricing_model: PricingModel.Tiered,
-    duration_minutes: null,
-    base_price: null,
-    is_active: true,
-    display_order: 0,
-  })
+  const [loadingTiers, setLoadingTiers] = useState(false)
 
   // Tiers state (for tiered pricing)
   const [tiers, setTiers] = useState<TierFormData[]>([])
+
+  // React Hook Form with Zod validation
+  const form = useForm<ServicePackageV2CompleteFormData>({
+    resolver: zodResolver(ServicePackageV2FormSchema),
+    mode: 'onSubmit', // Validate only on submit, not on mount
+    defaultValues: {
+      package: {
+        name: '',
+        description: null,
+        service_type: 'cleaning',
+        category: ServiceCategory.Office,
+        pricing_model: PricingModel.Tiered,
+        duration_minutes: null,
+        base_price: null,
+        is_active: true,
+      },
+      tiers: [],
+    },
+  })
 
   /**
    * Load pricing tiers for package
    */
   const loadTiers = useCallback(async (packageId: string) => {
+    setLoadingTiers(true)
     try {
       const { data, error } = await supabase
         .from('package_pricing_tiers')
@@ -100,6 +113,7 @@ export function PackageFormV2({
       }))
 
       setTiers(tierData)
+      return tierData
     } catch (error) {
       console.error('Error loading tiers:', error)
       toast({
@@ -107,96 +121,78 @@ export function PackageFormV2({
         description: 'Failed to load pricing tiers',
         variant: 'destructive',
       })
+      return []
+    } finally {
+      setLoadingTiers(false)
     }
   }, [toast])
 
   // Load package data when editing
   useEffect(() => {
-    if (editPackage) {
-      setFormData({
-        name: editPackage.name,
-        description: editPackage.description,
-        service_type: editPackage.service_type,
-        category: editPackage.category,
-        pricing_model: editPackage.pricing_model,
-        duration_minutes: editPackage.duration_minutes,
-        base_price: editPackage.base_price,
-        is_active: editPackage.is_active,
-        display_order: editPackage.display_order,
-      })
+    const initializeEditForm = async () => {
+      if (editPackage) {
+        // Load tiers first if tiered pricing
+        let loadedTiers: TierFormData[] = []
+        if (editPackage.pricing_model === PricingModel.Tiered) {
+          loadedTiers = await loadTiers(editPackage.id)
+        }
 
-      // Load tiers if tiered pricing
-      if (editPackage.pricing_model === PricingModel.Tiered) {
-        loadTiers(editPackage.id)
+        // Reset form with edit package data AND loaded tiers
+        form.reset({
+          package: {
+            name: editPackage.name,
+            description: editPackage.description,
+            service_type: editPackage.service_type,
+            category: editPackage.category,
+            pricing_model: editPackage.pricing_model,
+            duration_minutes: editPackage.duration_minutes,
+            base_price: editPackage.base_price,
+            is_active: editPackage.is_active,
+          },
+          tiers: loadedTiers,
+        })
       }
     }
-  }, [editPackage, loadTiers])
+
+    initializeEditForm()
+  }, [editPackage, loadTiers, form])
 
   /**
-   * Validate form
+   * Sync tiers to form state
    */
-  const validateForm = (): boolean => {
-    const errors: string[] = []
-
-    // Basic validation
-    if (!formData.name.trim()) {
-      errors.push('Please enter package name')
-    }
-
-    if (!formData.service_type) {
-      errors.push('Please select service type')
-    }
-
-    // Pricing model specific validation
-    if (formData.pricing_model === PricingModel.Fixed) {
-      if (!formData.duration_minutes || formData.duration_minutes <= 0) {
-        errors.push('Please enter duration (minutes)')
-      }
-      if (!formData.base_price || formData.base_price <= 0) {
-        errors.push('Please enter price')
-      }
-    } else if (formData.pricing_model === PricingModel.Tiered) {
-      if (!formData.category) {
-        errors.push('Please select category (Office/Condo/House)')
-      }
-      if (tiers.length === 0) {
-        errors.push('Please add at least 1 pricing tier')
-      }
-    }
-
-    if (errors.length > 0) {
-      setShowErrors(true)
-      toast({
-        title: 'Incomplete Data',
-        description: errors[0],
-        variant: 'destructive',
-      })
-      return false
-    }
-
-    return true
-  }
+  useEffect(() => {
+    form.setValue('tiers', tiers, { shouldValidate: false })
+  }, [tiers, form])
 
   /**
-   * Handle form submit
+   * Handle form submit (with Zod validation)
    */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
+  const onSubmit = async (data: ServicePackageV2CompleteFormData) => {
     setLoading(true)
 
     try {
+      // Additional tier overlap validation
+      if (data.package.pricing_model === PricingModel.Tiered && data.tiers) {
+        try {
+          validateTiersNoOverlap(data.tiers)
+        } catch (error) {
+          toast({
+            title: 'Error',
+            description: error instanceof Error ? error.message : 'Area ranges overlap',
+            variant: 'destructive',
+          })
+          setLoading(false)
+          return
+        }
+      }
+
       let packageId: string
 
       if (editPackage) {
         // Update existing package
         const { error } = await supabase
           .from('service_packages_v2')
-          .update(formData)
+          .update(data.package)
           .eq('id', editPackage.id)
 
         if (error) throw error
@@ -204,7 +200,7 @@ export function PackageFormV2({
         packageId = editPackage.id
 
         // Update tiers if tiered pricing
-        if (formData.pricing_model === PricingModel.Tiered) {
+        if (data.package.pricing_model === PricingModel.Tiered) {
           await updateTiers(packageId)
         }
 
@@ -214,19 +210,19 @@ export function PackageFormV2({
         })
       } else {
         // Create new package
-        const { data, error } = await supabase
+        const { data: newPackage, error } = await supabase
           .from('service_packages_v2')
-          .insert(formData)
+          .insert(data.package)
           .select()
           .single()
 
         if (error) throw error
-        if (!data) throw new Error('No data returned')
+        if (!newPackage) throw new Error('No data returned')
 
-        packageId = data.id
+        packageId = newPackage.id
 
         // Insert tiers if tiered pricing
-        if (formData.pricing_model === PricingModel.Tiered) {
+        if (data.package.pricing_model === PricingModel.Tiered) {
           await insertTiers(packageId)
         }
 
@@ -283,31 +279,32 @@ export function PackageFormV2({
    * Handle service type change
    */
   const handleServiceTypeChange = (value: 'cleaning' | 'training') => {
-    setFormData({
-      ...formData,
-      service_type: value,
-      // Auto-set pricing model based on service type
-      // Cleaning -> Tiered (default), Training -> Fixed (default)
-      pricing_model: value === 'training' ? PricingModel.Fixed : PricingModel.Tiered,
-    })
+    form.setValue('package.service_type', value)
+    // Auto-set pricing model based on service type
+    // Cleaning -> Tiered (default), Training -> Fixed (default)
+    const newPricingModel = value === 'training' ? PricingModel.Fixed : PricingModel.Tiered
+    form.setValue('package.pricing_model', newPricingModel)
   }
 
   /**
    * Handle pricing model change
    */
   const handlePricingModelChange = (value: string) => {
-    setFormData({
-      ...formData,
-      pricing_model: value as PricingModel,
-      // Reset fields based on pricing model
-      duration_minutes: value === PricingModel.Fixed ? formData.duration_minutes : null,
-      base_price: value === PricingModel.Fixed ? formData.base_price : null,
-      category: value === PricingModel.Tiered ? formData.category : null,
-    })
+    const pricingModel = value as PricingModel
+    form.setValue('package.pricing_model', pricingModel)
+
+    // Reset fields based on pricing model
+    if (pricingModel === PricingModel.Fixed) {
+      form.setValue('package.category', null)
+      setTiers([]) // Clear tiers for fixed pricing
+    } else {
+      form.setValue('package.duration_minutes', null)
+      form.setValue('package.base_price', null)
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -317,61 +314,69 @@ export function PackageFormV2({
           {/* Package Name */}
           <div>
             <Label htmlFor="name">Package Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Deep Cleaning Office"
-              required
+            <Controller
+              name="package.name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <>
+                  <Input
+                    id="name"
+                    placeholder="e.g. Deep Cleaning Office"
+                    {...field}
+                  />
+                  {fieldState.error && (
+                    <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                  )}
+                </>
+              )}
             />
           </div>
 
           {/* Description */}
           <div>
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value || null })
-              }
-              placeholder="Package description"
-              rows={3}
+            <Controller
+              name="package.description"
+              control={form.control}
+              render={({ field }) => (
+                <Textarea
+                  id="description"
+                  placeholder="Package description"
+                  rows={3}
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
+              )}
             />
           </div>
 
           {/* Service Type */}
           <div>
             <Label htmlFor="service_type">Service Type *</Label>
-            <Select
-              value={formData.service_type}
-              onValueChange={(value) => handleServiceTypeChange(value as 'cleaning' | 'training')}
-            >
-              <SelectTrigger id="service_type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cleaning">Cleaning (ทำความสะอาด)</SelectItem>
-                <SelectItem value="training">Training (ฝึกอบรม)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Display Order */}
-          <div>
-            <Label htmlFor="display_order">Display Order</Label>
-            <Input
-              id="display_order"
-              type="number"
-              min="0"
-              value={formData.display_order}
-              onChange={(e) =>
-                setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })
-              }
+            <Controller
+              name="package.service_type"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => handleServiceTypeChange(value as 'cleaning' | 'training')}
+                  >
+                    <SelectTrigger id="service_type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cleaning">Cleaning</SelectItem>
+                      <SelectItem value="training">Training</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.error && (
+                    <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                  )}
+                </>
+              )}
             />
-            <p className="text-sm text-muted-foreground mt-1">
-              Lower numbers will be displayed first (0 = first)
-            </p>
           </div>
         </CardContent>
       </Card>
@@ -385,56 +390,81 @@ export function PackageFormV2({
           {/* Pricing Model Selector */}
           <div>
             <Label htmlFor="pricing_model">Pricing Type *</Label>
-            <Select value={formData.pricing_model} onValueChange={handlePricingModelChange}>
-              <SelectTrigger id="pricing_model">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PricingModel.Fixed}>
-                  Fixed - Fixed Price (Legacy)
-                </SelectItem>
-                <SelectItem value={PricingModel.Tiered}>
-                  Tiered - Area & Frequency Based (Recommended)
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="package.pricing_model"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <>
+                  <Select value={field.value} onValueChange={handlePricingModelChange}>
+                    <SelectTrigger id="pricing_model">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={PricingModel.Fixed}>
+                        Fixed - Fixed Price (Legacy)
+                      </SelectItem>
+                      <SelectItem value={PricingModel.Tiered}>
+                        Tiered - Area & Frequency Based (Recommended)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.error && (
+                    <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                  )}
+                </>
+              )}
+            />
           </div>
 
           {/* Fixed Pricing Fields */}
-          {formData.pricing_model === PricingModel.Fixed && (
+          {form.watch('package.pricing_model') === PricingModel.Fixed && (
             <div className="space-y-4 pt-4 border-t">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="duration">Duration (minutes) *</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="0"
-                    value={formData.duration_minutes || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        duration_minutes: e.target.value ? parseInt(e.target.value) : null,
-                      })
-                    }
-                    placeholder="120"
+                  <Controller
+                    name="package.duration_minutes"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <>
+                        <Input
+                          id="duration"
+                          type="number"
+                          min="0"
+                          placeholder="120"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                        />
+                        {fieldState.error && (
+                          <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                        )}
+                      </>
+                    )}
                   />
                 </div>
                 <div>
                   <Label htmlFor="price">Price (฿) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.base_price || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        base_price: e.target.value ? parseFloat(e.target.value) : null,
-                      })
-                    }
-                    placeholder="2500.00"
+                  <Controller
+                    name="package.base_price"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <>
+                        <Input
+                          id="price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="2500.00"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                        />
+                        {fieldState.error && (
+                          <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                        )}
+                      </>
+                    )}
                   />
                 </div>
               </div>
@@ -442,31 +472,52 @@ export function PackageFormV2({
           )}
 
           {/* Tiered Pricing Fields */}
-          {formData.pricing_model === PricingModel.Tiered && (
+          {form.watch('package.pricing_model') === PricingModel.Tiered && (
             <div className="space-y-4 pt-4 border-t">
               {/* Category */}
               <div>
                 <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.category || ''}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value as ServiceCategory })
-                  }
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ServiceCategory.Office}>Office</SelectItem>
-                    <SelectItem value={ServiceCategory.Condo}>Condo</SelectItem>
-                    <SelectItem value={ServiceCategory.House}>House</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="package.category"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <Select
+                        value={field.value || ''}
+                        onValueChange={(value) => field.onChange(value as ServiceCategory)}
+                      >
+                        <SelectTrigger id="category">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ServiceCategory.Office}>Office</SelectItem>
+                          <SelectItem value={ServiceCategory.Condo}>Condo</SelectItem>
+                          <SelectItem value={ServiceCategory.House}>House</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {fieldState.error && (
+                        <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                      )}
+                    </>
+                  )}
+                />
               </div>
 
               {/* Tier Editor */}
               <div className="pt-4">
-                <TierEditor tiers={tiers} onChange={setTiers} showErrors={showErrors} />
+                {loadingTiers ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tinedy-blue mb-4"></div>
+                      <p className="text-muted-foreground">Loading pricing tiers...</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <TierEditor tiers={tiers} onChange={setTiers} />
+                )}
+                {form.formState.errors.tiers && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.tiers.message}</p>
+                )}
               </div>
             </div>
           )}
@@ -486,21 +537,6 @@ export function PackageFormV2({
           {loading ? 'Saving...' : editPackage ? 'Update' : 'Create Package'}
         </Button>
       </div>
-
-      {/* Validation Warning */}
-      {showErrors && (
-        <Card className="border-yellow-500 bg-yellow-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-2 text-yellow-800">
-              <AlertCircle className="h-5 w-5 mt-0.5" />
-              <div>
-                <p className="font-medium">Please check your data</p>
-                <p className="text-sm mt-1">Some required information is missing. Please complete before saving.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </form>
   )
 }

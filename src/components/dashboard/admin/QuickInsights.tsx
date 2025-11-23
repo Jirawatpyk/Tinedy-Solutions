@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Target, Package, DollarSign, Award } from 'lucide-react'
@@ -9,7 +10,15 @@ interface QuickInsightsProps {
   loading: boolean
 }
 
-export function QuickInsights({ miniStats, loading }: QuickInsightsProps) {
+/**
+ * QuickInsights Component
+ *
+ * แสดง mini statistics (Most Popular Service, Avg Booking Value, Completion Rate)
+ * ใช้ React.memo เพื่อป้องกัน unnecessary re-renders
+ *
+ * @performance Memoized - re-render เฉพาะเมื่อ miniStats หรือ loading เปลี่ยน
+ */
+const QuickInsightsComponent = ({ miniStats, loading }: QuickInsightsProps) => {
   if (loading) {
     return (
       <Card className="bg-gradient-to-br from-tinedy-blue/5 to-transparent">
@@ -101,3 +110,32 @@ export function QuickInsights({ miniStats, loading }: QuickInsightsProps) {
     </Card>
   )
 }
+
+/**
+ * Memoized QuickInsights
+ *
+ * Custom comparison function เพื่อ optimize re-renders
+ * Re-render เฉพาะเมื่อ:
+ * - loading เปลี่ยน
+ * - miniStats object เปลี่ยน (topService, avgBookingValue, completionRate)
+ */
+export const QuickInsights = memo(
+  QuickInsightsComponent,
+  (prevProps, nextProps) => {
+    // Compare loading state first
+    if (prevProps.loading !== nextProps.loading) return false
+
+    // If loading, skip further comparison
+    if (nextProps.loading) return true
+
+    // Compare miniStats object fields
+    const statsEqual =
+      prevProps.miniStats.avgBookingValue === nextProps.miniStats.avgBookingValue &&
+      prevProps.miniStats.completionRate === nextProps.miniStats.completionRate &&
+      prevProps.miniStats.topService?.name === nextProps.miniStats.topService?.name &&
+      prevProps.miniStats.topService?.count === nextProps.miniStats.topService?.count
+
+    // Return true to skip re-render, false to re-render
+    return statsEqual
+  }
+)

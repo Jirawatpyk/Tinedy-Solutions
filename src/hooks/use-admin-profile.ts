@@ -46,6 +46,38 @@ export function useAdminProfile() {
   useEffect(() => {
     if (!user || !profile) return
     loadProfile()
+
+    // Realtime subscription for profile updates
+    const subscription = supabase
+      .channel(`profile:${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`,
+        },
+        (payload) => {
+          // Update adminProfile with new data
+          if (payload.new) {
+            setAdminProfile((prev) => {
+              if (!prev) return null
+              return {
+                ...prev,
+                full_name: payload.new.full_name || prev.full_name,
+                phone: payload.new.phone || prev.phone,
+                avatar_url: payload.new.avatar_url ?? prev.avatar_url,
+              }
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [user, profile, loadProfile])
 
   async function updateProfile(updates: {

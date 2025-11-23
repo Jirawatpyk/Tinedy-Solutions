@@ -1,4 +1,6 @@
-import { useState, useEffect, startTransition } from 'react'
+import { useState, useEffect, startTransition, useCallback } from 'react'
+import { useForm, Controller, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +24,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Info, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { mapErrorToUserMessage, getValidationErrorMessage, getRecurringBookingError } from '@/lib/error-messages'
-import type { BookingForm } from '@/hooks/useBookingForm'
 import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, sendRecurringBookingConfirmation, type PaymentEmailData, type RecurringBookingEmailData } from '@/lib/email'
 import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
@@ -33,8 +34,11 @@ import { RecurringPattern as Pattern } from '@/types/recurring-booking'
 import type { RecurringPattern } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
 import { createRecurringGroup } from '@/lib/recurring-booking-service'
-import { Checkbox } from '@/components/ui/checkbox'
 import { logger } from '@/lib/logger'
+import {
+  bookingCreateSchema,
+  type BookingCreateFormData,
+} from '@/schemas'
 
 interface StaffMember {
   id: string
@@ -83,19 +87,32 @@ interface BookingCreateModalProps {
   staffMembers: StaffMember[]
   teams: Team[]
   onOpenAvailabilityModal: () => void
-  createForm: BookingForm
+  onBeforeOpenAvailability?: (formData: BookingCreateFormData) => void
   assignmentType: 'staff' | 'team' | 'none'
   setAssignmentType: (type: 'staff' | 'team' | 'none') => void
   calculateEndTime: (startTime: string, durationMinutes: number) => string
   packageSelection: PackageSelectionData | null
   setPackageSelection: (selection: PackageSelectionData | null) => void
+  // Default values for pre-filling (from Calendar click or Quick Availability Check)
+  defaultDate?: string
+  defaultStartTime?: string
+  defaultEndTime?: string
+  defaultStaffId?: string
+  defaultTeamId?: string
+  // Default customer data (from Customer Details page)
+  defaultCustomerId?: string
+  defaultFullName?: string
+  defaultEmail?: string
+  defaultPhone?: string
+  defaultAddress?: string
+  defaultCity?: string
+  defaultState?: string
+  defaultZipCode?: string
   // Recurring bookings props (lifted to parent for StaffAvailabilityModal)
   recurringDates?: string[]
-  setRecurringDates?: (dates: string[]) => void
-  enableRecurring?: boolean
-  setEnableRecurring?: (enabled: boolean) => void
+  setRecurringDates?: React.Dispatch<React.SetStateAction<string[]>>
   recurringPattern?: RecurringPattern
-  setRecurringPattern?: (pattern: RecurringPattern) => void
+  setRecurringPattern?: React.Dispatch<React.SetStateAction<RecurringPattern>>
 }
 
 export function BookingCreateModal({
@@ -106,16 +123,27 @@ export function BookingCreateModal({
   staffMembers,
   teams,
   onOpenAvailabilityModal,
-  createForm,
+  onBeforeOpenAvailability,
   assignmentType,
   setAssignmentType,
   calculateEndTime,
   packageSelection,
   setPackageSelection,
+  defaultDate,
+  defaultStartTime,
+  defaultEndTime,
+  defaultStaffId,
+  defaultTeamId,
+  defaultCustomerId,
+  defaultFullName,
+  defaultEmail,
+  defaultPhone,
+  defaultAddress,
+  defaultCity,
+  defaultState,
+  defaultZipCode,
   recurringDates: parentRecurringDates,
   setRecurringDates: parentSetRecurringDates,
-  enableRecurring: parentEnableRecurring,
-  setEnableRecurring: parentSetEnableRecurring,
   recurringPattern: parentRecurringPattern,
   setRecurringPattern: parentSetRecurringPattern,
 }: BookingCreateModalProps) {
@@ -124,16 +152,65 @@ export function BookingCreateModal({
   const [checkingCustomer, setCheckingCustomer] = useState(false)
 
   // Recurring Bookings State - use parent state if provided, otherwise use local state
-  const [localEnableRecurring, localSetEnableRecurring] = useState(false)
   const [localRecurringDates, localSetRecurringDates] = useState<string[]>([])
   const [localRecurringPattern, localSetRecurringPattern] = useState<RecurringPattern>(Pattern.AutoMonthly)
 
-  const enableRecurring = parentEnableRecurring !== undefined ? parentEnableRecurring : localEnableRecurring
-  const setEnableRecurring = parentSetEnableRecurring || localSetEnableRecurring
   const recurringDates = parentRecurringDates !== undefined ? parentRecurringDates : localRecurringDates
   const recurringPattern = parentRecurringPattern !== undefined ? parentRecurringPattern : localRecurringPattern
-  const setRecurringPattern = parentSetRecurringPattern || localSetRecurringPattern
-  const setRecurringDates = parentSetRecurringDates || localSetRecurringDates
+
+  // Stable callbacks for recurring state setters
+  const setRecurringPattern = useCallback(
+    (pattern: RecurringPattern | ((prev: RecurringPattern) => RecurringPattern)) => {
+      if (parentSetRecurringPattern) {
+        parentSetRecurringPattern(pattern)
+      } else {
+        localSetRecurringPattern(pattern)
+      }
+    },
+    [parentSetRecurringPattern]
+  )
+
+  const setRecurringDates = useCallback(
+    (dates: string[] | ((prev: string[]) => string[])) => {
+      if (parentSetRecurringDates) {
+        parentSetRecurringDates(dates)
+      } else {
+        localSetRecurringDates(dates)
+      }
+    },
+    [parentSetRecurringDates]
+  )
+
+  // React Hook Form with Zod validation
+  const form = useForm<BookingCreateFormData>({
+    resolver: zodResolver(bookingCreateSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      customer_id: '',
+      full_name: '',
+      email: '',
+      phone: '',
+      booking_date: '',
+      start_time: '',
+      end_time: '',
+      service_package_id: '',
+      package_v2_id: '',
+      total_price: 0,
+      area_sqm: undefined,
+      frequency: undefined,
+      address: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      staff_id: '',
+      team_id: '',
+      notes: '',
+    },
+  })
+
+  // Watch form values for reactive updates (Check Availability button)
+  const watchedBookingDate = useWatch({ control: form.control, name: 'booking_date' })
+  const watchedStartTime = useWatch({ control: form.control, name: 'start_time' })
 
   // Track modal open/close and packageSelection prop
   useEffect(() => {
@@ -144,9 +221,97 @@ export function BookingCreateModal({
     }
   }, [isOpen, packageSelection])
 
+  // Set default values when modal opens (from Calendar click, Quick Availability Check, or Customer Details)
+  useEffect(() => {
+    if (isOpen) {
+      // Date and time defaults
+      if (defaultDate) {
+        form.setValue('booking_date', defaultDate)
+        logger.debug('Set default booking_date', { defaultDate }, { context: 'BookingCreateModal' })
+      }
+      if (defaultStartTime) {
+        form.setValue('start_time', defaultStartTime)
+        logger.debug('Set default start_time', { defaultStartTime }, { context: 'BookingCreateModal' })
+      }
+      if (defaultEndTime) {
+        form.setValue('end_time', defaultEndTime)
+        logger.debug('Set default end_time', { defaultEndTime }, { context: 'BookingCreateModal' })
+      }
+      // Staff/Team defaults
+      if (defaultStaffId) {
+        form.setValue('staff_id', defaultStaffId)
+        logger.debug('Set default staff_id', { defaultStaffId }, { context: 'BookingCreateModal' })
+      }
+      if (defaultTeamId) {
+        form.setValue('team_id', defaultTeamId)
+        logger.debug('Set default team_id', { defaultTeamId }, { context: 'BookingCreateModal' })
+      }
+      // Customer data defaults (from Customer Details page)
+      if (defaultCustomerId) {
+        form.setValue('customer_id', defaultCustomerId)
+        logger.debug('Set default customer_id', { defaultCustomerId }, { context: 'BookingCreateModal' })
+      }
+      if (defaultFullName) {
+        form.setValue('full_name', defaultFullName)
+        logger.debug('Set default full_name', { defaultFullName }, { context: 'BookingCreateModal' })
+      }
+      if (defaultEmail) {
+        form.setValue('email', defaultEmail)
+        logger.debug('Set default email', { defaultEmail }, { context: 'BookingCreateModal' })
+      }
+      if (defaultPhone) {
+        form.setValue('phone', defaultPhone)
+        logger.debug('Set default phone', { defaultPhone }, { context: 'BookingCreateModal' })
+      }
+      if (defaultAddress) {
+        form.setValue('address', defaultAddress)
+        logger.debug('Set default address', { defaultAddress }, { context: 'BookingCreateModal' })
+      }
+      if (defaultCity) {
+        form.setValue('city', defaultCity)
+        logger.debug('Set default city', { defaultCity }, { context: 'BookingCreateModal' })
+      }
+      if (defaultState) {
+        form.setValue('state', defaultState)
+        logger.debug('Set default state', { defaultState }, { context: 'BookingCreateModal' })
+      }
+      if (defaultZipCode) {
+        form.setValue('zip_code', defaultZipCode)
+        logger.debug('Set default zip_code', { defaultZipCode }, { context: 'BookingCreateModal' })
+      }
+    }
+  }, [
+    isOpen,
+    defaultDate,
+    defaultStartTime,
+    defaultEndTime,
+    defaultStaffId,
+    defaultTeamId,
+    defaultCustomerId,
+    defaultFullName,
+    defaultEmail,
+    defaultPhone,
+    defaultAddress,
+    defaultCity,
+    defaultState,
+    defaultZipCode,
+    form,
+  ])
+
+  // Auto-sync booking_date with recurringDates[0] for recurring bookings
+  useEffect(() => {
+    const isRecurring = packageSelection?.frequency && packageSelection.frequency > 1
+    if (isRecurring && recurringDates.length > 0) {
+      // Set booking_date to first recurring date to pass validation
+      form.setValue('booking_date', recurringDates[0])
+    }
+    // Note: We don't clear booking_date here to avoid interfering with defaultDate prop
+  }, [recurringDates, packageSelection?.frequency, form])
+
   // Check existing customer by email
   const handleEmailBlur = async () => {
-    if (!createForm.formData.email || createForm.formData.email.trim() === '') return
+    const email = form.getValues('email')
+    if (!email || email.trim() === '') return
 
     setCheckingCustomer(true)
 
@@ -154,7 +319,7 @@ export function BookingCreateModal({
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('email', createForm.formData.email.trim())
+        .eq('email', email.trim())
         .single()
 
       if (data && !error) {
@@ -175,7 +340,8 @@ export function BookingCreateModal({
 
   // Check existing customer by phone
   const handlePhoneBlur = async () => {
-    if (!createForm.formData.phone || createForm.formData.phone.trim() === '' || existingCustomer) return
+    const phone = form.getValues('phone')
+    if (!phone || phone.trim() === '' || existingCustomer) return
 
     setCheckingCustomer(true)
 
@@ -183,7 +349,7 @@ export function BookingCreateModal({
       const { data, error} = await supabase
         .from('customers')
         .select('*')
-        .eq('phone', createForm.formData.phone.trim())
+        .eq('phone', phone.trim())
         .single()
 
       if (data && !error) {
@@ -204,16 +370,14 @@ export function BookingCreateModal({
   const useExistingCustomer = () => {
     if (!existingCustomer) return
 
-    createForm.setValues({
-      customer_id: existingCustomer.id,
-      full_name: existingCustomer.full_name,
-      email: existingCustomer.email,
-      phone: existingCustomer.phone,
-      address: existingCustomer.address || '',
-      city: existingCustomer.city || '',
-      state: existingCustomer.state || '',
-      zip_code: existingCustomer.zip_code || '',
-    })
+    form.setValue('customer_id', existingCustomer.id)
+    form.setValue('full_name', existingCustomer.full_name)
+    form.setValue('email', existingCustomer.email)
+    form.setValue('phone', existingCustomer.phone)
+    form.setValue('address', existingCustomer.address || '')
+    form.setValue('city', existingCustomer.city || '')
+    form.setValue('state', existingCustomer.state || '')
+    form.setValue('zip_code', existingCustomer.zip_code || '')
 
     toast({
       title: 'Customer data loaded',
@@ -222,34 +386,41 @@ export function BookingCreateModal({
   }
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const onSubmit = form.handleSubmit(async (data: BookingCreateFormData) => {
     try {
-      // Calculate end_time from start_time and service duration
-      const selectedPackage = servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)
-      let calculatedEndTime = createForm.formData.end_time || ''
+      const isRecurring = packageSelection?.frequency && packageSelection.frequency > 1
 
-      if (selectedPackage && selectedPackage.duration_minutes) {
-        calculatedEndTime = calculateEndTime(createForm.formData.start_time || '', selectedPackage.duration_minutes)
-      } else if (packageSelection?.estimatedHours && createForm.formData.start_time) {
-        calculatedEndTime = calculateEndTime(createForm.formData.start_time || '', packageSelection.estimatedHours * 60)
+      // For recurring bookings, set booking_date from recurringDates[0] to pass validation
+      if (isRecurring && recurringDates.length > 0 && !data.booking_date) {
+        data.booking_date = recurringDates[0]
       }
 
-      let customerId = createForm.formData.customer_id
+      logger.debug('Form submitted with validated data', { data, isRecurring, recurringDates }, { context: 'BookingCreateModal' })
+
+      // Calculate end_time from start_time and service duration
+      const selectedPackage = servicePackages.find(pkg => pkg.id === data.service_package_id || pkg.id === data.package_v2_id)
+      let calculatedEndTime = data.end_time || ''
+
+      if (selectedPackage && selectedPackage.duration_minutes) {
+        calculatedEndTime = calculateEndTime(data.start_time || '', selectedPackage.duration_minutes)
+      } else if (packageSelection?.estimatedHours && data.start_time) {
+        calculatedEndTime = calculateEndTime(data.start_time, packageSelection.estimatedHours * 60)
+      }
+
+      let customerId = data.customer_id
 
       // If no existing customer, create new customer first
       if (!customerId) {
         const { data: newCustomer, error: customerError } = await supabase
           .from('customers')
           .insert({
-            full_name: createForm.formData.full_name,
-            email: createForm.formData.email,
-            phone: createForm.formData.phone,
-            address: createForm.formData.address || null,
-            city: createForm.formData.city || null,
-            state: createForm.formData.state || null,
-            zip_code: createForm.formData.zip_code || null,
+            full_name: data.full_name!,
+            email: data.email!,
+            phone: data.phone!,
+            address: data.address || null,
+            city: data.city || null,
+            state: data.state || null,
+            zip_code: data.zip_code || null,
           })
           .select()
           .single()
@@ -259,7 +430,7 @@ export function BookingCreateModal({
       }
 
       // Validation: ต้องมี service_package_id หรือ package_v2_id
-      const servicePackageId = createForm.formData.service_package_id || createForm.formData.package_v2_id
+      const servicePackageId = data.service_package_id || data.package_v2_id
       if (!servicePackageId) {
         const validationError = getValidationErrorMessage()
         toast({
@@ -273,27 +444,26 @@ export function BookingCreateModal({
       // Build base booking data
       const baseBookingData = {
         customer_id: customerId!,
-        service_package_id: createForm.formData.service_package_id || null,
-        start_time: createForm.formData.start_time || '',
+        service_package_id: data.service_package_id || null,
+        start_time: data.start_time || '',
         end_time: calculatedEndTime || null,
-        total_price: createForm.formData.total_price || 0,
-        address: createForm.formData.address || '',
-        city: createForm.formData.city || '',
-        state: createForm.formData.state || null,
-        zip_code: createForm.formData.zip_code || null,
-        notes: createForm.formData.notes || null,
+        total_price: data.total_price || 0,
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || null,
+        zip_code: data.zip_code || null,
+        notes: data.notes || null,
         status: 'pending' as const,
         payment_status: 'unpaid' as const,
-        staff_id: assignmentType === 'staff' ? (createForm.formData.staff_id || null) : null,
-        team_id: assignmentType === 'team' ? (createForm.formData.team_id || null) : null,
-        area_sqm: createForm.formData.area_sqm || null,
-        frequency: createForm.formData.frequency || null,
-        calculated_price: createForm.formData.calculated_price || null,
-        package_v2_id: createForm.formData.package_v2_id || null,
+        staff_id: assignmentType === 'staff' ? (data.staff_id || null) : null,
+        team_id: assignmentType === 'team' ? (data.team_id || null) : null,
+        area_sqm: data.area_sqm || null,
+        frequency: data.frequency || null,
+        package_v2_id: data.package_v2_id || null,
       }
 
-      // Validation สำหรับ recurring bookings
-      if (enableRecurring && recurringDates.length > 0 && packageSelection?.frequency) {
+      // Validation สำหรับ recurring bookings (frequency > 1)
+      if (packageSelection?.frequency && packageSelection.frequency > 1) {
         // ตรวจสอบว่าเลือกวันครบตามความถี่หรือยัง
         if (recurringDates.length !== packageSelection.frequency) {
           const validationError = getValidationErrorMessage()
@@ -349,7 +519,7 @@ export function BookingCreateModal({
         }
 
         // ✅ ส่ง email confirmation สำหรับ recurring bookings
-        if (createForm.formData.email) {
+        if (data.email) {
           const fullAddress = [
             baseBookingData.address,
             baseBookingData.city,
@@ -372,8 +542,8 @@ export function BookingCreateModal({
           const recurringEmailData: RecurringBookingEmailData = {
             groupId: result.groupId,
             bookingIds: result.bookingIds,
-            customerName: createForm.formData.full_name || 'Customer',
-            customerEmail: createForm.formData.email,
+            customerName: data.full_name || 'Customer',
+            customerEmail: data.email,
             serviceName: selectedPackage?.name || 'Service',
             bookingDates: bookingDatesWithSequence,
             startTime: baseBookingData.start_time,
@@ -403,7 +573,7 @@ export function BookingCreateModal({
           .from('bookings')
           .insert({
             ...baseBookingData,
-            booking_date: createForm.formData.booking_date,
+            booking_date: data.booking_date,
           })
           .select(`
             *,
@@ -417,7 +587,7 @@ export function BookingCreateModal({
         if (bookingError) throw bookingError
 
         // Send booking confirmation email
-        if (newBooking && createForm.formData.email) {
+        if (newBooking && data.email) {
           const paymentLink = `${window.location.origin}/payment/${newBooking.id}`
           const fullAddress = [
             newBooking.address,
@@ -429,8 +599,8 @@ export function BookingCreateModal({
           const bookingWithRelations = newBooking as BookingWithRelations
           const emailData: PaymentEmailData = {
             bookingId: bookingWithRelations.id,
-            customerName: createForm.formData.full_name || 'Customer',
-            customerEmail: createForm.formData.email,
+            customerName: data.full_name || 'Customer',
+            customerEmail: data.email,
             serviceName: bookingWithRelations.service_packages?.name || bookingWithRelations.service_packages_v2?.name || 'Service',
             bookingDate: bookingWithRelations.booking_date,
             startTime: bookingWithRelations.start_time,
@@ -482,16 +652,18 @@ export function BookingCreateModal({
         variant: 'destructive',
       })
     }
-  }
+  })
 
   const resetForm = () => {
-    createForm.reset()
-    setAssignmentType('none')
-    setExistingCustomer(null)
-    setPackageSelection(null)
-    setEnableRecurring(false)
+    // Clear recurring state first to prevent useEffect from re-setting booking_date
     setRecurringDates([])
     setRecurringPattern(Pattern.AutoMonthly)
+    setPackageSelection(null)
+
+    // Then reset form and other states
+    form.reset()
+    setAssignmentType('none')
+    setExistingCustomer(null)
   }
 
   const handleClose = () => {
@@ -508,7 +680,7 @@ export function BookingCreateModal({
             Fill in the booking details below
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form onSubmit={onSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="space-y-4 overflow-y-auto flex-1 pl-1 pr-3">
           {/* Customer Information */}
           <div className="space-y-4 border-b pb-4">
@@ -539,12 +711,15 @@ export function BookingCreateModal({
                 <Label htmlFor="full_name">Full Name *</Label>
                 <Input
                   id="full_name"
-                  value={createForm.formData.full_name || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('full_name', e.target.value)
-                  }
+                  {...form.register('full_name')}
                   required
+                  aria-invalid={!!form.formState.errors.full_name}
                 />
+                {form.formState.errors.full_name && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.full_name.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -552,16 +727,19 @@ export function BookingCreateModal({
                 <Input
                   id="email"
                   type="email"
-                  value={createForm.formData.email || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('email', e.target.value)
-                  }
+                  {...form.register('email')}
                   onBlur={handleEmailBlur}
                   required
                   disabled={checkingCustomer}
+                  aria-invalid={!!form.formState.errors.email}
                 />
                 {checkingCustomer && (
                   <p className="text-xs text-muted-foreground">Checking...</p>
+                )}
+                {form.formState.errors.email && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -570,14 +748,17 @@ export function BookingCreateModal({
                 <Input
                   id="phone"
                   type="tel"
-                  value={createForm.formData.phone || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('phone', e.target.value)
-                  }
+                  {...form.register('phone')}
                   onBlur={handlePhoneBlur}
                   required
                   disabled={checkingCustomer}
+                  aria-invalid={!!form.formState.errors.phone}
                 />
+                {form.formState.errors.phone && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.phone.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -600,9 +781,6 @@ export function BookingCreateModal({
                     setPackageSelection(selection)
 
                     if (selection) {
-                      // Update form data with package selection
-                      const formUpdates: Record<string, unknown> = {}
-
                       // ตรวจสอบว่า package เป็น V1 หรือ V2 จาก _source field
                       const selectedPkg = servicePackages.find(pkg => pkg.id === selection.packageId)
                       const isV1Package = selectedPkg?._source === 'v1'
@@ -615,17 +793,16 @@ export function BookingCreateModal({
 
                         // FIX: ตั้งค่าตาม version ของ package (ต้องมีเพียงหนึ่งตัว)
                         if (isV1Package) {
-                          formUpdates.service_package_id = selection.packageId
-                          formUpdates.package_v2_id = null
+                          form.setValue('service_package_id', selection.packageId)
+                          form.setValue('package_v2_id', '')
                         } else {
-                          formUpdates.service_package_id = null
-                          formUpdates.package_v2_id = selection.packageId
+                          form.setValue('service_package_id', '')
+                          form.setValue('package_v2_id', selection.packageId)
                         }
 
-                        formUpdates.total_price = selection.price
-                        formUpdates.area_sqm = null
-                        formUpdates.frequency = null
-                        formUpdates.calculated_price = null
+                        form.setValue('total_price', selection.price)
+                        form.setValue('area_sqm', undefined)
+                        form.setValue('frequency', undefined)
                       } else {
                         // Tiered pricing - ต้องเป็น V2 แน่นอน
                         logger.debug('Setting tiered price', {
@@ -633,66 +810,47 @@ export function BookingCreateModal({
                           areaSqm: selection.areaSqm,
                           frequency: selection.frequency
                         }, { context: 'BookingCreateModal' })
-                        formUpdates.service_package_id = null
-                        formUpdates.package_v2_id = selection.packageId
-                        formUpdates.area_sqm = selection.areaSqm
-                        formUpdates.frequency = selection.frequency
-                        formUpdates.calculated_price = selection.price
-                        formUpdates.total_price = selection.price
+                        form.setValue('service_package_id', '')
+                        form.setValue('package_v2_id', selection.packageId)
+                        form.setValue('area_sqm', selection.areaSqm)
+                        form.setValue('frequency', selection.frequency as 1 | 2 | 4 | 8)
+                        form.setValue('total_price', selection.price)
+
+                        // Clear recurring state if frequency is 1 (one-time booking)
+                        if (selection.frequency === 1) {
+                          setRecurringDates([])
+                          setRecurringPattern(Pattern.AutoMonthly)
+                        }
                       }
 
                       // Auto-calculate End Time if Start Time is set
-                      if (createForm.formData.start_time && selection.estimatedHours) {
+                      const currentStartTime = form.getValues('start_time')
+                      if (currentStartTime && selection.estimatedHours) {
                         const durationMinutes = Math.round(selection.estimatedHours * 60)
-                        const endTime = calculateEndTime(createForm.formData.start_time, durationMinutes)
+                        const endTime = calculateEndTime(currentStartTime, durationMinutes)
                         logger.debug('Auto-calculated end time', {
                           endTime,
                           estimatedHours: selection.estimatedHours,
-                          startTime: createForm.formData.start_time
+                          startTime: currentStartTime
                         }, { context: 'BookingCreateModal' })
-                        formUpdates.end_time = endTime
+                        form.setValue('end_time', endTime)
                       }
-
-                      // Update form ครั้งเดียวด้วย batch updates
-                      createForm.setValues(formUpdates)
                     } else {
                       // Clear selection
                       logger.debug('Clearing package selection', undefined, { context: 'BookingCreateModal' })
-                      createForm.setValues({
-                        service_package_id: '',
-                        package_v2_id: undefined,
-                        area_sqm: null,
-                        frequency: null,
-                        calculated_price: null,
-                        total_price: 0,
-                      })
+                      form.setValue('service_package_id', '')
+                      form.setValue('package_v2_id', '')
+                      form.setValue('area_sqm', undefined)
+                      form.setValue('frequency', undefined)
+                      form.setValue('total_price', 0)
                     }
                   })
                 }}
               />
             </div>
 
-            {/* Recurring Bookings Checkbox - แสดงเฉพาะเมื่อ frequency > 1 */}
+            {/* Recurring Schedule Selector - แสดงอัตโนมัติเมื่อ frequency > 1 */}
             {packageSelection?.frequency && packageSelection.frequency > 1 && (
-              <div className="space-y-2 sm:col-span-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="enable_recurring"
-                    checked={enableRecurring}
-                    onCheckedChange={(checked) => setEnableRecurring(checked as boolean)}
-                  />
-                  <Label
-                    htmlFor="enable_recurring"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Create Recurring Bookings ({packageSelection.frequency} times)
-                  </Label>
-                </div>
-              </div>
-            )}
-
-            {/* Recurring Schedule Selector */}
-            {enableRecurring && packageSelection?.frequency && (
               <div className="space-y-2 sm:col-span-2">
                 <RecurringScheduleSelector
                   frequency={packageSelection.frequency as BookingFrequency}
@@ -705,20 +863,23 @@ export function BookingCreateModal({
             )}
 
             {/* Date/Time Fields - 3 columns when not recurring, 2 columns when recurring */}
-            <div className={`sm:col-span-2 grid gap-3 ${!enableRecurring ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring */}
-              {!enableRecurring && (
+            <div className={`sm:col-span-2 grid gap-3 ${packageSelection?.frequency && packageSelection.frequency > 1 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring (frequency = 1) */}
+              {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
                 <div className="space-y-2">
                   <Label htmlFor="booking_date">Booking Date *</Label>
                   <Input
                     id="booking_date"
                     type="date"
-                    value={createForm.formData.booking_date || ''}
-                    onChange={(e) =>
-                      createForm.handleChange('booking_date', e.target.value)
-                    }
+                    {...form.register('booking_date')}
                     required
+                    aria-invalid={!!form.formState.errors.booking_date}
                   />
+                  {form.formState.errors.booking_date && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.booking_date.message}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -728,25 +889,31 @@ export function BookingCreateModal({
                 <Input
                   id="start_time"
                   type="time"
-                  value={createForm.formData.start_time || ''}
-                  onChange={(e) => {
-                    const newStartTime = e.target.value
-                    createForm.handleChange('start_time', newStartTime)
+                  {...form.register('start_time', {
+                    onChange: (e) => {
+                      const newStartTime = e.target.value
 
-                    // Auto-calculate End Time when Start Time changes
-                    if (newStartTime && packageSelection?.estimatedHours) {
-                      const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
-                      const endTime = calculateEndTime(newStartTime, durationMinutes)
-                      logger.debug('Auto-recalculated end time on start time change', {
-                        newStartTime,
-                        endTime,
-                        estimatedHours: packageSelection.estimatedHours
-                      }, { context: 'BookingCreateModal' })
-                      createForm.handleChange('end_time', endTime)
+                      // Auto-calculate End Time when Start Time changes
+                      if (newStartTime && packageSelection?.estimatedHours) {
+                        const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                        const endTime = calculateEndTime(newStartTime, durationMinutes)
+                        logger.debug('Auto-recalculated end time on start time change', {
+                          newStartTime,
+                          endTime,
+                          estimatedHours: packageSelection.estimatedHours
+                        }, { context: 'BookingCreateModal' })
+                        form.setValue('end_time', endTime)
+                      }
                     }
-                  }}
+                  })}
                   required
+                  aria-invalid={!!form.formState.errors.start_time}
                 />
+                {form.formState.errors.start_time && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.start_time.message}
+                  </p>
+                )}
               </div>
 
               {/* End Time */}
@@ -755,12 +922,15 @@ export function BookingCreateModal({
                 <Input
                   id="end_time"
                   type="time"
-                  value={createForm.formData.end_time || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('end_time', e.target.value)
-                  }
+                  {...form.register('end_time')}
                   disabled={!!packageSelection?.estimatedHours}
+                  aria-invalid={!!form.formState.errors.end_time}
                 />
+                {form.formState.errors.end_time && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.end_time.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -772,14 +942,17 @@ export function BookingCreateModal({
                   id="total_price"
                   type="number"
                   step="0.01"
-                  value={createForm.formData.total_price || 0}
-                  onChange={(e) =>
-                    createForm.handleChange('total_price', parseFloat(e.target.value))
-                  }
+                  {...form.register('total_price', { valueAsNumber: true })}
                   required
                   disabled
                   className="bg-muted"
+                  aria-invalid={!!form.formState.errors.total_price}
                 />
+                {form.formState.errors.total_price && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.total_price.message}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Price is calculated from package selection
                 </p>
@@ -793,7 +966,8 @@ export function BookingCreateModal({
                 value={assignmentType}
                 onValueChange={(value: 'staff' | 'team' | 'none') => {
                   setAssignmentType(value)
-                  createForm.setValues({ staff_id: '', team_id: '' })
+                  form.setValue('staff_id', '')
+                  form.setValue('team_id', '')
                 }}
               >
                 <SelectTrigger>
@@ -811,24 +985,29 @@ export function BookingCreateModal({
             {assignmentType === 'staff' && (
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="staff_id">Select Staff Member *</Label>
-                <Select
-                  value={createForm.formData.staff_id || ''}
-                  onValueChange={(value) =>
-                    createForm.handleChange('staff_id', value)
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffMembers.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id}>
-                        {staff.full_name} ({staff.role})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="staff_id"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange} required>
+                      <SelectTrigger aria-invalid={!!form.formState.errors.staff_id}>
+                        <SelectValue placeholder="Select staff member..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffMembers.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.full_name} ({staff.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.staff_id && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.staff_id.message}
+                  </p>
+                )}
               </div>
             )}
 
@@ -836,24 +1015,29 @@ export function BookingCreateModal({
             {assignmentType === 'team' && (
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="team_id">Select Team *</Label>
-                <Select
-                  value={createForm.formData.team_id || ''}
-                  onValueChange={(value) =>
-                    createForm.handleChange('team_id', value)
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="team_id"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange} required>
+                      <SelectTrigger aria-invalid={!!form.formState.errors.team_id}>
+                        <SelectValue placeholder="Select team..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.team_id && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.team_id.message}
+                  </p>
+                )}
               </div>
             )}
 
@@ -865,28 +1049,38 @@ export function BookingCreateModal({
                   variant="outline"
                   className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
                   onClick={() => {
+                    const currentFormData = form.getValues()
+                    const isRecurring = packageSelection?.frequency && packageSelection.frequency > 1
                     logger.debug('Check availability button clicked', {
                       assignmentType,
-                      hasRecurringDates: enableRecurring ? recurringDates.length : null,
-                      hasBookingDate: !enableRecurring ? !!createForm.formData.booking_date : null,
-                      hasStartTime: !!createForm.formData.start_time,
-                      hasPackageSelection: !!packageSelection
+                      hasRecurringDates: isRecurring ? recurringDates.length : null,
+                      hasBookingDate: !isRecurring ? !!currentFormData.booking_date : null,
+                      hasStartTime: !!currentFormData.start_time,
+                      hasPackageSelection: !!packageSelection,
+                      formData: currentFormData
                     }, { context: 'BookingCreateModal' })
+
+                    // Sync form data to parent before opening availability modal
+                    if (onBeforeOpenAvailability) {
+                      onBeforeOpenAvailability(currentFormData)
+                    }
+
                     onOpenAvailabilityModal()
                   }}
                   disabled={
                     // ถ้าเป็น recurring ต้องเช็ค recurringDates, ถ้าไม่ใช่ต้องเช็ค booking_date
-                    (enableRecurring ? recurringDates.length === 0 : !createForm.formData.booking_date) ||
-                    !createForm.formData.start_time ||
+                    // ใช้ watchedBookingDate และ watchedStartTime เพื่อให้ reactive
+                    ((packageSelection?.frequency && packageSelection.frequency > 1) ? recurringDates.length === 0 : !watchedBookingDate) ||
+                    !watchedStartTime ||
                     !packageSelection
                   }
                 >
                   <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
                   Check Staff Availability
                 </Button>
-                {((enableRecurring ? recurringDates.length === 0 : !createForm.formData.booking_date) || !createForm.formData.start_time || !packageSelection) && (
+                {(((packageSelection?.frequency && packageSelection.frequency > 1) ? recurringDates.length === 0 : !watchedBookingDate) || !watchedStartTime || !packageSelection) && (
                   <p className="text-xs text-muted-foreground text-center">
-                    {enableRecurring
+                    {(packageSelection?.frequency && packageSelection.frequency > 1)
                       ? 'Please select dates, time, and service package first'
                       : 'Please select date, time, and service package first'
                     }
@@ -899,12 +1093,15 @@ export function BookingCreateModal({
               <Label htmlFor="address">Address *</Label>
               <Input
                 id="address"
-                value={createForm.formData.address || ''}
-                onChange={(e) =>
-                  createForm.handleChange('address', e.target.value)
-                }
+                {...form.register('address')}
                 required
+                aria-invalid={!!form.formState.errors.address}
               />
+              {form.formState.errors.address && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.address.message}
+                </p>
+              )}
             </div>
 
             <div className="sm:col-span-2 grid grid-cols-3 gap-3">
@@ -912,36 +1109,45 @@ export function BookingCreateModal({
                 <Label htmlFor="city">City *</Label>
                 <Input
                   id="city"
-                  value={createForm.formData.city || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('city', e.target.value)
-                  }
+                  {...form.register('city')}
                   required
+                  aria-invalid={!!form.formState.errors.city}
                 />
+                {form.formState.errors.city && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.city.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="state">State *</Label>
                 <Input
                   id="state"
-                  value={createForm.formData.state || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('state', e.target.value)
-                  }
+                  {...form.register('state')}
                   required
+                  aria-invalid={!!form.formState.errors.state}
                 />
+                {form.formState.errors.state && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.state.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="zip_code">Zip Code *</Label>
                 <Input
                   id="zip_code"
-                  value={createForm.formData.zip_code || ''}
-                  onChange={(e) =>
-                    createForm.handleChange('zip_code', e.target.value)
-                  }
+                  {...form.register('zip_code')}
                   required
+                  aria-invalid={!!form.formState.errors.zip_code}
                 />
+                {form.formState.errors.zip_code && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.zip_code.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -949,12 +1155,15 @@ export function BookingCreateModal({
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
-                value={createForm.formData.notes || ''}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  createForm.handleChange('notes', e.target.value)
-                }
+                {...form.register('notes')}
                 rows={3}
+                aria-invalid={!!form.formState.errors.notes}
               />
+              {form.formState.errors.notes && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.notes.message}
+                </p>
+              )}
             </div>
           </div>
           </div>

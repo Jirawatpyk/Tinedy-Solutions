@@ -31,25 +31,23 @@ export function NotificationBell() {
     loading
   })
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'new_booking':
-        return '🔔'
-      case 'team_booking':
-        return '👥'
-      case 'booking_reminder':
-        return '⏰'
-      case 'booking_cancelled':
-        return '❌'
-      case 'booking_updated':
-        return '📝'
-      case 'new_customer':
-        return '👤'
-      case 'new_team':
-        return '👥'
-      default:
-        return '📢'
-    }
+  // Booking-related notification types that should display booking ID
+  const BOOKING_RELATED_TYPES = [
+    'new_booking',
+    'team_booking',
+    'booking_reminder',
+    'booking_cancelled',
+    'booking_updated',
+    'booking_assigned',
+    'payment_received'
+  ]
+
+  const formatBookingId = (bookingId: string): string => {
+    return `#BK-${bookingId.substring(0, 6).toUpperCase()}`
+  }
+
+  const isBookingRelatedNotification = (type: string): boolean => {
+    return BOOKING_RELATED_TYPES.includes(type)
   }
 
   return (
@@ -126,18 +124,26 @@ export function NotificationBell() {
                   )}
 
                   <div className="flex gap-3 pl-4">
-                    {/* Icon */}
-                    <div className="text-2xl flex-shrink-0">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm mb-1">
-                            {notification.title}
-                          </p>
+                          {/* Title with Booking ID Badge */}
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="font-medium text-sm">
+                              {notification.title}
+                            </p>
+                            {notification.booking_id &&
+                             isBookingRelatedNotification(notification.type) && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-2 py-0 h-5"
+                              >
+                                {formatBookingId(notification.booking_id)}
+                              </Badge>
+                            )}
+                          </div>
+
                           <p className="text-sm text-muted-foreground break-words">
                             {notification.message}
                           </p>

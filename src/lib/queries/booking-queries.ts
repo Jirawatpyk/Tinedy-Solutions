@@ -1,0 +1,302 @@
+/**
+ * Booking Query Functions
+ *
+ * React Query functions สำหรับ Bookings
+ *
+ * Features:
+ * - Automatic caching (3 minutes stale time)
+ * - Support archived bookings filter
+ * - Shared cache across pages
+ * - Type-safe query keys
+ * - API response validation (Phase 7)
+ */
+
+import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
+import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
+import { BookingResponseSchema } from '@/schemas'
+import type { Booking } from '@/types/booking'
+import { z } from 'zod'
+
+/**
+ * Fetch Bookings List
+ *
+ * @param showArchived - Include archived (soft-deleted) bookings
+ * @returns Promise<Booking[]>
+ */
+export async function fetchBookings(showArchived: boolean = false): Promise<Booking[]> {
+  let query = supabase
+    .from('bookings')
+    .select(`
+      *,
+      customers (id, full_name, email),
+      service_packages (name, service_type),
+      service_packages_v2:package_v2_id (name, service_type),
+      profiles!bookings_staff_id_fkey (full_name),
+      ${TEAMS_WITH_LEAD_QUERY}
+    `)
+
+  // Filter by archived status
+  if (!showArchived) {
+    query = query.is('deleted_at', null)
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false })
+
+  if (error) throw new Error(`Failed to fetch bookings: ${error.message}`)
+
+  // Validate response data (Phase 7)
+  try {
+    const validatedData = z.array(BookingResponseSchema).parse(data || [])
+
+    // Merge V1 and V2 package data into service_packages field for compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processedData = validatedData.map((booking: any) => ({
+      ...booking,
+      service_packages: booking.service_packages || booking.service_packages_v2,
+      teams: transformTeamsData(booking.teams),
+    }))
+
+    return processedData as Booking[]
+  } catch (validationError) {
+    if (validationError instanceof z.ZodError) {
+      console.error('Booking response validation failed:', validationError.issues)
+      throw new Error(`Invalid booking data received from server: ${validationError.issues[0]?.message || 'Unknown validation error'}`)
+    }
+    throw validationError
+  }
+}
+
+/**
+ * Booking Filters for Date Range Query
+ */
+export interface BookingFilters {
+  viewMode?: 'staff' | 'team' | 'all'
+  staffId?: string
+  teamId?: string
+  status?: string
+  customerId?: string
+}
+
+/**
+ * Fetch Bookings by Date Range
+ *
+ * ดึง bookings ตาม date range พร้อม filters (สำหรับ Calendar, Weekly Schedule)
+ *
+ * @param startDate - Start date (YYYY-MM-DD)
+ * @param endDate - End date (YYYY-MM-DD)
+ * @param filters - Optional filters (viewMode, staffId, teamId, status)
+ * @returns Promise<Booking[]>
+ */
+export async function fetchBookingsByDateRange(
+  startDate: string,
+  endDate: string,
+  filters?: BookingFilters
+): Promise<Booking[]> {
+  let query = supabase
+    .from('bookings')
+    .select(`
+      *,
+      customers (id, full_name, email, phone),
+      service_packages (name, service_type),
+      service_packages_v2:package_v2_id (name, service_type),
+      profiles!bookings_staff_id_fkey (full_name),
+      ${TEAMS_WITH_LEAD_QUERY}
+    `)
+    .gte('booking_date', startDate)
+    .lte('booking_date', endDate)
+    .order('booking_date')
+    .order('start_time')
+
+  // Apply filters
+  if (filters?.viewMode === 'staff') {
+    query = query.not('staff_id', 'is', null)
+    if (filters.staffId) {
+      query = query.eq('staff_id', filters.staffId)
+    }
+  } else if (filters?.viewMode === 'team') {
+    query = query.not('team_id', 'is', null)
+    if (filters.teamId) {
+      query = query.eq('team_id', filters.teamId)
+    }
+  }
+
+  if (filters?.status && filters.status !== 'all') {
+    query = query.eq('status', filters.status)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw new Error(`Failed to fetch bookings: ${error.message}`)
+
+  // Validate response data (Phase 7)
+  try {
+    const validatedData = z.array(BookingResponseSchema).parse(data || [])
+
+    // Process data - merge V1/V2 packages and transform teams
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processedData = validatedData.map((booking: any) => ({
+      ...booking,
+      service_packages: booking.service_packages || booking.service_packages_v2,
+      customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
+      profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
+      teams: transformTeamsData(booking.teams),
+    }))
+
+    return processedData as Booking[]
+  } catch (validationError) {
+    if (validationError instanceof z.ZodError) {
+      console.error('Booking response validation failed:', validationError.issues)
+      throw new Error(`Invalid booking data received from server: ${validationError.issues[0]?.message || 'Unknown validation error'}`)
+    }
+    throw validationError
+  }
+}
+
+/**
+ * Fetch Bookings by Customer ID
+ *
+ * ดึง bookings ทั้งหมดของ customer คนใดคนหนึ่ง (สำหรับ Customer Detail page)
+ *
+ * @param customerId - Customer ID
+ * @param showArchived - Include archived (soft-deleted) bookings
+ * @returns Promise<Booking[]>
+ */
+export async function fetchBookingsByCustomer(
+  customerId: string,
+  showArchived: boolean = false
+): Promise<Booking[]> {
+  let query = supabase
+    .from('bookings')
+    .select(`
+      *,
+      customers (id, full_name, email, phone),
+      service_packages (name, service_type, price),
+      service_packages_v2:package_v2_id (name, service_type, base_price),
+      profiles!bookings_staff_id_fkey (full_name),
+      ${TEAMS_WITH_LEAD_QUERY}
+    `)
+    .eq('customer_id', customerId)
+    .order('booking_date', { ascending: false })
+    .order('start_time', { ascending: false })
+
+  // Filter by archived status
+  if (!showArchived) {
+    query = query.is('deleted_at', null)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(`Failed to fetch customer bookings: ${error.message}`)
+  }
+
+  // Validate and transform data
+  try {
+    const validatedData = z.array(BookingResponseSchema).parse(data || [])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processedData = validatedData.map((booking: any) => ({
+      ...booking,
+      service_packages: booking.service_packages || booking.service_packages_v2,
+      teams: transformTeamsData(booking.teams),
+    }))
+
+    return processedData as Booking[]
+  } catch (validationError) {
+    if (validationError instanceof z.ZodError) {
+      console.error('Customer bookings validation failed:', validationError.issues)
+      throw new Error(`Invalid booking data: ${validationError.issues[0]?.message}`)
+    }
+    throw validationError
+  }
+}
+
+/**
+ * Fetch Single Booking Detail
+ *
+ * @param id - Booking ID
+ * @returns Promise<Booking>
+ */
+export async function fetchBookingDetail(id: string): Promise<Booking> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      customers (id, full_name, email, phone),
+      service_packages (name, service_type, price),
+      service_packages_v2:package_v2_id (name, service_type, base_price),
+      profiles!bookings_staff_id_fkey (full_name),
+      ${TEAMS_WITH_LEAD_QUERY}
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error) throw new Error(`Failed to fetch booking detail: ${error.message}`)
+
+  // Validate response data (Phase 7)
+  try {
+    const validatedData = BookingResponseSchema.parse(data)
+
+    // Merge V1 and V2 package data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processedData: any = {
+      ...validatedData,
+      service_packages: validatedData.service_packages || validatedData.service_packages_v2,
+      teams: transformTeamsData(validatedData.teams),
+    }
+
+    return processedData as Booking
+  } catch (validationError) {
+    if (validationError instanceof z.ZodError) {
+      console.error('Booking detail validation failed:', validationError.issues)
+      throw new Error(`Invalid booking detail data received from server: ${validationError.issues[0]?.message || 'Unknown validation error'}`)
+    }
+    throw validationError
+  }
+}
+
+/**
+ * Query Options สำหรับ Bookings
+ */
+export const bookingQueryOptions = {
+  /**
+   * List of all bookings
+   */
+  list: (showArchived: boolean = false) => ({
+    queryKey: queryKeys.bookings.list(showArchived),
+    queryFn: () => fetchBookings(showArchived),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+  }),
+
+  /**
+   * Bookings by date range (for Calendar, Weekly Schedule)
+   */
+  byDateRange: (
+    startDate: string,
+    endDate: string,
+    filters?: BookingFilters
+  ) => ({
+    queryKey: queryKeys.bookings.byDateRange(startDate, endDate, filters),
+    queryFn: () => fetchBookingsByDateRange(startDate, endDate, filters),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+  }),
+
+  /**
+   * Bookings by customer ID (for Customer Detail page)
+   */
+  byCustomer: (customerId: string, showArchived: boolean = false) => ({
+    queryKey: queryKeys.bookings.byCustomer(customerId, showArchived),
+    queryFn: () => fetchBookingsByCustomer(customerId, showArchived),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+  }),
+
+  /**
+   * Single booking detail
+   */
+  detail: (id: string) => ({
+    queryKey: queryKeys.bookings.detail(id),
+    queryFn: () => fetchBookingDetail(id),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  }),
+}

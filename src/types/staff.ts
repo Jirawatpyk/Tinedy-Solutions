@@ -161,3 +161,27 @@ export interface StaffScheduleEntry {
   type: 'booking' | 'available' | 'unavailable' | 'break'
   notes?: string
 }
+
+/**
+ * Staff with rating (for staff list page)
+ *
+ * Staff record with calculated average rating from reviews.
+ * Used in Staff management page with performance indicators.
+ */
+export interface StaffWithRating extends StaffRecord {
+  average_rating?: number
+}
+
+/**
+ * Staff list item (minimal - for dropdowns/selects)
+ *
+ * Minimal staff information for dropdowns in Dashboard, Bookings, Calendar.
+ * Optimized for performance with only essential fields.
+ */
+export interface StaffListItem {
+  id: string
+  full_name: string
+  email: string
+  role: 'admin' | 'manager' | 'staff'
+  avatar_url?: string | null
+}

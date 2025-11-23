@@ -107,7 +107,7 @@ export function StaffChat() {
     <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Header - Same style as My Profile and My Calendar */}
       <div className={`bg-white border-b flex-shrink-0 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
-        <div className="px-4 sm:px-6 py-4">
+        <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <p className="text-sm text-muted-foreground">
             Communicate with your team in real-time
           </p>

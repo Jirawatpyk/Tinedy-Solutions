@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
 import { CHART_COLORS } from '@/types/reports'
+import { useChartAnimation } from '@/hooks/useChartAnimation'
 import {
   BarChart,
   Bar,
@@ -55,6 +56,26 @@ function StaffTabComponent({
   staffMetrics,
   staffPerformance,
 }: StaffTabProps) {
+  // Prepare workload data for animation
+  const workloadData = React.useMemo(() =>
+    staffPerformance
+      .filter(s => s.totalJobs > 0)
+      .map(staff => ({
+        name: staff.name,
+        value: staff.totalJobs,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8),
+    [staffPerformance]
+  )
+
+  // Chart animation
+  const workloadChart = useChartAnimation(workloadData, {
+    initialDelay: 50,
+    animationDuration: 800,
+    enabled: true
+  })
+
   return (
     <div className="space-y-6">
       {/* Staff Metrics Cards */}
@@ -163,27 +184,22 @@ function StaffTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={staffPerformance
-                    .filter(s => s.totalJobs > 0)
-                    .map(staff => ({
-                      name: staff.name,
-                      value: staff.totalJobs,
-                    }))
-                    .sort((a, b) => b.value - a.value)
-                    .slice(0, 8)
-                  }
+                  data={workloadData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(props: { name?: string; percent?: number }) => {
+                  labelLine={workloadChart.showLabels}
+                  label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
                     const percent = Number(props.percent || 0)
                     return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
-                  }}
+                  } : false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  animationBegin={0}
+                  animationDuration={workloadChart.isReady ? 800 : 0}
+                  opacity={workloadChart.isReady ? 1 : 0}
                 >
-                  {staffPerformance.slice(0, 8).map((_, index) => (
+                  {workloadData.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={[

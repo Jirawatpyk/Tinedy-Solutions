@@ -1,7 +1,9 @@
-import type { CustomerRecord } from '@/types'
+import type { CustomerRecord, CustomerFormData, CustomerSource } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useStaffList } from '@/hooks/useStaff'
+import { useBookingsByCustomer } from '@/hooks/useBookings'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,12 +13,12 @@ import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { mapErrorToUserMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import { useBookingForm, toBookingForm, type BookingFormState } from '@/hooks/useBookingForm'
+import { type BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus } from '@/lib/recurring-utils'
-import type { RecurringGroup, RecurringBookingRecord } from '@/types/recurring-booking'
+import type { RecurringGroup, RecurringBookingRecord, RecurringPattern } from '@/types/recurring-booking'
 import {
   ArrowLeft,
   Mail,
@@ -41,10 +43,11 @@ import {
   ChevronRight,
   Download,
   Tag,
-  X,
 } from 'lucide-react'
 import { formatDate, getBangkokDateString } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
+import { getTagColor } from '@/lib/tag-utils'
+import { TagInput } from '@/components/customers/tag-input'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -116,6 +119,9 @@ interface CustomerBooking {
   staff_id: string | null
   team_id: string | null
   service_package_id: string
+  package_v2_id?: string | null
+  area_sqm?: number | null
+  frequency?: 1 | 2 | 4 | 8 | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number
@@ -147,13 +153,6 @@ interface ChartDataPoint {
   total: number
 }
 
-interface StaffMember {
-  id: string
-  full_name: string
-  email: string
-  role: string
-}
-
 interface Team {
   id: string
   name: string
@@ -172,8 +171,22 @@ export function AdminCustomerDetail() {
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null)
   const [stats, setStats] = useState<CustomerStats | null>(null)
-  const [bookings, setBookings] = useState<CustomerBooking[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Use React Query hook for bookings data (filtered by customer ID)
+  const {
+    bookings: rawBookings,
+    isLoading: bookingsLoading,
+    refetch: refetchBookings
+  } = useBookingsByCustomer({
+    customerId: id || '',
+    showArchived: false,
+    enableRealtime: true,
+    enabled: !!id,
+  })
+
+  // Cast bookings to CustomerBooking[] type (compatible with Booking type from hook)
+  const bookings = rawBookings as unknown as CustomerBooking[]
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -183,7 +196,6 @@ export function AdminCustomerDetail() {
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false)
   const [isBookingDetailModalOpen, setIsBookingDetailModalOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
 
@@ -194,17 +206,26 @@ export function AdminCustomerDetail() {
   const [editBookingFormState, setEditBookingFormState] = useState<BookingFormState>({})
   const [isEditBookingAvailabilityOpen, setIsEditBookingAvailabilityOpen] = useState(false)
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
+  const [editFormData, setEditFormData] = useState<{
+    booking_date?: string
+    start_time?: string
+    end_time?: string
+    service_package_id?: string
+    package_v2_id?: string
+  } | null>(null)
+  const [selectedEditStaffId, setSelectedEditStaffId] = useState<string>('')
+  const [selectedEditTeamId, setSelectedEditTeamId] = useState<string>('')
 
   // Data for modals
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2
   const { packages: servicePackages } = useServicePackages()
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  // Use React Query hook for staff list
+  const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
   const [teams, setTeams] = useState<Team[]>([])
 
   // Form states
   const [noteText, setNoteText] = useState('')
-  const [tagInput, setTagInput] = useState('')
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<CustomerFormData>({
     full_name: '',
     email: '',
     phone: '',
@@ -213,182 +234,43 @@ export function AdminCustomerDetail() {
     city: '',
     state: '',
     zip_code: '',
-    relationship_level: 'new' as 'new' | 'regular' | 'vip' | 'inactive',
-    preferred_contact_method: 'phone' as 'phone' | 'email' | 'line' | 'sms',
-    tags: [] as string[],
-    source: '',
+    relationship_level: 'new',
+    preferred_contact_method: 'phone',
+    tags: [],
+    source: undefined,
+    source_other: '',
     birthday: '',
     company_name: '',
     tax_id: '',
     notes: '',
   })
-  // Create Booking Form - Using useBookingForm hook with customer data pre-populated
-  const createForm = useBookingForm({
-    initialData: {
-      customer_id: customer?.id,
-      full_name: customer?.full_name || '',
-      email: customer?.email || '',
-      phone: customer?.phone || '',
-      address: customer?.address || '',
-      city: customer?.city || '',
-      state: customer?.state || '',
-      zip_code: customer?.zip_code || '',
-    },
-    onSubmit: async () => {
-      // This is handled by the BookingCreateModal component
-    }
-  })
   const [createAssignmentType, setCreateAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
   const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
 
-  // Custom handler to fix package selection before passing to BookingCreateModal
-  const handlePackageSelectionChange = useCallback((selection: PackageSelectionData | null) => {
-    if (selection) {
-      // ตรวจสอบว่า package เป็น V1 หรือ V2
-      const selectedPkg = servicePackages.find(pkg => pkg.id === selection.packageId)
-      const isV1Package = selectedPkg?._source === 'v1'
-
-      console.log('🔧 [Customer-Detail] Fixing package selection:', {
-        packageId: selection.packageId,
-        version: selectedPkg?._source,
-        pricingModel: selection.pricingModel
-      })
-
-      // ปรับ formData ให้ถูกต้องตาม version
-      if (selection.pricingModel === 'fixed') {
-        if (isV1Package) {
-          // V1 Package: ใช้ service_package_id เท่านั้น
-          createForm.setValues({
-            service_package_id: selection.packageId,
-            package_v2_id: undefined,
-            total_price: selection.price,
-          })
-        } else {
-          // V2 Package (Fixed): ใช้ package_v2_id เท่านั้น
-          createForm.setValues({
-            service_package_id: undefined,
-            package_v2_id: selection.packageId,
-            total_price: selection.price,
-          })
-        }
-      } else {
-        // Tiered Pricing: ต้องเป็น V2 แน่นอน
-        createForm.setValues({
-          service_package_id: undefined,
-          package_v2_id: selection.packageId,
-          area_sqm: selection.areaSqm,
-          frequency: selection.frequency,
-          calculated_price: selection.price,
-          total_price: selection.price,
-        })
-      }
-    }
-
-    setCreatePackageSelection(selection)
-  }, [servicePackages, createForm])
-
-  // Debug: Track createPackageSelection state changes
-  useEffect(() => {
-    console.log('🟠 [Customer-Detail] createPackageSelection state changed:', createPackageSelection)
-  }, [createPackageSelection])
-
   // Recurring Bookings State (for Create Modal)
   const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
-  const [createEnableRecurring, setCreateEnableRecurring] = useState(false)
+  const [createRecurringPattern, setCreateRecurringPattern] = useState<RecurringPattern>('auto-monthly')
+
+  // Staff Availability Modal State (for Create Modal)
+  const [isCreateAvailabilityModalOpen, setIsCreateAvailabilityModalOpen] = useState(false)
+  const [createFormData, setCreateFormData] = useState<{
+    booking_date?: string
+    start_time?: string
+    end_time?: string
+    service_package_id?: string
+    package_v2_id?: string
+  } | null>(null)
+  const [selectedCreateStaffId, setSelectedCreateStaffId] = useState<string>('')
+  const [selectedCreateTeamId, setSelectedCreateTeamId] = useState<string>('')
 
   const [submitting, setSubmitting] = useState(false)
-
-  const refreshBookings = useCallback(async () => {
-    if (!id) return
-
-    try {
-      // Fetch booking history with full details (V1 + V2 packages)
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(
-          `
-          *,
-          service:service_packages!bookings_service_package_id_fkey (
-            name,
-            service_type,
-            price
-          ),
-          service_v2:service_packages_v2!bookings_package_v2_id_fkey (
-            name,
-            service_type
-          ),
-          staff:profiles!bookings_staff_id_fkey (
-            full_name
-          ),
-          service_packages!bookings_service_package_id_fkey (
-            name,
-            service_type
-          ),
-          service_packages_v2:package_v2_id (
-            name,
-            service_type
-          ),
-          customers (
-            id,
-            full_name,
-            email
-          ),
-          profiles:profiles!bookings_staff_id_fkey (
-            full_name
-          ),
-          teams (
-            name
-          )
-        `
-        )
-        .eq('customer_id', id)
-        .is('deleted_at', null)
-        .order('booking_date', { ascending: false })
-
-      if (bookingsError) {
-        console.warn('Error fetching bookings:', bookingsError)
-        setBookings([])
-      } else {
-        // Transform array relations to single objects and merge V1/V2 packages
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const transformedBookings = (bookingsData || []).map((booking: any) => {
-          const service = booking.service || booking.service_v2
-          const servicePackages = booking.service_packages || booking.service_packages_v2
-
-          return {
-            ...booking,
-            service: Array.isArray(service) ? service[0] : service,
-            staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
-            service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
-            customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-            profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-            teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
-          }
-        })
-        setBookings(transformedBookings)
-      }
-
-      // Also refresh stats
-      const { data: statsData } = await supabase
-        .from('customer_lifetime_value')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (statsData) {
-        setStats(statsData)
-      }
-    } catch (error) {
-      console.error('Error refreshing bookings:', error)
-    }
-  }, [id])
 
   const archiveBooking = async (bookingId: string) => {
     const result = await softDelete(bookingId)
     if (result.success) {
       setIsBookingDetailModalOpen(false)
       setSelectedBookingId(null)
-      refreshBookings()
+      refetchBookings()
     }
   }
 
@@ -432,72 +314,6 @@ export function AdminCustomerDetail() {
       } else {
         setStats(statsData)
       }
-
-      // Fetch booking history with full details (V1 + V2 packages)
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(
-          `
-          *,
-          service:service_packages!bookings_service_package_id_fkey (
-            name,
-            service_type,
-            price
-          ),
-          service_v2:service_packages_v2!bookings_package_v2_id_fkey (
-            name,
-            service_type
-          ),
-          staff:profiles!bookings_staff_id_fkey (
-            full_name
-          ),
-          service_packages!bookings_service_package_id_fkey (
-            name,
-            service_type
-          ),
-          service_packages_v2:package_v2_id (
-            name,
-            service_type
-          ),
-          customers (
-            id,
-            full_name,
-            email
-          ),
-          profiles:profiles!bookings_staff_id_fkey (
-            full_name
-          ),
-          teams (
-            name
-          )
-        `
-        )
-        .eq('customer_id', id)
-        .is('deleted_at', null)
-        .order('booking_date', { ascending: false })
-
-      if (bookingsError) {
-        console.warn('Error fetching bookings:', bookingsError)
-        setBookings([])
-      } else {
-        // Transform array relations to single objects and merge V1/V2 packages
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const transformedBookings = (bookingsData || []).map((booking: any) => {
-          const service = booking.service || booking.service_v2
-          const servicePackages = booking.service_packages || booking.service_packages_v2
-
-          return {
-            ...booking,
-            service: Array.isArray(service) ? service[0] : service,
-            staff: Array.isArray(booking.staff) ? booking.staff[0] : booking.staff,
-            service_packages: Array.isArray(servicePackages) ? servicePackages[0] : servicePackages,
-            customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
-            profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
-            teams: Array.isArray(booking.teams) ? booking.teams[0] : booking.teams,
-          }
-        })
-        setBookings(transformedBookings)
-      }
     } catch (error) {
       console.error('Error fetching customer details:', error)
       toast({
@@ -510,51 +326,20 @@ export function AdminCustomerDetail() {
     }
   }, [id, toast])
 
-  const fetchServicePackagesAndStaff = useCallback(async () => {
+  const fetchModalData = useCallback(async () => {
     try {
+      // Staff list โหลดผ่าน useStaffList hook แล้ว
       // Service packages โหลดผ่าน useServicePackages hook แล้ว
 
-      // Fetch staff members
-      const { data: staff, error: staffError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role')
-        .eq('role', 'staff')
-        .order('full_name')
-
-      if (staffError) throw staffError
-      setStaffMembers(staff || [])
-
-      // Fetch teams
+      // Fetch teams only
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name')
+        .eq('is_active', true)
         .order('name')
 
       if (teamsError) throw teamsError
       setTeams(teamsData || [])
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load booking options',
-        variant: 'destructive',
-      })
-    }
-  }, [toast])
-
-  const fetchModalData = useCallback(async () => {
-    try {
-      const [staffRes, teamsRes] = await Promise.all([
-        supabase.from('profiles').select('id, full_name, email, role').eq('role', 'staff').order('full_name'),
-        supabase.from('teams').select('id, name').eq('is_active', true).order('name')
-      ])
-
-      // Service packages โหลดผ่าน useServicePackages hook แล้ว
-      if (staffRes.error) throw staffRes.error
-      if (teamsRes.error) throw teamsRes.error
-
-      setStaffMembers(staffRes.data || [])
-      setTeams(teamsRes.data || [])
     } catch (error) {
       console.error('Error fetching modal data:', error)
     }
@@ -570,28 +355,19 @@ export function AdminCustomerDetail() {
     }
   }, [id, fetchCustomerDetails, fetchModalData])
 
-  useEffect(() => {
-    if (isBookingDialogOpen) {
-      fetchServicePackagesAndStaff()
-    }
-  }, [isBookingDialogOpen, fetchServicePackagesAndStaff])
+  // Teams are fetched in fetchModalData, which is called on mount
+  // Staff list and service packages are loaded via React Query hooks
+  // No need for separate effect for isBookingDialogOpen
 
-  // Update createForm when customer data is loaded
+  // Sync selectedBooking with bookings array when realtime updates occur
   useEffect(() => {
-    if (customer) {
-      createForm.setValues({
-        customer_id: customer.id,
-        full_name: customer.full_name || '',
-        email: customer.email || '',
-        phone: customer.phone || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        zip_code: customer.zip_code || '',
-      })
+    if (selectedBooking) {
+      const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
+      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(selectedBooking)) {
+        setSelectedBooking(updatedBooking as unknown as Booking)
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customer])
+  }, [bookings, selectedBooking])
 
   // Calculate end_time from start_time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -601,6 +377,14 @@ export function AdminCustomerDetail() {
     const endMinutes = totalMinutes % 60
     return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
   }
+
+  // Handle Create Booking - Auto-fill customer data
+  const handleCreateBooking = useCallback(() => {
+    if (!customer) return
+
+    // Open booking dialog - customer data will be pre-filled via default* props
+    setIsBookingDialogOpen(true)
+  }, [customer])
 
   // Edit Booking Form Helpers
   const editBookingForm = {
@@ -621,6 +405,9 @@ export function AdminCustomerDetail() {
     // Populate edit form with booking data
     setEditBookingFormState({
       service_package_id: booking.service_package_id,
+      package_v2_id: 'package_v2_id' in booking ? (booking.package_v2_id || undefined) : undefined,
+      area_sqm: 'area_sqm' in booking ? (booking.area_sqm || undefined) : undefined,
+      frequency: 'frequency' in booking ? (booking.frequency || undefined) : undefined,
       booking_date: booking.booking_date,
       start_time: booking.start_time,
       end_time: booking.end_time,
@@ -634,6 +421,10 @@ export function AdminCustomerDetail() {
       team_id: booking.team_id || '',
       status: booking.status,
     })
+
+    // Reset selected staff/team from availability modal
+    setSelectedEditStaffId('')
+    setSelectedEditTeamId('')
 
     // Set assignment type based on booking data
     if (booking.staff_id) {
@@ -659,6 +450,9 @@ export function AdminCustomerDetail() {
       staff_id: booking.staff_id,
       team_id: booking.team_id,
       service_package_id: booking.service_package_id,
+      package_v2_id: 'package_v2_id' in booking ? booking.package_v2_id : null,
+      area_sqm: 'area_sqm' in booking ? booking.area_sqm : null,
+      frequency: 'frequency' in booking ? booking.frequency : null,
       notes: booking.notes,
       payment_status: booking.payment_status,
       payment_method: booking.payment_method,
@@ -726,7 +520,8 @@ export function AdminCustomerDetail() {
       relationship_level: customer.relationship_level,
       preferred_contact_method: customer.preferred_contact_method,
       tags: customer.tags || [],
-      source: customer.source || '',
+      source: customer.source || undefined,
+      source_other: customer.source_other || '',
       birthday: customer.birthday || '',
       company_name: customer.company_name || '',
       tax_id: customer.tax_id || '',
@@ -1044,7 +839,7 @@ export function AdminCustomerDetail() {
     })
   }
 
-  if (loading || !customer) {
+  if (loading || bookingsLoading || !customer) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -1139,12 +934,12 @@ export function AdminCustomerDetail() {
                   </Badge>
                   {customer.source && (
                     <Badge variant="outline" className="text-xs">
-                      Source: {customer.source}
+                      Source: {customer.source === 'other' ? customer.source_other || 'Other' : customer.source}
                     </Badge>
                   )}
                   {customer.tags && customer.tags.length > 0 && (
                     customer.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
+                      <Badge key={tag} variant="outline" className={`text-xs ${getTagColor(tag)}`}>
                         {tag}
                       </Badge>
                     ))
@@ -1216,7 +1011,7 @@ export function AdminCustomerDetail() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => setIsBookingDialogOpen(true)}
+                onClick={handleCreateBooking}
               >
                 <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
                 <span className="truncate">New Booking</span>
@@ -1573,26 +1368,71 @@ export function AdminCustomerDetail() {
         onSuccess={() => {
           setIsBookingDialogOpen(false)
           setCreatePackageSelection(null)
-          fetchCustomerDetails()
+          refetchBookings()
         }}
         servicePackages={servicePackages}
-        staffMembers={staffMembers}
+        staffMembers={staffList}
         teams={teams}
         onOpenAvailabilityModal={() => {
-          // Keep BookingCreateModal open and just open Availability Modal on top
-          setIsAvailabilityModalOpen(true)
+          setIsCreateAvailabilityModalOpen(true)
         }}
-        createForm={toBookingForm(createForm)}
+        onBeforeOpenAvailability={(formData) => {
+          setCreateFormData(formData)
+        }}
         assignmentType={createAssignmentType}
         setAssignmentType={setCreateAssignmentType}
         calculateEndTime={calculateEndTime}
         packageSelection={createPackageSelection}
-        setPackageSelection={handlePackageSelectionChange}
+        setPackageSelection={setCreatePackageSelection}
+        defaultCustomerId={customer?.id}
+        defaultFullName={customer?.full_name}
+        defaultEmail={customer?.email}
+        defaultPhone={customer?.phone}
+        defaultAddress={customer?.address || ''}
+        defaultCity={customer?.city || ''}
+        defaultState={customer?.state || ''}
+        defaultZipCode={customer?.zip_code || ''}
+        defaultStaffId={selectedCreateStaffId}
+        defaultTeamId={selectedCreateTeamId}
         recurringDates={createRecurringDates}
         setRecurringDates={setCreateRecurringDates}
-        enableRecurring={createEnableRecurring}
-        setEnableRecurring={setCreateEnableRecurring}
+        recurringPattern={createRecurringPattern}
+        setRecurringPattern={setCreateRecurringPattern}
       />
+
+      {/* Staff Availability Modal (for Create) */}
+      {createFormData && (createFormData.service_package_id || createFormData.package_v2_id) && (createRecurringDates.length > 0 || createFormData.booking_date) && createFormData.start_time && (
+        <StaffAvailabilityModal
+          isOpen={isCreateAvailabilityModalOpen}
+          onClose={() => setIsCreateAvailabilityModalOpen(false)}
+          assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
+          date={createRecurringDates.length === 0 ? createFormData.booking_date : undefined}
+          dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
+          startTime={createFormData.start_time}
+          endTime={createFormData.end_time || ''}
+          servicePackageId={createFormData.service_package_id || createFormData.package_v2_id || ''}
+          onSelectStaff={(staffId) => {
+            setSelectedCreateStaffId(staffId)
+            setSelectedCreateTeamId('')
+            setCreateAssignmentType('staff')
+            setIsCreateAvailabilityModalOpen(false)
+            toast({
+              title: 'Staff Selected',
+              description: 'Staff member has been assigned to the booking',
+            })
+          }}
+          onSelectTeam={(teamId) => {
+            setSelectedCreateTeamId(teamId)
+            setSelectedCreateStaffId('')
+            setCreateAssignmentType('team')
+            setIsCreateAvailabilityModalOpen(false)
+            toast({
+              title: 'Team Selected',
+              description: 'Team has been assigned to the booking',
+            })
+          }}
+        />
+      )}
 
       {/* Add Note Dialog */}
       <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
@@ -1768,7 +1608,7 @@ export function AdminCustomerDetail() {
                   <Label htmlFor="edit_source">How did they find us?</Label>
                   <Select
                     value={editForm.source || undefined}
-                    onValueChange={(value) => setEditForm({ ...editForm, source: value })}
+                    onValueChange={(value) => setEditForm({ ...editForm, source: value as CustomerSource })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select source" />
@@ -1794,6 +1634,19 @@ export function AdminCustomerDetail() {
                   />
                 </div>
               </div>
+
+              {/* Show additional input when "Other" is selected */}
+              {editForm.source === 'other' && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit_source_other">Please specify</Label>
+                  <Input
+                    id="edit_source_other"
+                    placeholder="How did they find us?"
+                    value={editForm.source_other || ''}
+                    onChange={(e) => setEditForm({ ...editForm, source_other: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tags Section */}
@@ -1802,39 +1655,10 @@ export function AdminCustomerDetail() {
                 <Tag className="h-4 w-4 text-tinedy-blue" />
                 <Label htmlFor="edit_tags">Customer Tags</Label>
               </div>
-              <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px]">
-                {editForm.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="gap-1">
-                    {tag}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => {
-                        const newTags = editForm.tags.filter((_, i) => i !== index)
-                        setEditForm({ ...editForm, tags: newTags })
-                      }}
-                    />
-                  </Badge>
-                ))}
-              </div>
-              <Input
-                id="edit_tags"
-                placeholder="Type to add tags or select from suggestions..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    const trimmedTag = tagInput.trim()
-                    if (trimmedTag && !editForm.tags.includes(trimmedTag)) {
-                      setEditForm({ ...editForm, tags: [...editForm.tags, trimmedTag] })
-                      setTagInput('')
-                    }
-                  }
-                }}
+              <TagInput
+                tags={editForm.tags || []}
+                onChange={(newTags) => setEditForm({ ...editForm, tags: newTags })}
               />
-              <p className="text-xs text-muted-foreground">
-                Press Enter or click + to add tags. Click × to remove.
-              </p>
             </div>
 
             {/* Corporate Information */}
@@ -1913,53 +1737,6 @@ export function AdminCustomerDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Staff Availability Modal */}
-      {(createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
-       (createForm.formData.booking_date || createRecurringDates.length > 0) &&
-       createForm.formData.start_time && (
-        <StaffAvailabilityModal
-          isOpen={isAvailabilityModalOpen}
-          onClose={() => {
-            setIsAvailabilityModalOpen(false)
-            // BookingCreateModal is still open, no need to reopen
-          }}
-          assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
-          onSelectStaff={(staffId) => {
-            createForm.handleChange('staff_id', staffId)
-            setIsAvailabilityModalOpen(false)
-            // BookingCreateModal is still open, no need to reopen
-            toast({
-              title: 'Staff Selected',
-              description: 'Staff member has been assigned to the booking',
-            })
-          }}
-          onSelectTeam={(teamId) => {
-            createForm.handleChange('team_id', teamId)
-            setIsAvailabilityModalOpen(false)
-            // BookingCreateModal is still open, no need to reopen
-            toast({
-              title: 'Team Selected',
-              description: 'Team has been assigned to the booking',
-            })
-          }}
-          date={createForm.formData.booking_date}
-          dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
-          startTime={createForm.formData.start_time}
-          endTime={
-            (createForm.formData.service_package_id || createForm.formData.package_v2_id
-              ? calculateEndTime(
-                  createForm.formData.start_time,
-                  servicePackages.find(pkg => pkg.id === (createForm.formData.service_package_id || createForm.formData.package_v2_id))?.duration_minutes || 0
-                )
-              : '') || ''
-          }
-          servicePackageId={(createForm.formData.service_package_id || createForm.formData.package_v2_id) || ''}
-          servicePackageName={
-            servicePackages.find(pkg => pkg.id === (createForm.formData.service_package_id || createForm.formData.package_v2_id))?.name || ''
-          }
-        />
-      )}
-
       {/* Booking Detail Modal */}
       {selectedBookingId && (
         <BookingDetailModal
@@ -1968,7 +1745,7 @@ export function AdminCustomerDetail() {
           onClose={() => {
             setIsBookingDetailModalOpen(false)
             setSelectedBookingId(null)
-            refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+            refetchBookings()
           }}
           onEdit={(booking) => {
             handleEditBooking(booking)
@@ -1990,7 +1767,7 @@ export function AdminCustomerDetail() {
 
               setIsBookingDetailModalOpen(false)
               setSelectedBookingId(null)
-              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+              refetchBookings()
             } catch (error) {
               toast({
                 title: 'Error',
@@ -2013,7 +1790,7 @@ export function AdminCustomerDetail() {
                 description: `Status updated to ${newStatus}`,
               })
 
-              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+              refetchBookings()
             } catch (error) {
               toast({
                 title: 'Error',
@@ -2042,7 +1819,7 @@ export function AdminCustomerDetail() {
                 description: 'Payment marked as paid',
               })
 
-              refreshBookings() // Use refreshBookings instead of fetchCustomerDetails
+              refetchBookings()
             } catch (error) {
               toast({
                 title: 'Error',
@@ -2104,16 +1881,21 @@ export function AdminCustomerDetail() {
           onClose={() => {
             setIsBookingEditOpen(false)
             editBookingForm.reset()
+            setSelectedEditStaffId('')
+            setSelectedEditTeamId('')
           }}
           booking={selectedBooking}
           onSuccess={() => {
-            refreshBookings()
+            refetchBookings()
           }}
           servicePackages={servicePackages}
-          staffMembers={staffMembers}
+          staffMembers={staffList}
           teams={teams}
           onOpenAvailabilityModal={() => {
             setIsEditBookingAvailabilityOpen(true)
+          }}
+          onBeforeOpenAvailability={(formData) => {
+            setEditFormData(formData)
           }}
           editForm={editBookingForm}
           assignmentType={editBookingAssignmentType}
@@ -2121,11 +1903,13 @@ export function AdminCustomerDetail() {
           calculateEndTime={calculateEndTime}
           packageSelection={editPackageSelection}
           setPackageSelection={setEditPackageSelection}
+          defaultStaffId={selectedEditStaffId}
+          defaultTeamId={selectedEditTeamId}
         />
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {editBookingFormState.service_package_id && editBookingFormState.booking_date && editBookingFormState.start_time && (
+      {editFormData && (editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditBookingAvailabilityOpen}
           onClose={() => {
@@ -2133,7 +1917,9 @@ export function AdminCustomerDetail() {
           }}
           assignmentType={editBookingAssignmentType === 'staff' ? 'individual' : 'team'}
           onSelectStaff={(staffId) => {
-            editBookingForm.handleChange('staff_id', staffId)
+            setSelectedEditStaffId(staffId)
+            setSelectedEditTeamId('')
+            setEditBookingAssignmentType('staff')
             setIsEditBookingAvailabilityOpen(false)
             toast({
               title: 'Staff Selected',
@@ -2141,26 +1927,21 @@ export function AdminCustomerDetail() {
             })
           }}
           onSelectTeam={(teamId) => {
-            editBookingForm.handleChange('team_id', teamId)
+            setSelectedEditTeamId(teamId)
+            setSelectedEditStaffId('')
+            setEditBookingAssignmentType('team')
             setIsEditBookingAvailabilityOpen(false)
             toast({
               title: 'Team Selected',
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={editBookingFormState.booking_date || ''}
-          startTime={editBookingFormState.start_time || ''}
-          endTime={
-            editBookingFormState.service_package_id && editBookingFormState.start_time
-              ? calculateEndTime(
-                  editBookingFormState.start_time,
-                  servicePackages.find(pkg => pkg.id === editBookingFormState.service_package_id)?.duration_minutes || 0
-                )
-              : (editBookingFormState.end_time || '')
-          }
-          servicePackageId={editBookingFormState.service_package_id || ''}
+          date={editFormData.booking_date || ''}
+          startTime={editFormData.start_time || ''}
+          endTime={editFormData.end_time || ''}
+          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === editBookingFormState.service_package_id)?.name
+            servicePackages.find(pkg => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))?.name
           }
           currentAssignedStaffId={editBookingFormState.staff_id}
           currentAssignedTeamId={editBookingFormState.team_id}

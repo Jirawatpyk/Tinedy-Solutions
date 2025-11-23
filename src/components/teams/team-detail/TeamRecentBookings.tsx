@@ -44,9 +44,16 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           end_time,
           status,
           total_price,
-          customers (full_name),
-          service_packages (name),
-          service_packages_v2:package_v2_id (name)
+          payment_status,
+          address,
+          city,
+          state,
+          zip_code,
+          staff_id,
+          team_id,
+          customers (id, full_name, email, phone),
+          service_packages (name, service_type),
+          service_packages_v2:package_v2_id (name, service_type)
         `)
         .eq('team_id', teamId)
         .is('deleted_at', null)

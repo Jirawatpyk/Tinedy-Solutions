@@ -22,14 +22,21 @@ describe('BookingCard', () => {
     start_time: '10:00:00',
     end_time: '12:00:00',
     status: 'confirmed',
+    payment_status: 'paid',
+    total_price: 1500,
     notes: 'Test booking notes',
     address: '123 Main St',
     city: 'Bangkok',
     state: 'Bangkok',
     zip_code: '10110',
+    customer_id: 'customer-123',
+    service_package_id: 'service-123',
+    package_v2_id: null,
     created_at: '2025-10-26T00:00:00Z',
     staff_id: mockAuthContext.user?.id || null,
     team_id: null,
+    area_sqm: null,
+    frequency: null,
     customers: {
       id: 'customer-123',
       full_name: 'John Doe',
@@ -39,9 +46,11 @@ describe('BookingCard', () => {
     service_packages: {
       id: 'service-123',
       name: 'Basic Cleaning',
+      service_type: 'cleaning',
       duration_minutes: 120,
       price: 1500,
     },
+    service_packages_v2: null,
     ...overrides,
   })
 
@@ -150,6 +159,7 @@ describe('BookingCard', () => {
         service_packages: {
           id: 'service-123',
           name: 'Deep Cleaning',
+          service_type: 'cleaning',
           duration_minutes: 180,
           price: 2000,
         },
@@ -783,6 +793,7 @@ describe('BookingCard', () => {
         service_packages: {
           id: 'service-123',
           name: 'Basic Cleaning',
+          service_type: 'cleaning',
           duration_minutes: 0,
           price: 1500,
         },

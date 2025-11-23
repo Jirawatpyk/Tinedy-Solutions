@@ -12,6 +12,7 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { Search, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { formatRole } from '@/lib/role-utils'
 import type { Profile } from '@/types/chat'
 
 interface NewChatModalProps {
@@ -110,7 +111,7 @@ export function NewChatModal({
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          {user.role === 'admin' ? 'Admin' : 'Staff'}
+                          {formatRole(user.role)}
                         </Badge>
                         <p className="text-xs text-muted-foreground truncate">
                           {user.email}

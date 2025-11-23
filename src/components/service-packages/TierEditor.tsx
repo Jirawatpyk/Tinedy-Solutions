@@ -110,9 +110,9 @@ export function TierEditor({
         tierErrors.push('Must have at least 1 staff member')
       }
 
-      // Price validation
-      if (tier.price_1_time <= 0) {
-        tierErrors.push('Price for 1 time must be greater than 0')
+      // Price validation (allow 0 for optional pricing)
+      if (tier.price_1_time < 0) {
+        tierErrors.push('Price for 1 time cannot be negative')
       }
 
       if (tierErrors.length > 0) {
@@ -422,19 +422,19 @@ export function TierEditor({
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>1 time:</div>
                     <div className="font-semibold">{formatPrice(tier.price_1_time)}</div>
-                    {tier.price_2_times && (
+                    {tier.price_2_times != null && tier.price_2_times > 0 && (
                       <>
                         <div>2 times:</div>
                         <div className="font-semibold">{formatPrice(tier.price_2_times)}</div>
                       </>
                     )}
-                    {tier.price_4_times && (
+                    {tier.price_4_times != null && tier.price_4_times > 0 && (
                       <>
                         <div>4 times:</div>
                         <div className="font-semibold">{formatPrice(tier.price_4_times)}</div>
                       </>
                     )}
-                    {tier.price_8_times && (
+                    {tier.price_8_times != null && tier.price_8_times > 0 && (
                       <>
                         <div>8 times:</div>
                         <div className="font-semibold">{formatPrice(tier.price_8_times)}</div>
