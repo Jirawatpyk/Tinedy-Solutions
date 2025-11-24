@@ -205,6 +205,7 @@ function RevenueBookingsTabComponent({
             <CardTitle className="font-display flex items-center gap-2">
               <Package className="h-5 w-5" />
               Bookings Trend
+              <span className="text-sm font-normal text-muted-foreground">(Paid only)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
