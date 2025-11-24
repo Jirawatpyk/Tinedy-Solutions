@@ -69,13 +69,21 @@ export async function fetchBookings(showArchived: boolean = false): Promise<Book
 
 /**
  * Booking Filters for Date Range Query
+ * Updated to support multi-select arrays (Sprint 2)
  */
 export interface BookingFilters {
+  // Legacy single-value filters (deprecated, kept for backward compatibility)
   viewMode?: 'staff' | 'team' | 'all'
   staffId?: string
   teamId?: string
   status?: string
   customerId?: string
+
+  // New multi-select filters (Sprint 2)
+  staffIds?: string[]
+  teamIds?: string[]
+  statuses?: string[]
+  searchQuery?: string
 }
 
 /**
@@ -109,19 +117,38 @@ export async function fetchBookingsByDateRange(
     .order('start_time')
 
   // Apply filters
-  if (filters?.viewMode === 'staff') {
+  // Priority: New multi-select filters (Sprint 2) > Legacy single-value filters
+
+  // Staff filters
+  if (filters?.staffIds && filters.staffIds.length > 0) {
+    // New multi-select: use .in() for array
+    query = query.in('staff_id', filters.staffIds)
+  } else if (filters?.viewMode === 'staff') {
+    // Legacy viewMode filter
     query = query.not('staff_id', 'is', null)
     if (filters.staffId) {
       query = query.eq('staff_id', filters.staffId)
     }
+  }
+
+  // Team filters
+  if (filters?.teamIds && filters.teamIds.length > 0) {
+    // New multi-select: use .in() for array
+    query = query.in('team_id', filters.teamIds)
   } else if (filters?.viewMode === 'team') {
+    // Legacy viewMode filter
     query = query.not('team_id', 'is', null)
     if (filters.teamId) {
       query = query.eq('team_id', filters.teamId)
     }
   }
 
-  if (filters?.status && filters.status !== 'all') {
+  // Status filters
+  if (filters?.statuses && filters.statuses.length > 0) {
+    // New multi-select: use .in() for array
+    query = query.in('status', filters.statuses)
+  } else if (filters?.status && filters.status !== 'all') {
+    // Legacy single-value filter
     query = query.eq('status', filters.status)
   }
 
@@ -135,13 +162,59 @@ export async function fetchBookingsByDateRange(
 
     // Process data - merge V1/V2 packages and transform teams
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const processedData = validatedData.map((booking: any) => ({
+    let processedData = validatedData.map((booking: any) => ({
       ...booking,
       service_packages: booking.service_packages || booking.service_packages_v2,
       customers: Array.isArray(booking.customers) ? booking.customers[0] : booking.customers,
       profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles,
       teams: transformTeamsData(booking.teams),
     }))
+
+    // Client-side search filtering (Sprint 2)
+    if (filters?.searchQuery && filters.searchQuery.trim()) {
+      const searchLower = filters.searchQuery.toLowerCase().trim()
+      console.log('🔍 Search Query:', searchLower)
+      console.log('📊 Data before filter:', processedData.length)
+
+      processedData = processedData.filter((booking: any) => {
+        const customerName = booking.customers?.full_name?.toLowerCase() || ''
+        const customerPhone = booking.customers?.phone?.toLowerCase() || ''
+        const customerEmail = booking.customers?.email?.toLowerCase() || ''
+        // รองรับทั้ง service_packages (V1) และ service_packages_v2 (V2)
+        const serviceName = booking.service_packages?.name?.toLowerCase() ||
+                          booking.service_packages_v2?.name?.toLowerCase() || ''
+        const staffName = booking.profiles?.full_name?.toLowerCase() || ''
+        const teamName = booking.teams?.name?.toLowerCase() || ''
+        const bookingId = booking.id?.toLowerCase() || ''
+
+        const matches = (
+          customerName.includes(searchLower) ||
+          customerPhone.includes(searchLower) ||
+          customerEmail.includes(searchLower) ||
+          serviceName.includes(searchLower) ||
+          staffName.includes(searchLower) ||
+          teamName.includes(searchLower) ||
+          bookingId.includes(searchLower)
+        )
+
+        // Debug: แสดงข้อมูลของ booking แรก 3 ตัว
+        if (processedData.indexOf(booking) < 3) {
+          console.log('Checking booking:', booking.id?.slice(0, 8), {
+            customerName,
+            customerPhone,
+            customerEmail,
+            serviceName,
+            staffName,
+            teamName,
+            matches
+          })
+        }
+
+        return matches
+      })
+
+      console.log('✅ Data after filter:', processedData.length)
+    }
 
     return processedData as Booking[]
   } catch (validationError) {

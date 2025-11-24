@@ -5,20 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingCreateModal, BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { CalendarCell } from '@/components/calendar/CalendarCell'
-import { BookingCard } from '@/components/calendar/BookingCard'
+import { BookingListSidebar } from '@/components/calendar/BookingListSidebar'
+import { CalendarFilters } from '@/components/calendar/filters/CalendarFilters'
+import { useCalendarFilters } from '@/hooks/useCalendarFilters'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import type { PackageSelectionData } from '@/components/service-packages'
@@ -47,11 +42,8 @@ import {
 
 export function AdminCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedTeam, setSelectedTeam] = useState<string>('all')
-  const [selectedStaff, setSelectedStaff] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'staff' | 'team' | 'all'>('all')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date; end: Date } | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
@@ -80,6 +72,52 @@ export function AdminCalendar() {
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
+  // Filter state management with useCalendarFilters hook
+  const filterControls = useCalendarFilters()
+
+  // Callback สำหรับ Preset buttons ให้เปลี่ยน currentDate
+  const handlePresetDateChange = useCallback((preset: string) => {
+    const today = new Date()
+
+    switch (preset) {
+      case 'today':
+        setCurrentDate(today)
+        setSelectedDate(today)
+        setSelectedDateRange(null)
+        break
+      case 'week':
+        // แสดงทุก bookings ในสัปดาห์นี้
+        const weekStart = startOfWeek(today)
+        const weekEnd = endOfWeek(today)
+        setCurrentDate(weekStart)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: weekStart, end: weekEnd })
+        break
+      case 'month':
+        // แสดงทุก bookings ในเดือนนี้
+        const monthStart = startOfMonth(today)
+        const monthEnd = endOfMonth(today)
+        setCurrentDate(monthStart)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: monthStart, end: monthEnd })
+        break
+      case 'upcoming':
+        // แสดง bookings ที่กำลังจะมาถึง (วันนี้เป็นต้นไป 30 วัน)
+        const upcomingEnd = new Date(today)
+        upcomingEnd.setDate(today.getDate() + 30)
+        setCurrentDate(today)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: today, end: upcomingEnd })
+        break
+    }
+  }, [])
+
+  // Callback สำหรับคลิกวันในปฏิทิน (clear date range)
+  const handleDateClick = useCallback((date: Date) => {
+    setSelectedDate(date)
+    setSelectedDateRange(null) // Clear date range เมื่อเลือกวัน
+  }, [])
+
   // ใช้ custom hooks สำหรับโหลดข้อมูล
   const { packages: servicePackages } = useServicePackages()
   const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
@@ -89,7 +127,34 @@ export function AdminCalendar() {
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
 
-  // โหลด bookings ตาม date range และ filters
+  // Memoize filters object เพื่อป้องกัน query key เปลี่ยนตลอดเวลา
+  // searchQuery ไม่รวมใน query เพราะเป็น client-side filter
+  const bookingFilters = useMemo(() => {
+    const staffIds = filterControls.filters.staffIds
+    const teamIds = filterControls.filters.teamIds
+    const statuses = filterControls.filters.statuses
+
+    // ถ้าไม่มี filter เลย return undefined (stable reference)
+    if (staffIds.length === 0 && teamIds.length === 0 && statuses.length === 0) {
+      return undefined
+    }
+
+    return {
+      staffIds: staffIds.length > 0 ? staffIds : undefined,
+      teamIds: teamIds.length > 0 ? teamIds : undefined,
+      statuses: statuses.length > 0 ? statuses : undefined,
+      // searchQuery จะถูก filter client-side ใน booking-queries.ts
+      searchQuery: filterControls.filters.searchQuery || undefined,
+    }
+  }, [
+    // ใช้ .join() เพื่อสร้าง primitive dependency แทน array reference
+    filterControls.filters.staffIds.join(','),
+    filterControls.filters.teamIds.join(','),
+    filterControls.filters.statuses.join(','),
+    filterControls.filters.searchQuery,
+  ])
+
+  // โหลด bookings ตาม date range และ filters (from useCalendarFilters)
   const {
     bookings,
     isLoading,
@@ -99,12 +164,7 @@ export function AdminCalendar() {
       start: format(monthStart, 'yyyy-MM-dd'),
       end: format(monthEnd, 'yyyy-MM-dd'),
     },
-    filters: {
-      viewMode,
-      staffId: selectedStaff !== 'all' ? selectedStaff : undefined,
-      teamId: selectedTeam !== 'all' ? selectedTeam : undefined,
-      status: selectedStatus !== 'all' ? selectedStatus : undefined,
-    },
+    filters: bookingFilters,
     enableRealtime: true,
   })
 
@@ -588,10 +648,29 @@ export function AdminCalendar() {
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [monthStart, monthEnd])
 
-  // Memoize selected date bookings to prevent recalculation
+  // Memoize selected date/range bookings to prevent recalculation
   const selectedDateBookings = useMemo(() => {
-    return selectedDate ? getBookingsForDate(selectedDate) : []
-  }, [selectedDate, getBookingsForDate])
+    // ถ้าเลือก single date → แสดง bookings ของวันนั้น
+    if (selectedDate) {
+      return getBookingsForDate(selectedDate)
+    }
+
+    // ถ้าเลือก date range → แสดง bookings ทั้งหมดใน range
+    if (selectedDateRange) {
+      return bookings.filter((booking) => {
+        const bookingDate = new Date(booking.booking_date)
+        return bookingDate >= selectedDateRange.start && bookingDate <= selectedDateRange.end
+      })
+    }
+
+    // ถ้าไม่มี date selection แต่มี active filters (preset, search, staff, team)
+    // → แสดง bookings ทั้งหมดที่ผ่าน filters แล้ว
+    if (filterControls.hasActiveFilters) {
+      return bookings
+    }
+
+    return []
+  }, [selectedDate, selectedDateRange, getBookingsForDate, bookings, filterControls.hasActiveFilters])
 
   if (isLoading) {
     return (
@@ -676,108 +755,11 @@ export function AdminCalendar() {
         </Button>
       </div>
 
-      {/* Filters and View Mode */}
-      <Card>
-        <CardContent className="py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium whitespace-nowrap">View Mode:</label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('all')}
-                  className="rounded-r-none flex-1 h-8 text-xs"
-                >
-                  All Bookings
-                </Button>
-                <Button
-                  variant={viewMode === 'staff' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('staff')}
-                  className="rounded-none border-l-0 flex-1 h-8 text-xs"
-                >
-                  Staff View
-                </Button>
-                <Button
-                  variant={viewMode === 'team' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('team')}
-                  className="rounded-l-none border-l-0 flex-1 h-8 text-xs"
-                >
-                  Team View
-                </Button>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="h-6 w-px bg-border mx-1"></div>
-
-            {/* Staff Filter */}
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-xs font-medium whitespace-nowrap">Staff:</label>
-              <Select
-                value={selectedStaff}
-                onValueChange={setSelectedStaff}
-                disabled={viewMode !== 'staff'}
-              >
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="All Staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  {staffList.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Team Filter */}
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-xs font-medium whitespace-nowrap">Team:</label>
-              <Select
-                value={selectedTeam}
-                onValueChange={setSelectedTeam}
-                disabled={viewMode !== 'team'}
-              >
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <label className="text-xs font-medium whitespace-nowrap">Status:</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* New Filter System (Sprint 2 - UX Improvements) */}
+      <CalendarFilters
+        filterControls={filterControls}
+        onPresetDateChange={handlePresetDateChange}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
@@ -836,7 +818,7 @@ export function AdminCalendar() {
                     selectedDate={selectedDate}
                     dayBookings={dayBookings}
                     conflictingBookingIds={dayConflictIds}
-                    onDateClick={setSelectedDate}
+                    onDateClick={handleDateClick}
                     onCreateBooking={handleCreateBooking}
                   />
                 )
@@ -873,52 +855,15 @@ export function AdminCalendar() {
         </Card>
 
         {/* Booking List Sidebar */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="font-display">
-              {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Select a date'}
-            </CardTitle>
-            {selectedDateBookings.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {selectedDateBookings.length} booking{selectedDateBookings.length > 1 ? 's' : ''}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            {!selectedDate ? (
-              <div className="text-center py-12">
-                <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">
-                  Click on a date to view bookings
-                </p>
-              </div>
-            ) : selectedDateBookings.length === 0 ? (
-              <div className="text-center py-12">
-                <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No bookings for this date</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {selectedDateBookings.map((booking) => {
-                  const conflicts = conflictMap.get(booking.id)
-                  const availableStatuses = getAvailableStatuses(booking.status)
-
-                  return (
-                    <BookingCard
-                      key={booking.id}
-                      booking={booking}
-                      onClick={openBookingDetail}
-                      hasConflict={!!conflicts && conflicts.size > 0}
-                      conflictCount={conflicts?.size || 0}
-                      onStatusChange={handleInlineStatusChange}
-                      availableStatuses={availableStatuses}
-                    />
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <BookingListSidebar
+          selectedDate={selectedDate}
+          selectedDateRange={selectedDateRange}
+          bookings={selectedDateBookings}
+          conflictMap={conflictMap}
+          onBookingClick={openBookingDetail}
+          onStatusChange={handleInlineStatusChange}
+          getAvailableStatuses={getAvailableStatuses}
+        />
       </div>
 
       {/* Booking Detail Modal */}

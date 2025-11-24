@@ -91,7 +91,6 @@ export async function fetchServicePackagesV1(): Promise<ServicePackage[]> {
   const { data, error } = await supabase
     .from('service_packages')
     .select('id, name, description, service_type, duration_minutes, price, is_active, created_at')
-    .eq('is_active', true)
     .order('name')
 
   if (error) {
@@ -109,7 +108,6 @@ export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTier
   const { data: packages, error: pkgError } = await supabase
     .from('service_packages_v2')
     .select('*')
-    .eq('is_active', true)
     .order('name')
 
   if (pkgError) {
