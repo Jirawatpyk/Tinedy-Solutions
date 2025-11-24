@@ -249,12 +249,11 @@ function RevenueBookingsTabComponent({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={statusBreakdown as unknown as Record<string, unknown>[]}
+                  data={statusBreakdown.filter((item) => item.value > 0) as unknown as Record<string, unknown>[]}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
                   outerRadius={90}
-                  fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
                   labelLine={statusChart.showLabels}
@@ -269,25 +268,30 @@ function RevenueBookingsTabComponent({
                   animationDuration={statusChart.isReady ? 800 : 0}
                   animationEasing="ease-out"
                   opacity={statusChart.isReady ? 1 : 0}
+                  stroke="none"
                 >
-                  {statusBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
+                  {statusBreakdown
+                    .filter((entry) => entry.value > 0)
+                    .map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap justify-center gap-4 pt-2 border-t mt-4">
-              {statusBreakdown.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm font-medium text-tinedy-dark">{item.name}</span>
-                  <span className="text-sm font-bold text-tinedy-dark">{item.value}</span>
-                </div>
-              ))}
+              {statusBreakdown
+                .filter((item) => item.value > 0)
+                .map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm font-medium text-tinedy-dark">{item.name}</span>
+                    <span className="text-sm font-bold text-tinedy-dark">{item.value}</span>
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>
