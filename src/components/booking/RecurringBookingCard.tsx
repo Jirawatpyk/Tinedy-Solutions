@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import {
   ChevronDown,
   ChevronUp,
@@ -41,29 +40,23 @@ interface RecurringBookingCardProps {
   group: RecurringGroup
   onBookingClick?: (bookingId: string) => void
   onDeleteGroup?: (groupId: string) => void
-  onGroupStatusChange?: (groupId: string, newStatus: string, bookingIds: string[]) => void
+  onStatusChange?: (bookingId: string, currentStatus: string, newStatus: string) => void
+  getAvailableStatuses: (currentStatus: string) => string[]
+  getStatusLabel: (status: string) => string
 }
 
-// Helper Functions สำหรับ Status Management
-const FINAL_STATUSES = ['completed', 'cancelled', 'no_show']
-
-const getValidTransitions = (currentStatus: string): string[] => {
-  const transitions: Record<string, string[]> = {
-    pending: ['confirmed', 'cancelled'],
-    confirmed: ['in_progress', 'cancelled', 'no_show'],
-    in_progress: ['completed', 'cancelled'],
-    completed: [],
-    cancelled: [],
-    no_show: [],
-  }
-  return transitions[currentStatus] || []
+// Helper function to check if status is final
+const isFinalStatus = (status: string): boolean => {
+  return ['completed', 'cancelled', 'no_show'].includes(status)
 }
 
 export function RecurringBookingCard({
   group,
   onBookingClick,
   onDeleteGroup,
-  onGroupStatusChange
+  onStatusChange,
+  getAvailableStatuses,
+  getStatusLabel
 }: RecurringBookingCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -79,53 +72,6 @@ export function RecurringBookingCard({
   const totalAmount = group.bookings.reduce((sum, booking) => {
     return sum + Number(booking.total_price || 0)
   }, 0)
-
-  // ====== Status Management Logic ======
-
-  // Get editable bookings (not in final states)
-  const editableBookings = group.bookings.filter(
-    booking => !FINAL_STATUSES.includes(booking.status)
-  )
-
-  // Calculate group status
-  const getGroupStatus = (): string => {
-    if (editableBookings.length === 0) return 'completed'
-
-    const statuses = new Set(editableBookings.map(b => b.status))
-    return statuses.size === 1 ? editableBookings[0].status : 'mixed'
-  }
-
-  // Get available statuses for group (intersection of all valid transitions)
-  const getGroupAvailableStatuses = (): string[] => {
-    if (editableBookings.length === 0) return []
-
-    // Get all possible transitions for each editable booking
-    const allTransitions = editableBookings.map(booking =>
-      new Set([booking.status, ...getValidTransitions(booking.status)])
-    )
-
-    // Find intersection (common statuses available to ALL bookings)
-    if (allTransitions.length === 0) return []
-
-    const intersection = [...allTransitions[0]].filter(status =>
-      allTransitions.every(set => set.has(status))
-    )
-
-    return intersection
-  }
-
-  const groupStatus = getGroupStatus()
-  const availableStatuses = getGroupAvailableStatuses()
-  const hasEditableBookings = editableBookings.length > 0
-
-  // Handle group status change
-  const handleGroupStatusChange = (newStatus: string) => {
-    if (!onGroupStatusChange) return
-    if (newStatus === groupStatus) return
-
-    const bookingIds = editableBookings.map(b => b.id)
-    onGroupStatusChange(group.groupId, newStatus, bookingIds)
-  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -165,8 +111,8 @@ export function RecurringBookingCard({
               )}
             </div>
 
-            {/* Statistics & Status Dropdown */}
-            <div className="flex gap-4 text-sm flex-wrap items-center">
+            {/* Statistics */}
+            <div className="flex gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <span>{group.completedCount} Completed</span>
@@ -179,31 +125,6 @@ export function RecurringBookingCard({
                 <div className="flex items-center gap-1">
                   <XCircle className="h-4 w-4 text-red-600" />
                   <span>{group.cancelledCount} Cancelled</span>
-                </div>
-              )}
-
-              {/* Status Dropdown */}
-              {hasEditableBookings && onGroupStatusChange && (
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-muted-foreground">•</span>
-                  <Select
-                    value={groupStatus}
-                    onValueChange={handleGroupStatusChange}
-                    disabled={!hasEditableBookings || availableStatuses.length === 0}
-                  >
-                    <SelectTrigger className="w-36 h-8">
-                      <SelectValue>
-                        {groupStatus === 'mixed' ? 'Mixed Status' : getBookingStatusLabel(groupStatus)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {getBookingStatusLabel(status)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               )}
             </div>
@@ -282,9 +203,25 @@ export function RecurringBookingCard({
                     </div>
                   </div>
 
-                  <StatusBadge variant={getBookingStatusVariant(booking.status)}>
-                    {getBookingStatusLabel(booking.status)}
-                  </StatusBadge>
+                  {/* Status Dropdown for each booking */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={booking.status}
+                      onValueChange={(newStatus) => onStatusChange?.(booking.id, booking.status, newStatus)}
+                      disabled={isFinalStatus(booking.status)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableStatuses(booking.status).map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {getStatusLabel(status)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )
             })}

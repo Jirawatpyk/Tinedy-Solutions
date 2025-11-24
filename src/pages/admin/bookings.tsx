@@ -223,41 +223,6 @@ export function AdminBookings() {
     onSuccess: refresh,
   })
 
-  // Handle group status change (bulk update for recurring groups)
-  const handleGroupStatusChange = async (_groupId: string, newStatus: string, bookingIds: string[]) => {
-    if (bookingIds.length === 0) return
-
-    // Show confirmation dialog
-    const confirmed = confirm(
-      `Change status for ${bookingIds.length} booking(s) to "${getStatusLabel(newStatus)}"?\n\nCompleted/Cancelled bookings will not be affected.`
-    )
-
-    if (!confirmed) return
-
-    try {
-      // Bulk update via Supabase
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .in('id', bookingIds)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Updated ${bookingIds.length} booking(s) to ${getStatusLabel(newStatus)}`,
-      })
-
-      refresh()
-    } catch (error) {
-      console.error('Error updating group status:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update booking statuses. Please try again.',
-        variant: 'destructive',
-      })
-    }
-  }
 
   useEffect(() => {
     // OPTIMIZE: Run all queries in parallel for better performance
@@ -1346,7 +1311,6 @@ export function AdminBookings() {
             onRestoreBooking={restoreBooking}
             showArchived={showArchived}
             onStatusChange={handleStatusChange}
-            onGroupStatusChange={handleGroupStatusChange}
             formatTime={formatTime}
             getStatusBadge={getStatusBadge}
             getPaymentStatusBadge={getPaymentStatusBadge}

@@ -1216,6 +1216,51 @@ export function AdminCustomerDetail() {
                         setSelectedBookingId(bookingId)
                         setIsBookingDetailModalOpen(true)
                       }}
+                      onStatusChange={async (bookingId, _currentStatus, newStatus) => {
+                        try {
+                          const { error } = await supabase
+                            .from('bookings')
+                            .update({ status: newStatus })
+                            .eq('id', bookingId)
+
+                          if (error) throw error
+
+                          toast({
+                            title: 'Success',
+                            description: `Status updated to ${newStatus}`,
+                          })
+
+                          refetchBookings()
+                        } catch (error) {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to update status',
+                            variant: 'destructive',
+                          })
+                        }
+                      }}
+                      getAvailableStatuses={(currentStatus) => {
+                        const statusFlow: Record<string, string[]> = {
+                          pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
+                          confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
+                          in_progress: ['in_progress', 'completed', 'cancelled'],
+                          completed: ['completed'],
+                          cancelled: ['cancelled'],
+                          no_show: ['no_show']
+                        }
+                        return statusFlow[currentStatus] || [currentStatus]
+                      }}
+                      getStatusLabel={(status) => {
+                        const labels: Record<string, string> = {
+                          pending: 'Pending',
+                          confirmed: 'Confirmed',
+                          in_progress: 'In Progress',
+                          completed: 'Completed',
+                          cancelled: 'Cancelled',
+                          no_show: 'No Show'
+                        }
+                        return labels[status] || status
+                      }}
                     />
                   )
                 } else {
