@@ -39,8 +39,8 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
 }) => {
   const { filters, hasActiveFilters, activeFilterCount } = filterControls
 
-  // Fetch staff list for filter options
-  const { data: staffList = [] } = useQuery(staffQueryOptions.listSimple('all'))
+  // Fetch staff list for filter options (only role = 'staff', exclude admin and manager)
+  const { data: staffList = [] } = useQuery(staffQueryOptions.listSimple('staff'))
 
   // Fetch teams list for filter options
   const { data: teamsList = [] } = useQuery(teamQueryOptions.listSimple())
@@ -148,9 +148,12 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
                   icon={<User className="h-4 w-4" />}
                   options={staffOptions}
                   selectedValues={filters.staffIds}
+                  onChange={filterControls.setStaff}
                   onToggle={filterControls.toggleStaff}
                   emptyText="No staff available"
-                  maxHeight={120}
+                  maxHeight={400}
+                  minHeight={150}
+                  itemHeight={40}
                   showSelectAll
                   showCount
                   showClear
@@ -164,9 +167,12 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
                   icon={<Users className="h-4 w-4" />}
                   options={teamsOptions}
                   selectedValues={filters.teamIds}
+                  onChange={filterControls.setTeam}
                   onToggle={filterControls.toggleTeam}
                   emptyText="No teams available"
-                  maxHeight={120}
+                  maxHeight={300}
+                  minHeight={100}
+                  itemHeight={40}
                   showSelectAll
                   showCount
                   showClear
@@ -180,8 +186,11 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
                   icon={<BookmarkCheck className="h-4 w-4" />}
                   options={statusOptions}
                   selectedValues={filters.statuses}
+                  onChange={filterControls.setStatus}
                   onToggle={filterControls.toggleStatus}
-                  maxHeight={120}
+                  maxHeight={250}
+                  minHeight={100}
+                  itemHeight={40}
                   showSelectAll
                   showCount
                   showClear
@@ -190,13 +199,6 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
             </ScrollArea>
           </PopoverContent>
         </Popover>
-
-        {/* Clear All Button */}
-        {hasActiveFilters && (
-          <Button variant="ghost" onClick={filterControls.clearAll} size="sm">
-            Clear All
-          </Button>
-        )}
       </div>
 
       {/* Presets Row */}

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
@@ -36,6 +37,7 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
   const { toast } = useToast()
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(initialData?.business_logo_url || null)
+  const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<GeneralSettingsFormData>({
@@ -155,6 +157,7 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
       if (error) throw error
 
       setLogoUrl(null)
+      setShowRemoveLogoDialog(false)
 
       toast({
         title: 'Logo Removed',
@@ -199,7 +202,7 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
                     variant="destructive"
                     size="sm"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                    onClick={handleRemoveLogo}
+                    onClick={() => setShowRemoveLogoDialog(true)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -364,6 +367,18 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
           </div>
         </form>
       </CardContent>
+
+      {/* Confirm Delete Logo Dialog */}
+      <ConfirmDialog
+        open={showRemoveLogoDialog}
+        onOpenChange={setShowRemoveLogoDialog}
+        title="Remove Business Logo"
+        description="Are you sure you want to remove the business logo? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Remove Logo"
+        cancelLabel="Cancel"
+        onConfirm={handleRemoveLogo}
+      />
     </Card>
   )
 }

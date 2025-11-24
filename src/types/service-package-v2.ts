@@ -398,11 +398,11 @@ export function isFixedPackage(
  * @returns Formatted area range string
  *
  * @example
- * formatAreaRange(tier) // "0-100 ตร.ม."
- * formatAreaRange(tier2) // "101-200 ตร.ม."
+ * formatAreaRange(tier) // "0-100 sqm"
+ * formatAreaRange(tier2) // "101-200 sqm"
  */
 export function formatAreaRange(tier: PackagePricingTier): string {
-  return `${tier.area_min}-${tier.area_max} ตร.ม.`
+  return `${tier.area_min}-${tier.area_max} sqm`
 }
 
 /**

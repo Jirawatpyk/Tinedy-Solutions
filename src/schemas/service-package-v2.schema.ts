@@ -193,15 +193,13 @@ export const validateTiersNoOverlap = (
       const tier2 = tiers[j]
 
       // ตรวจสอบการทับซ้อน
-      const overlap =
-        (tier1.area_min >= tier2.area_min && tier1.area_min < tier2.area_max) ||
-        (tier1.area_max > tier2.area_min && tier1.area_max <= tier2.area_max) ||
-        (tier1.area_min <= tier2.area_min && tier1.area_max >= tier2.area_max)
+      // ช่วงทับซ้อนหรือติดกันถ้า: tier1 เริ่มก่อน tier2 จบ AND tier1 จบหลังหรือเท่ากับ tier2 เริ่ม
+      const overlap = tier1.area_min < tier2.area_max && tier1.area_max >= tier2.area_min
 
       if (overlap) {
         throw new Error(
-          `ช่วงราคาที่ ${i + 1} (${tier1.area_min}-${tier1.area_max} ตร.ม.) ` +
-          `ทับซ้อนกับช่วงราคาที่ ${j + 1} (${tier2.area_min}-${tier2.area_max} ตร.ม.)`
+          `Price tier ${i + 1} (${tier1.area_min}-${tier1.area_max} sqm) ` +
+          `overlaps with price tier ${j + 1} (${tier2.area_min}-${tier2.area_max} sqm)`
         )
       }
     }

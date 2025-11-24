@@ -11,6 +11,7 @@
  * - API response validation (Phase 7)
  */
 
+import { keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
@@ -349,11 +350,23 @@ export const bookingQueryOptions = {
     startDate: string,
     endDate: string,
     filters?: BookingFilters
-  ) => ({
-    queryKey: queryKeys.bookings.byDateRange(startDate, endDate, filters),
-    queryFn: () => fetchBookingsByDateRange(startDate, endDate, filters),
-    staleTime: 3 * 60 * 1000, // 3 minutes
-  }),
+  ) => {
+    // Normalize filters เพื่อสร้าง stable query key
+    // Sort arrays เพื่อให้ [1,2,3] และ [3,2,1] ได้ query key เดียวกัน
+    const normalizedFilters = filters ? {
+      staffIds: filters.staffIds?.length ? [...filters.staffIds].sort() : undefined,
+      teamIds: filters.teamIds?.length ? [...filters.teamIds].sort() : undefined,
+      statuses: filters.statuses?.length ? [...filters.statuses].sort() : undefined,
+      searchQuery: filters.searchQuery?.trim() || undefined,
+    } : undefined
+
+    return {
+      queryKey: queryKeys.bookings.byDateRange(startDate, endDate, normalizedFilters),
+      queryFn: () => fetchBookingsByDateRange(startDate, endDate, filters), // Use original filters for query
+      staleTime: 3 * 60 * 1000, // 3 minutes
+      placeholderData: keepPreviousData, // Keep previous data while refetching (prevents UI flash)
+    }
+  },
 
   /**
    * Bookings by customer ID (for Customer Detail page)

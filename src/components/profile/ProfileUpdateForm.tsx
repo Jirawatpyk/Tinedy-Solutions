@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
@@ -46,6 +47,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
   const { toast } = useToast()
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialData?.avatar_url || null)
+  const [showRemoveAvatarDialog, setShowRemoveAvatarDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<ProfileUpdateFormData>({
@@ -164,6 +166,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
       if (error) throw error
 
       setAvatarUrl(null)
+      setShowRemoveAvatarDialog(false)
 
       toast({
         title: 'Avatar Removed',
@@ -210,7 +213,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                   variant="destructive"
                   size="sm"
                   className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                  onClick={handleRemoveAvatar}
+                  onClick={() => setShowRemoveAvatarDialog(true)}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -404,6 +407,18 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
           </div>
         </form>
       </CardContent>
+
+      {/* Confirm Delete Avatar Dialog */}
+      <ConfirmDialog
+        open={showRemoveAvatarDialog}
+        onOpenChange={setShowRemoveAvatarDialog}
+        title="Remove Profile Picture"
+        description="Are you sure you want to remove your profile picture? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Remove Picture"
+        cancelLabel="Cancel"
+        onConfirm={handleRemoveAvatar}
+      />
     </Card>
   )
 }

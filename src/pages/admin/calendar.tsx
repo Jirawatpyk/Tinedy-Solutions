@@ -130,12 +130,10 @@ export function AdminCalendar() {
   // Memoize filters object เพื่อป้องกัน query key เปลี่ยนตลอดเวลา
   // searchQuery ไม่รวมใน query เพราะเป็น client-side filter
   const bookingFilters = useMemo(() => {
-    const staffIds = filterControls.filters.staffIds
-    const teamIds = filterControls.filters.teamIds
-    const statuses = filterControls.filters.statuses
+    const { staffIds, teamIds, statuses, searchQuery } = filterControls.filters
 
     // ถ้าไม่มี filter เลย return undefined (stable reference)
-    if (staffIds.length === 0 && teamIds.length === 0 && statuses.length === 0) {
+    if (!staffIds.length && !teamIds.length && !statuses.length && !searchQuery) {
       return undefined
     }
 
@@ -144,13 +142,13 @@ export function AdminCalendar() {
       teamIds: teamIds.length > 0 ? teamIds : undefined,
       statuses: statuses.length > 0 ? statuses : undefined,
       // searchQuery จะถูก filter client-side ใน booking-queries.ts
-      searchQuery: filterControls.filters.searchQuery || undefined,
+      searchQuery: searchQuery || undefined,
     }
   }, [
-    // ใช้ .join() เพื่อสร้าง primitive dependency แทน array reference
-    filterControls.filters.staffIds.join(','),
-    filterControls.filters.teamIds.join(','),
-    filterControls.filters.statuses.join(','),
+    // ใช้ JSON.stringify เพื่อ deep equality check (ป้องกัน reference change)
+    JSON.stringify(filterControls.filters.staffIds),
+    JSON.stringify(filterControls.filters.teamIds),
+    JSON.stringify(filterControls.filters.statuses),
     filterControls.filters.searchQuery,
   ])
 

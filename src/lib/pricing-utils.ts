@@ -542,11 +542,11 @@ export function formatPrice(price: number | null | undefined): string {
  *
  * @example
  * ```typescript
- * formatArea(150)  // "150 ตร.ม."
+ * formatArea(150)  // "150 sqm"
  * ```
  */
 export function formatArea(areaSqm: number): string {
-  return `${areaSqm} ตร.ม.`
+  return `${areaSqm} sqm`
 }
 
 /**

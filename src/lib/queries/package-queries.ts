@@ -179,44 +179,48 @@ export async function fetchUnifiedServicePackages(): Promise<UnifiedServicePacka
     fetchServicePackagesV2(),
   ])
 
-  // Normalize V1 packages
-  const normalizedV1: UnifiedServicePackage[] = packagesV1.map((pkg) => ({
-    id: pkg.id,
-    name: pkg.name,
-    description: pkg.description,
-    service_type: pkg.service_type,
-    pricing_model: 'fixed' as const,
-    base_price: pkg.price,
-    duration_minutes: pkg.duration_minutes,
-    is_active: pkg.is_active,
-    created_at: pkg.created_at,
-    updated_at: pkg.created_at, // V1 ไม่มี updated_at
-    tiers: [],
-    tier_count: 0,
-    min_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
-    max_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
-    _source: 'v1' as const,
-  }))
+  // Normalize V1 packages (filter only active)
+  const normalizedV1: UnifiedServicePackage[] = packagesV1
+    .filter(pkg => pkg.is_active)
+    .map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description,
+      service_type: pkg.service_type,
+      pricing_model: 'fixed' as const,
+      base_price: pkg.price,
+      duration_minutes: pkg.duration_minutes,
+      is_active: pkg.is_active,
+      created_at: pkg.created_at,
+      updated_at: pkg.created_at, // V1 ไม่มี updated_at
+      tiers: [],
+      tier_count: 0,
+      min_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
+      max_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
+      _source: 'v1' as const,
+    }))
 
-  // Normalize V2 packages
-  const normalizedV2: UnifiedServicePackage[] = packagesV2.map((pkg) => ({
-    id: pkg.id,
-    name: pkg.name,
-    description: pkg.description,
-    service_type: pkg.service_type,
-    pricing_model: pkg.pricing_model,
-    base_price: pkg.base_price,
-    duration_minutes: pkg.duration_minutes,
-    is_active: pkg.is_active,
-    created_at: pkg.created_at,
-    updated_at: pkg.updated_at,
-    category: pkg.category,
-    tiers: pkg.tiers,
-    tier_count: pkg.tier_count,
-    min_price: pkg.min_price,
-    max_price: pkg.max_price,
-    _source: 'v2' as const,
-  }))
+  // Normalize V2 packages (filter only active)
+  const normalizedV2: UnifiedServicePackage[] = packagesV2
+    .filter(pkg => pkg.is_active)
+    .map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description,
+      service_type: pkg.service_type,
+      pricing_model: pkg.pricing_model,
+      base_price: pkg.base_price,
+      duration_minutes: pkg.duration_minutes,
+      is_active: pkg.is_active,
+      created_at: pkg.created_at,
+      updated_at: pkg.updated_at,
+      category: pkg.category,
+      tiers: pkg.tiers,
+      tier_count: pkg.tier_count,
+      min_price: pkg.min_price,
+      max_price: pkg.max_price,
+      _source: 'v2' as const,
+    }))
 
   // รวมกัน
   return [...normalizedV1, ...normalizedV2]

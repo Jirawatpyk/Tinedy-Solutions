@@ -41,6 +41,10 @@ interface FilterMultiSelectProps {
   emptyText?: string
   /** Maximum height for scrollable area (default: 200px) */
   maxHeight?: number
+  /** Minimum height for scrollable area (default: 100px) */
+  minHeight?: number
+  /** Height per item for dynamic height calculation (default: 40px) */
+  itemHeight?: number
   /** Show "Select All" checkbox */
   showSelectAll?: boolean
   /** Show selected count */
@@ -60,6 +64,8 @@ const FilterMultiSelectComponent: React.FC<FilterMultiSelectProps> = ({
   onToggle,
   emptyText = 'No options available',
   maxHeight = 200,
+  minHeight = 100,
+  itemHeight = 40,
   showSelectAll = true,
   showCount = true,
   showClear = true,
@@ -71,6 +77,16 @@ const FilterMultiSelectComponent: React.FC<FilterMultiSelectProps> = ({
     if (selectedValues.length === options.length) return 'all'
     return 'indeterminate'
   }, [selectedValues.length, options.length])
+
+  // Calculate dynamic height based on content
+  // Note: Header and Select All are OUTSIDE ScrollArea, only count items
+  const dynamicHeight = useMemo(() => {
+    const itemsHeight = options.length * itemHeight
+    const paddingAndSpacing = 16 // pb-2 bottom padding + space-y-2
+    const totalHeight = itemsHeight + paddingAndSpacing
+
+    return Math.min(Math.max(totalHeight, minHeight), maxHeight)
+  }, [options.length, itemHeight, minHeight, maxHeight])
 
   // Handle select all/none
   const handleSelectAll = () => {
@@ -161,8 +177,8 @@ const FilterMultiSelectComponent: React.FC<FilterMultiSelectProps> = ({
           {emptyText}
         </div>
       ) : (
-        <ScrollArea style={{ maxHeight: `${maxHeight}px` }} className="pr-3">
-          <div className="space-y-2">
+        <ScrollArea style={{ height: `${dynamicHeight}px` }} className="pr-3">
+          <div className="space-y-2 pb-2">
             {options.map((option) => (
               <div
                 key={option.value}

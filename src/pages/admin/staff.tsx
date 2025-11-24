@@ -403,7 +403,7 @@ export function AdminStaff() {
               New Staff
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
@@ -417,7 +417,9 @@ export function AdminStaff() {
 
             {!editingStaff ? (
               // CREATE FORM
-              <form onSubmit={createForm.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={createForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                <div className="overflow-y-auto flex-1 pr-4 pl-1">
+                  <div className="space-y-4">
                 <Controller
                   name="email"
                   control={createForm.control}
@@ -568,8 +570,9 @@ export function AdminStaff() {
                     </div>
                   )}
                 />
-
-                <DialogFooter>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -577,14 +580,19 @@ export function AdminStaff() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-tinedy-blue">
+                  <Button
+                    type="submit"
+                    className="bg-tinedy-blue"
+                  >
                     Create
                   </Button>
                 </DialogFooter>
               </form>
             ) : (
               // UPDATE FORM
-              <form onSubmit={updateForm.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={updateForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                <div className="overflow-y-auto flex-1 pr-4 pl-1">
+                  <div className="space-y-4">
                 <Controller
                   name="full_name"
                   control={updateForm.control}
@@ -715,8 +723,9 @@ export function AdminStaff() {
                     )
                   }}
                 />
-
-                <DialogFooter>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -724,7 +733,10 @@ export function AdminStaff() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-tinedy-blue">
+                  <Button
+                    type="submit"
+                    className="bg-tinedy-blue"
+                  >
                     Update
                   </Button>
                 </DialogFooter>

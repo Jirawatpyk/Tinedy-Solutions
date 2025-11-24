@@ -11,7 +11,7 @@
  * - Shared cache ข้ามหน้าต่างๆ
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
@@ -193,6 +193,7 @@ export function useBookingsByDateRange(
   } = useQuery({
     ...bookingQueryOptions.byDateRange(dateRange.start, dateRange.end, filters),
     enabled: enabled && !!dateRange.start && !!dateRange.end, // Only fetch if date range is valid
+    placeholderData: keepPreviousData, // Keep showing previous data while refetching (prevents flash)
   })
 
   // Realtime subscription - invalidate when bookings change
