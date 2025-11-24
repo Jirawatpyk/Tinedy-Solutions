@@ -69,8 +69,8 @@ export async function fetchTodayStats(): Promise<StatsChange> {
         .from('bookings')
         .select('total_price')
         .eq('payment_status', 'paid')
-        .gte('updated_at', todayStart)
-        .lte('updated_at', todayEnd),
+        .gte('payment_date', todayStart)
+        .lte('payment_date', todayEnd),
       supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
