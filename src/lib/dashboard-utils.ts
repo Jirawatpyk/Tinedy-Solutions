@@ -31,10 +31,16 @@ export function getBangkokDateString(): string {
  * @returns Object with todayStr, todayStart, todayEnd
  */
 export function getBangkokToday() {
+  // ใช้ toLocaleString แทนการบวก offset เพื่อหลีกเลี่ยง double offset bug
   const now = new Date()
-  const bangkokOffset = 7 * 60 * 60 * 1000
-  const bangkokTime = new Date(now.getTime() + bangkokOffset)
-  const todayStr = bangkokTime.toISOString().split('T')[0]
+  const bangkokDateStr = now.toLocaleString('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).split(',')[0] // Format: YYYY-MM-DD
+
+  const todayStr = bangkokDateStr
 
   return {
     todayStr,
