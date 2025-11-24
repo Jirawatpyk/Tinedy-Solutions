@@ -56,7 +56,14 @@ export async function fetchDashboardStats(): Promise<Stats> {
  * staleTime: 1 minute - ข้อมูลวันนี้ควรอัพเดทบ่อยกว่า
  */
 export async function fetchTodayStats(): Promise<StatsChange> {
-  const { todayStart, todayEnd } = getBangkokToday()
+  const { todayStart, todayEnd, todayStr } = getBangkokToday()
+
+  // Debug: แสดงค่า date range ที่ใช้
+  console.log('🔍 fetchTodayStats Debug:', {
+    todayStr,
+    todayStart,
+    todayEnd,
+  })
 
   const [todayBookingsRes, todayRevenueRes, todayCustomersRes, todayPendingRes] =
     await Promise.all([
@@ -86,6 +93,23 @@ export async function fetchTodayStats(): Promise<StatsChange> {
 
   const todayRevenue =
     todayRevenueRes.data?.reduce((sum, booking) => sum + Number(booking.total_price), 0) || 0
+
+  // Debug: แสดงผลลัพธ์
+  console.log('📊 fetchTodayStats Results:', {
+    bookingsCount: todayBookingsRes.count,
+    revenueCount: todayRevenueRes.data?.length,
+    todayRevenue,
+    customersCount: todayCustomersRes.count,
+    pendingCount: todayPendingRes.count,
+  })
+
+  // Debug: แสดง bookings ที่นับได้
+  if (todayBookingsRes.data && todayBookingsRes.data.length > 0) {
+    console.log('📋 Today Bookings:', todayBookingsRes.data.map((b: { id: string; created_at: string }) => ({
+      id: b.id,
+      created_at: b.created_at,
+    })))
+  }
 
   return {
     bookingsChange: todayBookingsRes.count || 0,
