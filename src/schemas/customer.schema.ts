@@ -48,12 +48,7 @@ export const customerCreateSchema = z.object({
   birthday: birthdaySchema.optional().or(z.literal('')),
   company_name: z
     .string()
-    .trim()
     .max(255, 'Company name is too long')
-    .refine(
-      (val) => !val || !val.includes('  '),
-      { message: 'Company name cannot contain consecutive spaces' }
-    )
     .optional()
     .or(z.literal('')),
   tax_id: z

@@ -39,11 +39,7 @@ export const TeamCreateSchema = z.object({
     .string({ message: 'Team name is required' })
     .trim()
     .min(1, 'Team name must not be empty')
-    .max(200, 'Team name must not exceed 200 characters')
-    .refine(
-      (val) => !val.includes('  '),
-      { message: 'Team name cannot contain consecutive spaces' }
-    ),
+    .max(200, 'Team name must not exceed 200 characters'),
 
   description: z
     .string()

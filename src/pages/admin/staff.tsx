@@ -192,11 +192,9 @@ export function AdminStaff() {
         )
 
         const responseData = await response.json()
-        console.log('Edge Function Response:', { status: response.status, data: responseData })
 
         if (!response.ok || !responseData?.success) {
           const errorMsg = responseData?.error || 'Failed to create staff member'
-          console.log('Error message from Edge Function:', errorMsg)
 
           // Check for duplicate email error
           if (errorMsg.toLowerCase().includes('user already registered') ||

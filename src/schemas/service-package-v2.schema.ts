@@ -87,11 +87,7 @@ const ServicePackageV2BaseSchema = z.object({
     .string({ message: 'Package name is required' })
     .trim()
     .min(1, 'Package name must not be empty')
-    .max(200, 'Package name must not exceed 200 characters')
-    .refine(
-      (val) => !val.includes('  '),
-      { message: 'Package name cannot contain consecutive spaces' }
-    ),
+    .max(200, 'Package name must not exceed 200 characters'),
 
   description: z
     .string()

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { nameSchema } from './common.schema'
 
 /**
  * Staff Management Schemas
@@ -71,7 +70,12 @@ export const StaffCreateSchema = z.object({
 
   password: passwordSchema,
 
-  full_name: nameSchema.max(200, 'Full name must not exceed 200 characters'),
+  full_name: z
+    .string({ message: 'Full name is required' })
+    .trim()
+    .min(1, 'Full name must not be empty')
+    .min(2, 'Full name must be at least 2 characters')
+    .max(200, 'Full name must not exceed 200 characters'),
 
   phone: phoneSchema,
 
@@ -125,7 +129,12 @@ export const StaffCreateWithSkillsSchema = StaffCreateSchema.transform((data) =>
  * Note: ไม่สามารถแก้ไข email และ password ผ่าน form นี้
  */
 export const StaffUpdateSchema = z.object({
-  full_name: nameSchema.max(200, 'Full name must not exceed 200 characters'),
+  full_name: z
+    .string({ message: 'Full name is required' })
+    .trim()
+    .min(1, 'Full name must not be empty')
+    .min(2, 'Full name must be at least 2 characters')
+    .max(200, 'Full name must not exceed 200 characters'),
 
   phone: phoneSchema,
 
