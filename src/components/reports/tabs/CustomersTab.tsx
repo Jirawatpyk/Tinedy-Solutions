@@ -171,31 +171,46 @@ function CustomersTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getCustomerCLVDistribution(customersWithBookings)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="range"
-                  tick={{ fontSize: 12 }}
-                  stroke="#888"
-                />
-                <YAxis tick={{ fontSize: 12 }} stroke="#888" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                  }}
-                />
-                <Legend />
-                <Bar
-                  dataKey="count"
-                  fill={CHART_COLORS.secondary}
-                  radius={[4, 4, 0, 0]}
-                  name="Customers"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {(() => {
+              const clvData = getCustomerCLVDistribution(customersWithBookings)
+              const hasData = clvData.some(d => d.count > 0)
+
+              if (!hasData) {
+                return (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No customer data available for selected period
+                  </div>
+                )
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={clvData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="range"
+                      tick={{ fontSize: 12 }}
+                      stroke="#888"
+                    />
+                    <YAxis tick={{ fontSize: 12 }} stroke="#888" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="count"
+                      fill={CHART_COLORS.secondary}
+                      radius={[4, 4, 0, 0]}
+                      name="Customers"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )
+            })()}
           </CardContent>
         </Card>
       </div>

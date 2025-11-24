@@ -49,6 +49,7 @@ export interface ChartDataPoint {
 
 /**
  * Calculate revenue metrics from bookings data
+ * Uses payment_date for revenue tracking (Cash Flow)
  */
 export const calculateRevenueMetrics = (bookings: BookingForAnalytics[]): RevenueMetrics => {
   const now = new Date()
@@ -73,28 +74,34 @@ export const calculateRevenueMetrics = (bookings: BookingForAnalytics[]): Revenu
 
   const total = paidBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
+  // Helper function to get date to check (payment_date or fallback to booking_date)
+  const getDateToCheck = (b: BookingForAnalytics) => {
+    const paymentDate = (b as { payment_date?: string | null }).payment_date
+    return new Date(paymentDate || b.booking_date)
+  }
+
   const today = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: todayStart, end: todayEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: todayStart, end: todayEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const yesterday = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: yesterdayStart, end: yesterdayEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: yesterdayStart, end: yesterdayEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const thisWeek = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisWeekStart, end: thisWeekEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: thisWeekStart, end: thisWeekEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const lastWeek = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastWeekStart, end: lastWeekEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: lastWeekStart, end: lastWeekEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const thisMonth = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: thisMonthStart, end: thisMonthEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: thisMonthStart, end: thisMonthEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const lastMonth = paidBookings
-    .filter((b) => isWithinInterval(new Date(b.booking_date), { start: lastMonthStart, end: lastMonthEnd }))
+    .filter((b) => isWithinInterval(getDateToCheck(b), { start: lastMonthStart, end: lastMonthEnd }))
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const monthGrowth = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : 0
@@ -158,6 +165,7 @@ export const calculateBookingMetrics = (bookings: BookingForAnalytics[]): Bookin
 
 /**
  * Generate chart data for date range
+ * Uses payment_date for revenue tracking (Cash Flow)
  */
 export const generateChartData = (
   bookings: BookingForAnalytics[],
@@ -174,9 +182,12 @@ export const generateChartData = (
     const dayStart = startOfDay(day)
     const dayEnd = endOfDay(day)
 
-    const dayBookings = paidBookings.filter((b) =>
-      isWithinInterval(new Date(b.booking_date), { start: dayStart, end: dayEnd })
-    )
+    const dayBookings = paidBookings.filter((b) => {
+      // Use payment_date if available, fallback to booking_date
+      const paymentDate = (b as { payment_date?: string | null }).payment_date
+      const dateToCheck = paymentDate || b.booking_date
+      return isWithinInterval(new Date(dateToCheck), { start: dayStart, end: dayEnd })
+    })
 
     const revenue = dayBookings.reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
@@ -455,8 +466,11 @@ export const getCustomerCLVDistribution = (
     { min: 5000, max: Infinity, label: '฿5K+' },
   ]
 
+  // Filter out customers with no bookings in the selected date range
+  const customersWithBookings = customers.filter(c => c.bookings.length > 0)
+
   return ranges.map((range) => {
-    const count = customers.filter((customer) => {
+    const count = customersWithBookings.filter((customer) => {
       const totalRevenue = customer.bookings
         .filter((b: BookingForAnalytics) => {
           const paymentStatus = (b as { payment_status?: string }).payment_status
