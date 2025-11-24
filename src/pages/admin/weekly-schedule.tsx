@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { Calendar, ChevronLeft, ChevronRight, TrendingUp, Download, Clock, CheckCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -654,42 +653,6 @@ export function AdminWeeklySchedule() {
           </Button>
         </div>
 
-        {/* Week Stats skeleton - ตรงกับของจริง */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            title="Total Bookings"
-            value={0}
-            description="This week"
-            icon={Calendar}
-            iconColor="text-tinedy-blue"
-            isLoading={true}
-          />
-          <StatCard
-            title="Confirmed"
-            value={0}
-            description="Active bookings"
-            icon={CheckCircle}
-            iconColor="text-tinedy-green"
-            isLoading={true}
-          />
-          <StatCard
-            title="Completed"
-            value={0}
-            description="Jobs done"
-            icon={TrendingUp}
-            iconColor="text-tinedy-purple"
-            isLoading={true}
-          />
-          <StatCard
-            title="Busiest Day"
-            value="-"
-            description="0 bookings"
-            icon={Clock}
-            iconColor="text-orange-500"
-            isLoading={true}
-          />
-        </div>
-
         {/* Filters skeleton - ตรงกับของจริง */}
         <Card>
           <CardContent className="py-3">
@@ -759,41 +722,6 @@ export function AdminWeeklySchedule() {
           <Download className="h-4 w-4 mr-2" />
           Export Schedule
         </Button>
-      </div>
-
-      {/* Week Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          title="Total Bookings"
-          value={weekStats.totalBookings}
-          description="This week"
-          icon={Calendar}
-          iconColor="text-tinedy-blue"
-        />
-
-        <StatCard
-          title="Confirmed"
-          value={weekStats.confirmedBookings}
-          description="Active bookings"
-          icon={CheckCircle}
-          iconColor="text-tinedy-green"
-        />
-
-        <StatCard
-          title="Completed"
-          value={weekStats.completedBookings}
-          description="Jobs done"
-          icon={TrendingUp}
-          iconColor="text-tinedy-purple"
-        />
-
-        <StatCard
-          title="Busiest Day"
-          value={weekStats.busiestDay}
-          description={`${weekStats.busiestDayCount} bookings`}
-          icon={Clock}
-          iconColor="text-orange-500"
-        />
       </div>
 
       {/* Filters and View Mode */}
