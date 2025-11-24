@@ -75,8 +75,13 @@ export const GeneralSettingsSchema = z.object({
 
   business_address: z
     .string({ message: 'Business address is required' })
+    .trim()
     .min(1, 'Business address must not be empty')
-    .max(500, 'Business address must not exceed 500 characters'),
+    .max(500, 'Business address must not exceed 500 characters')
+    .refine(
+      (val) => !val.includes('  '),
+      { message: 'Business address cannot contain consecutive spaces' }
+    ),
 
   business_description: z
     .string()

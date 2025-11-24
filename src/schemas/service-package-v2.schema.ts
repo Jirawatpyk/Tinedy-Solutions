@@ -85,8 +85,13 @@ export const PackagePricingTierSchema = z.object({
 const ServicePackageV2BaseSchema = z.object({
   name: z
     .string({ message: 'Package name is required' })
+    .trim()
     .min(1, 'Package name must not be empty')
-    .max(200, 'Package name must not exceed 200 characters'),
+    .max(200, 'Package name must not exceed 200 characters')
+    .refine(
+      (val) => !val.includes('  '),
+      { message: 'Package name cannot contain consecutive spaces' }
+    ),
 
   description: z
     .string()

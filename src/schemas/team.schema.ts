@@ -37,8 +37,13 @@ export const TeamMemberRoleEnum = z.enum(['leader', 'member'])
 export const TeamCreateSchema = z.object({
   name: z
     .string({ message: 'Team name is required' })
+    .trim()
     .min(1, 'Team name must not be empty')
-    .max(200, 'Team name must not exceed 200 characters'),
+    .max(200, 'Team name must not exceed 200 characters')
+    .refine(
+      (val) => !val.includes('  '),
+      { message: 'Team name cannot contain consecutive spaces' }
+    ),
 
   description: z
     .string()

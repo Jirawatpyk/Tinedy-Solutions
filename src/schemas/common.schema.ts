@@ -40,13 +40,23 @@ export const passwordOptionalSchema = z
 // Name Validator
 export const nameSchema = z
   .string()
+  .trim()
   .min(1, 'Name is required')
   .min(2, 'Name must be at least 2 characters')
+  .refine(
+    (val) => !val.includes('  '),
+    { message: 'Name cannot contain consecutive spaces' }
+  )
 
 // Optional Name Validator
 export const nameOptionalSchema = z
   .string()
+  .trim()
   .min(2, 'Name must be at least 2 characters')
+  .refine(
+    (val) => !val || !val.includes('  '),
+    { message: 'Name cannot contain consecutive spaces' }
+  )
   .optional()
   .or(z.literal(''))
 
