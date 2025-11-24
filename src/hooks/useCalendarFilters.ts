@@ -81,7 +81,7 @@ function calendarFiltersReducer(
       }
 
     // Staff Filter Actions
-    case 'TOGGLE_STAFF':
+    case 'TOGGLE_STAFF': {
       const staffIds = state.staffIds.includes(action.payload)
         ? state.staffIds.filter((id) => id !== action.payload)
         : [...state.staffIds, action.payload]
@@ -90,6 +90,7 @@ function calendarFiltersReducer(
         staffIds,
         preset: null,
       }
+    }
 
     case 'SET_STAFF':
       return {
@@ -106,7 +107,7 @@ function calendarFiltersReducer(
       }
 
     // Team Filter Actions
-    case 'TOGGLE_TEAM':
+    case 'TOGGLE_TEAM': {
       const teamIds = state.teamIds.includes(action.payload)
         ? state.teamIds.filter((id) => id !== action.payload)
         : [...state.teamIds, action.payload]
@@ -115,6 +116,7 @@ function calendarFiltersReducer(
         teamIds,
         preset: null,
       }
+    }
 
     case 'SET_TEAM':
       return {
@@ -131,7 +133,7 @@ function calendarFiltersReducer(
       }
 
     // Status Filter Actions
-    case 'TOGGLE_STATUS':
+    case 'TOGGLE_STATUS': {
       const statuses = state.statuses.includes(action.payload)
         ? state.statuses.filter((s) => s !== action.payload)
         : [...state.statuses, action.payload]
@@ -140,6 +142,7 @@ function calendarFiltersReducer(
         statuses,
         preset: null,
       }
+    }
 
     case 'SET_STATUS':
       return {

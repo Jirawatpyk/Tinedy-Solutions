@@ -85,7 +85,7 @@ export function AdminCalendar() {
         setSelectedDate(today)
         setSelectedDateRange(null)
         break
-      case 'week':
+      case 'week': {
         // แสดงทุก bookings ในสัปดาห์นี้
         const weekStart = startOfWeek(today)
         const weekEnd = endOfWeek(today)
@@ -93,7 +93,8 @@ export function AdminCalendar() {
         setSelectedDate(null)
         setSelectedDateRange({ start: weekStart, end: weekEnd })
         break
-      case 'month':
+      }
+      case 'month': {
         // แสดงทุก bookings ในเดือนนี้
         const monthStart = startOfMonth(today)
         const monthEnd = endOfMonth(today)
@@ -101,7 +102,8 @@ export function AdminCalendar() {
         setSelectedDate(null)
         setSelectedDateRange({ start: monthStart, end: monthEnd })
         break
-      case 'upcoming':
+      }
+      case 'upcoming': {
         // แสดง bookings ที่กำลังจะมาถึง (วันนี้เป็นต้นไป 30 วัน)
         const upcomingEnd = new Date(today)
         upcomingEnd.setDate(today.getDate() + 30)
@@ -109,6 +111,7 @@ export function AdminCalendar() {
         setSelectedDate(null)
         setSelectedDateRange({ start: today, end: upcomingEnd })
         break
+      }
     }
   }, [])
 
@@ -129,9 +132,13 @@ export function AdminCalendar() {
 
   // Memoize filters object เพื่อป้องกัน query key เปลี่ยนตลอดเวลา
   // searchQuery ไม่รวมใน query เพราะเป็น client-side filter
-  const bookingFilters = useMemo(() => {
-    const { staffIds, teamIds, statuses, searchQuery } = filterControls.filters
+  // Extract filter values to separate variables for stable dependencies
+  const staffIds = filterControls.filters.staffIds
+  const teamIds = filterControls.filters.teamIds
+  const statuses = filterControls.filters.statuses
+  const searchQuery = filterControls.filters.searchQuery
 
+  const bookingFilters = useMemo(() => {
     // ถ้าไม่มี filter เลย return undefined (stable reference)
     if (!staffIds.length && !teamIds.length && !statuses.length && !searchQuery) {
       return undefined
@@ -144,13 +151,7 @@ export function AdminCalendar() {
       // searchQuery จะถูก filter client-side ใน booking-queries.ts
       searchQuery: searchQuery || undefined,
     }
-  }, [
-    // ใช้ JSON.stringify เพื่อ deep equality check (ป้องกัน reference change)
-    JSON.stringify(filterControls.filters.staffIds),
-    JSON.stringify(filterControls.filters.teamIds),
-    JSON.stringify(filterControls.filters.statuses),
-    filterControls.filters.searchQuery,
-  ])
+  }, [staffIds, teamIds, statuses, searchQuery])
 
   // โหลด bookings ตาม date range และ filters (from useCalendarFilters)
   const {
@@ -479,7 +480,7 @@ export function AdminCalendar() {
     return labels[status] || status
   }
 
-  const handleStatusChange = async (bookingId: string, currentStatus: string, newStatus: string) => {
+  const handleStatusChange = useCallback(async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
 
     setIsUpdatingStatus(true)
@@ -514,7 +515,7 @@ export function AdminCalendar() {
     } finally {
       setIsUpdatingStatus(false)
     }
-  }
+  }, [toast, selectedBooking, refetchBookings])
 
   // Status transition validation (from useBookingStatusManager logic)
   const getValidTransitions = useCallback((currentStatus: string): string[] => {

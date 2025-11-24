@@ -177,7 +177,7 @@ export async function fetchBookingsByDateRange(
       console.log('🔍 Search Query:', searchLower)
       console.log('📊 Data before filter:', processedData.length)
 
-      processedData = processedData.filter((booking: any) => {
+      processedData = processedData.filter((booking: Booking) => {
         const customerName = booking.customers?.full_name?.toLowerCase() || ''
         const customerPhone = booking.customers?.phone?.toLowerCase() || ''
         const customerEmail = booking.customers?.email?.toLowerCase() || ''

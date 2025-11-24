@@ -28,11 +28,18 @@ export interface BookingWithService {
   total_price: number
   status: string
   payment_status?: string
+  payment_date?: string | null
   created_at: string
   customer_id: string
   staff_id: string | null
   service_package_id: string
   package_v2_id: string | null
+  recurring_group_id?: string | null
+  recurring_sequence?: number
+  recurring_total?: number
+  recurring_pattern?: string | null
+  is_recurring?: boolean
+  parent_booking_id?: string | null
   service_packages: { name: string; service_type: string } | null
 }
 
@@ -64,11 +71,18 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
       total_price,
       status,
       payment_status,
+      payment_date,
       created_at,
       customer_id,
       staff_id,
       service_package_id,
       package_v2_id,
+      recurring_group_id,
+      recurring_sequence,
+      recurring_total,
+      recurring_pattern,
+      is_recurring,
+      parent_booking_id,
       service_packages (
         name,
         service_type
@@ -91,11 +105,19 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
     start_time: string
     total_price: number
     status: string
+    payment_status?: string
+    payment_date?: string | null
     created_at: string
     customer_id: string
     staff_id: string | null
     service_package_id: string
     package_v2_id: string | null
+    recurring_group_id?: string | null
+    recurring_sequence?: number
+    recurring_total?: number
+    recurring_pattern?: string | null
+    is_recurring?: boolean
+    parent_booking_id?: string | null
     service_packages: { name: string; service_type: string }[] | { name: string; service_type: string } | null
     service_packages_v2: { name: string; service_type: string }[] | { name: string; service_type: string } | null
   }

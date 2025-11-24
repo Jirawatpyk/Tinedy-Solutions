@@ -231,19 +231,26 @@ export function useChat() {
     }
   }, [user, sendMessage])
 
-  // Mark messages as read
-  const markAsRead = useCallback(async (messageIds: string[]) => {
-    if (messageIds.length === 0) return
+  // Mark messages as read (Optimized for large batches)
+  const markAsRead = useCallback(async (senderId: string, count: number) => {
+    if (count === 0 || !user) return
 
+    console.log('📝 Marking messages as read:', count, 'messages from', senderId)
+
+    // OPTIMIZED: Use WHERE conditions instead of IN clause (much faster for 50+ messages)
     const { error } = await supabase
       .from('messages')
       .update({ is_read: true })
-      .in('id', messageIds)
+      .eq('recipient_id', user.id)
+      .eq('sender_id', senderId)
+      .eq('is_read', false)
 
     if (error) {
-      console.error('Error marking messages as read:', error)
+      console.error('❌ Error marking messages as read:', error)
+    } else {
+      console.log('✅ Successfully marked', count, 'messages as read')
     }
-  }, [])
+  }, [user])
 
   // Get total unread count (for sidebar badge)
   const getTotalUnreadCount = useCallback(async () => {
@@ -355,7 +362,32 @@ export function useChat() {
                  new Date(a.lastMessage.created_at).getTime()
         })
 
-      setConversations(activeConversations)
+      // BEST PRACTICE: Merge with existing state to preserve optimistic updates
+      // If a conversation's unreadCount is already 0 in state (user just opened it),
+      // don't overwrite with database value (might be stale due to race condition)
+      setConversations((prevConversations) => {
+        const currentSelectedUser = selectedUserRef.current
+
+        return activeConversations.map((newConv) => {
+          const existingConv = prevConversations.find(
+            (prev) => prev.user.id === newConv.user.id
+          )
+
+          // If this is the currently selected user and their unreadCount is 0,
+          // keep it as 0 (optimistic update from opening conversation)
+          if (currentSelectedUser &&
+              newConv.user.id === currentSelectedUser.id &&
+              existingConv?.unreadCount === 0) {
+            console.log(`🔒 Preserving optimistic update for ${newConv.user.full_name} (unreadCount = 0)`)
+            return {
+              ...newConv,
+              unreadCount: 0
+            }
+          }
+
+          return newConv
+        })
+      })
       prevMessagesLengthRef.current = activeConversations.length
     } catch (error) {
       console.error('Error loading conversations:', error)
@@ -450,7 +482,8 @@ export function useChat() {
       const exists = prevConversations.some((conv) => conv.user.id === otherUserId)
       if (!exists) {
         console.log('🔄 Loading conversations in background for new conversation')
-        setTimeout(() => loadConversations(), 100)
+        // IMPORTANT: Use showLoading=false to prevent overwriting current state
+        setTimeout(() => loadConversations(false), 100)
       }
       return prevConversations
     })
@@ -566,7 +599,7 @@ export function useChat() {
 
               // Auto mark as read if it's an incoming message
               if (shouldMarkAsRead) {
-                await markAsRead([newMessage.id])
+                await markAsRead(newMessage.sender_id, 1)
               }
             } else {
               console.log('⏭️ Message not for current conversation, skipping')
@@ -586,24 +619,32 @@ export function useChat() {
             console.log('🔄 Message updated:', updatedMessage.id)
 
             // If message was JUST marked as read (changed from false to true), update conversation's unread count
+            // BUT: Only if this update is NOT from the currently selected user
+            // (because we already optimistically updated it when opening the conversation)
             if (updatedMessage.is_read === true && oldMessage.is_read === false) {
-              console.log('📖 Message marked as read, decreasing unread count')
-              setConversations((prevConversations) => {
-                const otherUserId = updatedMessage.sender_id === user.id
-                  ? updatedMessage.recipient_id
-                  : updatedMessage.sender_id
+              const currentSelectedUser = selectedUserRef.current
+              const otherUserId = updatedMessage.sender_id === user.id
+                ? updatedMessage.recipient_id
+                : updatedMessage.sender_id
 
-                return prevConversations.map((conv) => {
-                  if (conv.user.id === otherUserId && conv.unreadCount > 0) {
-                    console.log(`📉 Decreasing unread count for ${conv.user.full_name}: ${conv.unreadCount} → ${conv.unreadCount - 1}`)
-                    return {
-                      ...conv,
-                      unreadCount: Math.max(0, conv.unreadCount - 1)
+              // Skip if this is the currently selected user (already updated optimistically)
+              if (currentSelectedUser && otherUserId === currentSelectedUser.id) {
+                console.log('⏭️ Skipping unread count update - already updated optimistically')
+              } else {
+                console.log('📖 Message marked as read, decreasing unread count')
+                setConversations((prevConversations) => {
+                  return prevConversations.map((conv) => {
+                    if (conv.user.id === otherUserId && conv.unreadCount > 0) {
+                      console.log(`📉 Decreasing unread count for ${conv.user.full_name}: ${conv.unreadCount} → ${conv.unreadCount - 1}`)
+                      return {
+                        ...conv,
+                        unreadCount: Math.max(0, conv.unreadCount - 1)
+                      }
                     }
-                  }
-                  return conv
+                    return conv
+                  })
                 })
-              })
+              }
             }
 
             // Update message in current conversation (for checkmarks)
@@ -640,6 +681,7 @@ export function useChat() {
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {
     if (selectedUser) {
+      console.log('👤 Selected user:', selectedUser.full_name, selectedUser.id)
       // BEST PRACTICE: Use startTransition for smooth UI
       // Show loading immediately and clear old messages
       setIsLoadingMessages(true)
@@ -652,19 +694,24 @@ export function useChat() {
 
         // Fetch messages after clearing
         return fetchMessages(selectedUser.id)
-      }).then(async (fetchedMessages) => {
-        // Mark unread messages from this user as read
-        const unreadMessages = fetchedMessages
-          .filter((m: Message) => m.sender_id === selectedUser.id && !m.is_read)
-          .map((m: Message) => m.id)
+      }).then(async () => {
+        // Query unread count from database (not from fetchedMessages to avoid pagination issues)
+        const { count: unreadCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', user!.id)
+          .eq('sender_id', selectedUser.id)
+          .eq('is_read', false)
 
-        if (unreadMessages.length > 0) {
-          await markAsRead(unreadMessages)
+        console.log('📬 Found', unreadCount || 0, 'unread messages from', selectedUser.full_name)
 
-          // Update conversation's unread count locally instead of full reload
+        if (unreadCount && unreadCount > 0) {
+          // IMPORTANT: Update state FIRST (optimistic update)
+          console.log('🔄 Updating conversation unreadCount to 0 (optimistic)')
           setConversations((prevConversations) => {
             return prevConversations.map((conv) => {
               if (conv.user.id === selectedUser.id) {
+                console.log(`📉 ${conv.user.full_name}: ${conv.unreadCount} → 0`)
                 return {
                   ...conv,
                   unreadCount: 0
@@ -673,6 +720,27 @@ export function useChat() {
               return conv
             })
           })
+
+          // Then mark as read in database
+          await markAsRead(selectedUser.id, unreadCount)
+
+          // Dispatch event for sidebar to update badge immediately (optimistic)
+          window.dispatchEvent(new CustomEvent('chat:messages-read', {
+            detail: {
+              senderId: selectedUser.id,
+              count: unreadCount
+            }
+          }))
+          console.log('📤 Dispatched chat:messages-read event for sidebar update')
+
+          // Also update messages state to show checkmarks
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.sender_id === selectedUser.id && !msg.is_read
+                ? { ...msg, is_read: true }
+                : msg
+            )
+          )
         }
       })
     } else {

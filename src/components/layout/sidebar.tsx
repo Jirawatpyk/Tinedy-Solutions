@@ -84,6 +84,25 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
     fetchUnreadCount()
   }, [location.pathname, user])
 
+  // Listen for optimistic updates from chat page (for large message batches 50+)
+  useEffect(() => {
+    const handleMessagesRead = (event: Event) => {
+      const customEvent = event as CustomEvent<{ senderId: string; count: number }>
+      const { count } = customEvent.detail
+
+      console.log('📥 Sidebar received chat:messages-read event, reducing count by', count)
+
+      // Optimistic update - immediately reduce badge count
+      setUnreadCount((prev) => Math.max(0, prev - count))
+    }
+
+    window.addEventListener('chat:messages-read', handleMessagesRead)
+
+    return () => {
+      window.removeEventListener('chat:messages-read', handleMessagesRead)
+    }
+  }, [])
+
   const handleSignOut = async () => {
     try {
       setIsLoggingOut(true)
