@@ -140,32 +140,31 @@ export function RecurringBookingCard({
                 Total ({group.totalBookings} bookings)
               </p>
 
-              {/* Payment Status Summary */}
-              <div className="flex flex-wrap gap-1 justify-end mt-1">
+              {/* Payment Status - Single badge for entire group */}
+              <div className="flex justify-end mt-1">
                 {(() => {
-                  const paidCount = group.bookings.filter(b => b.payment_status === 'paid').length
-                  const partialCount = group.bookings.filter(b => b.payment_status === 'partial').length
-                  const unpaidCount = group.bookings.filter(b => !b.payment_status || b.payment_status === 'unpaid').length
+                  // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
+                  const paymentStatus = firstBooking.payment_status || 'unpaid'
 
-                  return (
-                    <>
-                      {paidCount > 0 && (
-                        <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
-                          {paidCount} Paid
-                        </Badge>
-                      )}
-                      {partialCount > 0 && (
-                        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
-                          {partialCount} Partial
-                        </Badge>
-                      )}
-                      {unpaidCount > 0 && (
-                        <Badge className="bg-red-50 text-red-700 border-red-300 text-xs">
-                          {unpaidCount} Unpaid
-                        </Badge>
-                      )}
-                    </>
-                  )
+                  if (paymentStatus === 'paid') {
+                    return (
+                      <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                        Paid
+                      </Badge>
+                    )
+                  } else if (paymentStatus === 'partial') {
+                    return (
+                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
+                        Partial
+                      </Badge>
+                    )
+                  } else {
+                    return (
+                      <Badge className="bg-red-50 text-red-700 border-red-300 text-xs">
+                        Unpaid
+                      </Badge>
+                    )
+                  }
                 })()}
               </div>
             </div>
