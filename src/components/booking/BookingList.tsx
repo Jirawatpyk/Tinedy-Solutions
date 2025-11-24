@@ -42,6 +42,7 @@ interface BookingListProps {
   // It's kept in the interface for future use when archive filtering is needed
   showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
+  onGroupStatusChange?: (groupId: string, newStatus: string, bookingIds: string[]) => void
   formatTime: (time: string) => string
   getStatusBadge: (status: string) => React.ReactElement
   getPaymentStatusBadge: (status?: string) => React.ReactElement
@@ -71,6 +72,7 @@ function BookingListComponent({
   onRestoreBooking,
   showArchived: _showArchived,
   onStatusChange,
+  onGroupStatusChange,
   formatTime,
   getStatusBadge,
   getPaymentStatusBadge,
@@ -197,6 +199,7 @@ function BookingListComponent({
                       if (booking) onBookingClick(booking)
                     }}
                     onDeleteGroup={onDeleteRecurringGroup}
+                    onGroupStatusChange={onGroupStatusChange}
                   />
                 )
               } else {
