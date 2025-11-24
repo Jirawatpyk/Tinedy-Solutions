@@ -56,39 +56,42 @@ export async function fetchDashboardStats(): Promise<Stats> {
  * staleTime: 1 minute - ข้อมูลวันนี้ควรอัพเดทบ่อยกว่า
  */
 export async function fetchTodayStats(): Promise<StatsChange> {
-  const { todayStart, todayEnd, todayStr } = getBangkokToday()
+  const { todayStr } = getBangkokToday()
 
-  // Debug: แสดงค่า date range ที่ใช้
+  // Debug: แสดงค่า date ที่ใช้
   console.log('🔍 fetchTodayStats Debug:', {
     todayStr,
-    todayStart,
-    todayEnd,
   })
 
+  // ใช้ DATE column แทน timestamp เพื่อหลีกเลี่ยง timezone issues
+  // booking_date และ payment_date เป็น DATE type (YYYY-MM-DD) ไม่มี timezone
   const [todayBookingsRes, todayRevenueRes, todayCustomersRes, todayPendingRes] =
     await Promise.all([
+      // นับ bookings ที่สร้างวันนี้ - ใช้ created_at::date
       supabase
         .from('bookings')
         .select('*', { count: 'exact' })
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd),
+        .gte('created_at', `${todayStr}T00:00:00+07:00`)
+        .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
+      // นับยอดรายได้ที่จ่ายวันนี้ - ใช้ payment_date (DATE column)
       supabase
         .from('bookings')
         .select('total_price')
         .eq('payment_status', 'paid')
-        .gte('payment_date', todayStart)
-        .lte('payment_date', todayEnd),
+        .eq('payment_date', todayStr),
+      // นับลูกค้าใหม่วันนี้
       supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd),
+        .gte('created_at', `${todayStr}T00:00:00+07:00`)
+        .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
+      // นับ pending bookings ที่สร้างวันนี้
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending')
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd),
+        .gte('created_at', `${todayStr}T00:00:00+07:00`)
+        .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
     ])
 
   const todayRevenue =
