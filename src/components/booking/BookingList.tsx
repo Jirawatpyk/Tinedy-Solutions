@@ -99,6 +99,7 @@ function BookingListComponent({
           totalBookings: sortedBookings.length,
           bookings: sortedBookings,
           completedCount: stats.completed,
+          confirmedCount: stats.confirmed,
           cancelledCount: stats.cancelled,
           upcomingCount: stats.upcoming,
         })

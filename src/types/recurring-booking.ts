@@ -129,6 +129,7 @@ export interface RecurringGroup {
 
   // สถิติ
   completedCount: number
+  confirmedCount: number
   cancelledCount: number
   upcomingCount: number
 }

@@ -17,7 +17,8 @@ import type {
 import {
   generateRecurringGroupId,
   getRecurringSequence,
-  sortRecurringGroup
+  sortRecurringGroup,
+  countBookingsByStatus
 } from './recurring-utils'
 
 /**
@@ -409,17 +410,17 @@ export async function getRecurringGroup(
 
     const bookings = data as RecurringBookingRecord[]
     const sorted = sortRecurringGroup(bookings)
+    const stats = countBookingsByStatus(sorted)
 
     const group: RecurringGroup = {
       groupId,
       pattern: sorted[0].recurring_pattern || 'custom',
       totalBookings: sorted[0].recurring_total || 0,
       bookings: sorted,
-      completedCount: sorted.filter(b => b.status === 'completed').length,
-      cancelledCount: sorted.filter(b => b.status === 'cancelled').length,
-      upcomingCount: sorted.filter(b =>
-        b.status !== 'completed' && b.status !== 'cancelled'
-      ).length
+      completedCount: stats.completed,
+      confirmedCount: stats.confirmed,
+      cancelledCount: stats.cancelled,
+      upcomingCount: stats.upcoming
     }
 
     logger.debug('Fetched recurring group', {

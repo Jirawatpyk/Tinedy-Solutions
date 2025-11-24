@@ -227,15 +227,17 @@ export function findParentBooking(
  */
 export function countBookingsByStatus(bookings: RecurringBookingRecord[]): {
   completed: number
+  confirmed: number
   cancelled: number
   upcoming: number
   total: number
 } {
   return {
     completed: bookings.filter(b => b.status === 'completed').length,
+    confirmed: bookings.filter(b => b.status === 'confirmed').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
     upcoming: bookings.filter(b =>
-      b.status !== 'completed' && b.status !== 'cancelled'
+      b.status !== 'completed' && b.status !== 'cancelled' && b.status !== 'confirmed'
     ).length,
     total: bookings.length
   }
