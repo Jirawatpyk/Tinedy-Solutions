@@ -74,6 +74,8 @@ const getDateRangePreset = (preset: string): { start: Date; end: Date } => {
       return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) }
     case 'last3months':
       return { start: startOfMonth(subMonths(now, 3)), end: endOfMonth(subMonths(now, 1)) }
+    case 'allTime':
+      return { start: new Date('2020-01-01'), end: endOfDay(now) }
     default:
       return { start: startOfMonth(now), end: endOfMonth(now) }
   }

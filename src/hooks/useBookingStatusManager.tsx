@@ -182,6 +182,7 @@ export function useBookingStatusManager<T extends BookingBase>({
         .from('bookings')
         .select(`
           id,
+          booking_date,
           recurring_group_id,
           is_recurring,
           total_price,
@@ -202,12 +203,21 @@ export function useBookingStatusManager<T extends BookingBase>({
         payment_date: paymentDate,
       }
 
+      console.log('🔍 DEBUG markAsPaid:', {
+        paymentDate,
+        updateData,
+        bookingDate: booking?.booking_date,
+      })
+
       // ✅ ถ้าเป็น recurring booking ให้อัปเดตทั้ง group
       if (booking?.recurring_group_id) {
-        const { error } = await supabase
+        const { error, data: updatedData } = await supabase
           .from('bookings')
           .update(updateData)
           .eq('recurring_group_id', booking.recurring_group_id)
+          .select('id, booking_date, payment_date')
+
+        console.log('🔍 DEBUG AFTER UPDATE (recurring):', { error, updatedData })
 
         if (error) throw error
 

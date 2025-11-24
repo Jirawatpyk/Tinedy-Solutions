@@ -155,7 +155,7 @@ export async function fetchReportsCustomers(): Promise<{
       .order('full_name'),
     supabase
       .from('bookings')
-      .select('id, booking_date, total_price, status, payment_status, created_at, customer_id')
+      .select('id, booking_date, total_price, status, payment_status, payment_date, created_at, customer_id')
   ])
 
   if (customersResult.error) {
@@ -210,14 +210,14 @@ export async function fetchReportsStaff(): Promise<{
       .order('full_name'),
     supabase
       .from('bookings')
-      .select('id, booking_date, total_price, status, payment_status, staff_id, created_at')
+      .select('id, booking_date, total_price, status, payment_status, payment_date, staff_id, created_at')
       .not('staff_id', 'is', null),
     supabase
       .from('team_members')
       .select('team_id, staff_id'),
     supabase
       .from('bookings')
-      .select('id, booking_date, total_price, status, payment_status, team_id, created_at')
+      .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, created_at')
       .not('team_id', 'is', null)
   ])
 
@@ -345,7 +345,7 @@ export async function fetchReportsTeams(): Promise<{
       .order('name'),
     supabase
       .from('bookings')
-      .select('id, booking_date, total_price, status, payment_status, team_id, created_at')
+      .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, created_at')
       .not('team_id', 'is', null)
   ])
 

@@ -188,6 +188,7 @@ export function AdminReports() {
       total_price: b.total_price,
       status: b.status,
       payment_status: b.payment_status,
+      payment_date: b.payment_date,
       created_at: b.created_at,
       customer_id: b.customer_id,
       staff_id: b.staff_id,
@@ -213,6 +214,7 @@ export function AdminReports() {
       total_price: b.total_price,
       status: b.status,
       payment_status: b.payment_status,
+      payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
       service_type: b.service_packages?.service_type,
@@ -278,6 +280,7 @@ export function AdminReports() {
       total_price: b.total_price,
       status: b.status,
       payment_status: b.payment_status,
+      payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
       service_type: b.service_packages?.service_type,
@@ -412,6 +415,7 @@ export function AdminReports() {
               <SelectItem value="thisMonth">This Month</SelectItem>
               <SelectItem value="lastMonth">Last Month</SelectItem>
               <SelectItem value="last3months">Last 3 Months</SelectItem>
+              <SelectItem value="allTime">All Time</SelectItem>
             </SelectContent>
           </Select>
           <DropdownMenu>
