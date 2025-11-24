@@ -582,10 +582,12 @@ export function useChat() {
           },
           (payload) => {
             const updatedMessage = payload.new as Message
+            const oldMessage = payload.old as Message
             console.log('🔄 Message updated:', updatedMessage.id)
 
-            // If message is marked as read, update conversation's unread count
-            if (updatedMessage.is_read) {
+            // If message was JUST marked as read (changed from false to true), update conversation's unread count
+            if (updatedMessage.is_read === true && oldMessage.is_read === false) {
+              console.log('📖 Message marked as read, decreasing unread count')
               setConversations((prevConversations) => {
                 const otherUserId = updatedMessage.sender_id === user.id
                   ? updatedMessage.recipient_id
@@ -593,6 +595,7 @@ export function useChat() {
 
                 return prevConversations.map((conv) => {
                   if (conv.user.id === otherUserId && conv.unreadCount > 0) {
+                    console.log(`📉 Decreasing unread count for ${conv.user.full_name}: ${conv.unreadCount} → ${conv.unreadCount - 1}`)
                     return {
                       ...conv,
                       unreadCount: Math.max(0, conv.unreadCount - 1)
@@ -602,6 +605,15 @@ export function useChat() {
                 })
               })
             }
+
+            // Update message in current conversation (for checkmarks)
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === updatedMessage.id
+                  ? { ...msg, is_read: updatedMessage.is_read }
+                  : msg
+              )
+            )
           }
         )
         .subscribe((status) => {

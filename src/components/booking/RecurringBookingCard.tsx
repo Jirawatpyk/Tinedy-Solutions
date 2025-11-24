@@ -133,13 +133,14 @@ export function RecurringBookingCard({
           {/* Right Section: Total Amount, Delete & Expand Button */}
           <div className="flex sm:flex-col items-center sm:items-end gap-4">
             <div className="flex-1 sm:flex-none text-right">
-              <p className="font-semibold text-tinedy-dark text-lg">
-                {formatCurrency(totalAmount)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Total ({group.totalBookings} bookings)
-              </p>
-
+              <div className="flex items-baseline justify-end gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Total ({group.totalBookings} bookings)
+                </p>
+                <p className="font-semibold text-tinedy-dark text-lg">
+                  {formatCurrency(totalAmount)}
+                </p>
+              </div>
               {/* Payment Status - Single badge for entire group */}
               <div className="flex justify-end mt-1">
                 {(() => {
