@@ -27,6 +27,7 @@ export interface RecurringBookingRecord {
   start_time: string
   end_time: string | null
   status: string
+  payment_status?: string
   total_price: number
   area_sqm?: number | null
   frequency?: number | null
