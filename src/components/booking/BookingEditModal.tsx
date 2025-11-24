@@ -437,7 +437,8 @@ export function BookingEditModal({
                 type="time"
                 {...form.register('end_time')}
                 placeholder="Auto-calculated from package"
-                disabled={!!packageSelection?.estimatedHours}
+                disabled={true}
+                className="bg-muted"
                 aria-invalid={!!form.formState.errors.end_time}
               />
               {form.formState.errors.end_time && (

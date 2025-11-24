@@ -918,12 +918,14 @@ export function BookingCreateModal({
 
               {/* End Time */}
               <div className="space-y-2">
-                <Label htmlFor="end_time">End Time *</Label>
+                <Label htmlFor="end_time">End Time</Label>
                 <Input
                   id="end_time"
                   type="time"
                   {...form.register('end_time')}
-                  disabled={!!packageSelection?.estimatedHours}
+                  placeholder="Auto-calculated from package"
+                  disabled={true}
+                  className="bg-muted"
                   aria-invalid={!!form.formState.errors.end_time}
                 />
                 {form.formState.errors.end_time && (
