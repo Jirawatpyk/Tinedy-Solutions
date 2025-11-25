@@ -42,7 +42,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
         staffIds: [],
         teamIds: [],
         searchQuery: '',
-        dateRange: null, // Clear date filter when selecting pending status
+        // dateRange not set - preserve existing date filter
       }
 
     case 'confirmed':
@@ -51,7 +51,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
         staffIds: [],
         teamIds: [],
         searchQuery: '',
-        dateRange: null, // Clear date filter when selecting confirmed status
+        // dateRange not set - preserve existing date filter
       }
 
     default:
