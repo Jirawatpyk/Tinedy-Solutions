@@ -735,7 +735,11 @@ export function AdminWeeklySchedule() {
                 <Button
                   variant={viewMode === 'all' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode('all')}
+                  onClick={() => {
+                    setViewMode('all')
+                    setSelectedStaff('all')
+                    setSelectedTeam('all')
+                  }}
                   className="rounded-r-none flex-1 h-8 text-xs"
                 >
                   All Bookings
@@ -743,7 +747,10 @@ export function AdminWeeklySchedule() {
                 <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode('staff')}
+                  onClick={() => {
+                    setViewMode('staff')
+                    setSelectedTeam('all')
+                  }}
                   className="rounded-none border-l-0 flex-1 h-8 text-xs"
                 >
                   Staff View
@@ -751,7 +758,10 @@ export function AdminWeeklySchedule() {
                 <Button
                   variant={viewMode === 'team' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode('team')}
+                  onClick={() => {
+                    setViewMode('team')
+                    setSelectedStaff('all')
+                  }}
                   className="rounded-l-none border-l-0 flex-1 h-8 text-xs"
                 >
                   Team View

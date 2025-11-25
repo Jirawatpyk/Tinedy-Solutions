@@ -118,30 +118,32 @@ export async function fetchBookingsByDateRange(
     .order('start_time')
 
   // Apply filters
-  // Priority: New multi-select filters (Sprint 2) > Legacy single-value filters
+  // Priority: New multi-select filters (Sprint 2) > Legacy single-value filters > Legacy viewMode filters
 
   // Staff filters
   if (filters?.staffIds && filters.staffIds.length > 0) {
-    // New multi-select: use .in() for array
+    // Sprint 2 multi-select: use .in() for array
     query = query.in('staff_id', filters.staffIds)
+  } else if (filters?.staffId) {
+    // Legacy single-select: เลือก staff คนใดคนหนึ่ง (ใช้ได้ทุก viewMode)
+    query = query.eq('staff_id', filters.staffId)
   } else if (filters?.viewMode === 'staff') {
-    // Legacy viewMode filter
+    // Legacy viewMode: แสดงเฉพาะ staff bookings (ทุกคน)
     query = query.not('staff_id', 'is', null)
-    if (filters.staffId) {
-      query = query.eq('staff_id', filters.staffId)
-    }
+    query = query.is('team_id', null)
   }
 
   // Team filters
   if (filters?.teamIds && filters.teamIds.length > 0) {
-    // New multi-select: use .in() for array
+    // Sprint 2 multi-select: use .in() for array
     query = query.in('team_id', filters.teamIds)
+  } else if (filters?.teamId) {
+    // Legacy single-select: เลือก team ทีมใดทีมหนึ่ง (ใช้ได้ทุก viewMode)
+    query = query.eq('team_id', filters.teamId)
   } else if (filters?.viewMode === 'team') {
-    // Legacy viewMode filter
+    // Legacy viewMode: แสดงเฉพาะ team bookings (ทุกทีม)
     query = query.not('team_id', 'is', null)
-    if (filters.teamId) {
-      query = query.eq('team_id', filters.teamId)
-    }
+    query = query.is('staff_id', null)
   }
 
   // Status filters
@@ -151,6 +153,11 @@ export async function fetchBookingsByDateRange(
   } else if (filters?.status && filters.status !== 'all') {
     // Legacy single-value filter
     query = query.eq('status', filters.status)
+  }
+
+  // Customer filter (for compatibility)
+  if (filters?.customerId) {
+    query = query.eq('customer_id', filters.customerId)
   }
 
   const { data, error } = await query
@@ -174,8 +181,6 @@ export async function fetchBookingsByDateRange(
     // Client-side search filtering (Sprint 2)
     if (filters?.searchQuery && filters.searchQuery.trim()) {
       const searchLower = filters.searchQuery.toLowerCase().trim()
-      console.log('🔍 Search Query:', searchLower)
-      console.log('📊 Data before filter:', processedData.length)
 
       processedData = processedData.filter((booking: Booking) => {
         const customerName = booking.customers?.full_name?.toLowerCase() || ''
@@ -188,7 +193,7 @@ export async function fetchBookingsByDateRange(
         const teamName = booking.teams?.name?.toLowerCase() || ''
         const bookingId = booking.id?.toLowerCase() || ''
 
-        const matches = (
+        return (
           customerName.includes(searchLower) ||
           customerPhone.includes(searchLower) ||
           customerEmail.includes(searchLower) ||
@@ -197,24 +202,7 @@ export async function fetchBookingsByDateRange(
           teamName.includes(searchLower) ||
           bookingId.includes(searchLower)
         )
-
-        // Debug: แสดงข้อมูลของ booking แรก 3 ตัว
-        if (processedData.indexOf(booking) < 3) {
-          console.log('Checking booking:', booking.id?.slice(0, 8), {
-            customerName,
-            customerPhone,
-            customerEmail,
-            serviceName,
-            staffName,
-            teamName,
-            matches
-          })
-        }
-
-        return matches
       })
-
-      console.log('✅ Data after filter:', processedData.length)
     }
 
     return processedData as Booking[]
@@ -354,10 +342,18 @@ export const bookingQueryOptions = {
     // Normalize filters เพื่อสร้าง stable query key
     // Sort arrays เพื่อให้ [1,2,3] และ [3,2,1] ได้ query key เดียวกัน
     const normalizedFilters = filters ? {
+      // Sprint 2 multi-select filters
       staffIds: filters.staffIds?.length ? [...filters.staffIds].sort() : undefined,
       teamIds: filters.teamIds?.length ? [...filters.teamIds].sort() : undefined,
       statuses: filters.statuses?.length ? [...filters.statuses].sort() : undefined,
       searchQuery: filters.searchQuery?.trim() || undefined,
+
+      // Legacy single-value filters (สำหรับ Weekly Schedule & Calendar)
+      viewMode: filters.viewMode || undefined,
+      staffId: filters.staffId || undefined,
+      teamId: filters.teamId || undefined,
+      status: filters.status || undefined,
+      customerId: filters.customerId || undefined,
     } : undefined
 
     return {
