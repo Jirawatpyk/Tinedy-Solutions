@@ -156,6 +156,36 @@ export function AdminStaff() {
 
         if (error) throw error
 
+        // Update password if provided
+        const formData = data as StaffUpdateFormData
+        if (formData.password && formData.password.trim()) {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session?.access_token) {
+            throw new Error('Authentication required')
+          }
+
+          const passwordResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-staff-password`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                user_id: editingStaff.id,
+                new_password: formData.password,
+              }),
+            }
+          )
+
+          const passwordResult = await passwordResponse.json()
+
+          if (!passwordResult.success) {
+            throw new Error(passwordResult.error || 'Failed to update password')
+          }
+        }
+
         toast({
           title: 'Success',
           description: 'Staff member updated successfully',
@@ -280,6 +310,7 @@ export function AdminStaff() {
     updateForm.reset({
       full_name: staffMember.full_name,
       phone: staffMember.phone || '',
+      password: '',
       role: staffMember.role as 'admin' | 'manager' | 'staff',
       staff_number: staffMember.staff_number || '',
       skills: staffMember.skills ? staffMember.skills.join(', ') : '',
@@ -301,6 +332,7 @@ export function AdminStaff() {
     updateForm.reset({
       full_name: '',
       phone: '',
+      password: '',
       role: 'staff',
       staff_number: '',
       skills: '',
@@ -624,6 +656,29 @@ export function AdminStaff() {
                       {fieldState.error && (
                         <p className="text-xs text-destructive">{fieldState.error.message}</p>
                       )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="password"
+                  control={updateForm.control}
+                  render={({ field, fieldState }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="password">New Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="Leave blank to keep current password"
+                      />
+                      {fieldState.error && (
+                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Optional: Only fill if you want to change password (min 6 characters)
+                      </p>
                     </div>
                   )}
                 />

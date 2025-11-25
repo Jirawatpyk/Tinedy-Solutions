@@ -126,7 +126,8 @@ export const StaffCreateWithSkillsSchema = StaffCreateSchema.transform((data) =>
 
 /**
  * Schema สำหรับแก้ไขข้อมูลพนักงาน
- * Note: ไม่สามารถแก้ไข email และ password ผ่าน form นี้
+ * Note: ไม่สามารถแก้ไข email ผ่าน form นี้
+ * Password เป็น optional - ถ้ากรอกจะทำการเปลี่ยนรหัสผ่าน
  */
 export const StaffUpdateSchema = z.object({
   full_name: z
@@ -137,6 +138,10 @@ export const StaffUpdateSchema = z.object({
     .max(200, 'Full name must not exceed 200 characters'),
 
   phone: phoneSchema,
+
+  password: passwordSchema
+    .optional()
+    .or(z.literal('')),
 
   role: StaffRoleEnum,
 
