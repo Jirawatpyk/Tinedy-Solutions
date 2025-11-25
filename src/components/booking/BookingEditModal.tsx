@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { formatTime } from '@/lib/booking-utils'
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -139,7 +140,7 @@ export function BookingEditModal({
             setBookingDuration(durationMinutes)
           }
         } catch (error) {
-          console.error('[BookingEditModal] Error calculating duration:', error)
+          logger.error('Error calculating duration in BookingEditModal', { error })
           setBookingDuration(null)
         }
 
@@ -289,18 +290,14 @@ export function BookingEditModal({
       }
 
       // No conflicts or user confirmed override - proceed with update
-      console.log('[BookingEditModal] Updating booking:', bookingId, updateData)
-
-      const { data: result, error } = await supabase
+      const { error } = await supabase
         .from('bookings')
         .update(updateData)
         .eq('id', bookingId)
         .select()
 
-      console.log('[BookingEditModal] Update result:', { result, error })
-
       if (error) {
-        console.error('[BookingEditModal] Update error:', error)
+        logger.error('Error updating booking in BookingEditModal', { bookingId, error })
         throw error
       }
 
@@ -313,7 +310,7 @@ export function BookingEditModal({
       clearConflicts()
       onSuccess()
     } catch (error) {
-      console.error('[BookingEditModal] Caught error:', error)
+      logger.error('Error in BookingEditModal submission', { error })
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
         title: errorMsg.title,

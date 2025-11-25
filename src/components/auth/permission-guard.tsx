@@ -40,6 +40,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import type { PermissionAction, PermissionResource, UserRole } from '@/types/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -141,12 +142,6 @@ export interface PermissionGuardProps {
   ariaLabel?: string
 
   /**
-   * Debug mode (logs permission checks to console)
-   * @default false
-   */
-  debug?: boolean
-
-  /**
    * Additional CSS classes
    */
   className?: string
@@ -167,7 +162,7 @@ function checkPermission(
     case 'action':
       if (!check.action || !check.resource) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing action or resource for action mode', check)
+          logger.error('[PermissionGuard] Missing action or resource for action mode', check)
         }
         return false
       }
@@ -176,7 +171,7 @@ function checkPermission(
     case 'role':
       if (!check.roles || check.roles.length === 0) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing roles for role mode', check)
+          logger.error('[PermissionGuard] Missing roles for role mode', check)
         }
         return false
       }
@@ -194,7 +189,7 @@ function checkPermission(
     case 'feature':
       if (!check.feature) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing feature for feature mode', check)
+          logger.error('[PermissionGuard] Missing feature for feature mode', check)
         }
         return false
       }
@@ -203,7 +198,7 @@ function checkPermission(
     case 'route':
       if (!check.route) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing route for route mode', check)
+          logger.error('[PermissionGuard] Missing route for route mode', check)
         }
         return false
       }
@@ -212,7 +207,7 @@ function checkPermission(
     case 'delete':
       if (!check.resource) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing resource for delete mode', check)
+          logger.error('[PermissionGuard] Missing resource for delete mode', check)
         }
         return false
       }
@@ -221,7 +216,7 @@ function checkPermission(
     case 'softDelete':
       if (!check.resource) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing resource for softDelete mode', check)
+          logger.error('[PermissionGuard] Missing resource for softDelete mode', check)
         }
         return false
       }
@@ -230,7 +225,7 @@ function checkPermission(
     case 'custom':
       if (!check.check) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[PermissionGuard] Missing check function for custom mode', check)
+          logger.error('[PermissionGuard] Missing check function for custom mode', check)
         }
         return false
       }
@@ -238,7 +233,7 @@ function checkPermission(
 
     default:
       if (process.env.NODE_ENV === 'development') {
-        console.error('[PermissionGuard] Unknown permission mode:', (check as PermissionCheck).mode)
+        logger.error('[PermissionGuard] Unknown permission mode:', (check as PermissionCheck).mode)
       }
       return false
   }
@@ -291,7 +286,6 @@ export const PermissionGuard = memo(function PermissionGuard({
   fallbackMessage,
   loadingFallback,
   ariaLabel,
-  debug = false,
   className,
 }: PermissionGuardProps) {
   const permissions = usePermissions()
@@ -306,17 +300,6 @@ export const PermissionGuard = memo(function PermissionGuard({
 
   // Check permissions
   const hasPermission = checkPermissions(requires, permissions, requireAll)
-
-  // Debug logging
-  if (debug && process.env.NODE_ENV === 'development') {
-    console.log('[PermissionGuard]', {
-      requires,
-      requireAll,
-      hasPermission,
-      userRole: permissions.role,
-      permissions: permissions.permissions,
-    })
-  }
 
   // Grant access
   if (hasPermission) {

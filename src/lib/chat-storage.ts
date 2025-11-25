@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Attachment } from '@/types/chat'
+import { logger } from '@/lib/logger'
 
 const BUCKET_NAME = 'chat-attachments'
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -66,7 +67,7 @@ export async function uploadChatFile(
       })
 
     if (error) {
-      console.error('Upload error:', error)
+      logger.error('Upload error:', error)
       return {
         success: false,
         error: 'Failed to upload file. Please try again.',
@@ -97,7 +98,7 @@ export async function uploadChatFile(
       attachment,
     }
   } catch (error) {
-    console.error('Unexpected error during upload:', error)
+    logger.error('Unexpected error during upload:', error)
     return {
       success: false,
       error: 'An unexpected error occurred. Please try again.',
@@ -113,13 +114,13 @@ export async function deleteChatFile(filePath: string): Promise<boolean> {
     const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath])
 
     if (error) {
-      console.error('Delete error:', error)
+      logger.error('Delete error:', error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error('Unexpected error during delete:', error)
+    logger.error('Unexpected error during delete:', error)
     return false
   }
 }

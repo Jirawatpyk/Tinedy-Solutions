@@ -5,6 +5,7 @@ import type { Message, Profile, Conversation, Attachment } from '@/types/chat'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { uploadChatFile } from '@/lib/chat-storage'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
+import { logger } from '@/lib/logger'
 
 const MESSAGES_PER_PAGE = 50
 
@@ -41,7 +42,7 @@ export function useChat() {
 
       if (fetchError) {
         const errorMsg = getSupabaseErrorMessage(fetchError)
-        console.error('Error fetching users:', fetchError)
+        logger.error('Error fetching users:', fetchError, { context: 'Chat' })
         setError(errorMsg)
         return []
       }
@@ -50,7 +51,7 @@ export function useChat() {
       return (profiles as Profile[]) || []
     } catch (err) {
       const errorMsg = getSupabaseErrorMessage(err)
-      console.error('Unexpected error fetching users:', err)
+      logger.error('Unexpected error fetching users:', err, { context: 'Chat' })
       setError(errorMsg)
       return []
     }
@@ -84,7 +85,7 @@ export function useChat() {
 
       if (fetchError) {
         const errorMsg = getSupabaseErrorMessage(fetchError)
-        console.error('Error fetching messages:', fetchError)
+        logger.error('Error fetching messages:', fetchError, { context: 'Chat' })
         setError(errorMsg)
         setIsLoadingMessages(false)
         return []
@@ -109,7 +110,7 @@ export function useChat() {
       return messagesInOrder
     } catch (err) {
       const errorMsg = getSupabaseErrorMessage(err)
-      console.error('Unexpected error fetching messages:', err)
+      logger.error('Unexpected error fetching messages:', err, { context: 'Chat' })
       setError(errorMsg)
       setIsLoadingMessages(false)
       return []
@@ -145,7 +146,7 @@ export function useChat() {
         .limit(MESSAGES_PER_PAGE)
 
       if (fetchError) {
-        console.error('Error loading more messages:', fetchError)
+        logger.error('Error loading more messages:', fetchError, { context: 'Chat' })
         return
       }
 
@@ -162,7 +163,7 @@ export function useChat() {
       setMessages((prev) => [...olderMessagesInOrder, ...prev])
       setHasMoreMessages(olderMessages.length === MESSAGES_PER_PAGE)
     } catch (err) {
-      console.error('Unexpected error loading more messages:', err)
+      logger.error('Unexpected error loading more messages:', err, { context: 'Chat' })
     } finally {
       setIsLoadingMore(false)
     }
@@ -194,10 +195,9 @@ export function useChat() {
 
       // Don't add to local state - let realtime subscription handle it
       // This ensures the message has proper profile data
-      console.log('✅ Message sent, waiting for realtime subscription to add it')
       return data
     } catch (error) {
-      console.error('Error sending message:', error)
+      logger.error('Error sending message:', error, { context: 'Chat' })
       throw error
     } finally {
       setIsSending(false)
@@ -224,7 +224,7 @@ export function useChat() {
       // Send message with attachment
       return await sendMessage(recipientId, messageText, [uploadResult.attachment])
     } catch (error) {
-      console.error('Error sending message with file:', error)
+      logger.error('Error sending message with file:', error, { context: 'Chat' })
       throw error
     } finally {
       setIsSending(false)
@@ -235,8 +235,6 @@ export function useChat() {
   const markAsRead = useCallback(async (senderId: string, count: number) => {
     if (count === 0 || !user) return
 
-    console.log('📝 Marking messages as read:', count, 'messages from', senderId)
-
     // OPTIMIZED: Use WHERE conditions instead of IN clause (much faster for 50+ messages)
     const { error } = await supabase
       .from('messages')
@@ -246,9 +244,7 @@ export function useChat() {
       .eq('is_read', false)
 
     if (error) {
-      console.error('❌ Error marking messages as read:', error)
-    } else {
-      console.log('✅ Successfully marked', count, 'messages as read')
+      logger.error('Error marking messages as read:', { error, count, senderId }, { context: 'Chat' })
     }
   }, [user])
 
@@ -271,7 +267,6 @@ export function useChat() {
 
     // Prevent concurrent loads
     if (isLoadingConversationsRef.current) {
-      console.log('⏭️ Already loading conversations, skipping')
       return
     }
 
@@ -300,7 +295,7 @@ export function useChat() {
         .order('created_at', { ascending: false })
 
       if (messagesError) {
-        console.error('Error fetching messages:', messagesError)
+        logger.error('Error fetching messages:', messagesError, { context: 'Chat' })
         return
       }
 
@@ -325,7 +320,6 @@ export function useChat() {
 
         // Skip if otherUser is undefined (shouldn't happen with proper data)
         if (!otherUser) {
-          console.warn('[loadConversations] Missing user data for message:', message.id)
           return
         }
 
@@ -378,7 +372,6 @@ export function useChat() {
           if (currentSelectedUser &&
               newConv.user.id === currentSelectedUser.id &&
               existingConv?.unreadCount === 0) {
-            console.log(`🔒 Preserving optimistic update for ${newConv.user.full_name} (unreadCount = 0)`)
             return {
               ...newConv,
               unreadCount: 0
@@ -390,7 +383,7 @@ export function useChat() {
       })
       prevMessagesLengthRef.current = activeConversations.length
     } catch (error) {
-      console.error('Error loading conversations:', error)
+      logger.error('Error loading conversations:', error, { context: 'Chat' })
     } finally {
       setIsLoading(false)
       isLoadingConversationsRef.current = false
@@ -435,7 +428,7 @@ export function useChat() {
 
     } catch (error) {
       // Rollback on error: Restore previous state
-      console.error('Error deleting conversation:', error)
+      logger.error('Error deleting conversation:', { error, otherUserId }, { context: 'Chat' })
       setConversations(previousConversations)
       throw error
     }
@@ -484,13 +477,11 @@ export function useChat() {
                  new Date(a.lastMessage.created_at).getTime()
         })
 
-        console.log('✅ Updated conversation locally without reload')
         return updatedConversations
       }
 
       // If conversation doesn't exist, it's a new conversation
       // We'll reload in the background but return current state immediately
-      console.log('🆕 New conversation detected')
       return prevConversations
     })
 
@@ -498,7 +489,6 @@ export function useChat() {
     setConversations((prevConversations) => {
       const exists = prevConversations.some((conv) => conv.user.id === otherUserId)
       if (!exists) {
-        console.log('🔄 Loading conversations in background for new conversation')
         // IMPORTANT: Use showLoading=false to prevent overwriting current state
         setTimeout(() => loadConversations(false), 100)
       }
@@ -513,8 +503,6 @@ export function useChat() {
     let channel: RealtimeChannel
 
     const setupRealtimeSubscription = async () => {
-      console.log('🚀 Setting up realtime subscription for user:', user.id)
-
       channel = supabase
         .channel('messages-channel')
         // Listen for ALL new messages (both incoming and outgoing)
@@ -529,21 +517,11 @@ export function useChat() {
             const newMessage = payload.new as Message
             const currentSelectedUser = selectedUserRef.current
 
-            console.log('📬 New message received:', {
-              id: newMessage.id,
-              sender_id: newMessage.sender_id,
-              recipient_id: newMessage.recipient_id,
-              message: newMessage.message?.substring(0, 50),
-              currentUserId: user.id,
-              selectedUserId: currentSelectedUser?.id
-            })
-
             // Check if this message is relevant to me
             const isIncoming = newMessage.recipient_id === user.id
             const isOutgoing = newMessage.sender_id === user.id
 
             if (!isIncoming && !isOutgoing) {
-              console.log('⏭️ Message not related to me, ignoring')
               return
             }
 
@@ -567,7 +545,7 @@ export function useChat() {
                 .single()
 
               if (error) {
-                console.error('❌ Error fetching full message:', error)
+                logger.error('Error fetching full message:', error, { context: 'Chat' })
                 return
               }
 
@@ -578,7 +556,7 @@ export function useChat() {
                 recipient: Array.isArray(fullMessage.recipient) ? fullMessage.recipient[0] : fullMessage.recipient,
               } as Message
             } catch (error) {
-              console.error('❌ Error processing new message:', error)
+              logger.error('Error processing new message:', error, { context: 'Chat' })
               return
             }
 
@@ -594,11 +572,9 @@ export function useChat() {
                 // Incoming message from currently selected user
                 shouldAddToCurrentConversation = true
                 shouldMarkAsRead = true
-                console.log('✅ Incoming message from selected user')
               } else if (isOutgoing && newMessage.recipient_id === currentSelectedUser.id) {
                 // Outgoing message to currently selected user
                 shouldAddToCurrentConversation = true
-                console.log('✅ Outgoing message to selected user')
               }
             }
 
@@ -607,10 +583,8 @@ export function useChat() {
                 // Check if message already exists
                 const exists = prev.some(msg => msg.id === newMessage.id)
                 if (exists) {
-                  console.log('⏭️ Message already exists in state, skipping')
                   return prev
                 }
-                console.log('➕ Adding message to conversation')
                 return [...prev, messageWithProfiles!]
               })
 
@@ -618,8 +592,6 @@ export function useChat() {
               if (shouldMarkAsRead) {
                 await markAsRead(newMessage.sender_id, 1)
               }
-            } else {
-              console.log('⏭️ Message not for current conversation, skipping')
             }
           }
         )
@@ -633,7 +605,6 @@ export function useChat() {
           (payload) => {
             const updatedMessage = payload.new as Message
             const oldMessage = payload.old as Message
-            console.log('🔄 Message updated:', updatedMessage.id)
 
             // If message was JUST marked as read (changed from false to true), update conversation's unread count
             // BUT: Only if this update is NOT from the currently selected user
@@ -646,13 +617,11 @@ export function useChat() {
 
               // Skip if this is the currently selected user (already updated optimistically)
               if (currentSelectedUser && otherUserId === currentSelectedUser.id) {
-                console.log('⏭️ Skipping unread count update - already updated optimistically')
+                // Already updated optimistically
               } else {
-                console.log('📖 Message marked as read, decreasing unread count')
                 setConversations((prevConversations) => {
                   return prevConversations.map((conv) => {
                     if (conv.user.id === otherUserId && conv.unreadCount > 0) {
-                      console.log(`📉 Decreasing unread count for ${conv.user.full_name}: ${conv.unreadCount} → ${conv.unreadCount - 1}`)
                       return {
                         ...conv,
                         unreadCount: Math.max(0, conv.unreadCount - 1)
@@ -674,16 +643,13 @@ export function useChat() {
             )
           }
         )
-        .subscribe((status) => {
-          console.log('📡 Realtime subscription status:', status)
-        })
+        .subscribe()
     }
 
     setupRealtimeSubscription()
 
     return () => {
       if (channel) {
-        console.log('🔌 Unsubscribing from realtime channel')
         supabase.removeChannel(channel)
       }
     }
@@ -698,7 +664,6 @@ export function useChat() {
   // When selecting a user, fetch messages and mark as read
   useEffect(() => {
     if (selectedUser) {
-      console.log('👤 Selected user:', selectedUser.full_name, selectedUser.id)
       // BEST PRACTICE: Use startTransition for smooth UI
       // Show loading immediately and clear old messages
       setIsLoadingMessages(true)
@@ -720,15 +685,11 @@ export function useChat() {
           .eq('sender_id', selectedUser.id)
           .eq('is_read', false)
 
-        console.log('📬 Found', unreadCount || 0, 'unread messages from', selectedUser.full_name)
-
         if (unreadCount && unreadCount > 0) {
           // IMPORTANT: Update state FIRST (optimistic update)
-          console.log('🔄 Updating conversation unreadCount to 0 (optimistic)')
           setConversations((prevConversations) => {
             return prevConversations.map((conv) => {
               if (conv.user.id === selectedUser.id) {
-                console.log(`📉 ${conv.user.full_name}: ${conv.unreadCount} → 0`)
                 return {
                   ...conv,
                   unreadCount: 0
@@ -748,7 +709,6 @@ export function useChat() {
               count: unreadCount
             }
           }))
-          console.log('📤 Dispatched chat:messages-read event for sidebar update')
 
           // Also update messages state to show checkmarks
           setMessages((prev) =>
@@ -766,7 +726,7 @@ export function useChat() {
       setHasMoreMessages(true)
       setIsLoadingMessages(false)
     }
-  }, [selectedUser, fetchMessages, markAsRead])
+  }, [selectedUser, fetchMessages, markAsRead, user])
 
   return {
     messages,

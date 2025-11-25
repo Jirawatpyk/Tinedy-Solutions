@@ -84,10 +84,6 @@ export function useDashboardStats() {
 
   // Realtime subscription - invalidate queries when data changes
   useEffect(() => {
-    console.log('='.repeat(60))
-    console.log('[Dashboard Realtime] Initializing subscription')
-    console.log('='.repeat(60))
-
     const channel = supabase
       .channel('dashboard-realtime')
       .on(
@@ -98,12 +94,9 @@ export function useDashboardStats() {
           table: 'bookings',
         },
         (payload) => {
-          console.log('[Dashboard] 📊 Booking event:', payload.eventType)
-
           // Add delay for UPDATE events to prevent race conditions
           const delay = payload.eventType === 'UPDATE' ? 300 : 100
           setTimeout(() => {
-            console.log('[Dashboard] 🔄 Invalidating dashboard queries...')
             queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
           }, delay)
         }
@@ -116,11 +109,8 @@ export function useDashboardStats() {
           table: 'customers',
         },
         (payload) => {
-          console.log('[Dashboard] 👤 Customer event:', payload.eventType)
-
           const delay = payload.eventType === 'UPDATE' ? 300 : 100
           setTimeout(() => {
-            console.log('[Dashboard] 🔄 Invalidating customer stats...')
             queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats() })
             queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.todayStats() })
           }, delay)
@@ -128,10 +118,7 @@ export function useDashboardStats() {
       )
       .subscribe()
 
-    console.log('[Dashboard] ✅ Subscription initialized!')
-
     return () => {
-      console.log('[Dashboard] 🔌 Cleaning up realtime subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient])
