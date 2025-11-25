@@ -59,7 +59,7 @@ export interface UseStaffDashboardReturn {
   addNotes: (bookingId: string, notes: string) => Promise<void>
 
   // Actions
-  refetch: () => void
+  refetch: () => Promise<void>
 }
 
 // ============================================================================
@@ -325,12 +325,14 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
   })
 
   // Refetch all queries
-  const refetch = () => {
-    teamMembershipQuery.refetch()
-    todayQuery.refetch()
-    upcomingQuery.refetch()
-    completedQuery.refetch()
-    statsQuery.refetch()
+  const refetch = async () => {
+    await Promise.all([
+      teamMembershipQuery.refetch(),
+      todayQuery.refetch(),
+      upcomingQuery.refetch(),
+      completedQuery.refetch(),
+      statsQuery.refetch(),
+    ])
   }
 
   return {

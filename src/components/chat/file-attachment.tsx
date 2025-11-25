@@ -25,7 +25,7 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
           <img
             src={attachment.url}
             alt={attachment.name}
-            className="max-w-xs max-h-64 object-cover cursor-pointer group-hover:opacity-90 transition-opacity"
+            className="max-w-[240px] max-h-48 object-contain cursor-pointer group-hover:opacity-90 transition-opacity"
             onError={() => setImageError(true)}
             loading="lazy"
           />
