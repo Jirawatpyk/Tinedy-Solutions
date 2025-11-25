@@ -172,19 +172,41 @@ export function Header({ onMenuClick }: HeaderProps) {
         })
       }
 
-      // Search Service Packages
-      const { data: services } = await supabase
+      // Search Service Packages V1 (Legacy)
+      const { data: servicesV1 } = await supabase
         .from('service_packages')
         .select('id, name, price')
         .ilike('name', `%${query}%`)
         .limit(5)
 
-      services?.forEach((service) => {
+      servicesV1?.forEach((service) => {
+        searchResults.push({
+          id: service.id,
+          type: 'service',
+          title: `${service.name} (V1)`,
+          subtitle: `฿${service.price?.toLocaleString() ?? '0'}`,
+          link: `${basePath}/packages/${service.id}`,
+        })
+      })
+
+      // Search Service Packages V2 (New)
+      const { data: servicesV2 } = await supabase
+        .from('service_packages_v2')
+        .select('id, name, pricing_model, base_price')
+        .ilike('name', `%${query}%`)
+        .eq('is_active', true)
+        .limit(5)
+
+      servicesV2?.forEach((service) => {
+        const priceDisplay = service.pricing_model === 'fixed' && service.base_price
+          ? `฿${service.base_price.toLocaleString()}`
+          : 'Tiered Pricing'
+
         searchResults.push({
           id: service.id,
           type: 'service',
           title: service.name,
-          subtitle: `฿${service.price?.toLocaleString() ?? '0'}`,
+          subtitle: priceDisplay,
           link: `${basePath}/packages/${service.id}`,
         })
       })

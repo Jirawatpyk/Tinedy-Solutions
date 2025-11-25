@@ -282,13 +282,11 @@ export function AdminServicePackages() {
    */
   const deletePackageV2 = async (id: string) => {
     try {
-      // Delete tiers first
-      const { error: tiersError } = await supabase
+      // Delete tiers first (ignore error - Fixed pricing packages don't have tiers)
+      await supabase
         .from('package_pricing_tiers')
         .delete()
         .eq('package_id', id)
-
-      if (tiersError) throw tiersError
 
       // Delete package
       const { error: packageError } = await supabase

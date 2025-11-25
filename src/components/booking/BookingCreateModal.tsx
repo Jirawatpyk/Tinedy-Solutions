@@ -390,6 +390,18 @@ export function BookingCreateModal({
     try {
       const isRecurring = packageSelection?.frequency && packageSelection.frequency > 1
 
+      // Validation: For tiered pricing packages, area_sqm and frequency are required
+      if (packageSelection?.pricingModel === 'tiered') {
+        if (!data.area_sqm || !data.frequency) {
+          toast({
+            title: 'Incomplete Information',
+            description: 'Please specify area and frequency for tiered pricing packages',
+            variant: 'destructive',
+          })
+          return
+        }
+      }
+
       // For recurring bookings, set booking_date from recurringDates[0] to pass validation
       if (isRecurring && recurringDates.length > 0 && !data.booking_date) {
         data.booking_date = recurringDates[0]
@@ -1169,6 +1181,70 @@ export function BookingCreateModal({
             </div>
           </div>
           </div>
+
+          {/* Form Validation Errors Summary */}
+          {Object.keys(form.formState.errors).length > 0 && (
+            <div className="flex-shrink-0 border-t pt-4 mt-4">
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <div className="font-medium mb-2">Please fix the following errors:</div>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {form.formState.errors.full_name && (
+                      <li>{form.formState.errors.full_name.message}</li>
+                    )}
+                    {form.formState.errors.email && (
+                      <li>{form.formState.errors.email.message}</li>
+                    )}
+                    {form.formState.errors.phone && (
+                      <li>{form.formState.errors.phone.message}</li>
+                    )}
+                    {form.formState.errors.service_package_id && (
+                      <li>{form.formState.errors.service_package_id.message}</li>
+                    )}
+                    {form.formState.errors.package_v2_id && (
+                      <li>{form.formState.errors.package_v2_id.message}</li>
+                    )}
+                    {form.formState.errors.booking_date && (
+                      <li>{form.formState.errors.booking_date.message}</li>
+                    )}
+                    {form.formState.errors.start_time && (
+                      <li>{form.formState.errors.start_time.message}</li>
+                    )}
+                    {form.formState.errors.end_time && (
+                      <li>{form.formState.errors.end_time.message}</li>
+                    )}
+                    {form.formState.errors.total_price && (
+                      <li>{form.formState.errors.total_price.message}</li>
+                    )}
+                    {form.formState.errors.area_sqm && (
+                      <li>{form.formState.errors.area_sqm.message}</li>
+                    )}
+                    {form.formState.errors.address && (
+                      <li>{form.formState.errors.address.message}</li>
+                    )}
+                    {form.formState.errors.city && (
+                      <li>{form.formState.errors.city.message}</li>
+                    )}
+                    {form.formState.errors.state && (
+                      <li>{form.formState.errors.state.message}</li>
+                    )}
+                    {form.formState.errors.zip_code && (
+                      <li>{form.formState.errors.zip_code.message}</li>
+                    )}
+                    {form.formState.errors.staff_id && (
+                      <li>{form.formState.errors.staff_id.message}</li>
+                    )}
+                    {form.formState.errors.team_id && (
+                      <li>{form.formState.errors.team_id.message}</li>
+                    )}
+                    {form.formState.errors.notes && (
+                      <li>{form.formState.errors.notes.message}</li>
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 flex-shrink-0 border-t pt-4 mt-4">
             <Button

@@ -154,7 +154,31 @@ export function AdminStaff() {
           .update(updatePayload)
           .eq('id', editingStaff.id)
 
-        if (error) throw error
+        if (error) {
+          // Log error for debugging
+          console.error('[Update Staff] Database error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          })
+
+          // Check for duplicate staff_number error (PostgreSQL unique constraint violation)
+          if (error.code === '23505') {
+            // Check if it's staff_number or email duplicate
+            if (error.message.toLowerCase().includes('staff_number') ||
+                error.details?.toLowerCase().includes('staff_number')) {
+              throw new Error('This staff number is already in use. Please use a different staff number.')
+            }
+            if (error.message.toLowerCase().includes('email') ||
+                error.details?.toLowerCase().includes('email')) {
+              throw new Error('This email is already registered. Please use a different email.')
+            }
+            // Generic duplicate error
+            throw new Error('Duplicate value detected. Please check your input.')
+          }
+          throw error
+        }
 
         // Update password if provided
         const formData = data as StaffUpdateFormData
@@ -226,12 +250,26 @@ export function AdminStaff() {
         if (!response.ok || !responseData?.success) {
           const errorMsg = responseData?.error || 'Failed to create staff member'
 
-          // Check for duplicate email error
-          if (errorMsg.toLowerCase().includes('user already registered') ||
-              errorMsg.toLowerCase().includes('already exists') ||
-              errorMsg.toLowerCase().includes('duplicate') ||
-              errorMsg.toLowerCase().includes('already registered')) {
+          // Log error for debugging
+          console.error('[Create Staff] Edge Function error:', {
+            errorMsg,
+            responseData,
+            response: { ok: response.ok, status: response.status }
+          })
+
+          // Check for duplicate email error (flexible matching)
+          const errorLower = errorMsg.toLowerCase()
+          if ((errorLower.includes('already') && errorLower.includes('registered')) ||
+              (errorLower.includes('already') && errorLower.includes('email')) ||
+              (errorLower.includes('user') && errorLower.includes('already')) ||
+              errorLower.includes('already exists')) {
             throw new Error('This email is already registered. Please use a different email.')
+          }
+
+          // Check for duplicate staff_number error
+          if (errorMsg.toLowerCase().includes('duplicate') &&
+              errorMsg.toLowerCase().includes('staff_number')) {
+            throw new Error('This staff number is already in use. Please use a different staff number.')
           }
 
           throw new Error(errorMsg)

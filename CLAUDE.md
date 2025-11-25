@@ -38,11 +38,13 @@ npm test -- --run               # Run once without watch mode
 ### Build Issues
 If you encounter Vite cache issues during development:
 ```bash
+# Unix/Mac/Git Bash
 rm -rf node_modules/.vite && npm run dev
-```
 
-On Windows:
-```cmd
+# Windows PowerShell
+Remove-Item -Recurse -Force node_modules\.vite; npm run dev
+
+# Windows CMD
 rmdir /s /q node_modules\.vite && npm run dev
 ```
 
@@ -138,7 +140,8 @@ The application implements a comprehensive RBAC system via `src/lib/permissions.
 **Core Tables:**
 - `profiles` - User profiles (extends Supabase auth.users) with role field
 - `customers` - Customer records with tags, analytics, and avatar support
-- `service_packages` - Service offerings (cleaning, training, etc.)
+- `service_packages` - Service offerings V1 (legacy system, deprecated)
+- `service_packages_v2` - Service offerings V2 with tiered pricing and packages
 - `bookings` - Main booking records with team/staff assignment and soft delete support
 - `recurring_bookings` - Recurring booking schedules (migration exists)
 - `booking_status_history` - Audit trail for booking status changes
@@ -149,6 +152,15 @@ The application implements a comprehensive RBAC system via `src/lib/permissions.
 - `settings` - Application settings (notifications, business hours, logo)
 - `reviews` - Customer ratings for staff (may not exist in all deployments)
 - `staff_availability` - Staff schedule and availability tracking
+
+**Service Packages System:**
+The application has two service package systems:
+- **V1 (Legacy)**: Simple service package with fixed pricing (table: `service_packages`)
+- **V2 (Current)**: Advanced system with tiered pricing and prepaid packages (table: `service_packages_v2`)
+  - Supports tiered pricing (e.g., small, medium, large)
+  - Prepaid package tracking with sessions/credits
+  - Package usage history
+  - Migration: `supabase-service-packages-v2.sql`
 
 **Key Patterns:**
 - **Row Level Security (RLS)**: All tables enforce role-based access via RLS policies
@@ -277,6 +289,38 @@ const channel = supabase
 return () => supabase.removeChannel(channel)
 ```
 
+**⚠️ Realtime Subscription Pitfall - Stale Closures:**
+When using realtime subscriptions with React state, **always use `useRef`** for values needed in callbacks:
+```typescript
+// ❌ Wrong - callback captures stale selectedUser
+useEffect(() => {
+  const channel = supabase.channel('messages')
+    .on('postgres_changes', { event: 'INSERT', table: 'messages' }, (payload) => {
+      if (payload.new.sender_id === selectedUser.id) { // Stale!
+        setMessages(prev => [...prev, payload.new])
+      }
+    })
+}, [selectedUser]) // Re-creates subscription on every change
+
+// ✅ Correct - use ref to get latest value
+const selectedUserRef = useRef(selectedUser)
+useEffect(() => {
+  selectedUserRef.current = selectedUser
+}, [selectedUser])
+
+useEffect(() => {
+  const channel = supabase.channel('messages')
+    .on('postgres_changes', { event: 'INSERT', table: 'messages' }, (payload) => {
+      const currentUser = selectedUserRef.current // Always current!
+      if (payload.new.sender_id === currentUser.id) {
+        setMessages(prev => [...prev, payload.new])
+      }
+    })
+    .subscribe()
+  return () => supabase.removeChannel(channel)
+}, []) // Subscribe once
+```
+
 **Error Handling:**
 - Reviews table may not exist in all deployments - wrap in try-catch
 - Use `getErrorMessage()` utility from `src/lib/error-utils.ts`
@@ -305,21 +349,34 @@ return () => supabase.removeChannel(channel)
 
 Migration files in `supabase/migrations/` are manually run in Supabase Dashboard SQL Editor.
 
-**Critical Migrations:**
-- `enable_rls_policies_v2.sql` - ⚠️ **MUST RUN** before production (enables RLS on all tables)
+**Migration Workflow:**
+1. Open Supabase Dashboard → SQL Editor
+2. Load migration file content
+3. Execute SQL
+4. Verify changes in Table Editor
+5. Test RLS policies if applicable
+
+**Critical Migrations (Run in Order):**
+- `supabase-schema.sql` - ⚠️ **REQUIRED** Base schema (profiles, customers, bookings, teams, etc.)
 - `20250116_add_manager_role.sql` - Adds manager role to user roles enum
-- `20250116_manager_rls_policies.sql` - Manager-specific RLS policies
 - `20250116_soft_delete_system.sql` - Soft delete infrastructure (deleted_at, deleted_by)
+- `20250116_manager_rls_policies.sql` - Manager-specific RLS policies
+- `20250117_fix_profiles_rls_policies.sql` - Fixed profiles RLS policies
+- `20250118_add_rls_remaining_tables.sql` - RLS for remaining tables
+- `20250118_fix_delete_user_rls.sql` - Fixed user deletion RLS
+
+**Feature Migrations:**
 - `20250112_add_recurring_bookings.sql` - Recurring booking schedules
-- `20250128_create_notifications_table.sql` - In-app notifications with realtime
 - `20250121_create_booking_status_history.sql` - Audit trail for booking status changes
 - `20250121_add_payment_fields.sql` - Payment tracking fields
+- `20250121_add_customer_avatar.sql` - Customer avatar support
+- `20250122_add_staff_number_and_skills.sql` - Staff number auto-generation and skills
+- `20250118_add_business_logo_support.sql` - Business logo in settings
+- `supabase-service-packages-v2.sql` - Service Packages V2 with tiered pricing
 
-**Common Migrations:**
-- `add_team_lead.sql` - Team leadership functionality
-- `create_settings_table.sql` - Application settings
-- `customer_analytics_views.sql` - Customer analytics views
-- `enhance_customers_table.sql` - Enhanced customer fields with tags
+**Notification System:**
+- `20250116_fix_notification_realtime.sql` - Enable realtime for notifications
+- `20250116_fix_notification_language_to_english.sql` - English notification messages
 
 **Migration Pattern:**
 
@@ -590,21 +647,30 @@ Dashboard ได้ถูก refactor เป็น modular components:
 - Automated booking reminders via cron jobs
 
 **Planned Improvements:**
-See [OPTIMIZATION_ROADMAP.md](../OPTIMIZATION_ROADMAP.md):
-- Large component refactoring
-- Type safety improvements
-- React Query integration
-- Performance optimization
-- Extended test coverage
+See [OPTIMIZATION_ROADMAP.md](../OPTIMIZATION_ROADMAP.md) (located in parent directory):
+- Large component refactoring (bookings.tsx, customer-detail.tsx)
+- Type safety improvements (eliminate `any` types)
+- React Query integration for better data caching
+- Performance optimization (virtualization, memoization)
+- Extended test coverage beyond permission system
 
 ### Platform Notes
 
 **Windows Development:**
 This project is developed on Windows. Be aware of:
 - Use forward slashes `/` in import paths (TypeScript/Vite requirement)
-- Git Bash or WSL recommended for Unix-like commands
-- PowerShell alternatives: `dir` instead of `ls`, `del` instead of `rm`
-- Line endings: Git should handle CRLF conversion automatically
+- Git Bash or WSL recommended for Unix-like commands in documentation
+- PowerShell alternatives:
+  - `ls` → `Get-ChildItem` (or use `ls` alias)
+  - `rm -rf` → `Remove-Item -Recurse -Force`
+  - `cat` → `Get-Content`
+  - `grep` → `Select-String`
+- CMD alternatives:
+  - `ls` → `dir`
+  - `rm` → `del`
+  - `rm -rf` → `rmdir /s /q`
+- Line endings: Git handles CRLF ↔ LF conversion automatically
+- Use Git Bash for commands in this documentation for consistency
 
 ### Environment Setup
 
@@ -614,7 +680,18 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+See `.env.example` for template.
+
 Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.
+
+### Development Tools
+
+**Mock Mobile UI:**
+The project includes a standalone mobile UI mockup for testing mobile layouts:
+- File: `mock-mobile-ui.html`
+- Open directly in browser (no server needed)
+- Useful for testing mobile-first designs without running dev server
+- Contains realistic booking cards, chat UI, and navigation examples
 
 **Additional Documentation:**
 
@@ -650,3 +727,13 @@ Database setup requires running `supabase-schema.sql` in Supabase SQL Editor.
 - Production build creates `dist/` directory
 - Run `npm run build` to create optimized production bundle
 - Run `npm run preview` to test production build locally
+- **Console logs automatically removed** in production via `vite.config.ts` esbuild settings
+- Development builds keep console logs for debugging
+
+**Build Configuration:**
+- Vite config (`vite.config.ts`):
+  - Path alias: `@/` → `./src`
+  - Production minification: esbuild
+  - Console/debugger removal in production only
+- TypeScript strict mode enabled
+- ESLint flat config format

@@ -13,7 +13,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,6 +63,7 @@ export function PackageFormV2({
   showCancel = true,
 }: PackageFormV2Props) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [loadingTiers, setLoadingTiers] = useState(false)
 
@@ -171,7 +174,7 @@ export function PackageFormV2({
     setLoading(true)
 
     try {
-      // Additional tier overlap validation
+      // Additional tier overlap validation (Zod validates individual tier fields)
       if (data.package.pricing_model === PricingModel.Tiered && data.tiers) {
         try {
           validateTiersNoOverlap(data.tiers)
@@ -231,6 +234,9 @@ export function PackageFormV2({
           description: 'New package created successfully',
         })
       }
+
+      // Invalidate all package queries to refetch data across the app
+      await queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
 
       onSuccess?.(packageId)
     } catch (error) {
@@ -513,7 +519,7 @@ export function PackageFormV2({
                     </CardContent>
                   </Card>
                 ) : (
-                  <TierEditor tiers={tiers} onChange={setTiers} />
+                  <TierEditor tiers={tiers} onChange={setTiers} showErrors={form.formState.isSubmitted} />
                 )}
                 {form.formState.errors.tiers && (
                   <p className="text-sm text-red-500 mt-1">{form.formState.errors.tiers.message}</p>

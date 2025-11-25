@@ -198,6 +198,15 @@ export function mapErrorToUserMessage(
   const errorMessage = errorObj?.message || ''
   const errorCode = errorObj?.code
 
+  // Check for custom error messages first (these are already user-friendly)
+  // If the error message is already user-friendly (starts with "This"), use it as is
+  if (errorMessage.startsWith('This ')) {
+    return {
+      title: 'Error',
+      description: errorMessage,
+    }
+  }
+
   // Network errors
   if (
     errorMessage.includes('fetch') ||

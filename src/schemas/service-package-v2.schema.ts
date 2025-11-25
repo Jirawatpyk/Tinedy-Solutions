@@ -44,10 +44,8 @@ export const PackagePricingTierSchema = z.object({
     .min(1, 'At least 1 staff member is required'),
 
   estimated_hours: z
-    .number()
-    .positive('Estimated hours must be greater than 0')
-    .nullable()
-    .optional(),
+    .number({ message: 'Estimated hours is required' })
+    .positive('Estimated hours must be greater than 0'),
 
   price_1_time: z
     .number({ message: '1-time price is required' })

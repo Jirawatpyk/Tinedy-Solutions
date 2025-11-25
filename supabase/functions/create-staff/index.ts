@@ -77,6 +77,14 @@ serve(async (req) => {
     })
 
     if (createError) {
+      // Check for duplicate email error from Auth API
+      const errorMsg = createError.message.toLowerCase()
+      if (errorMsg.includes('user already registered') ||
+          errorMsg.includes('already exists') ||
+          errorMsg.includes('already registered') ||
+          errorMsg.includes('duplicate')) {
+        throw new Error('This email is already registered. Please use a different email.')
+      }
       throw createError
     }
 
@@ -102,6 +110,17 @@ serve(async (req) => {
     if (profileError) {
       // If profile creation fails, delete the user
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
+
+      // Check for duplicate staff_number error
+      if (profileError.code === '23505') {
+        if (profileError.message.toLowerCase().includes('staff_number')) {
+          throw new Error('This staff number is already in use. Please use a different staff number.')
+        }
+        if (profileError.message.toLowerCase().includes('email')) {
+          throw new Error('This email is already registered. Please use a different email.')
+        }
+      }
+
       throw profileError
     }
 

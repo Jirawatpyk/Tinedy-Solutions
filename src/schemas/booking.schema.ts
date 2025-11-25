@@ -116,19 +116,9 @@ export const bookingCreateSchema = baseBookingSchema
       path: ['customer_id'],
     }
   )
-  .refine(
-    (data) => {
-      // If package_v2_id is used, area_sqm and frequency are required
-      if (data.package_v2_id) {
-        return !!(data.area_sqm && data.frequency)
-      }
-      return true
-    },
-    {
-      message: 'Area and frequency are required for V2 tiered pricing packages',
-      path: ['area_sqm'],
-    }
-  )
+  // Note: Removed validation for area_sqm and frequency on package_v2_id
+  // because V2 packages can be either Fixed or Tiered pricing.
+  // Validation is now handled in the component based on pricingModel.
 
 export type BookingCreateFormData = z.infer<typeof bookingCreateSchema>
 

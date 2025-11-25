@@ -415,13 +415,23 @@ export function useChat() {
         setMessages([])
       }
 
-      // Delete all messages between current user and other user
-      const { error } = await supabase
+      // Delete messages sent BY current user TO other user
+      const { error: error1 } = await supabase
         .from('messages')
         .delete()
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+        .eq('sender_id', user.id)
+        .eq('recipient_id', otherUserId)
 
-      if (error) throw error
+      if (error1) throw error1
+
+      // Delete messages sent BY other user TO current user
+      const { error: error2 } = await supabase
+        .from('messages')
+        .delete()
+        .eq('sender_id', otherUserId)
+        .eq('recipient_id', user.id)
+
+      if (error2) throw error2
 
     } catch (error) {
       // Rollback on error: Restore previous state

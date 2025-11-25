@@ -29,7 +29,7 @@ export interface TierFormData {
   area_min: number
   area_max: number
   required_staff: number
-  estimated_hours: number | null
+  estimated_hours: number
   price_1_time: number
   price_2_times: number | null
   price_4_times: number | null
@@ -55,7 +55,7 @@ function createEmptyTier(): TierFormData {
     area_min: 0,
     area_max: 100,
     required_staff: 1,
-    estimated_hours: null,
+    estimated_hours: 0,
     price_1_time: 0,
     price_2_times: null,
     price_4_times: null,
@@ -301,24 +301,30 @@ export function TierEditor({
                   </div>
                   <div>
                     <Label htmlFor={`tier-${index}-hours`}>
-                      Estimated Hours (Optional)
+                      Estimated Hours *
                     </Label>
                     <Input
                       id={`tier-${index}-hours`}
                       type="number"
                       step="0.5"
-                      min="0"
-                      value={tier.estimated_hours ?? ''}
+                      min="0.5"
+                      value={tier.estimated_hours > 0 ? tier.estimated_hours : ''}
                       onChange={(e) =>
                         handleUpdateTier(
                           index,
                           'estimated_hours',
-                          e.target.value ? parseFloat(e.target.value) : null
+                          e.target.value ? parseFloat(e.target.value) : 0
                         )
                       }
                       placeholder="e.g. 2.5"
                       disabled={disabled}
+                      className={cn(
+                        showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && 'border-red-500'
+                      )}
                     />
+                    {showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && (
+                      <p className="text-sm text-red-500 mt-1">Estimated hours is required</p>
+                    )}
                   </div>
                 </div>
 
