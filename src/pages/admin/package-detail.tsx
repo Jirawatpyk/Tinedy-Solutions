@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { queryKeys } from '@/lib/query-keys'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
@@ -90,6 +92,7 @@ export default function AdminPackageDetail() {
   const { packageId } = useParams<{ packageId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -286,6 +289,9 @@ export default function AdminPackageDetail() {
         is_active: !packageData.is_active,
       })
 
+      // Invalidate React Query cache to refresh packages list
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+
       toast({
         title: 'Success',
         description: `Package ${packageData.is_active ? 'deactivated' : 'activated'} successfully`,
@@ -334,6 +340,9 @@ export default function AdminPackageDetail() {
         .eq('id', packageData.id)
 
       if (error) throw error
+
+      // Invalidate React Query cache before navigation
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
 
       toast({
         title: 'Success',
