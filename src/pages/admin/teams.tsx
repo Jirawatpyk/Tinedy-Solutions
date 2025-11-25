@@ -29,6 +29,7 @@ import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { TeamCard } from '@/components/teams/team-card'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
 import {
   TeamCreateSchema,
@@ -79,6 +80,11 @@ export function AdminTeams() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
+
+  // Remove Member Confirmation Dialog State
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState<{ teamId: string; staffId: string } | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
 
   // React Hook Form - Create Team (uses base schema, transforms on submit)
   const createTeamForm = useForm<TeamCreateFormData>({
@@ -387,15 +393,23 @@ export function AdminTeams() {
     }
   }
 
-  const handleRemoveMember = async (teamId: string, staffId: string) => {
-    if (!confirm('Remove this member from the team?')) return
+  // Open remove member confirmation dialog
+  const handleRemoveMember = (teamId: string, staffId: string) => {
+    setPendingRemove({ teamId, staffId })
+    setShowRemoveConfirm(true)
+  }
 
+  // Actually perform the removal (called after confirmation)
+  const confirmRemoveMember = async () => {
+    if (!pendingRemove) return
+
+    setIsRemoving(true)
     try {
       const { error } = await supabase
         .from('team_members')
         .delete()
-        .eq('team_id', teamId)
-        .eq('staff_id', staffId)
+        .eq('team_id', pendingRemove.teamId)
+        .eq('staff_id', pendingRemove.staffId)
 
       if (error) throw error
 
@@ -404,6 +418,8 @@ export function AdminTeams() {
         description: 'Member removed successfully',
       })
 
+      setShowRemoveConfirm(false)
+      setPendingRemove(null)
       refresh()
     } catch (error) {
       console.error('Error removing member:', error)
@@ -413,6 +429,8 @@ export function AdminTeams() {
         description: errorMessage.description,
         variant: 'destructive',
       })
+    } finally {
+      setIsRemoving(false)
     }
   }
 
@@ -798,6 +816,19 @@ export function AdminTeams() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <ConfirmDialog
+        open={showRemoveConfirm}
+        onOpenChange={setShowRemoveConfirm}
+        title="Remove Team Member"
+        description="Are you sure you want to remove this member from the team?"
+        variant="warning"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        onConfirm={confirmRemoveMember}
+        isLoading={isRemoving}
+      />
     </div>
   )
 }

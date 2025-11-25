@@ -20,6 +20,11 @@ interface UseBulkActionsReturn {
   handleBulkStatusUpdate: () => Promise<void>
   handleBulkDelete: () => Promise<void>
   handleBulkExport: () => void
+  // Delete confirmation dialog state
+  showDeleteConfirm: boolean
+  setShowDeleteConfirm: (show: boolean) => void
+  confirmBulkDelete: () => Promise<void>
+  isDeleting: boolean
 }
 
 /**
@@ -40,6 +45,8 @@ export function useBulkActions({
   const { toast } = useToast()
   const [selectedBookings, setSelectedBookings] = useState<string[]>([])
   const [bulkStatus, setBulkStatus] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const toggleSelectAll = () => {
     if (selectedBookings.length === filteredBookings.length) {
@@ -127,10 +134,17 @@ export function useBulkActions({
     }
   }
 
+  // Open delete confirmation dialog
   const handleBulkDelete = async () => {
     if (selectedBookings.length === 0) return
-    if (!confirm(`Are you sure you want to delete ${selectedBookings.length} bookings?`)) return
+    setShowDeleteConfirm(true)
+  }
 
+  // Actually perform the deletion (called after confirmation)
+  const confirmBulkDelete = async () => {
+    if (selectedBookings.length === 0) return
+
+    setIsDeleting(true)
     try {
       const { error } = await supabase
         .from('bookings')
@@ -144,6 +158,7 @@ export function useBulkActions({
         description: `Deleted ${selectedBookings.length} bookings`,
       })
       setSelectedBookings([])
+      setShowDeleteConfirm(false)
       onSuccess()
     } catch (error) {
       toast({
@@ -151,6 +166,8 @@ export function useBulkActions({
         description: getErrorMessage(error),
         variant: 'destructive',
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -193,5 +210,10 @@ export function useBulkActions({
     handleBulkStatusUpdate,
     handleBulkDelete,
     handleBulkExport,
+    // Delete confirmation dialog
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    confirmBulkDelete,
+    isDeleting,
   }
 }

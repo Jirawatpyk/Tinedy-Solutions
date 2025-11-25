@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import type { ReactElement, Dispatch, SetStateAction } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
+import { queryKeys } from '@/lib/query-keys'
 import type { BookingBase } from '@/types/booking'
+import type { Booking } from '@/types/booking'
 
 interface PendingStatusChange {
   bookingId: string
@@ -47,6 +50,7 @@ export function useBookingStatusManager<T extends BookingBase>({
   onSuccess,
 }: UseBookingStatusManagerProps<T>): UseBookingStatusManagerReturn {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null)
 
@@ -134,32 +138,73 @@ export function useBookingStatusManager<T extends BookingBase>({
     setShowStatusConfirmDialog(true)
   }
 
-  // Confirm and execute status change
+  // Helper function to update booking status in all cached queries (Optimistic Update)
+  const updateBookingStatusInCache = (bookingId: string, newStatus: string) => {
+    // Update all booking-related queries in cache
+    queryClient.setQueriesData<Booking[]>(
+      { queryKey: queryKeys.bookings.all },
+      (oldData) => {
+        if (!oldData) return oldData
+        return oldData.map((booking) =>
+          booking.id === bookingId
+            ? { ...booking, status: newStatus }
+            : booking
+        )
+      }
+    )
+  }
+
+  // Confirm and execute status change with Optimistic Update
   const confirmStatusChange = async () => {
     if (!pendingStatusChange) return
 
+    const { bookingId, currentStatus, newStatus } = pendingStatusChange
+
+    // 1. Close dialog immediately for better UX
+    setShowStatusConfirmDialog(false)
+    setPendingStatusChange(null)
+
+    // 2. Optimistic Update - Update cache immediately (UI changes instantly)
+    const previousData = queryClient.getQueriesData<Booking[]>({
+      queryKey: queryKeys.bookings.all,
+    })
+    updateBookingStatusInCache(bookingId, newStatus)
+
+    // 3. Update selected booking state immediately
+    if (selectedBooking && selectedBooking.id === bookingId) {
+      setSelectedBooking({ ...selectedBooking, status: newStatus })
+    }
+
     try {
+      // 4. Call API in background
       const { error } = await supabase
         .from('bookings')
-        .update({ status: pendingStatusChange.newStatus })
-        .eq('id', pendingStatusChange.bookingId)
+        .update({ status: newStatus })
+        .eq('id', bookingId)
 
       if (error) throw error
 
+      // 5. Show success toast
       toast({
         title: 'Success',
-        description: `Status changed to ${pendingStatusChange.newStatus}`,
+        description: `Status changed to ${getStatusLabel(newStatus)}`,
       })
 
-      // Update selected booking if it's the same one
-      if (selectedBooking && selectedBooking.id === pendingStatusChange.bookingId) {
-        setSelectedBooking({ ...selectedBooking, status: pendingStatusChange.newStatus })
-      }
-
-      setShowStatusConfirmDialog(false)
-      setPendingStatusChange(null)
+      // 6. Trigger background refetch to sync with server
       onSuccess()
     } catch (error) {
+      // 7. Rollback on error - restore previous cache data
+      previousData.forEach(([queryKey, data]) => {
+        if (data) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      })
+
+      // Rollback selected booking
+      if (selectedBooking && selectedBooking.id === bookingId) {
+        setSelectedBooking({ ...selectedBooking, status: currentStatus })
+      }
+
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
         title: errorMsg.title,

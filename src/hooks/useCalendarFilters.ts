@@ -42,7 +42,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
         staffIds: [],
         teamIds: [],
         searchQuery: '',
-        // dateRange not set - preserve existing date filter
+        dateRange: null, // Clear date filter to show all pending bookings
       }
 
     case 'confirmed':
@@ -51,7 +51,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
         staffIds: [],
         teamIds: [],
         searchQuery: '',
-        // dateRange not set - preserve existing date filter
+        dateRange: null, // Clear date filter to show all confirmed bookings
       }
 
     default:

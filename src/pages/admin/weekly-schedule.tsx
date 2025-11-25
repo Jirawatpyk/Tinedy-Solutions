@@ -22,6 +22,7 @@ import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
@@ -63,6 +64,11 @@ export function AdminWeeklySchedule() {
   const [editFormData, setEditFormData] = useState<BookingFormState>({})
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
+
+  // Delete Confirmation Dialog State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
@@ -342,14 +348,22 @@ export function AdminWeeklySchedule() {
     }
   }
 
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to delete this booking?')) return
+  // Open delete confirmation dialog
+  const handleDeleteBooking = (bookingId: string) => {
+    setPendingDeleteId(bookingId)
+    setShowDeleteConfirm(true)
+  }
 
+  // Actually perform the deletion (called after confirmation)
+  const confirmDeleteBooking = async () => {
+    if (!pendingDeleteId) return
+
+    setIsDeleting(true)
     try {
       const { error } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', bookingId)
+        .eq('id', pendingDeleteId)
 
       if (error) throw error
 
@@ -358,6 +372,8 @@ export function AdminWeeklySchedule() {
         description: 'Booking deleted successfully',
       })
 
+      setShowDeleteConfirm(false)
+      setPendingDeleteId(null)
       setIsDetailModalOpen(false)
       refetchBookings()
     } catch (error) {
@@ -367,6 +383,8 @@ export function AdminWeeklySchedule() {
         description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -1040,6 +1058,19 @@ export function AdminWeeklySchedule() {
           excludeBookingId={selectedBooking?.id}
         />
       )}
+
+      {/* Delete Booking Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Booking"
+        description="Are you sure you want to delete this booking? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDeleteBooking}
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

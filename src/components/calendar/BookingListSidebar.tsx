@@ -62,7 +62,21 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
       return format(selectedDate, 'MMM d, yyyy')
     }
     if (selectedDateRange) {
-      return `${format(selectedDateRange.start, 'MMM d')}-${format(selectedDateRange.end, 'd, yyyy')}`
+      const startMonth = format(selectedDateRange.start, 'MMM')
+      const endMonth = format(selectedDateRange.end, 'MMM')
+      const startYear = format(selectedDateRange.start, 'yyyy')
+      const endYear = format(selectedDateRange.end, 'yyyy')
+
+      // Same month and year: "Nov 25-30, 2025"
+      if (startMonth === endMonth && startYear === endYear) {
+        return `${format(selectedDateRange.start, 'MMM d')}-${format(selectedDateRange.end, 'd, yyyy')}`
+      }
+      // Different month, same year: "Nov 25 - Dec 25, 2025"
+      if (startYear === endYear) {
+        return `${format(selectedDateRange.start, 'MMM d')} - ${format(selectedDateRange.end, 'MMM d, yyyy')}`
+      }
+      // Different year: "Dec 25, 2025 - Jan 25, 2026"
+      return `${format(selectedDateRange.start, 'MMM d, yyyy')} - ${format(selectedDateRange.end, 'MMM d, yyyy')}`
     }
     // ถ้ามี bookings แสดงว่ากำลังใช้ filter (preset, search, etc.)
     if (bookings.length > 0) {

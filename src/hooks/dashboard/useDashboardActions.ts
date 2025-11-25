@@ -6,6 +6,11 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { getBangkokDateString } from '@/lib/dashboard-utils'
 import type { TodayBooking, ActionLoading } from '@/types/dashboard'
 
+interface DeleteConfirmState {
+  show: boolean
+  bookingId: string | null
+}
+
 export function useDashboardActions(
   refresh: () => void,
   selectedBooking: TodayBooking | null,
@@ -17,6 +22,12 @@ export function useDashboardActions(
     statusChange: false,
     delete: false,
     markAsPaid: false,
+  })
+
+  // Delete confirmation dialog state
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
+    show: false,
+    bookingId: null,
   })
 
   const handleStatusChange = useCallback(
@@ -55,13 +66,22 @@ export function useDashboardActions(
     [selectedBooking, toast, refresh, onBookingUpdate]
   )
 
+  // Open delete confirmation dialog
   const deleteBooking = useCallback(
-    async (bookingId: string) => {
-      if (!confirm('Are you sure you want to delete this booking?')) return
+    (bookingId: string) => {
+      setDeleteConfirm({ show: true, bookingId })
+    },
+    []
+  )
+
+  // Actually perform the deletion (called after confirmation)
+  const confirmDeleteBooking = useCallback(
+    async () => {
+      if (!deleteConfirm.bookingId) return
 
       setActionLoading((prev) => ({ ...prev, delete: true }))
       try {
-        const { error } = await supabase.from('bookings').delete().eq('id', bookingId)
+        const { error } = await supabase.from('bookings').delete().eq('id', deleteConfirm.bookingId)
 
         if (error) throw error
 
@@ -70,6 +90,7 @@ export function useDashboardActions(
           description: 'Booking deleted successfully',
         })
 
+        setDeleteConfirm({ show: false, bookingId: null })
         refresh()
       } catch (error) {
         toast({
@@ -81,8 +102,13 @@ export function useDashboardActions(
         setActionLoading((prev) => ({ ...prev, delete: false }))
       }
     },
-    [toast, refresh]
+    [deleteConfirm.bookingId, toast, refresh]
   )
+
+  // Close delete confirmation dialog
+  const cancelDeleteBooking = useCallback(() => {
+    setDeleteConfirm({ show: false, bookingId: null })
+  }, [])
 
   const markAsPaid = useCallback(
     async (bookingId: string, method: string = 'cash') => {
@@ -141,5 +167,9 @@ export function useDashboardActions(
     archiveBooking,
     markAsPaid,
     actionLoading,
+    // Delete confirmation dialog
+    deleteConfirm,
+    confirmDeleteBooking,
+    cancelDeleteBooking,
   }
 }

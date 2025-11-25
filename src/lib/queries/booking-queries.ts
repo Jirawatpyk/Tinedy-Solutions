@@ -359,7 +359,8 @@ export const bookingQueryOptions = {
     return {
       queryKey: queryKeys.bookings.byDateRange(startDate, endDate, normalizedFilters),
       queryFn: () => fetchBookingsByDateRange(startDate, endDate, filters), // Use original filters for query
-      staleTime: 3 * 60 * 1000, // 3 minutes
+      staleTime: 30 * 1000, // 30 seconds - shorter for calendar realtime updates
+      refetchOnMount: 'always' as const, // Always refetch when component mounts
       placeholderData: keepPreviousData, // Keep previous data while refetching (prevents UI flash)
     }
   },

@@ -98,15 +98,14 @@ export const FilterPresets: React.FC<FilterPresetsProps> = ({
     // Toggle off if clicking active preset
     if (activePreset === preset && onClear) {
       onClear()
-    } else {
-      // Date-based presets (today, week, month, upcoming) should change calendar date
-      if (
-        onPresetDateChange &&
-        (preset === 'today' || preset === 'week' || preset === 'month' || preset === 'upcoming')
-      ) {
+    } else if (preset) {
+      // All presets should notify calendar to update its date state
+      // - Date presets (today, week, month, upcoming): set date range
+      // - Status presets (pending, confirmed): clear date range to show all
+      if (onPresetDateChange) {
         onPresetDateChange(preset)
       }
-      // All presets still update filter state (for status filters: pending, confirmed)
+      // All presets update filter state
       onPresetChange(preset)
     }
   }

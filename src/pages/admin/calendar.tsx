@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,6 +75,50 @@ export function AdminCalendar() {
   // Filter state management with useCalendarFilters hook
   const filterControls = useCalendarFilters()
 
+  // Sync selectedDate/selectedDateRange with preset on initial load
+  // This ensures the sidebar shows correct bookings when page loads with a saved preset
+  useEffect(() => {
+    const preset = filterControls.filters.preset
+    if (!preset) return
+
+    const today = new Date()
+
+    switch (preset) {
+      case 'today':
+        setSelectedDate(today)
+        setSelectedDateRange(null)
+        break
+      case 'week': {
+        const weekStart = startOfWeek(today)
+        const weekEnd = endOfWeek(today)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: weekStart, end: weekEnd })
+        break
+      }
+      case 'month': {
+        const monthStart = startOfMonth(today)
+        const monthEnd = endOfMonth(today)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: monthStart, end: monthEnd })
+        break
+      }
+      case 'upcoming': {
+        const upcomingEnd = new Date(today)
+        upcomingEnd.setDate(today.getDate() + 30)
+        setSelectedDate(null)
+        setSelectedDateRange({ start: today, end: upcomingEnd })
+        break
+      }
+      case 'pending':
+      case 'confirmed':
+        // Status presets: no date selection, show all matching
+        setSelectedDate(null)
+        setSelectedDateRange(null)
+        break
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
+
   // Callback สำหรับ Preset buttons ให้เปลี่ยน currentDate
   const handlePresetDateChange = useCallback((preset: string) => {
     const today = new Date()
@@ -110,6 +154,13 @@ export function AdminCalendar() {
         setCurrentDate(today)
         setSelectedDate(null)
         setSelectedDateRange({ start: today, end: upcomingEnd })
+        break
+      }
+      case 'pending':
+      case 'confirmed': {
+        // Status-based presets: clear date filter to show all matching bookings
+        setSelectedDate(null)
+        setSelectedDateRange(null)
         break
       }
     }

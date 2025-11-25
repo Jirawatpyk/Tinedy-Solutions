@@ -14,6 +14,7 @@ import { DashboardStats, QuickInsights, DashboardCharts, TodayAppointmentsList }
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Types
 import type { Team, TodayBooking } from '@/types/dashboard'
@@ -288,6 +289,19 @@ export function AdminDashboard() {
           excludeBookingId={modal.selectedBooking?.id}
         />
       )}
+
+      {/* Delete Booking Confirmation Dialog */}
+      <ConfirmDialog
+        open={actions.deleteConfirm.show}
+        onOpenChange={(open) => !open && actions.cancelDeleteBooking()}
+        title="Delete Booking"
+        description="Are you sure you want to delete this booking? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={actions.confirmDeleteBooking}
+        isLoading={actions.actionLoading.delete}
+      />
     </div>
   )
 }

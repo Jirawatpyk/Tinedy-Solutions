@@ -25,6 +25,7 @@ import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
 import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
 import { BookingList } from '@/components/booking/BookingList'
 import { BookingStatusConfirmDialog } from '@/components/booking/BookingStatusConfirmDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
 import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
@@ -198,6 +199,11 @@ export function AdminBookings() {
     handleBulkStatusUpdate,
     handleBulkDelete,
     handleBulkExport,
+    // Delete confirmation dialog
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    confirmBulkDelete,
+    isDeleting,
   } = useBulkActions({
     bookings,
     filteredBookings,
@@ -1314,6 +1320,19 @@ export function AdminBookings() {
         conflicts={conflicts}
         getStatusBadge={getStatusBadge}
         formatTime={formatTime}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Bookings"
+        description={`Are you sure you want to delete ${selectedBookings.length} booking(s)? This action cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmBulkDelete}
+        isLoading={isDeleting}
       />
 
       {/* Bookings list */}

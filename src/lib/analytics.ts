@@ -284,6 +284,7 @@ export const getBookingStatusBreakdown = (bookings: BookingForAnalytics[]) => {
     { name: 'In Progress', value: statusCounts.in_progress || 0, color: '#8b5cf6' }, // violet-500
     { name: 'Completed', value: statusCounts.completed || 0, color: '#22c55e' }, // green-500
     { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' }, // red-500
+    { name: 'No Show', value: statusCounts.no_show || 0, color: '#6b7280' }, // gray-500
   ]
 }
 
