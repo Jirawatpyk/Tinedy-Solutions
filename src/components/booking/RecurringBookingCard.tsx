@@ -27,7 +27,8 @@ import {
   Clock,
   Link2,
   User,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { getRecurringPatternLabel } from '@/types/recurring-booking'
@@ -40,6 +41,8 @@ interface RecurringBookingCardProps {
   group: RecurringGroup
   onBookingClick?: (bookingId: string) => void
   onDeleteGroup?: (groupId: string) => void
+  onArchiveGroup?: (groupId: string) => void
+  onRestoreBooking?: (bookingId: string) => void
   onStatusChange?: (bookingId: string, currentStatus: string, newStatus: string) => void
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
@@ -54,6 +57,8 @@ export function RecurringBookingCard({
   group,
   onBookingClick,
   onDeleteGroup,
+  onArchiveGroup,
+  onRestoreBooking,
   onStatusChange,
   getAvailableStatuses,
   getStatusLabel
@@ -188,13 +193,13 @@ export function RecurringBookingCard({
                   <ChevronDown className="h-4 w-4" />
                 )}
               </Button>
-              {onDeleteGroup && (
+              {(onDeleteGroup || onArchiveGroup) && (
                 <PermissionAwareDeleteButton
                   resource="bookings"
                   itemName={`Recurring Group (${group.totalBookings} bookings)`}
-                  onDelete={() => onDeleteGroup(group.groupId)}
-                  onCancel={() => onDeleteGroup(group.groupId)}
-                  cancelText="Cancel Group"
+                  onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
+                  onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
+                  cancelText="Archive Group"
                 />
               )}
             </div>
@@ -207,7 +212,10 @@ export function RecurringBookingCard({
         <CardContent className="pt-0">
           <div className="space-y-2">
             {group.bookings.map((booking) => {
-              const bgColor = booking.status === 'completed'
+              const isArchived = !!booking.deleted_at
+              const bgColor = isArchived
+                ? 'bg-gray-100 hover:bg-gray-200 opacity-60 border-dashed'
+                : booking.status === 'completed'
                 ? 'bg-green-50 hover:bg-green-100'
                 : booking.status === 'cancelled'
                 ? 'bg-red-50 hover:bg-red-100'
@@ -229,8 +237,15 @@ export function RecurringBookingCard({
                     </Badge>
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">
-                        {formatDate(booking.booking_date)}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {formatDate(booking.booking_date)}
+                        </span>
+                        {isArchived && (
+                          <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                            Archived
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {formatTime(booking.start_time)} - {booking.end_time ? formatTime(booking.end_time) : 'N/A'}
@@ -238,24 +253,39 @@ export function RecurringBookingCard({
                     </div>
                   </div>
 
-                  {/* Status Dropdown for each booking */}
+                  {/* Actions: Status Dropdown or Restore Button */}
                   <div onClick={(e) => e.stopPropagation()}>
-                    <Select
-                      value={booking.status}
-                      onValueChange={(newStatus) => onStatusChange?.(booking.id, booking.status, newStatus)}
-                      disabled={isFinalStatus(booking.status)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getAvailableStatuses(booking.status).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {getStatusLabel(status)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isArchived && onRestoreBooking ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onRestoreBooking(booking.id)
+                        }}
+                        className="border-green-500 text-green-700 hover:bg-green-50"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Restore
+                      </Button>
+                    ) : (
+                      <Select
+                        value={booking.status}
+                        onValueChange={(newStatus) => onStatusChange?.(booking.id, booking.status, newStatus)}
+                        disabled={isFinalStatus(booking.status)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableStatuses(booking.status).map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {getStatusLabel(status)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
               )

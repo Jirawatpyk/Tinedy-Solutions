@@ -206,6 +206,7 @@ export async function fetchStaffBookingsToday(
       service_packages_v2:package_v2_id (id, name, service_type)
     `)
     .eq('booking_date', todayStr)
+    .is('deleted_at', null) // Exclude archived bookings
     .order('start_time', { ascending: true })
 
   if (filterCondition) {
@@ -255,6 +256,7 @@ export async function fetchStaffBookingsUpcoming(
     `)
     .gte('booking_date', tomorrowStr)
     .lte('booking_date', nextWeekStr)
+    .is('deleted_at', null) // Exclude archived bookings
     .order('booking_date', { ascending: true })
     .order('start_time', { ascending: true })
 
@@ -303,6 +305,7 @@ export async function fetchStaffBookingsCompleted(
     `)
     .gte('booking_date', thirtyDaysAgoStr)
     .lte('booking_date', yesterdayStr)
+    .is('deleted_at', null) // Exclude archived bookings
     .order('booking_date', { ascending: false })
     .order('start_time', { ascending: false })
 
@@ -377,6 +380,7 @@ export async function fetchStaffStats(
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('booking_date', todayStr)
+          .is('deleted_at', null) // Exclude archived bookings
         if (filterCondition) {
           query = query.or(filterCondition)
         } else {
@@ -393,6 +397,7 @@ export async function fetchStaffStats(
           .select('*', { count: 'exact', head: true })
           .gte('booking_date', startOfWeekStr)
           .lte('booking_date', endOfWeekStr)
+          .is('deleted_at', null) // Exclude archived bookings
         if (filterCondition) {
           query = query.or(filterCondition)
         } else {
@@ -409,6 +414,7 @@ export async function fetchStaffStats(
           .select('*', { count: 'exact', head: true })
           .gte('booking_date', thirtyDaysAgoStr)
           .lte('booking_date', todayStr)
+          .is('deleted_at', null) // Exclude archived bookings
         if (filterCondition) {
           query = query.or(filterCondition)
         } else {
@@ -426,6 +432,7 @@ export async function fetchStaffStats(
           .eq('status', 'completed')
           .gte('booking_date', thirtyDaysAgoStr)
           .lte('booking_date', todayStr)
+          .is('deleted_at', null) // Exclude archived bookings
         if (filterCondition) {
           query = query.or(filterCondition)
         } else {
@@ -462,6 +469,7 @@ export async function fetchStaffStats(
           .eq('payment_status', 'paid')
           .gte('booking_date', startOfMonthStr)
           .lte('booking_date', todayStr)
+          .is('deleted_at', null) // Exclude archived bookings
 
         if (filterCondition) {
           query = query.or(filterCondition)

@@ -704,18 +704,8 @@ export function AdminBookings() {
   // Archive booking (soft delete)
   const archiveBooking = useCallback(async (bookingId: string) => {
     try {
-      // Check if this is a recurring booking
-      const booking = bookings.find(b => b.id === bookingId)
-
-      if (booking?.is_recurring && booking.recurring_group_id) {
-        // Show recurring edit dialog
-        setPendingRecurringBooking(booking)
-        setRecurringEditAction('archive')
-        setShowRecurringEditDialog(true)
-        return
-      }
-
-      // Non-recurring booking - archive normally
+      // Archive this booking only (regardless of recurring status)
+      // RecurringEditDialog is no longer needed - just archive the single booking
       const { error } = await supabase
         .rpc('soft_delete_record', {
           table_name: 'bookings',
@@ -737,7 +727,7 @@ export function AdminBookings() {
         variant: 'destructive',
       })
     }
-  }, [bookings, toast, refresh])
+  }, [toast, refresh])
 
   // Restore archived booking
   const restoreBooking = useCallback(async (bookingId: string) => {
@@ -759,6 +749,59 @@ export function AdminBookings() {
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to restore booking',
+        variant: 'destructive',
+      })
+    }
+  }, [toast, refresh])
+
+  // Archive entire recurring group (soft delete)
+  const archiveRecurringGroup = useCallback(async (groupId: string) => {
+    try {
+      logger.debug('Archiving recurring group', { groupId }, { context: 'AdminBookings' })
+
+      // Get all bookings in this group
+      const { data: groupBookings, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('recurring_group_id', groupId)
+        .is('deleted_at', null) // Only non-archived bookings
+
+      if (fetchError) throw fetchError
+
+      if (!groupBookings || groupBookings.length === 0) {
+        toast({
+          title: 'Info',
+          description: 'No active bookings found in this group to archive',
+        })
+        return
+      }
+
+      // Archive all bookings in the group using soft_delete_record RPC
+      let archivedCount = 0
+      for (const booking of groupBookings) {
+        const { error } = await supabase
+          .rpc('soft_delete_record', {
+            table_name: 'bookings',
+            record_id: booking.id
+          })
+
+        if (!error) {
+          archivedCount++
+        } else {
+          logger.error('Error archiving booking in group', { error, bookingId: booking.id }, { context: 'AdminBookings' })
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: `Archived ${archivedCount} booking(s) successfully`,
+      })
+      refresh()
+    } catch (error) {
+      logger.error('Archive recurring group error', { error }, { context: 'AdminBookings' })
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to archive recurring group',
         variant: 'destructive',
       })
     }
@@ -1307,6 +1350,7 @@ export function AdminBookings() {
             onLastPage={goToLast}
             onDeleteBooking={deleteBooking}
             onDeleteRecurringGroup={deleteRecurringGroup}
+            onArchiveRecurringGroup={archiveRecurringGroup}
             onArchiveBooking={archiveBooking}
             onRestoreBooking={restoreBooking}
             showArchived={showArchived}

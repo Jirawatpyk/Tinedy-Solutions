@@ -43,6 +43,7 @@ export interface RecurringBookingRecord {
   // Timestamps
   created_at: string
   updated_at: string
+  deleted_at?: string | null
 
   // Relations (populated ด้วย Supabase joins)
   customers?: {

@@ -36,6 +36,7 @@ interface BookingListProps {
   onLastPage: () => void
   onDeleteBooking: (bookingId: string) => void
   onDeleteRecurringGroup?: (groupId: string) => void
+  onArchiveRecurringGroup?: (groupId: string) => void
   onArchiveBooking?: (bookingId: string) => void
   onRestoreBooking?: (bookingId: string) => void
   // Note: showArchived parameter is intentionally unused (prefixed with _ in implementation)
@@ -67,6 +68,7 @@ function BookingListComponent({
   onLastPage,
   onDeleteBooking,
   onDeleteRecurringGroup,
+  onArchiveRecurringGroup,
   onArchiveBooking,
   onRestoreBooking,
   showArchived: _showArchived,
@@ -198,6 +200,8 @@ function BookingListComponent({
                       if (booking) onBookingClick(booking)
                     }}
                     onDeleteGroup={onDeleteRecurringGroup}
+                    onArchiveGroup={onArchiveRecurringGroup}
+                    onRestoreBooking={onRestoreBooking}
                     onStatusChange={onStatusChange}
                     getAvailableStatuses={getAvailableStatuses}
                     getStatusLabel={getStatusLabel}

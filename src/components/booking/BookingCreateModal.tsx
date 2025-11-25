@@ -320,6 +320,7 @@ export function BookingCreateModal({
         .from('customers')
         .select('*')
         .eq('email', email.trim())
+        .is('deleted_at', null) // Exclude archived customers
         .single()
 
       if (data && !error) {
@@ -350,6 +351,7 @@ export function BookingCreateModal({
         .from('customers')
         .select('*')
         .eq('phone', phone.trim())
+        .is('deleted_at', null) // Exclude archived customers
         .single()
 
       if (data && !error) {
