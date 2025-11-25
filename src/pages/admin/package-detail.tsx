@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { queryKeys } from '@/lib/query-keys'
+import { packageQueryOptions } from '@/lib/queries/package-queries'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
@@ -289,8 +289,11 @@ export default function AdminPackageDetail() {
         is_active: !packageData.is_active,
       })
 
-      // Invalidate React Query cache to refresh packages list
-      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+      // Invalidate React Query cache with exact query key and force refetch
+      await queryClient.invalidateQueries({
+        queryKey: packageQueryOptions.allForAdmin.queryKey,
+        refetchType: 'active'
+      })
 
       toast({
         title: 'Success',
@@ -341,8 +344,11 @@ export default function AdminPackageDetail() {
 
       if (error) throw error
 
-      // Invalidate React Query cache before navigation
-      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+      // Invalidate React Query cache with exact query key before navigation
+      await queryClient.invalidateQueries({
+        queryKey: packageQueryOptions.allForAdmin.queryKey,
+        refetchType: 'active'
+      })
 
       toast({
         title: 'Success',

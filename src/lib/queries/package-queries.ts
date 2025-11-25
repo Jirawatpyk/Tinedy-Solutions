@@ -307,6 +307,6 @@ export const packageQueryOptions = {
   allForAdmin: {
     queryKey: [...queryKeys.packages.unified(), 'all-for-admin'],
     queryFn: fetchAllServicePackagesForAdmin,
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 0, // Always refetch when invalidated (for admin package management)
   },
 }

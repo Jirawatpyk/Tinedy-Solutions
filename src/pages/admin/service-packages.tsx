@@ -39,7 +39,10 @@ export function AdminServicePackages() {
     isLoading: loading,
     error: queryError,
     refetch,
-  } = useQuery(packageQueryOptions.allForAdmin)
+  } = useQuery({
+    ...packageQueryOptions.allForAdmin,
+    refetchOnMount: 'always' // Always refetch when navigating back to this page
+  })
 
   const error = queryError?.message || null
   const refresh = async () => {
