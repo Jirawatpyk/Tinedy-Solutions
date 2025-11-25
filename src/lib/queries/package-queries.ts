@@ -171,6 +171,7 @@ export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTier
 
 /**
  * Fetch Unified Service Packages (V1 + V2 รวมกัน)
+ * สำหรับใช้ในการสร้าง Booking - กรองเฉพาะ active packages
  */
 export async function fetchUnifiedServicePackages(): Promise<UnifiedServicePackage[]> {
   // Fetch both V1 and V2 in parallel
@@ -227,6 +228,62 @@ export async function fetchUnifiedServicePackages(): Promise<UnifiedServicePacka
 }
 
 /**
+ * Fetch All Service Packages (V1 + V2 รวมกัน) รวมทั้ง inactive
+ * สำหรับใช้ในหน้า Admin จัดการ packages - แสดงทุก package
+ */
+export async function fetchAllServicePackagesForAdmin(): Promise<UnifiedServicePackage[]> {
+  // Fetch both V1 and V2 in parallel
+  const [packagesV1, packagesV2] = await Promise.all([
+    fetchServicePackagesV1(),
+    fetchServicePackagesV2(),
+  ])
+
+  // Normalize V1 packages (ไม่ filter - แสดงทั้ง active และ inactive)
+  const normalizedV1: UnifiedServicePackage[] = packagesV1
+    .map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description,
+      service_type: pkg.service_type,
+      pricing_model: 'fixed' as const,
+      base_price: pkg.price,
+      duration_minutes: pkg.duration_minutes,
+      is_active: pkg.is_active,
+      created_at: pkg.created_at,
+      updated_at: pkg.created_at, // V1 ไม่มี updated_at
+      tiers: [],
+      tier_count: 0,
+      min_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
+      max_price: pkg.price && pkg.price > 0 ? pkg.price : undefined,
+      _source: 'v1' as const,
+    }))
+
+  // Normalize V2 packages (ไม่ filter - แสดงทั้ง active และ inactive)
+  const normalizedV2: UnifiedServicePackage[] = packagesV2
+    .map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description,
+      service_type: pkg.service_type,
+      pricing_model: pkg.pricing_model,
+      base_price: pkg.base_price,
+      duration_minutes: pkg.duration_minutes,
+      is_active: pkg.is_active,
+      created_at: pkg.created_at,
+      updated_at: pkg.updated_at,
+      category: pkg.category,
+      tiers: pkg.tiers,
+      tier_count: pkg.tier_count,
+      min_price: pkg.min_price,
+      max_price: pkg.max_price,
+      _source: 'v2' as const,
+    }))
+
+  // รวมกัน
+  return [...normalizedV1, ...normalizedV2]
+}
+
+/**
  * Query Options สำหรับ Service Packages
  *
  * staleTime: 30 minutes - packages ไม่ค่อยเปลี่ยนบ่อย
@@ -245,6 +302,11 @@ export const packageQueryOptions = {
   unified: {
     queryKey: queryKeys.packages.unified(),
     queryFn: fetchUnifiedServicePackages,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  },
+  allForAdmin: {
+    queryKey: [...queryKeys.packages.unified(), 'all-for-admin'],
+    queryFn: fetchAllServicePackagesForAdmin,
     staleTime: 30 * 60 * 1000, // 30 minutes
   },
 }

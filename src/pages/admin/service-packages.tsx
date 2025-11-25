@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,14 +27,24 @@ import { Package, Plus, CheckCircle, XCircle } from 'lucide-react'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
 import { PricingModel, ServiceCategory } from '@/types'
-import { useServicePackages } from '@/hooks/useServicePackages'
+import { packageQueryOptions } from '@/lib/queries/package-queries'
 
 export function AdminServicePackages() {
   // Permission checks
   const { can, canDelete } = usePermissions()
 
-  // React Query - Fetch packages (V1 + V2 unified)
-  const { packages: unifiedPackages, loading, error, refresh } = useServicePackages()
+  // React Query - Fetch ALL packages (V1 + V2 unified) including inactive for admin management
+  const {
+    data: unifiedPackages = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useQuery(packageQueryOptions.allForAdmin)
+
+  const error = queryError?.message || null
+  const refresh = async () => {
+    await refetch()
+  }
 
   // Separate V1 and V2 packages (keep as UnifiedServicePackage for type safety)
   const packagesV1Unified = useMemo(() => {
