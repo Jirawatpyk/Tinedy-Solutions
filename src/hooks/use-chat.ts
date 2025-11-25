@@ -401,7 +401,20 @@ export function useChat() {
   const deleteConversation = useCallback(async (otherUserId: string) => {
     if (!user) return
 
+    // Store previous state for rollback on error (optimistic update pattern)
+    const previousConversations = conversations
+    const wasSelectedUser = selectedUser?.id === otherUserId
+
     try {
+      // Optimistic update: Remove from UI immediately for better UX
+      setConversations(prev => prev.filter(conv => conv.user.id !== otherUserId))
+
+      // Clear selection if viewing deleted conversation
+      if (wasSelectedUser) {
+        setSelectedUser(null)
+        setMessages([])
+      }
+
       // Delete all messages between current user and other user
       const { error } = await supabase
         .from('messages')
@@ -410,19 +423,13 @@ export function useChat() {
 
       if (error) throw error
 
-      // If currently viewing deleted conversation, clear selection
-      if (selectedUser?.id === otherUserId) {
-        setSelectedUser(null)
-        setMessages([])
-      }
-
-      // Reload conversations
-      await loadConversations()
     } catch (error) {
+      // Rollback on error: Restore previous state
       console.error('Error deleting conversation:', error)
+      setConversations(previousConversations)
       throw error
     }
-  }, [user, selectedUser, loadConversations])
+  }, [user, selectedUser, conversations])
 
   // Start new chat with a user
   const startNewChat = useCallback(async (otherUser: Profile) => {
