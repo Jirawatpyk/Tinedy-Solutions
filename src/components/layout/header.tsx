@@ -69,11 +69,12 @@ export function Header({ onMenuClick }: HeaderProps) {
       // Check if cleaned query matches UUID pattern (with or without dashes, partial or full)
       const isUuidPattern = /^[0-9a-f]{8}(-?[0-9a-f]{4}){0,3}(-?[0-9a-f]{0,12})?$/i.test(cleanedQuery)
 
-      // Search Customers
+      // Search Customers (exclude archived)
       const { data: customers } = await supabase
         .from('customers')
         .select('id, full_name, email')
         .ilike('full_name', `%${query}%`)
+        .is('deleted_at', null)
         .limit(5)
 
       customers?.forEach((customer) => {
@@ -105,7 +106,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       // Search Bookings - ปรับปรุงใหม่: รองรับค้นหาด้วย ID และชื่อลูกค้า
       if (isUuidPattern) {
-        // ค้นหาด้วย Booking ID - ดึงทั้งหมดแล้วกรองที่ client
+        // ค้นหาด้วย Booking ID - ดึงทั้งหมดแล้วกรองที่ client (exclude archived)
         const { data: bookingsByID, error: bookingError } = await supabase
           .from('bookings')
           .select(`
@@ -114,6 +115,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             status,
             customers (full_name)
           `)
+          .is('deleted_at', null)
           .order('created_at', { ascending: false })
           .limit(500)
 
