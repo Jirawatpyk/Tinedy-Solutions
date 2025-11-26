@@ -48,11 +48,11 @@ export function MainLayout() {
         onToggleCollapse={toggleCollapse}
       />
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <Header onMenuClick={toggleSidebar} />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col w-full">
-          <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 flex-1 flex flex-col w-full">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
+          <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 flex-1 flex flex-col">
             {/* Breadcrumbs navigation - hide on dashboard pages */}
             {breadcrumbs.length > 1 && (
               <div className="mb-4">
