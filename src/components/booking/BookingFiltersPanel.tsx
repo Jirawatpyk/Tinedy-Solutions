@@ -167,6 +167,7 @@ const BookingFiltersPanelComponent = ({
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="no_show">No Show</SelectItem>
               </SelectContent>
             </Select>
           </div>

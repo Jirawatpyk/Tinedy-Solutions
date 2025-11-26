@@ -1,4 +1,4 @@
-import type { CustomerRecord, CustomerFormData, CustomerSource } from '@/types'
+import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -42,12 +42,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Tag,
 } from 'lucide-react'
 import { formatDate, getBangkokDateString } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
-import { TagInput } from '@/components/customers/tag-input'
+import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -79,13 +78,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
@@ -225,25 +217,6 @@ export function AdminCustomerDetail() {
 
   // Form states
   const [noteText, setNoteText] = useState('')
-  const [editForm, setEditForm] = useState<CustomerFormData>({
-    full_name: '',
-    email: '',
-    phone: '',
-    line_id: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    relationship_level: 'new',
-    preferred_contact_method: 'phone',
-    tags: [],
-    source: undefined,
-    source_other: '',
-    birthday: '',
-    company_name: '',
-    tax_id: '',
-    notes: '',
-  })
   const [createAssignmentType, setCreateAssignmentType] = useState<'none' | 'staff' | 'team'>('none')
   const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
 
@@ -506,70 +479,6 @@ export function AdminCustomerDetail() {
     setIsBookingDetailModalOpen(false)
   }
 
-  const openEditDialog = () => {
-    if (!customer) return
-    setEditForm({
-      full_name: customer.full_name || '',
-      email: customer.email || '',
-      phone: customer.phone || '',
-      line_id: customer.line_id || '',
-      address: customer.address || '',
-      city: customer.city || '',
-      state: customer.state || '',
-      zip_code: customer.zip_code || '',
-      relationship_level: customer.relationship_level,
-      preferred_contact_method: customer.preferred_contact_method,
-      tags: customer.tags || [],
-      source: customer.source || undefined,
-      source_other: customer.source_other || '',
-      birthday: customer.birthday || '',
-      company_name: customer.company_name || '',
-      tax_id: customer.tax_id || '',
-      notes: customer.notes || '',
-    })
-    setIsEditDialogOpen(true)
-  }
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!id) return
-
-    try {
-      setSubmitting(true)
-
-      // Prepare update data - convert empty strings to null for date field
-      const updateData = {
-        ...editForm,
-        birthday: editForm.birthday || null, // Convert empty string to null
-      }
-
-      const { error } = await supabase
-        .from('customers')
-        .update(updateData)
-        .eq('id', id)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Customer updated successfully',
-      })
-
-      setIsEditDialogOpen(false)
-      fetchCustomerDetails() // Refresh data
-    } catch (error) {
-      console.error('Error updating customer:', error)
-      const errorMsg = mapErrorToUserMessage(error, 'customer')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const handleAddNote = async () => {
     if (!id || !noteText.trim()) return
 
@@ -669,6 +578,7 @@ export function AdminCustomerDetail() {
           completedCount: stats.completed,
           confirmedCount: stats.confirmed,
           cancelledCount: stats.cancelled,
+          noShowCount: stats.noShow,
           upcomingCount: stats.upcoming,
         })
 
@@ -902,7 +812,7 @@ export function AdminCustomerDetail() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={openEditDialog}
+            onClick={() => setIsEditDialogOpen(true)}
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit
@@ -1525,241 +1435,12 @@ export function AdminCustomerDetail() {
       </Dialog>
 
       {/* Edit Customer Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-            <DialogDescription>
-              Update customer information
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_full_name">Full Name *</Label>
-                <Input
-                  id="edit_full_name"
-                  value={editForm.full_name}
-                  onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_email">Email *</Label>
-                <Input
-                  id="edit_email"
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_phone">Phone *</Label>
-                <Input
-                  id="edit_phone"
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_line_id">LINE ID</Label>
-                <Input
-                  id="edit_line_id"
-                  value={editForm.line_id}
-                  onChange={(e) => setEditForm({ ...editForm, line_id: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit_address">Address</Label>
-              <Input
-                id="edit_address"
-                value={editForm.address}
-                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_city">City</Label>
-                <Input
-                  id="edit_city"
-                  value={editForm.city}
-                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_state">State/Province</Label>
-                <Input
-                  id="edit_state"
-                  value={editForm.state}
-                  onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_zip_code">ZIP Code</Label>
-                <Input
-                  id="edit_zip_code"
-                  value={editForm.zip_code}
-                  onChange={(e) => setEditForm({ ...editForm, zip_code: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Relationship & Contact Section */}
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground">Relationship & Contact Preferences</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_relationship_level">Relationship Level *</Label>
-                  <Select
-                    value={editForm.relationship_level}
-                    onValueChange={(value: 'new' | 'regular' | 'vip' | 'inactive') => setEditForm({ ...editForm, relationship_level: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">🆕 New Customer</SelectItem>
-                      <SelectItem value="regular">💚 Regular Customer</SelectItem>
-                      <SelectItem value="vip">👑 VIP Customer</SelectItem>
-                      <SelectItem value="inactive">💤 Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_preferred_contact_method">Preferred Contact *</Label>
-                  <Select
-                    value={editForm.preferred_contact_method}
-                    onValueChange={(value: 'phone' | 'email' | 'line' | 'sms') => setEditForm({ ...editForm, preferred_contact_method: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="phone">📱 Phone</SelectItem>
-                      <SelectItem value="email">✉️ Email</SelectItem>
-                      <SelectItem value="line">💬 LINE</SelectItem>
-                      <SelectItem value="sms">💌 SMS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_source">How did they find us?</Label>
-                  <Select
-                    value={editForm.source || undefined}
-                    onValueChange={(value) => setEditForm({ ...editForm, source: value as CustomerSource })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="google">Google Search</SelectItem>
-                      <SelectItem value="website">Website</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="walk-in">Walk-in</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_birthday">Birthday</Label>
-                  <Input
-                    id="edit_birthday"
-                    type="date"
-                    value={editForm.birthday}
-                    onChange={(e) => setEditForm({ ...editForm, birthday: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Show additional input when "Other" is selected */}
-              {editForm.source === 'other' && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit_source_other">Please specify</Label>
-                  <Input
-                    id="edit_source_other"
-                    placeholder="How did they find us?"
-                    value={editForm.source_other || ''}
-                    onChange={(e) => setEditForm({ ...editForm, source_other: e.target.value })}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Tags Section */}
-            <div className="border-t pt-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-tinedy-blue" />
-                <Label htmlFor="edit_tags">Customer Tags</Label>
-              </div>
-              <TagInput
-                tags={editForm.tags || []}
-                onChange={(newTags) => setEditForm({ ...editForm, tags: newTags })}
-              />
-            </div>
-
-            {/* Corporate Information */}
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground">Corporate Information (Optional)</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_company_name">Company Name</Label>
-                  <Input
-                    id="edit_company_name"
-                    value={editForm.company_name}
-                    onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
-                    placeholder="ABC Company Ltd."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_tax_id">Tax ID</Label>
-                  <Input
-                    id="edit_tax_id"
-                    value={editForm.tax_id}
-                    onChange={(e) => setEditForm({ ...editForm, tax_id: e.target.value })}
-                    placeholder="0-0000-00000-00-0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="border-t pt-4 space-y-2">
-              <Label htmlFor="edit_notes">Notes</Label>
-              <Textarea
-                id="edit_notes"
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                placeholder="Additional notes about this customer..."
-                rows={3}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting} className="bg-tinedy-blue">
-                {submitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CustomerFormDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        onSuccess={fetchCustomerDetails}
+        customer={customer}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

@@ -2,38 +2,20 @@ import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCustomers } from '@/hooks/useCustomers'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { StatCard } from '@/components/common/StatCard/StatCard'
-import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
+import { getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
-import {
-  customerCreateSchema,
-  customerUpdateSchema,
-  type CustomerCreateFormData,
-  type CustomerUpdateFormData,
-} from '@/schemas'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
-import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, Tag, RotateCcw } from 'lucide-react'
-import { TagInput } from '@/components/customers/tag-input'
+import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw } from 'lucide-react'
+import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
@@ -73,29 +55,6 @@ export function AdminCustomers() {
   const ITEMS_PER_LOAD = 12
 
   const { toast } = useToast()
-
-  // React Hook Form with Zod validation
-  const form = useForm<CustomerCreateFormData | CustomerUpdateFormData>({
-    resolver: zodResolver(editingCustomer ? customerUpdateSchema : customerCreateSchema),
-    defaultValues: {
-      full_name: '',
-      email: '',
-      phone: '',
-      line_id: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      relationship_level: 'new',
-      preferred_contact_method: 'phone',
-      tags: [],
-      source: undefined,
-      birthday: '',
-      company_name: '',
-      tax_id: '',
-      notes: '',
-    },
-  })
 
   // Filter customers using useMemo for better performance
   const filteredCustomers = useMemo(() => {
@@ -138,61 +97,6 @@ export function AdminCustomers() {
       })
     }
   }, [customersError, toast])
-
-  const onSubmit = async (data: CustomerCreateFormData | CustomerUpdateFormData) => {
-    try {
-      // Clean up form data - convert empty strings to null for optional fields
-      const cleanedData = {
-        ...data,
-        line_id: data.line_id || null,
-        address: data.address || null,
-        city: data.city || null,
-        state: data.state || null,
-        zip_code: data.zip_code || null,
-        source: data.source || null,
-        birthday: data.birthday || null,
-        company_name: data.company_name || null,
-        tax_id: data.tax_id || null,
-        notes: data.notes || null,
-        tags: data.tags && data.tags.length > 0 ? data.tags : null,
-      }
-
-      if (editingCustomer) {
-        const { error } = await supabase
-          .from('customers')
-          .update(cleanedData)
-          .eq('id', editingCustomer.id)
-
-        if (error) throw error
-
-        toast({
-          title: 'Success',
-          description: 'Customer updated successfully',
-        })
-      } else {
-        const { error } = await supabase.from('customers').insert(cleanedData)
-
-        if (error) throw error
-
-        toast({
-          title: 'Success',
-          description: 'Customer created successfully',
-        })
-      }
-
-      setIsDialogOpen(false)
-      resetForm()
-      refresh()
-    } catch (error) {
-      logger.error('Error saving customer', { error, editingCustomer: !!editingCustomer }, { context: 'AdminCustomers' })
-      const errorMessage = mapErrorToUserMessage(error, 'customer')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
-  }
 
   const deleteCustomer = async (customerId: string) => {
     try {
@@ -272,47 +176,21 @@ export function AdminCustomers() {
 
   const openEditDialog = (customer: CustomerRecord) => {
     setEditingCustomer(customer)
-    form.reset({
-      full_name: customer.full_name,
-      email: customer.email,
-      phone: customer.phone,
-      line_id: customer.line_id || '',
-      address: customer.address || '',
-      city: customer.city || '',
-      state: customer.state || '',
-      zip_code: customer.zip_code || '',
-      relationship_level: customer.relationship_level || 'new',
-      preferred_contact_method: customer.preferred_contact_method || 'phone',
-      tags: customer.tags || [],
-      source: customer.source || undefined,
-      birthday: customer.birthday || '',
-      company_name: customer.company_name || '',
-      tax_id: customer.tax_id || '',
-      notes: customer.notes || '',
-    } as CustomerUpdateFormData)
     setIsDialogOpen(true)
   }
 
-  const resetForm = () => {
+  const openCreateDialog = () => {
     setEditingCustomer(null)
-    form.reset({
-      full_name: '',
-      email: '',
-      phone: '',
-      line_id: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      relationship_level: 'new',
-      preferred_contact_method: 'phone',
-      tags: [],
-      source: undefined,
-      birthday: '',
-      company_name: '',
-      tax_id: '',
-      notes: '',
-    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false)
+    setEditingCustomer(null)
+  }
+
+  const handleDialogSuccess = () => {
+    refresh()
   }
 
   const getCustomerStats = () => {
@@ -421,304 +299,21 @@ export function AdminCustomers() {
               </label>
             </div>
           </AdminOnly>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCustomer ? 'Edit Customer' : 'New Customer'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingCustomer
-                  ? 'Update customer information'
-                  : 'Add a new customer to your database'}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name *</Label>
-                  <Input
-                    id="full_name"
-                    {...form.register('full_name')}
-                    aria-invalid={!!form.formState.errors.full_name}
-                  />
-                  {form.formState.errors.full_name && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.full_name.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...form.register('email')}
-                    aria-invalid={!!form.formState.errors.email}
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    {...form.register('phone')}
-                    placeholder="0812345678"
-                    aria-invalid={!!form.formState.errors.phone}
-                  />
-                  {form.formState.errors.phone && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.phone.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="line_id">LINE ID</Label>
-                  <Input
-                    id="line_id"
-                    {...form.register('line_id')}
-                    placeholder="@username"
-                  />
-                  {form.formState.errors.line_id && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.line_id.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+          <Button
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={openCreateDialog}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Customer
+          </Button>
 
-              {/* Relationship & Contact Section */}
-              <div className="border-t pt-4 space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground">Relationship & Contact Preferences</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="relationship_level">Relationship Level</Label>
-                    <Controller
-                      name="relationship_level"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">🆕 New Customer</SelectItem>
-                            <SelectItem value="regular">💚 Regular Customer</SelectItem>
-                            <SelectItem value="vip">👑 VIP Customer</SelectItem>
-                            <SelectItem value="inactive">💤 Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="preferred_contact_method">Preferred Contact</Label>
-                    <Controller
-                      name="preferred_contact_method"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="phone">📱 Phone</SelectItem>
-                            <SelectItem value="email">✉️ Email</SelectItem>
-                            <SelectItem value="line">💬 LINE</SelectItem>
-                            <SelectItem value="sms">💌 SMS</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="source">How did they find us?</Label>
-                    <Controller
-                      name="source"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select source" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="facebook">Facebook</SelectItem>
-                            <SelectItem value="instagram">Instagram</SelectItem>
-                            <SelectItem value="google">Google Search</SelectItem>
-                            <SelectItem value="website">Website</SelectItem>
-                            <SelectItem value="referral">Referral</SelectItem>
-                            <SelectItem value="walk-in">Walk-in</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="birthday">Birthday</Label>
-                    <Input
-                      id="birthday"
-                      type="date"
-                      {...form.register('birthday')}
-                    />
-                    {form.formState.errors.birthday && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.birthday.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Show additional input when "Other" is selected */}
-                {form.watch('source') === 'other' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="source_other">Please specify</Label>
-                    <Input
-                      id="source_other"
-                      placeholder="How did they find us?"
-                      {...form.register('source_other')}
-                    />
-                    {form.formState.errors.source_other && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.source_other.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Tags Section */}
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-tinedy-blue" />
-                  <Label htmlFor="tags">Customer Tags</Label>
-                </div>
-                <Controller
-                  name="tags"
-                  control={form.control}
-                  render={({ field }) => (
-                    <TagInput tags={field.value || []} onChange={field.onChange} />
-                  )}
-                />
-              </div>
-
-              {/* Corporate Information (Optional) */}
-              <div className="border-t pt-4 space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground">Corporate Information (Optional)</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company_name">Company Name</Label>
-                    <Input
-                      id="company_name"
-                      {...form.register('company_name')}
-                      placeholder="ABC Company Ltd."
-                    />
-                    {form.formState.errors.company_name && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.company_name.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax_id">Tax ID</Label>
-                    <Input
-                      id="tax_id"
-                      {...form.register('tax_id')}
-                      placeholder="0-0000-00000-00-0"
-                    />
-                    {form.formState.errors.tax_id && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.tax_id.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Address Section */}
-              <div className="border-t pt-4 space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground">Address Information</h3>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  {...form.register('address')}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    {...form.register('city')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    {...form.register('state')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">Zip Code</Label>
-                  <Input
-                    id="zip_code"
-                    {...form.register('zip_code')}
-                    placeholder="10110"
-                  />
-                </div>
-              </div>
-              </div>
-
-              {/* Notes Section */}
-              <div className="border-t pt-4 space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <textarea
-                  id="notes"
-                  {...form.register('notes')}
-                  placeholder="Add any additional notes about this customer..."
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                {form.formState.errors.notes && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.notes.message}
-                  </p>
-                )}
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-tinedy-blue">
-                  {editingCustomer ? 'Update' : 'Create'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          {/* Customer Form Dialog */}
+          <CustomerFormDialog
+            isOpen={isDialogOpen}
+            onClose={handleDialogClose}
+            onSuccess={handleDialogSuccess}
+            customer={editingCustomer}
+          />
         </div>
       </div>
 

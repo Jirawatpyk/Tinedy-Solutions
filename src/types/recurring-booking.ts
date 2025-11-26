@@ -132,6 +132,7 @@ export interface RecurringGroup {
   completedCount: number
   confirmedCount: number
   cancelledCount: number
+  noShowCount: number
   upcomingCount: number
 }
 

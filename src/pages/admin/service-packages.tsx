@@ -348,38 +348,74 @@ export function AdminServicePackages() {
   }
 
   /**
+   * Handle Edit V1 Package
+   */
+  const handleEditV1 = (pkg: ServicePackageV2WithTiers) => {
+    // Convert V2 format back to V1 for editing
+    const v1Pkg: ServicePackage = {
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description || '',
+      service_type: pkg.service_type,
+      duration_minutes: pkg.duration_minutes || 0,
+      price: pkg.base_price || 0,
+      is_active: pkg.is_active,
+      created_at: pkg.created_at,
+    }
+    setEditingPackage(v1Pkg)
+    setEditingPackageV2(null) // Clear V2 editing
+    setFormData({
+      name: v1Pkg.name,
+      description: v1Pkg.description || '',
+      service_type: v1Pkg.service_type,
+      duration_minutes: v1Pkg.duration_minutes?.toString() || '',
+      price: v1Pkg.price?.toString() || '',
+    })
+    setIsDialogOpen(true)
+  }
+
+  /**
    * Unified handlers for PackageCard (handles both V1 and V2)
    */
-  const handleUnifiedEdit = (pkg: ServicePackageV2WithTiers) => {
-    if (pkg.pricing_model === PricingModel.Fixed && 'price' in pkg) {
-      // It's actually a V1 package converted to V2 format - shouldn't happen
-      // But if it does, just open V2 edit mode with the data
+  const handleUnifiedEdit = (pkg: ServicePackageV2WithTiers & { _source?: 'v1' | 'v2' }) => {
+    // ใช้ _source เพื่อตัดสินใจว่าจะ edit ด้วย form ไหน
+    if (pkg._source === 'v2') {
       handleEditV2(pkg)
     } else {
-      handleEditV2(pkg)
+      // V1 package - use V1 form
+      handleEditV1(pkg)
     }
   }
 
-  const handleUnifiedDelete = async (id: string) => {
-    // Try V2 first (check if it exists in V2)
-    const { data: v2Pkg } = await supabase
-      .from('service_packages_v2')
-      .select('id')
-      .eq('id', id)
-      .single()
-
-    if (v2Pkg) {
+  const handleUnifiedDelete = async (id: string, source?: 'v1' | 'v2') => {
+    // ใช้ _source เพื่อตัดสินใจว่าจะ delete จาก table ไหน
+    if (source === 'v2') {
       await deletePackageV2(id)
-    } else {
+    } else if (source === 'v1') {
       await deletePackage(id)
+    } else {
+      // Fallback: query database เพื่อตรวจสอบ (กรณี _source ไม่ถูกส่งมา)
+      const { data: v2Pkg } = await supabase
+        .from('service_packages_v2')
+        .select('id')
+        .eq('id', id)
+        .single()
+
+      if (v2Pkg) {
+        await deletePackageV2(id)
+      } else {
+        await deletePackage(id)
+      }
     }
   }
 
-  const handleUnifiedToggle = (pkg: ServicePackageV2WithTiers) => {
-    if (pkg.pricing_model === PricingModel.Tiered) {
+  const handleUnifiedToggle = (pkg: ServicePackageV2WithTiers & { _source?: 'v1' | 'v2' }) => {
+    // ใช้ _source เพื่อตัดสินใจว่าจะ update table ไหน
+    // Fixed pricing packages อาจมาจากทั้ง V1 และ V2 tables
+    if (pkg._source === 'v2') {
       toggleActiveV2(pkg)
     } else {
-      // Convert V2 format back to V1 for toggle
+      // V1 package - update service_packages table
       const v1Pkg: ServicePackage = {
         id: pkg.id,
         name: pkg.name,
@@ -734,32 +770,33 @@ export function AdminServicePackages() {
               )
             })}
 
-            {/* V1 Packages - Convert to V2 format for PackageCard */}
+            {/* Fixed Pricing Packages (from both V1 and V2 tables) */}
             {filteredPackages.slice(0, Math.max(0, displayCount - filteredPackagesV2.length)).map((pkg) => {
-              // Convert V1 to V2 format for PackageCard
-              const v1AsV2: ServicePackageV2WithTiers = {
+              // Convert to V2 format for PackageCard, preserving _source
+              const pkgWithSource: ServicePackageV2WithTiers & { _source: 'v1' | 'v2' } = {
                 id: pkg.id,
                 name: pkg.name,
                 description: pkg.description,
                 service_type: pkg.service_type,
-                category: null,
+                category: (pkg.category as ServiceCategory | null) ?? null,
                 pricing_model: PricingModel.Fixed,
                 duration_minutes: pkg.duration_minutes,
                 base_price: Number(pkg.base_price || 0),
                 is_active: pkg.is_active,
                 created_at: pkg.created_at,
-                updated_at: pkg.created_at, // V1 doesn't have updated_at, use created_at
+                updated_at: pkg.updated_at || pkg.created_at,
                 tier_count: pkg.tier_count || 0,
                 min_price: pkg.min_price,
                 max_price: pkg.max_price,
                 tiers: pkg.tiers || [],
+                _source: pkg._source, // ใช้ _source จาก UnifiedServicePackage
               }
               return (
                 <PackageCard
                   key={pkg.id}
-                  package={v1AsV2}
+                  package={pkgWithSource}
                   onEdit={handleUnifiedEdit}
-                  onDelete={handleUnifiedDelete}
+                  onDelete={(id) => handleUnifiedDelete(id, pkg._source)}
                   onToggleActive={handleUnifiedToggle}
                   showActions={can('update', 'service_packages') || canDelete('service_packages')}
                 />

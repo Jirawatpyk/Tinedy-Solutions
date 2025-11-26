@@ -132,6 +132,12 @@ export function RecurringBookingCard({
                 <Clock className="h-4 w-4 text-orange-600" />
                 <span>{group.upcomingCount} Upcoming</span>
               </div>
+              {group.noShowCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <XCircle className="h-4 w-4 text-gray-500" />
+                  <span>{group.noShowCount} No Show</span>
+                </div>
+              )}
               {group.cancelledCount > 0 && (
                 <div className="flex items-center gap-1">
                   <XCircle className="h-4 w-4 text-red-600" />

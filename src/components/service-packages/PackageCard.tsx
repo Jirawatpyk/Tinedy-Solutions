@@ -115,7 +115,7 @@ export function PackageCard({
   const basePath = '/admin'
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on buttons or dropdown
+    // Don't navigate if clicking on buttons or menu items
     if ((e.target as HTMLElement).closest('button, [role="menuitem"]')) {
       return
     }

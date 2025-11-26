@@ -56,7 +56,7 @@ export function NewChatModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Start New Chat</DialogTitle>
           <DialogDescription>
@@ -64,7 +64,7 @@ export function NewChatModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           {/* Search Input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -78,7 +78,7 @@ export function NewChatModal({
           </div>
 
           {/* User List */}
-          <div className="max-h-[400px] overflow-y-auto border rounded-lg">
+          <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -124,7 +124,7 @@ export function NewChatModal({
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2 flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}

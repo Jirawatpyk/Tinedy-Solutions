@@ -181,6 +181,7 @@ export function AdminServicePackagesV2() {
 
       refresh()
     } catch (error) {
+      console.error('Toggle active error:', error)
       toast({
         title: 'Error',
         description: 'Failed to update package status',

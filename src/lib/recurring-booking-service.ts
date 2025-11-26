@@ -420,6 +420,7 @@ export async function getRecurringGroup(
       completedCount: stats.completed,
       confirmedCount: stats.confirmed,
       cancelledCount: stats.cancelled,
+      noShowCount: stats.noShow,
       upcomingCount: stats.upcoming
     }
 
