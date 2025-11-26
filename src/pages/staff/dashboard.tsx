@@ -9,6 +9,7 @@ import { NotificationPrompt } from '@/components/notifications/notification-prom
 import { BookingTabs, type TabValue } from '@/components/staff/booking-tabs'
 import { EmptyState } from '@/components/staff/empty-state'
 import { FloatingActionButton } from '@/components/staff/floating-action-button'
+import { PerformanceChart } from '@/components/staff/performance-chart'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -18,6 +19,8 @@ import {
   TrendingUp,
   DollarSign,
   AlertCircle,
+  Award,
+  Star,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -276,11 +279,12 @@ export default function StaffDashboard() {
       case 'stats':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {/* Stats Cards - Responsive Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {loading ? (
                 <>
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-32 sm:h-36 rounded-2xl" />
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className="h-28 sm:h-32 rounded-2xl" />
                   ))}
                 </>
               ) : (
@@ -293,33 +297,65 @@ export default function StaffDashboard() {
                       description="Tasks to do today"
                     />
                   </div>
-                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
+                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '50ms' }}>
                     <StatsCard
-                      title="This Week's Tasks"
+                      title="This Week"
                       value={stats?.jobsThisWeek ?? 0}
                       icon={Calendar}
                       description="All tasks this week"
                     />
                   </div>
-                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
+                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
                     <StatsCard
-                      title="Completion Rate"
+                      title="Total Tasks"
+                      value={stats?.totalTasks6Months ?? 0}
+                      icon={Award}
+                      description="Last 6 months"
+                    />
+                  </div>
+                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '150ms' }}>
+                    <StatsCard
+                      title="Completion"
                       value={`${stats?.completionRate ?? 0}%`}
                       icon={TrendingUp}
                       description="Last 30 days"
                     />
                   </div>
-                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
+                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
                     <StatsCard
-                      title="This Month's Earnings"
-                      value={`฿${stats?.totalEarnings.toLocaleString() ?? '0'}`}
+                      title="Rating"
+                      value={stats?.averageRating && stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
+                      icon={Star}
+                      description="From reviews"
+                    />
+                  </div>
+                  <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '250ms' }}>
+                    <StatsCard
+                      title="Earnings"
+                      value={`฿${(stats?.totalEarnings ?? 0).toLocaleString()}`}
                       icon={DollarSign}
-                      description="Earnings from completed tasks"
+                      description="This month"
                     />
                   </div>
                 </>
               )}
             </div>
+
+            {/* Performance Chart */}
+            {!loading && stats?.monthlyData && stats.monthlyData.length > 0 && (
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
+                <PerformanceChart
+                  stats={{
+                    totalJobs: stats.totalTasks6Months,
+                    completedJobs: 0,
+                    completionRate: stats.completionRate,
+                    averageRating: stats.averageRating,
+                    totalRevenue: stats.totalEarnings,
+                    monthlyData: stats.monthlyData,
+                  }}
+                />
+              </div>
+            )}
           </div>
         )
     }

@@ -78,6 +78,13 @@ export interface StaffStats {
   completionRate: number // percentage
   averageRating: number
   totalEarnings: number // current month
+  // Extended stats for enhanced Stats tab
+  totalTasks6Months: number
+  monthlyData: {
+    month: string
+    jobs: number
+    revenue: number
+  }[]
 }
 
 // ============================================================================
@@ -363,6 +370,11 @@ export async function fetchStaffStats(
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const startOfMonthStr = formatDate(startOfMonth)
 
+    // 6 months ago for extended stats
+    const sixMonthsAgo = new Date(today)
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const sixMonthsAgoStr = formatDate(sixMonthsAgo)
+
     const filterCondition = buildFilterCondition(userId, teamIds)
 
     // Run all queries in parallel
@@ -373,6 +385,8 @@ export async function fetchStaffStats(
       completedJobsResult,
       reviewsResult,
       earningsResult,
+      totalTasks6MonthsResult,
+      monthlyDataResult,
     ] = await Promise.all([
       // Jobs today
       (async () => {
@@ -483,6 +497,66 @@ export async function fetchStaffStats(
 
         return bookings.reduce((sum, booking) => sum + (booking.total_price || 0), 0)
       })(),
+
+      // Total tasks (6 months)
+      (async () => {
+        let query = supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .gte('booking_date', sixMonthsAgoStr)
+          .lte('booking_date', todayStr)
+          .is('deleted_at', null)
+        if (filterCondition) {
+          query = query.or(filterCondition)
+        } else {
+          query = query.eq('staff_id', userId)
+        }
+        const r = await query
+        return r.count || 0
+      })(),
+
+      // Monthly breakdown (6 months) for performance chart
+      (async () => {
+        let query = supabase
+          .from('bookings')
+          .select('booking_date, status, total_price')
+          .gte('booking_date', sixMonthsAgoStr)
+          .lte('booking_date', todayStr)
+          .is('deleted_at', null)
+          .order('booking_date', { ascending: true })
+
+        if (filterCondition) {
+          query = query.or(filterCondition)
+        } else {
+          query = query.eq('staff_id', userId)
+        }
+
+        const { data: bookings } = await query
+
+        if (!bookings || bookings.length === 0) return []
+
+        // Group by month
+        const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
+        bookings.forEach((booking) => {
+          const month = booking.booking_date.slice(0, 7) // YYYY-MM
+          if (!monthlyMap.has(month)) {
+            monthlyMap.set(month, { jobs: 0, revenue: 0 })
+          }
+          const data = monthlyMap.get(month)!
+          data.jobs += 1
+          if (booking.status === 'completed') {
+            data.revenue += booking.total_price || 0
+          }
+        })
+
+        return Array.from(monthlyMap.entries())
+          .map(([month, data]) => ({
+            month,
+            jobs: data.jobs,
+            revenue: data.revenue,
+          }))
+          .sort((a, b) => a.month.localeCompare(b.month))
+      })(),
     ])
 
     // Calculate completion rate
@@ -495,6 +569,8 @@ export async function fetchStaffStats(
       completionRate,
       averageRating: reviewsResult,
       totalEarnings: earningsResult,
+      totalTasks6Months: totalTasks6MonthsResult,
+      monthlyData: monthlyDataResult,
     }
 
     logger.debug('Staff Stats', stats, { context: 'StaffBookings' })
@@ -509,6 +585,8 @@ export async function fetchStaffStats(
       completionRate: 0,
       averageRating: 0,
       totalEarnings: 0,
+      totalTasks6Months: 0,
+      monthlyData: [],
     }
   }
 }
