@@ -3,6 +3,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingList } from '../BookingList'
 import type { Booking } from '@/types/booking'
+import type { RecurringGroup } from '@/types/recurring-booking'
+
+// Type for combined items (recurring groups + standalone bookings)
+type CombinedItem =
+  | { type: 'group'; data: RecurringGroup; createdAt: string }
+  | { type: 'booking'; data: Booking; createdAt: string }
 
 describe('BookingList', () => {
   const mockOnToggleSelect = vi.fn()
@@ -52,6 +58,18 @@ describe('BookingList', () => {
     ...overrides,
   })
 
+  // Helper to create CombinedItem from Booking
+  const createCombinedBookingItem = (booking: Booking): CombinedItem => ({
+    type: 'booking',
+    data: booking,
+    createdAt: booking.created_at || '2025-10-28T10:00:00Z',
+  })
+
+  // Helper to create CombinedItem array from Bookings
+  const createCombinedItems = (bookings: Booking[]): CombinedItem[] => {
+    return bookings.map(createCombinedBookingItem)
+  }
+
   const defaultMetadata = {
     startIndex: 1,
     endIndex: 10,
@@ -61,6 +79,8 @@ describe('BookingList', () => {
   }
 
   const defaultProps = {
+    combinedItems: [] as CombinedItem[],
+    allBookings: [] as Booking[],
     selectedBookings: [],
     currentPage: 1,
     totalPages: 3,
@@ -93,12 +113,14 @@ describe('BookingList', () => {
         createMockBooking({ id: 'booking-1', customers: { id: 'c1', full_name: 'Customer 1', email: 'c1@example.com' } }),
         createMockBooking({ id: 'booking-2', customers: { id: 'c2', full_name: 'Customer 2', email: 'c2@example.com' } }),
       ]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -110,12 +132,14 @@ describe('BookingList', () => {
     it('should display booking customer information', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -127,12 +151,14 @@ describe('BookingList', () => {
     it('should display booking service information', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -144,12 +170,14 @@ describe('BookingList', () => {
     it('should display booking date and time', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -161,12 +189,14 @@ describe('BookingList', () => {
     it('should display booking price', () => {
       // Arrange
       const bookings = [createMockBooking({ total_price: 2500 })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -177,12 +207,14 @@ describe('BookingList', () => {
     it('should display booking ID (first 8 characters)', () => {
       // Arrange
       const bookings = [createMockBooking({ id: 'abcd1234-5678-90ab-cdef-1234567890ab' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -197,12 +229,14 @@ describe('BookingList', () => {
           profiles: { full_name: 'Staff Member' },
         }),
       ]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -218,12 +252,14 @@ describe('BookingList', () => {
           teams: { name: 'Team Alpha' },
         }),
       ]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -234,12 +270,14 @@ describe('BookingList', () => {
     it('should display status and payment status badges', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -251,12 +289,14 @@ describe('BookingList', () => {
     it('should display "Unknown Customer" when customer is null', () => {
       // Arrange
       const bookings = [createMockBooking({ customers: null })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -274,7 +314,8 @@ describe('BookingList', () => {
       render(
         <BookingList
           {...defaultProps}
-          bookings={[]}
+          combinedItems={[]}
+          allBookings={[]}
           metadata={emptyMetadata}
         />
       )
@@ -291,7 +332,8 @@ describe('BookingList', () => {
       render(
         <BookingList
           {...defaultProps}
-          bookings={[]}
+          combinedItems={[]}
+          allBookings={[]}
           metadata={emptyMetadata}
         />
       )
@@ -305,12 +347,14 @@ describe('BookingList', () => {
     it('should render checkbox for each booking', () => {
       // Arrange
       const bookings = [createMockBooking(), createMockBooking({ id: 'booking-2' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -322,12 +366,14 @@ describe('BookingList', () => {
     it('should show selected bookings as checked', () => {
       // Arrange
       const bookings = [createMockBooking({ id: 'booking-1' }), createMockBooking({ id: 'booking-2' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           selectedBookings={['booking-1']}
         />
       )
@@ -342,12 +388,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking({ id: 'booking-123' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -362,12 +410,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -385,12 +435,14 @@ describe('BookingList', () => {
       const user = userEvent.setup()
       const booking = createMockBooking()
       const bookings = [booking]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -406,12 +458,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking({ id: 'booking-123', status: 'pending' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -426,12 +480,14 @@ describe('BookingList', () => {
       // Arrange
       userEvent.setup()
       const bookings = [createMockBooking({ id: 'booking-123' })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -446,12 +502,14 @@ describe('BookingList', () => {
     it('should display pagination metadata', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -462,12 +520,14 @@ describe('BookingList', () => {
     it('should display current page and total pages', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           currentPage={2}
           totalPages={5}
         />
@@ -481,13 +541,15 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
       const metadata = { ...defaultMetadata, hasPrevPage: true }
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           metadata={metadata}
         />
       )
@@ -503,13 +565,15 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
       const metadata = { ...defaultMetadata, hasPrevPage: true }
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           metadata={metadata}
         />
       )
@@ -525,12 +589,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -545,12 +611,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -564,13 +632,15 @@ describe('BookingList', () => {
     it('should disable First and Previous buttons when on first page', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
       const metadata = { ...defaultMetadata, hasPrevPage: false }
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           metadata={metadata}
         />
       )
@@ -585,13 +655,15 @@ describe('BookingList', () => {
     it('should disable Next and Last buttons when on last page', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
       const metadata = { ...defaultMetadata, hasNextPage: false }
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           metadata={metadata}
         />
       )
@@ -608,12 +680,14 @@ describe('BookingList', () => {
     it('should display items per page selector', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -627,12 +701,14 @@ describe('BookingList', () => {
       // Arrange
       const user = userEvent.setup()
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -646,12 +722,14 @@ describe('BookingList', () => {
     it('should display current items per page value', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
           itemsPerPage={25}
         />
       )
@@ -670,12 +748,14 @@ describe('BookingList', () => {
         createMockBooking({ id: 'booking-2' }),
         createMockBooking({ id: 'booking-3' }),
       ]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -689,12 +769,14 @@ describe('BookingList', () => {
     it('should handle booking without customer gracefully', () => {
       // Arrange
       const bookings = [createMockBooking({ customers: null })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -705,12 +787,14 @@ describe('BookingList', () => {
     it('should handle booking without service package gracefully', () => {
       // Arrange
       const bookings = [createMockBooking({ service_packages: null })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -721,12 +805,14 @@ describe('BookingList', () => {
     it('should handle booking without staff or team', () => {
       // Arrange
       const bookings = [createMockBooking({ profiles: null, teams: null })]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -740,12 +826,14 @@ describe('BookingList', () => {
       const bookings = Array.from({ length: 100 }, (_, i) =>
         createMockBooking({ id: `booking-${i}`, customers: { id: `c${i}`, full_name: `Customer ${i}`, email: `c${i}@example.com` } })
       )
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -764,12 +852,14 @@ describe('BookingList', () => {
           teams: null,
         }),
       ]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -782,12 +872,14 @@ describe('BookingList', () => {
     it('should not re-render when props are unchanged (memoization)', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       const { rerender } = render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -795,7 +887,8 @@ describe('BookingList', () => {
       rerender(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -809,12 +902,14 @@ describe('BookingList', () => {
     it('should have accessible checkboxes', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -826,12 +921,14 @@ describe('BookingList', () => {
     it('should have accessible buttons', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 
@@ -845,12 +942,14 @@ describe('BookingList', () => {
     it('should have accessible comboboxes', () => {
       // Arrange
       const bookings = [createMockBooking()]
+      const combinedItems = createCombinedItems(bookings)
 
       // Act
       render(
         <BookingList
           {...defaultProps}
-          bookings={bookings}
+          combinedItems={combinedItems}
+          allBookings={bookings}
         />
       )
 

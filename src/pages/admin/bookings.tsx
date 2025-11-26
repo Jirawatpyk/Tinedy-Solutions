@@ -33,9 +33,15 @@ import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
-import type { RecurringEditScope, RecurringPattern } from '@/types/recurring-booking'
+import type { RecurringEditScope, RecurringPattern, RecurringGroup, RecurringBookingRecord } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
+import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
+
+// Type for combined items (recurring groups + standalone bookings)
+type CombinedItem =
+  | { type: 'group'; data: RecurringGroup; createdAt: string }
+  | { type: 'booking'; data: Booking; createdAt: string }
 
 interface Team {
   id: string
@@ -127,11 +133,72 @@ export function AdminBookings() {
     })
   }, [bookings, debouncedSearchQuery, filters.status, filters.staffId, filters.teamId, filters.dateFrom, filters.dateTo, filters.serviceType])
 
+  // Group filtered bookings into recurring groups and standalone bookings
+  // This must happen BEFORE pagination to keep groups together
+  const combinedItems = useMemo((): CombinedItem[] => {
+    const recurring: RecurringGroup[] = []
+    const standalone: Booking[] = []
+    const processedGroupIds = new Set<string>()
+
+    // Group recurring bookings
+    const groupedMap = groupBookingsByRecurringGroup(filteredBookings as unknown as RecurringBookingRecord[])
+
+    groupedMap.forEach((groupBookings, groupId) => {
+      if (!processedGroupIds.has(groupId)) {
+        const sortedBookings = sortRecurringGroup(groupBookings)
+        const stats = countBookingsByStatus(sortedBookings)
+        const firstBooking = sortedBookings[0]
+
+        recurring.push({
+          groupId,
+          pattern: firstBooking.recurring_pattern!,
+          totalBookings: sortedBookings.length,
+          bookings: sortedBookings,
+          completedCount: stats.completed,
+          confirmedCount: stats.confirmed,
+          cancelledCount: stats.cancelled,
+          noShowCount: stats.noShow,
+          upcomingCount: stats.upcoming,
+        })
+
+        processedGroupIds.add(groupId)
+      }
+    })
+
+    // Non-recurring bookings (standalone)
+    filteredBookings.forEach((booking) => {
+      if (!booking.is_recurring || !booking.recurring_group_id) {
+        standalone.push(booking)
+      }
+    })
+
+    // Combine and sort by created_at (newest first)
+    const combined: CombinedItem[] = [
+      ...recurring.map(group => ({
+        type: 'group' as const,
+        data: group,
+        createdAt: group.bookings[0].created_at || ''
+      })),
+      ...standalone.map(booking => ({
+        type: 'booking' as const,
+        data: booking,
+        createdAt: booking.created_at || ''
+      }))
+    ]
+
+    combined.sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
+    return combined
+  }, [filteredBookings])
+
   // Items per page state (for dynamic pagination)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  // Pagination hook
+
+  // Pagination at COMBINED ITEM level (group counts as 1 item)
   const {
-    items: paginatedBookings,
+    items: paginatedCombinedItems,
     currentPage,
     totalPages,
     nextPage,
@@ -139,11 +206,55 @@ export function AdminBookings() {
     goToFirst,
     goToLast,
     goToPage,
-    metadata
-  } = usePagination(filteredBookings, {
+    metadata: paginationMetadata
+  } = usePagination(combinedItems, {
     initialPage: 1,
     itemsPerPage: itemsPerPage
   })
+
+  // Calculate total bookings count for display (including all bookings in groups)
+  const totalBookingsCount = useMemo(() => {
+    return combinedItems.reduce((count, item) => {
+      if (item.type === 'group') {
+        return count + item.data.totalBookings
+      }
+      return count + 1
+    }, 0)
+  }, [combinedItems])
+
+  // Create metadata for BookingList (showing booking count, not item count)
+  const metadata = useMemo(() => {
+    // Calculate start/end booking indices for current page
+    let startBookingIndex = 0
+    let endBookingIndex = 0
+
+    // Count bookings before current page
+    for (let i = 0; i < (paginationMetadata.startIndex - 1); i++) {
+      const item = combinedItems[i]
+      if (item?.type === 'group') {
+        startBookingIndex += item.data.totalBookings
+      } else if (item) {
+        startBookingIndex += 1
+      }
+    }
+
+    // Count bookings in current page
+    endBookingIndex = startBookingIndex
+    paginatedCombinedItems.forEach(item => {
+      if (item.type === 'group') {
+        endBookingIndex += item.data.totalBookings
+      } else {
+        endBookingIndex += 1
+      }
+    })
+
+    return {
+      ...paginationMetadata,
+      totalItems: totalBookingsCount,
+      startIndex: startBookingIndex + 1,
+      endIndex: endBookingIndex,
+    }
+  }, [paginationMetadata, combinedItems, paginatedCombinedItems, totalBookingsCount])
   // Detail Modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -1351,7 +1462,8 @@ export function AdminBookings() {
         </CardHeader>
         <CardContent>
           <BookingList
-            bookings={paginatedBookings}
+            combinedItems={paginatedCombinedItems}
+            allBookings={filteredBookings}
             selectedBookings={selectedBookings}
             currentPage={currentPage}
             totalPages={totalPages}
