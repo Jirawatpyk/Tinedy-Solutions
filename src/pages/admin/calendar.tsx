@@ -904,6 +904,10 @@ export function AdminCalendar() {
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <span>Cancelled</span>
                 </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-gray-500" />
+                  <span>No Show</span>
+                </div>
               </div>
             </div>
           </CardContent>

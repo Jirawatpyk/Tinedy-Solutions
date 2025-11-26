@@ -22,7 +22,7 @@ export function MessageBubble({ message, isOwnMessage, onImageClick }: MessageBu
     >
       <div
         className={cn(
-          'max-w-[70%] rounded-lg px-4 py-2 break-words',
+          'max-w-[80%] sm:max-w-[70%] rounded-lg px-4 py-2 break-words overflow-hidden',
           isOwnMessage
             ? 'bg-tinedy-blue text-white rounded-br-none'
             : 'bg-gray-100 text-gray-900 rounded-bl-none'
