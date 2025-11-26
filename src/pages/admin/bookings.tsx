@@ -33,15 +33,10 @@ import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
-import type { RecurringEditScope, RecurringPattern, RecurringGroup, RecurringBookingRecord } from '@/types/recurring-booking'
+import type { RecurringEditScope, RecurringPattern, RecurringGroup, CombinedItem } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
-import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus } from '@/lib/recurring-utils'
+import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
-
-// Type for combined items (recurring groups + standalone bookings)
-type CombinedItem =
-  | { type: 'group'; data: RecurringGroup; createdAt: string }
-  | { type: 'booking'; data: Booking; createdAt: string }
 
 interface Team {
   id: string
@@ -140,8 +135,9 @@ export function AdminBookings() {
     const standalone: Booking[] = []
     const processedGroupIds = new Set<string>()
 
-    // Group recurring bookings
-    const groupedMap = groupBookingsByRecurringGroup(filteredBookings as unknown as RecurringBookingRecord[])
+    // Filter recurring bookings using type guard (type-safe)
+    const recurringBookings = filteredBookings.filter(isRecurringBooking)
+    const groupedMap = groupBookingsByRecurringGroup(recurringBookings)
 
     groupedMap.forEach((groupBookings, groupId) => {
       if (!processedGroupIds.has(groupId)) {

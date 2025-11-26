@@ -3,12 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingList } from '../BookingList'
 import type { Booking } from '@/types/booking'
-import type { RecurringGroup } from '@/types/recurring-booking'
-
-// Type for combined items (recurring groups + standalone bookings)
-type CombinedItem =
-  | { type: 'group'; data: RecurringGroup; createdAt: string }
-  | { type: 'booking'; data: Booking; createdAt: string }
+import type { RecurringGroup, CombinedItem, RecurringBookingRecord } from '@/types/recurring-booking'
 
 describe('BookingList', () => {
   const mockOnToggleSelect = vi.fn()
@@ -69,6 +64,78 @@ describe('BookingList', () => {
   const createCombinedItems = (bookings: Booking[]): CombinedItem[] => {
     return bookings.map(createCombinedBookingItem)
   }
+
+  // Helper to create RecurringBookingRecord from Booking
+  const createRecurringBookingRecord = (
+    booking: Booking,
+    sequence: number,
+    total: number,
+    groupId: string
+  ): RecurringBookingRecord => ({
+    id: booking.id,
+    customer_id: booking.customer_id || 'customer-123',
+    service_package_id: booking.service_package_id,
+    booking_date: booking.booking_date,
+    start_time: booking.start_time,
+    end_time: booking.end_time || null,
+    status: booking.status,
+    payment_status: booking.payment_status,
+    total_price: booking.total_price,
+    recurring_group_id: groupId,
+    recurring_sequence: sequence,
+    recurring_total: total,
+    recurring_pattern: 'auto-monthly',
+    is_recurring: true,
+    parent_booking_id: null,
+    created_at: booking.created_at || '2025-10-28T10:00:00Z',
+    updated_at: booking.created_at || '2025-10-28T10:00:00Z',
+    customers: booking.customers ? { full_name: booking.customers.full_name, email: booking.customers.email } : undefined,
+    service_packages: booking.service_packages || undefined,
+    profiles: booking.profiles || undefined,
+    teams: booking.teams ? { name: booking.teams.name } : undefined,
+  })
+
+  // Helper to create RecurringGroup
+  const createMockRecurringGroup = (overrides: Partial<RecurringGroup> = {}): RecurringGroup => {
+    const bookings: RecurringBookingRecord[] = [
+      createRecurringBookingRecord(
+        createMockBooking({ id: 'recurring-1', booking_date: '2025-10-01', status: 'completed' }),
+        1, 4, 'group-123'
+      ),
+      createRecurringBookingRecord(
+        createMockBooking({ id: 'recurring-2', booking_date: '2025-10-08', status: 'confirmed' }),
+        2, 4, 'group-123'
+      ),
+      createRecurringBookingRecord(
+        createMockBooking({ id: 'recurring-3', booking_date: '2025-10-15', status: 'pending' }),
+        3, 4, 'group-123'
+      ),
+      createRecurringBookingRecord(
+        createMockBooking({ id: 'recurring-4', booking_date: '2025-10-22', status: 'pending' }),
+        4, 4, 'group-123'
+      ),
+    ]
+
+    return {
+      groupId: 'group-123',
+      pattern: 'auto-monthly',
+      totalBookings: 4,
+      bookings,
+      completedCount: 1,
+      confirmedCount: 1,
+      cancelledCount: 0,
+      noShowCount: 0,
+      upcomingCount: 2,
+      ...overrides,
+    }
+  }
+
+  // Helper to create CombinedItem from RecurringGroup
+  const createCombinedGroupItem = (group: RecurringGroup): CombinedItem => ({
+    type: 'group',
+    data: group,
+    createdAt: group.bookings[0]?.created_at || '2025-10-28T10:00:00Z',
+  })
 
   const defaultMetadata = {
     startIndex: 1,
@@ -956,6 +1023,140 @@ describe('BookingList', () => {
       // Assert
       const comboboxes = screen.getAllByRole('combobox')
       expect(comboboxes.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Recurring Booking Groups', () => {
+    it('should render recurring booking group header', () => {
+      // Arrange
+      const group = createMockRecurringGroup()
+      const combinedItems: CombinedItem[] = [createCombinedGroupItem(group)]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('Recurring Booking Group')).toBeInTheDocument()
+    })
+
+    it('should display group statistics (completed, confirmed, upcoming counts)', () => {
+      // Arrange
+      const group = createMockRecurringGroup({
+        completedCount: 2,
+        confirmedCount: 1,
+        upcomingCount: 3,
+        cancelledCount: 0,
+        noShowCount: 1,
+      })
+      const combinedItems: CombinedItem[] = [createCombinedGroupItem(group)]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('2 Completed')).toBeInTheDocument()
+      expect(screen.getByText('1 Confirmed')).toBeInTheDocument()
+      expect(screen.getByText('3 Upcoming')).toBeInTheDocument()
+      expect(screen.getByText('1 No Show')).toBeInTheDocument()
+    })
+
+    it('should render mixed items (groups + standalone bookings)', () => {
+      // Arrange
+      const group = createMockRecurringGroup()
+      const standaloneBooking = createMockBooking({
+        id: 'standalone-1',
+        customers: { id: 'c1', full_name: 'Standalone Customer', email: 'standalone@example.com' },
+      })
+      const combinedItems: CombinedItem[] = [
+        createCombinedGroupItem(group),
+        createCombinedBookingItem(standaloneBooking),
+      ]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[standaloneBooking]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('Recurring Booking Group')).toBeInTheDocument()
+      expect(screen.getByText('Standalone Customer')).toBeInTheDocument()
+    })
+
+    it('should display total bookings count in group', () => {
+      // Arrange
+      const group = createMockRecurringGroup({ totalBookings: 8 })
+      const combinedItems: CombinedItem[] = [createCombinedGroupItem(group)]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText(/8 bookings/)).toBeInTheDocument()
+    })
+
+    it('should handle group with all completed bookings', () => {
+      // Arrange
+      const group = createMockRecurringGroup({
+        completedCount: 4,
+        confirmedCount: 0,
+        upcomingCount: 0,
+        cancelledCount: 0,
+        noShowCount: 0,
+      })
+      const combinedItems: CombinedItem[] = [createCombinedGroupItem(group)]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('4 Completed')).toBeInTheDocument()
+      expect(screen.queryByText(/Confirmed/)).not.toBeInTheDocument()
+    })
+
+    it('should display pattern badge (Monthly)', () => {
+      // Arrange
+      const group = createMockRecurringGroup({ pattern: 'auto-monthly' })
+      const combinedItems: CombinedItem[] = [createCombinedGroupItem(group)]
+
+      // Act
+      render(
+        <BookingList
+          {...defaultProps}
+          combinedItems={combinedItems}
+          allBookings={[]}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('Monthly')).toBeInTheDocument()
     })
   })
 })

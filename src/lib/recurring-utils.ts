@@ -7,7 +7,7 @@
 import type {
   RecurringPattern,
   AutoScheduleOptions,
-  RecurringBookingRecord
+  RecurringBookingBase
 } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
 
@@ -171,11 +171,12 @@ export function getRecurringSequence(index: number): number {
 
 /**
  * แยก bookings ตาม recurring group
+ * Uses RecurringBookingBase for type compatibility with Booking type
  */
-export function groupBookingsByRecurringGroup(
-  bookings: RecurringBookingRecord[]
-): Map<string, RecurringBookingRecord[]> {
-  const groups = new Map<string, RecurringBookingRecord[]>()
+export function groupBookingsByRecurringGroup<T extends RecurringBookingBase>(
+  bookings: T[]
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>()
 
   for (const booking of bookings) {
     if (booking.recurring_group_id) {
@@ -191,9 +192,9 @@ export function groupBookingsByRecurringGroup(
 /**
  * เรียงลำดับ bookings ใน group ตาม sequence
  */
-export function sortRecurringGroup(
-  bookings: RecurringBookingRecord[]
-): RecurringBookingRecord[] {
+export function sortRecurringGroup<T extends RecurringBookingBase>(
+  bookings: T[]
+): T[] {
   return [...bookings].sort((a, b) =>
     (a.recurring_sequence || 0) - (b.recurring_sequence || 0)
   )
@@ -201,31 +202,34 @@ export function sortRecurringGroup(
 
 /**
  * ตรวจสอบว่า booking เป็น recurring หรือไม่
+ * Type guard that narrows to RecurringBookingBase
  */
-export function isRecurringBooking(booking: unknown): booking is RecurringBookingRecord {
+export function isRecurringBooking<T>(booking: T): booking is T & RecurringBookingBase {
   return (
     typeof booking === 'object' &&
     booking !== null &&
     'is_recurring' in booking &&
-    booking.is_recurring === true &&
+    (booking as Record<string, unknown>).is_recurring === true &&
     'recurring_group_id' in booking &&
-    !!booking.recurring_group_id
+    !!(booking as Record<string, unknown>).recurring_group_id &&
+    'recurring_sequence' in booking &&
+    'recurring_total' in booking
   )
 }
 
 /**
  * หา booking แรก (parent) ในกลุ่ม
  */
-export function findParentBooking(
-  bookings: RecurringBookingRecord[]
-): RecurringBookingRecord | null {
+export function findParentBooking<T extends RecurringBookingBase>(
+  bookings: T[]
+): T | null {
   return bookings.find(b => b.recurring_sequence === 1) || null
 }
 
 /**
  * นับจำนวน bookings แต่ละสถานะในกลุ่ม
  */
-export function countBookingsByStatus(bookings: RecurringBookingRecord[]): {
+export function countBookingsByStatus<T extends RecurringBookingBase>(bookings: T[]): {
   completed: number
   confirmed: number
   cancelled: number

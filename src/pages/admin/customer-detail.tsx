@@ -17,8 +17,8 @@ import { type BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
-import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus } from '@/lib/recurring-utils'
-import type { RecurringGroup, RecurringBookingRecord, RecurringPattern } from '@/types/recurring-booking'
+import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
+import type { RecurringGroup, RecurringPattern } from '@/types/recurring-booking'
 import {
   ArrowLeft,
   Mail,
@@ -561,8 +561,9 @@ export function AdminCustomerDetail() {
     const standalone: typeof filteredBookings = []
     const processedGroupIds = new Set<string>()
 
-    // Group recurring bookings
-    const groupedMap = groupBookingsByRecurringGroup(filteredBookings as unknown as RecurringBookingRecord[])
+    // Filter recurring bookings using type guard (type-safe)
+    const recurringBookings = filteredBookings.filter(isRecurringBooking)
+    const groupedMap = groupBookingsByRecurringGroup(recurringBookings)
 
     groupedMap.forEach((groupBookings, groupId) => {
       if (!processedGroupIds.has(groupId)) {
@@ -594,11 +595,9 @@ export function AdminCustomerDetail() {
     })
 
     // Combine groups and standalone bookings, sorted by created_at (newest first)
-    type CombinedItem =
-      | { type: 'group'; data: RecurringGroup; createdAt: string }
-      | { type: 'booking'; data: typeof filteredBookings[0]; createdAt: string }
-
-    const combined: CombinedItem[] = [
+    // Note: Using CombinedItem from @/types/recurring-booking (imported above)
+    // Type assertion needed because standalone bookings have slightly different type
+    const combined = [
       ...recurring.map(group => ({
         type: 'group' as const,
         data: group,

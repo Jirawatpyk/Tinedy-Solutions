@@ -9,13 +9,7 @@ import { PermissionAwareDeleteButton } from '@/components/common/PermissionAware
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
-import type { RecurringGroup } from '@/types/recurring-booking'
-
-// Type for combined items (recurring groups + standalone bookings)
-// This type is shared with bookings.tsx
-type CombinedItem =
-  | { type: 'group'; data: RecurringGroup; createdAt: string }
-  | { type: 'booking'; data: Booking; createdAt: string }
+import type { CombinedItem } from '@/types/recurring-booking'
 
 interface PaginationMetadata {
   startIndex: number

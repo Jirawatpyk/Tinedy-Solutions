@@ -5,6 +5,7 @@
  */
 
 import type { BookingFrequency } from './service-package-v2'
+import type { Booking } from './booking'
 
 /**
  * รูปแบบการสร้างตาราง recurring
@@ -17,35 +18,29 @@ export const RecurringPattern = {
 export type RecurringPattern = typeof RecurringPattern[keyof typeof RecurringPattern]
 
 /**
- * ข้อมูล Recurring Booking เดี่ยว (extends จาก database record)
+ * Base fields required for recurring booking functionality
+ * Used for type-safe filtering with isRecurringBooking type guard
  */
-export interface RecurringBookingRecord {
+export interface RecurringBookingBase {
   id: string
-  customer_id: string
-  service_package_id: string
   booking_date: string
   start_time: string
-  end_time: string | null
+  end_time?: string | null
   status: string
-  payment_status?: string
   total_price: number
-  area_sqm?: number | null
-  frequency?: number | null
-
-  // Recurring fields
-  recurring_group_id: string | null
+  payment_status?: string
+  // Recurring fields (required when is_recurring is true)
+  recurring_group_id: string
   recurring_sequence: number
   recurring_total: number
   recurring_pattern: RecurringPattern | null
-  is_recurring: boolean
+  is_recurring: true
   parent_booking_id: string | null
-
   // Timestamps
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
   deleted_at?: string | null
-
-  // Relations (populated ด้วย Supabase joins)
+  // Optional relations
   customers?: {
     full_name: string
     email: string
@@ -63,6 +58,22 @@ export interface RecurringBookingRecord {
   }
   teams?: {
     name: string
+  }
+}
+
+/**
+ * ข้อมูล Recurring Booking เดี่ยว (extends จาก database record)
+ * Extends RecurringBookingBase with additional database fields
+ */
+export interface RecurringBookingRecord extends RecurringBookingBase {
+  customer_id: string
+  service_package_id: string
+  payment_status?: string
+  area_sqm?: number | null
+  frequency?: number | null
+  service_packages_v2?: {
+    name: string
+    service_type: string
   }
 }
 
@@ -121,12 +132,13 @@ export interface AutoScheduleOptions {
 
 /**
  * Recurring Group พร้อม bookings ทั้งหมด
+ * Uses RecurringBookingBase for broader type compatibility
  */
 export interface RecurringGroup {
   groupId: string
   pattern: RecurringPattern
   totalBookings: number
-  bookings: RecurringBookingRecord[]
+  bookings: RecurringBookingBase[]
 
   // สถิติ
   completedCount: number
@@ -179,3 +191,16 @@ export function getRecurringPatternLabel(pattern: RecurringPattern | null): stri
 
   return labels[pattern] || 'Not specified'
 }
+
+/**
+ * Combined Item Type
+ *
+ * ใช้สำหรับรวม recurring groups และ standalone bookings
+ * เพื่อแสดงใน BookingList component
+ *
+ * - type: 'group' = Recurring booking group
+ * - type: 'booking' = Standalone booking (ไม่ใช่ recurring)
+ */
+export type CombinedItem =
+  | { type: 'group'; data: RecurringGroup; createdAt: string }
+  | { type: 'booking'; data: Booking; createdAt: string }

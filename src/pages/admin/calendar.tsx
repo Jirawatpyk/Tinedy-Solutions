@@ -18,6 +18,7 @@ import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { BookingFormState } from '@/hooks/useBookingForm'
+import type { RecurringPattern } from '@/types/recurring-booking'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
 import { useTeamsList } from '@/hooks/useTeams'
@@ -63,6 +64,10 @@ export function AdminCalendar() {
   // Package Selection State - Lifted to parent to persist across modal open/close
   const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
+
+  // Recurring Bookings State (for Create Modal - lifted to parent for StaffAvailabilityModal)
+  const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
+  const [createRecurringPattern, setCreateRecurringPattern] = useState<RecurringPattern>('auto-monthly' as RecurringPattern)
 
   // Loading States for mutations
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -941,11 +946,14 @@ export function AdminCalendar() {
         onClose={() => {
           setIsCreateOpen(false)
           setSelectedCreateDate('')
-          setCreatePackageSelection(null); createForm.reset();
+          setCreatePackageSelection(null)
+          setCreateRecurringDates([])
+          createForm.reset()
         }}
         onSuccess={() => {
           refetchBookings()
-          setCreatePackageSelection(null) // Clear selection after success
+          setCreatePackageSelection(null)
+          setCreateRecurringDates([])
         }}
         servicePackages={servicePackages}
         staffMembers={staffList}
@@ -976,6 +984,10 @@ export function AdminCalendar() {
         defaultDate={selectedCreateDate}
         defaultStaffId={createForm.formData.staff_id}
         defaultTeamId={createForm.formData.team_id}
+        recurringDates={createRecurringDates}
+        setRecurringDates={setCreateRecurringDates}
+        recurringPattern={createRecurringPattern}
+        setRecurringPattern={setCreateRecurringPattern}
       />
 
       {/* Edit Booking Modal */}
@@ -1052,7 +1064,8 @@ export function AdminCalendar() {
               description: 'Team has been assigned to the booking',
             })
           }}
-          date={createFormData.booking_date || ''}
+          date={createRecurringDates.length === 0 ? (createFormData.booking_date || '') : undefined}
+          dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
           startTime={createFormData.start_time || ''}
           endTime={
             createFormData.service_package_id && createFormData.start_time
