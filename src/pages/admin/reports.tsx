@@ -238,36 +238,45 @@ export function AdminReports() {
       .slice(0, 5)
   }, [filteredBookings])
 
-  // Filter staff bookings by date range
+  // Filter staff bookings by payment_date for revenue calculations
+  // FIXED: Use payment_date to capture recurring bookings paid in advance
   const filteredStaffWithBookings = useMemo(() => {
     const { start, end } = getDateRangePreset(dateRange)
     return staffWithBookings.map((staffMember) => ({
       ...staffMember,
-      bookings: staffMember.bookings.filter((booking) =>
-        isWithinInterval(new Date(booking.booking_date), { start, end })
-      ),
+      bookings: staffMember.bookings.filter((booking) => {
+        const paymentDate = (booking as { payment_date?: string | null }).payment_date
+        const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+        return isWithinInterval(dateToCheck, { start, end })
+      }),
     }))
   }, [staffWithBookings, dateRange])
 
-  // Filter team bookings by date range
+  // Filter team bookings by payment_date for revenue calculations
+  // FIXED: Use payment_date to capture recurring bookings paid in advance
   const filteredTeamsWithBookings = useMemo(() => {
     const { start, end } = getDateRangePreset(dateRange)
     return teamsWithBookings.map((team) => ({
       ...team,
-      bookings: team.bookings.filter((booking) =>
-        isWithinInterval(new Date(booking.booking_date), { start, end })
-      ),
+      bookings: team.bookings.filter((booking) => {
+        const paymentDate = (booking as { payment_date?: string | null }).payment_date
+        const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+        return isWithinInterval(dateToCheck, { start, end })
+      }),
     }))
   }, [teamsWithBookings, dateRange])
 
-  // Filter customer bookings by date range
+  // Filter customer bookings by payment_date for revenue calculations
+  // FIXED: Use payment_date to capture recurring bookings paid in advance
   const filteredCustomersWithBookings = useMemo(() => {
     const { start, end } = getDateRangePreset(dateRange)
     return customersWithBookings.map((customer) => ({
       ...customer,
-      bookings: customer.bookings.filter((booking) =>
-        isWithinInterval(new Date(booking.booking_date), { start, end })
-      ),
+      bookings: customer.bookings.filter((booking) => {
+        const paymentDate = (booking as { payment_date?: string | null }).payment_date
+        const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+        return isWithinInterval(dateToCheck, { start, end })
+      }),
     }))
   }, [customersWithBookings, dateRange])
 
