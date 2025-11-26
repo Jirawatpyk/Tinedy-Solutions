@@ -1,5 +1,6 @@
--- Fix Customer Lifetime Value to use payment_status instead of booking status
--- This aligns with the Reports & Analytics page which uses payment_status = 'paid' for revenue calculations
+-- Fix Customer Lifetime Value to exclude archived bookings from total_bookings count
+-- Issue: Total Bookings was counting archived bookings (bookings with deleted_at IS NOT NULL)
+-- Solution: Add deleted_at IS NULL filter to the LEFT JOIN with bookings table
 
 DROP VIEW IF EXISTS customer_lifetime_value CASCADE;
 
@@ -10,9 +11,11 @@ SELECT
   c.email,
   c.relationship_level,
   c.created_at as customer_since,
+
+  -- FIXED: Only count non-archived bookings
   COUNT(b.id) as total_bookings,
 
-  -- FIXED: Use payment_status = 'paid' instead of status = 'completed'
+  -- Use payment_status = 'paid' instead of status = 'completed' for lifetime value
   COALESCE(SUM(CASE WHEN b.payment_status = 'paid' THEN b.total_price ELSE 0 END), 0) as lifetime_value,
   COALESCE(AVG(CASE WHEN b.payment_status = 'paid' THEN b.total_price END), 0) as avg_booking_value,
 
@@ -36,8 +39,9 @@ SELECT
   -- Calculate customer tenure in days
   (CURRENT_DATE - c.created_at::DATE)::INTEGER as customer_tenure_days
 FROM customers c
+-- FIXED: Only join non-archived bookings (deleted_at IS NULL)
 LEFT JOIN bookings b ON c.id = b.customer_id AND b.deleted_at IS NULL
 LEFT JOIN service_packages sp ON b.service_package_id = sp.id
 GROUP BY c.id, c.full_name, c.email, c.relationship_level, c.created_at;
 
-COMMENT ON VIEW customer_lifetime_value IS 'Customer booking statistics - lifetime_value calculated from paid bookings (payment_status = paid), last_booking_date shows most recent PAST service date (excludes future bookings)';
+COMMENT ON VIEW customer_lifetime_value IS 'Customer booking statistics - excludes archived bookings, lifetime_value calculated from paid bookings (payment_status = paid), last_booking_date shows most recent PAST service date (excludes future bookings)';
