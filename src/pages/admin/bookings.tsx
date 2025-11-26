@@ -1056,7 +1056,7 @@ export function AdminBookings() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header skeleton - matches real page structure */}
+        {/* Page header skeleton - matches current structure */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -1074,7 +1074,7 @@ export function AdminBookings() {
           </div>
         </div>
 
-        {/* BookingFiltersPanel skeleton - matches real component */}
+        {/* Filters skeleton */}
         <Card>
           <CardContent className="py-4 space-y-4">
             {/* Search bar skeleton */}
@@ -1113,7 +1113,7 @@ export function AdminBookings() {
           </CardContent>
         </Card>
 
-        {/* Bookings list skeleton - matches BookingList component */}
+        {/* Bookings list skeleton */}
         <Card>
           <CardHeader>
             {/* BulkActionsToolbar skeleton */}
