@@ -5,27 +5,21 @@
  * - แสดงข้อมูลส่วนตัว
  * - แก้ไข profile (full_name, phone, avatar)
  * - เปลี่ยนรหัสผ่าน
- * - แสดง performance statistics
- * - ใช้ ProfileUpdateForm component (Phase 5)
+ * - ตั้งค่า notification
+ *
+ * Note: Performance statistics ย้ายไปอยู่ที่ My Bookings > Stats tab
  */
 
 import { useState } from 'react'
 import { useStaffProfile } from '@/hooks/use-staff-profile'
 import { ProfileUpdateForm } from '@/components/profile/ProfileUpdateForm'
-import { PerformanceChart } from '@/components/staff/performance-chart'
-import { StatsCard } from '@/components/staff/stats-card'
 import { NotificationSettingsCard } from '@/components/staff/notification-settings-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Briefcase,
-  Star,
-  TrendingUp,
-  DollarSign,
   Lock,
   AlertCircle,
 } from 'lucide-react'
@@ -35,7 +29,6 @@ import { mapErrorToUserMessage } from '@/lib/error-messages'
 export default function StaffProfile() {
   const {
     staffProfile,
-    performanceStats,
     error,
     refresh,
     changePassword,
@@ -106,7 +99,7 @@ export default function StaffProfile() {
         <div className="px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Manage your personal information and view your performance statistics
+              Manage your personal information and notification settings
             </p>
           </div>
         </div>
@@ -122,34 +115,6 @@ export default function StaffProfile() {
       )}
 
       <div className="p-4 sm:p-6 space-y-6 max-w-full mx-auto">
-        {/* Performance Stats - ต้อง fetch จาก DB */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Tasks"
-            value={performanceStats?.totalJobs ?? 0}
-            icon={Briefcase}
-            description="Last 6 months"
-          />
-          <StatsCard
-            title="Completed Tasks"
-            value={performanceStats?.completedJobs ?? 0}
-            icon={TrendingUp}
-            description={performanceStats ? `${performanceStats.completionRate}% completion rate` : '0% completion rate'}
-          />
-          <StatsCard
-            title="Average Rating"
-            value={performanceStats && performanceStats.averageRating > 0 ? performanceStats.averageRating.toFixed(1) : 'N/A'}
-            icon={Star}
-            description="From customer reviews"
-          />
-          <StatsCard
-            title="Total Revenue"
-            value={performanceStats ? `฿${performanceStats.totalRevenue.toLocaleString()}` : '฿0'}
-            icon={DollarSign}
-            description="Last 6 months"
-          />
-        </div>
-
         {/* Profile Update Form */}
         {staffProfile && (
           <ProfileUpdateForm
@@ -204,30 +169,6 @@ export default function StaffProfile() {
           </CardContent>
         </Card>
 
-        {/* Performance History - ต้อง fetch จาก DB */}
-        {!performanceStats ? (
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Skeleton className="h-80 w-full" />
-                <Skeleton className="h-80 w-full" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : performanceStats.monthlyData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance History</CardTitle>
-              <CardDescription>Work statistics for the last 6 months</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PerformanceChart stats={performanceStats} />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   )
