@@ -1056,96 +1056,143 @@ export function AdminBookings() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Page header skeleton - matches real page structure */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
             <p className="text-sm text-muted-foreground">
               Manage all service bookings
             </p>
           </div>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
+          <div className="flex items-center gap-4">
+            {/* Show archived checkbox skeleton */}
+            <div className="flex items-center space-x-2">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+            {/* New Booking button skeleton */}
+            <Skeleton className="h-10 w-36" />
+          </div>
         </div>
 
-        {/* Filters skeleton */}
+        {/* BookingFiltersPanel skeleton - matches real component */}
         <Card>
-          <CardContent className="py-3 space-y-3">
-            {/* Quick Filters skeleton */}
+          <CardContent className="py-4 space-y-4">
+            {/* Search bar skeleton */}
+            <div className="relative">
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Quick filters skeleton */}
             <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-16" />
               <Skeleton className="h-8 w-24" />
               <Skeleton className="h-8 w-28" />
+              <Skeleton className="h-8 w-32" />
             </div>
 
-            {/* Main Filters skeleton - 4 columns grid */}
+            {/* Main filters grid skeleton - 4 columns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Skeleton className="h-8 w-full" />
-              <div className="flex gap-2">
-                <Skeleton className="h-8 flex-1" />
-                <Skeleton className="h-8 flex-1" />
-              </div>
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
 
-            {/* Additional Filters skeleton - 2 columns grid */}
+            {/* Additional filters skeleton - 2 columns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Filter actions skeleton */}
+            <div className="flex items-center justify-between pt-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-9 w-32" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Bookings list skeleton */}
+        {/* Bookings list skeleton - matches BookingList component */}
         <Card>
           <CardHeader>
             {/* BulkActionsToolbar skeleton */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-5 w-48" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-9 w-32" />
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-24" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {/* Pagination Controls skeleton - Top */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-12" />
-                  <Skeleton className="h-10 w-20" />
                   <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-4 w-20" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-56" />
-                </div>
+                <Skeleton className="h-4 w-48" />
               </div>
 
-              {/* Booking cards skeleton */}
+              {/* Booking items skeleton */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4"
+                  className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/5 transition-colors"
                 >
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-5 w-48" />
-                    <Skeleton className="h-4 w-64" />
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-56" />
-                  </div>
-                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
-                    <Skeleton className="h-6 w-20" />
-                    <Skeleton className="h-6 w-24 rounded-full" />
-                    <div className="flex gap-2">
-                      <Skeleton className="h-10 w-32" />
-                      <Skeleton className="h-10 w-10" />
+                  {/* Checkbox skeleton */}
+                  <Skeleton className="h-5 w-5 mt-1 rounded" />
+
+                  {/* Content skeleton */}
+                  <div className="flex-1 space-y-3">
+                    {/* Header row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                      </div>
+                    </div>
+
+                    {/* Details row */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+
+                    {/* Action buttons row */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <Skeleton className="h-9 w-28" />
+                      <Skeleton className="h-9 w-9" />
+                      <Skeleton className="h-9 w-9" />
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Pagination Controls skeleton - Bottom */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+                <Skeleton className="h-4 w-48" />
+                <div className="flex items-center gap-1">
+                  <Skeleton className="h-9 w-9" />
+                  <Skeleton className="h-9 w-9" />
+                  <Skeleton className="h-9 w-9" />
+                  <Skeleton className="h-9 w-9" />
+                  <Skeleton className="h-9 w-9" />
+                  <Skeleton className="h-9 w-9" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
