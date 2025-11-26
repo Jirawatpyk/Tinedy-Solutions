@@ -103,8 +103,13 @@ export function BookingDetailModal({
       }
     } catch (error) {
       console.error('Error fetching review:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load review data',
+        variant: 'destructive',
+      })
     }
-  }, [booking, resetReview])
+  }, [booking, resetReview, toast])
 
   // Fetch existing review when booking changes
   useEffect(() => {

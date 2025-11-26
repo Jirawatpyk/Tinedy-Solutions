@@ -188,6 +188,11 @@ export function AdminTeams() {
       setAvailableStaff(data || [])
     } catch (error) {
       console.error('Error loading staff:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load available staff',
+        variant: 'destructive',
+      })
     }
   }
 

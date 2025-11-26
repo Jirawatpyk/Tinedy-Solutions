@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PaymentMethodSkeleton } from '@/components/skeletons/lazy-loading-skeletons'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 // Lazy load payment components to reduce initial bundle size
 const PromptPayQR = lazy(() =>
@@ -23,6 +24,7 @@ type PaymentMethod = 'promptpay' | 'slip' | null
 export function PaymentPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [recurringBookings, setRecurringBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,10 +77,15 @@ export function PaymentPage() {
       }
     } catch (error) {
       console.error('Error fetching booking:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load booking details. Please try again.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
-  }, [bookingId, navigate])
+  }, [bookingId, navigate, toast])
 
   const checkPaymentStatus = useCallback(async () => {
     if (!bookingId) return
