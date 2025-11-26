@@ -197,12 +197,15 @@ export function AdminReports() {
     return generateChartData(mappedBookings, start, end)
   }, [bookings, dateRange])
 
-  // Filter bookings by date range for all charts
+  // Filter bookings by payment_date for revenue calculations
+  // FIXED: Use payment_date to capture recurring bookings paid in advance
   const filteredBookings = useMemo(() => {
     const { start, end } = getDateRangePreset(dateRange)
-    return bookings.filter((booking) =>
-      isWithinInterval(new Date(booking.booking_date), { start, end })
-    )
+    return bookings.filter((booking) => {
+      const paymentDate = (booking as { payment_date?: string | null }).payment_date
+      const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+      return isWithinInterval(dateToCheck, { start, end })
+    })
   }, [bookings, dateRange])
 
   // Calculate all useMemo values BEFORE any conditional returns (Rules of Hooks)
