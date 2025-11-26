@@ -456,12 +456,18 @@ export async function fetchStaffStats(
         return r.count || 0
       })(),
 
-      // Average rating from reviews
+      // Average rating from reviews (staff + team reviews)
       (async () => {
+        // Build filter for staff reviews OR team reviews
+        let filterStr = `staff_id.eq.${userId}`
+        if (teamIds.length > 0) {
+          filterStr += `,team_id.in.(${teamIds.join(',')})`
+        }
+
         const { data: reviews, error } = await supabase
           .from('reviews')
           .select('rating')
-          .eq('staff_id', userId)
+          .or(filterStr)
 
         if (error) {
           logger.error('Error fetching reviews', { error, userId }, { context: 'StaffBookings' })
