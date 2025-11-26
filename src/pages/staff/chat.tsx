@@ -104,7 +104,7 @@ export function StaffChat() {
   }
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Header - Same style as My Profile and My Calendar */}
       <div className={`bg-white border-b flex-shrink-0 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
         <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
@@ -115,8 +115,8 @@ export function StaffChat() {
       </div>
 
       {/* Chat Container - Mobile: Stack, Desktop: Side by side */}
-      <div className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-12rem)]">
+      <div className="flex-1 p-4 sm:p-6 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
           {/* User List - Sidebar: Hide on mobile when chat is selected */}
           <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>
             <UserList
