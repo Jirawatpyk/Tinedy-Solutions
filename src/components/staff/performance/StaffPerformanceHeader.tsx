@@ -22,7 +22,11 @@ export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({ sta
 
   return (
     <div className="flex items-center gap-4">
-      <Button variant="ghost" size="icon" onClick={() => navigate(`${basePath}/staff`)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => navigate(`${basePath}/staff`)}
+      >
         <ArrowLeft className="h-5 w-5" />
       </Button>
       <div className="flex items-center gap-4 flex-1">

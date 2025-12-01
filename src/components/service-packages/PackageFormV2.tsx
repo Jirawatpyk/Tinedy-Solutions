@@ -425,7 +425,7 @@ export function PackageFormV2({
           {/* Fixed Pricing Fields */}
           {form.watch('package.pricing_model') === PricingModel.Fixed && (
             <div className="space-y-4 pt-4 border-t">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="duration">Duration (minutes) *</Label>
                   <Controller

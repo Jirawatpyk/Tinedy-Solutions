@@ -80,14 +80,14 @@ export function TeamPerformanceCharts({ teamId }: TeamPerformanceChartsProps) {
   if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
             Monthly Bookings
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[300px]">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="flex items-center justify-center h-[200px] sm:h-[300px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </CardContent>
@@ -97,18 +97,18 @@ export function TeamPerformanceCharts({ teamId }: TeamPerformanceChartsProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="font-display flex items-center gap-2">
-          <Activity className="h-5 w-5" />
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+          <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
           Monthly Bookings
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-6 pt-0">
         {monthlyData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[300px] text-center">
-            <Activity className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">No booking data available</p>
-            <p className="text-sm text-muted-foreground mt-1">Data will appear here once bookings are created</p>
+          <div className="flex flex-col items-center justify-center h-[200px] sm:h-[300px] text-center">
+            <Activity className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+            <p className="text-sm sm:text-base text-muted-foreground">No booking data available</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Data will appear here once bookings are created</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>

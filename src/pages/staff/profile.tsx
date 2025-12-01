@@ -99,7 +99,7 @@ export default function StaffProfile() {
         <div className="px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Manage your personal information and notification settings
+              Manage your personal information
             </p>
           </div>
         </div>

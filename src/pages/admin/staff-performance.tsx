@@ -25,38 +25,38 @@ export function AdminStaffPerformance() {
       <div className="space-y-6">
         {/* Header skeleton */}
         <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
           <div className="space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-6 sm:h-8 w-48 sm:w-64" />
+            <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
           </div>
         </div>
 
         {/* Stats cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                <Skeleton className="h-3 sm:h-4 w-3 sm:w-4" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-7 w-16 mb-1" />
-                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 sm:h-7 w-12 sm:w-16 mb-1" />
+                <Skeleton className="h-2 sm:h-3 w-16 sm:w-20" />
               </CardContent>
             </Card>
           ))}
         </div>
 
         {/* Charts skeleton */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {Array.from({ length: 2 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
-                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-[300px] w-full" />
+                <Skeleton className="h-[200px] sm:h-[300px] w-full" />
               </CardContent>
             </Card>
           ))}

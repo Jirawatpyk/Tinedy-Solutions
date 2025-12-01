@@ -81,7 +81,7 @@ const BookingFiltersPanelComponent = ({
   return (
     <>
       <Card>
-        <CardContent className="py-3 space-y-3">
+        <CardContent className="py-3 px-4 sm:px-6 space-y-3">
           {/* Quick Filters + More Filters Row */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -99,7 +99,7 @@ const BookingFiltersPanelComponent = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setQuickFilter('week')}
-                className="h-8 text-xs"
+                className="h-8 text-xs hidden sm:inline-flex"
               >
                 This Week
               </Button>
@@ -107,7 +107,7 @@ const BookingFiltersPanelComponent = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setQuickFilter('month')}
-                className="h-8 text-xs"
+                className="h-8 text-xs hidden sm:inline-flex"
               >
                 This Month
               </Button>

@@ -56,13 +56,37 @@ function BookingStatusPieChartComponent({
                   label={
                     chart.showLabels
                       ? ((props) => {
-                          const entry = props as unknown as { payload: BookingStatusData; percent: number }
-                          return `${entry.payload.status}: ${(entry.percent * 100).toFixed(0)}%`
+                          const entry = props as unknown as {
+                            payload: BookingStatusData
+                            percent: number
+                            cx: number
+                            cy: number
+                            midAngle: number
+                            outerRadius: number
+                          }
+                          const RADIAN = Math.PI / 180
+                          const radius = entry.outerRadius + 30
+                          const x = entry.cx + radius * Math.cos(-entry.midAngle * RADIAN)
+                          const y = entry.cy + radius * Math.sin(-entry.midAngle * RADIAN)
+
+                          return (
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#374151"
+                              textAnchor={x > entry.cx ? 'start' : 'end'}
+                              dominantBaseline="central"
+                              fontSize="12"
+                              fontWeight="600"
+                            >
+                              {`${entry.payload.status}: ${(entry.percent * 100).toFixed(0)}%`}
+                            </text>
+                          )
                         })
                       : false
                   }
-                  outerRadius={90}
-                  innerRadius={60}
+                  outerRadius={80}
+                  innerRadius={55}
                   fill="#8884d8"
                   dataKey="count"
                   paddingAngle={2}
@@ -93,17 +117,17 @@ function BookingStatusPieChartComponent({
             </ResponsiveContainer>
 
             {/* Status Count Summary */}
-            <div className="flex flex-wrap justify-center gap-4 pt-2 border-t">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-4 pt-2 border-t">
               {data.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="flex items-center gap-1.5">
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: entry.color }}
                   />
-                  <span className="text-sm font-medium text-tinedy-dark">
+                  <span className="text-xs sm:text-sm font-medium text-tinedy-dark whitespace-nowrap">
                     {entry.status}
                   </span>
-                  <span className="text-sm font-bold text-tinedy-dark">
+                  <span className="text-xs sm:text-sm font-bold text-tinedy-dark">
                     {entry.count}
                   </span>
                 </div>

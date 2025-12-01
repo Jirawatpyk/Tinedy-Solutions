@@ -1082,15 +1082,16 @@ export function AdminCustomerDetail() {
 
       {/* Booking History */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="text-xl">Booking History</CardTitle>
+        <CardHeader className="px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <CardTitle className="text-lg sm:text-xl">Booking History</CardTitle>
             <div className="flex items-center gap-2">
               <div className="w-full sm:w-64">
                 <Input
                   placeholder="Search bookings..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 text-sm"
                 />
               </div>
               <Button
@@ -1098,23 +1099,24 @@ export function AdminCustomerDetail() {
                 size="sm"
                 onClick={exportToCSV}
                 disabled={filteredBookings.length === 0}
+                className="h-9"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {combinedItems.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
+            <div className="text-center py-8 sm:py-12">
+              <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+              <p className="text-sm text-muted-foreground">
                 {searchQuery ? 'No bookings found matching your search' : 'No booking history yet'}
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {paginatedItems.map((item) => {
                 if (item.type === 'group') {
                   // Render Recurring Booking Group Card
@@ -1189,72 +1191,74 @@ export function AdminCustomerDetail() {
                         setIsBookingDetailModalOpen(true)
                       }}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
                             {/* 1. ชื่อลูกค้า + Booking ID */}
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className="font-medium text-tinedy-dark">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
                                   {customer.full_name}
-                                  <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">
+                                  <span className="ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">
                                     #{booking.id.slice(0, 8)}
                                   </span>
                                 </p>
                                 {/* 2. Email */}
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                   {customer.email}
                                 </p>
                               </div>
-                              <div className="sm:hidden">
-                                <Badge variant="outline" className={statusInfo.className}>
+                              <div className="sm:hidden flex-shrink-0">
+                                <Badge variant="outline" className={`${statusInfo.className} text-[10px]`}>
                                   {statusInfo.label}
                                 </Badge>
                               </div>
                             </div>
 
                             {/* 3. Service Type Badge + Package Name */}
-                            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                               <span className="inline-flex items-center">
-                                <Badge variant="outline" className="mr-2">
+                                <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                                   {booking.service?.service_type || booking.service_packages?.service_type || 'N/A'}
                                 </Badge>
-                                {booking.service?.name || booking.service_packages?.name || 'N/A'}
+                                <span className="truncate">
+                                  {booking.service?.name || booking.service_packages?.name || 'N/A'}
+                                </span>
                               </span>
                             </div>
 
                             {/* 4. วันที่ • เวลา */}
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-xs sm:text-sm text-muted-foreground">
                               {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {booking.end_time ? formatTime(booking.end_time) : 'N/A'}
                             </div>
 
                             {/* 5. Staff/Team */}
                             {booking.profiles && (
-                              <p className="text-sm text-tinedy-blue flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                Staff: {booking.profiles.full_name}
+                              <p className="text-xs sm:text-sm text-tinedy-blue flex items-center gap-1">
+                                <User className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">Staff: {booking.profiles.full_name}</span>
                               </p>
                             )}
                             {booking.teams && (
-                              <p className="text-sm text-tinedy-green flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                Team: {booking.teams.name}
+                              <p className="text-xs sm:text-sm text-tinedy-green flex items-center gap-1">
+                                <Users className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">Team: {booking.teams.name}</span>
                               </p>
                             )}
                           </div>
 
                           {/* 6. ราคา + Status ด้านขวา */}
-                          <div className="flex flex-col items-end gap-4">
+                          <div className="flex flex-col items-end gap-2 sm:gap-4 flex-shrink-0">
                             <div>
-                              <p className="font-semibold text-tinedy-dark text-lg">
+                              <p className="font-semibold text-tinedy-dark text-base sm:text-lg">
                                 ฿{booking.total_price?.toLocaleString() || 0}
                               </p>
                             </div>
-                            <div className="flex flex-wrap gap-2 items-center sm:items-end">
-                              <Badge variant="outline" className={statusInfo.className}>
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center sm:items-end justify-end">
+                              <Badge variant="outline" className={`${statusInfo.className} text-[10px] sm:text-xs hidden sm:inline-flex`}>
                                 {statusInfo.label}
                               </Badge>
-                              <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')}>
+                              <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')} className="text-[10px] sm:text-xs">
                                 {getPaymentStatusLabel(booking.payment_status || 'unpaid')}
                               </StatusBadge>
                             </div>
@@ -1271,19 +1275,21 @@ export function AdminCustomerDetail() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{endIndex} of {totalBookingsCount} bookings
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                <span className="hidden sm:inline">Showing {startIndex + 1}-{endIndex} of {totalBookingsCount} bookings</span>
+                <span className="sm:hidden">{startIndex + 1}-{endIndex} of {totalBookingsCount}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="h-8 text-xs"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Previous</span>
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -1292,7 +1298,7 @@ export function AdminCustomerDetail() {
                       variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? 'bg-tinedy-blue' : ''}
+                      className={`h-8 min-w-[32px] text-xs ${currentPage === page ? 'bg-tinedy-blue' : ''}`}
                     >
                       {page}
                     </Button>
@@ -1303,9 +1309,10 @@ export function AdminCustomerDetail() {
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
+                  className="h-8 text-xs"
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:ml-1" />
                 </Button>
               </div>
             </div>

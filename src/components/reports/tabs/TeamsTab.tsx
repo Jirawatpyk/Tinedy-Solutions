@@ -97,14 +97,15 @@ function TeamsTabComponent({
 
       {/* Revenue by Team Chart */}
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
             Revenue by Team
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+        <CardContent className="p-4 sm:p-6">
+          <div className="h-[250px] sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={teamPerformance
                 .map(team => ({
@@ -147,6 +148,7 @@ function TeamsTabComponent({
               />
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
@@ -155,14 +157,15 @@ function TeamsTabComponent({
 
         {/* Team Workload Distribution */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Target className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5" />
               Team Workload Distribution
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={workloadData}
@@ -197,16 +200,17 @@ function TeamsTabComponent({
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
+            </div>
+            <div className="mt-3 sm:mt-4 space-y-2">
               {teamPerformance
                 .filter((t: TeamPerformance) => t.totalJobs > 0)
                 .sort((a: TeamPerformance, b: TeamPerformance) => b.totalJobs - a.totalJobs)
                 .slice(0, 5)
                 .map((team: TeamPerformance, index: number) => (
-                  <div key={team.id} className="flex items-center justify-between text-sm">
+                  <div key={team.id} className="flex items-center justify-between text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-3 h-3 rounded-full"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                         style={{
                           backgroundColor: [
                             CHART_COLORS.primary,
@@ -228,13 +232,13 @@ function TeamsTabComponent({
 
         {/* Team Completion Rate */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Award className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Award className="h-4 w-4 sm:h-5 sm:w-5" />
               Team Completion Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
             {teamPerformance
               .filter((t: TeamPerformance) => t.totalJobs > 0)
               .sort((a: TeamPerformance, b: TeamPerformance) => b.completionRate - a.completionRate)
@@ -247,15 +251,15 @@ function TeamsTabComponent({
                 return (
                   <div key={team.id}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{team.name}</span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm font-medium">{team.name}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         {completed}/{totalJobs}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-1.5 sm:h-2">
                         <div
-                          className={`h-2 rounded-full ${
+                          className={`h-1.5 sm:h-2 rounded-full ${
                             completionRate >= 80
                               ? 'bg-green-500'
                               : completionRate >= 60
@@ -265,7 +269,7 @@ function TeamsTabComponent({
                           style={{ width: `${completionRate}%` }}
                         />
                       </div>
-                      <span className="text-xs font-semibold w-12 text-right">
+                      <span className="text-[10px] sm:text-xs font-semibold w-10 sm:w-12 text-right">
                         {completionRate.toFixed(0)}%
                       </span>
                     </div>
@@ -278,45 +282,45 @@ function TeamsTabComponent({
 
       {/* Team Performance Comparison Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <BriefcaseBusiness className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+            <BriefcaseBusiness className="h-4 w-4 sm:h-5 sm:w-5" />
             Team Performance Comparison
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b">
                 <tr className="text-left">
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     Rank
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     Team Name
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Members
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Total Jobs
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Completed
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     In Progress
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Pending
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Revenue
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Rate
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Utilization
                   </th>
                 </tr>
@@ -324,7 +328,7 @@ function TeamsTabComponent({
               <tbody>
                 {teamPerformance.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={10} className="py-6 sm:py-8 text-center text-xs sm:text-sm text-muted-foreground">
                       No team performance data available
                     </td>
                   </tr>
@@ -333,34 +337,34 @@ function TeamsTabComponent({
                     .sort((a, b) => b.revenue - a.revenue)
                     .map((team, index) => (
                       <tr key={team.id} className="border-b hover:bg-accent/20">
-                        <td className="py-3 text-sm">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            {index === 0 && <Award className="h-4 w-4 text-tinedy-yellow" />}
+                            {index === 0 && <Award className="h-3 w-3 sm:h-4 sm:w-4 text-tinedy-yellow" />}
                             <span className={index === 0 ? 'font-bold text-tinedy-yellow' : ''}>
                               #{index + 1}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 font-medium">{team.name}</td>
-                        <td className="py-3 text-sm text-right">
-                          <span className="inline-flex items-center justify-center rounded-full bg-tinedy-blue/10 px-2 py-1 text-xs font-medium text-tinedy-blue">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap">{team.name}</td>
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center rounded-full bg-tinedy-blue/10 px-2 py-1 text-[10px] sm:text-xs font-medium text-tinedy-blue">
                             {team.memberCount}
                           </span>
                         </td>
-                        <td className="py-3 text-sm text-right">{team.totalJobs}</td>
-                        <td className="py-3 text-sm text-right text-green-600 font-semibold">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">{team.totalJobs}</td>
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right text-green-600 font-semibold whitespace-nowrap">
                           {team.completed}
                         </td>
-                        <td className="py-3 text-sm text-right text-blue-600">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right text-blue-600 whitespace-nowrap">
                           {team.inProgress}
                         </td>
-                        <td className="py-3 text-sm text-right text-yellow-600">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right text-yellow-600 whitespace-nowrap">
                           {team.pending}
                         </td>
-                        <td className="py-3 font-bold text-right text-tinedy-dark">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm font-bold text-right text-tinedy-dark whitespace-nowrap">
                           {formatCurrency(team.revenue)}
                         </td>
-                        <td className="py-3 text-sm text-right">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">
                           <span
                             className={`font-semibold ${
                               team.completionRate >= 80
@@ -373,11 +377,11 @@ function TeamsTabComponent({
                             {team.completionRate.toFixed(0)}%
                           </span>
                         </td>
-                        <td className="py-3 text-sm text-right">
+                        <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-1.5 sm:h-2">
                               <div
-                                className={`h-2 rounded-full ${
+                                className={`h-1.5 sm:h-2 rounded-full ${
                                   team.completionRate >= 80
                                     ? 'bg-green-500'
                                     : team.completionRate >= 60
@@ -387,7 +391,7 @@ function TeamsTabComponent({
                                 style={{ width: `${team.completionRate}%` }}
                               />
                             </div>
-                            <span className="text-xs font-medium">
+                            <span className="text-[10px] sm:text-xs font-medium">
                               {team.completionRate.toFixed(0)}%
                             </span>
                           </div>
@@ -399,22 +403,22 @@ function TeamsTabComponent({
             </table>
           </div>
           {teamPerformance.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500" />
                   <span className="text-muted-foreground">
                     High Utilization (&gt;80%)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-yellow-500" />
                   <span className="text-muted-foreground">
                     Medium Utilization (60-80%)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-orange-500" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-orange-500" />
                   <span className="text-muted-foreground">
                     Low Utilization (&lt;60%)
                   </span>

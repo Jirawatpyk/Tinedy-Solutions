@@ -1,9 +1,28 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ArrowLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { TeamDetailHeader } from '@/components/teams/team-detail/TeamDetailHeader'
@@ -12,6 +31,13 @@ import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
 import { TeamRecentBookings } from '@/components/teams/team-detail/TeamRecentBookings'
 import { TeamPerformanceCharts } from '@/components/teams/team-detail/TeamPerformanceCharts'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import {
+  TeamUpdateSchema,
+  TeamUpdateTransformSchema,
+  AddTeamMemberSchema,
+  type TeamUpdateFormData,
+  type AddTeamMemberFormData,
+} from '@/schemas'
 
 interface TeamMember {
   id: string
@@ -52,6 +78,29 @@ export function AdminTeamDetail() {
   const [team, setTeam] = useState<Team | null>(null)
   const [stats, setStats] = useState<TeamStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [memberDialogOpen, setMemberDialogOpen] = useState(false)
+  const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
+
+  // React Hook Form - Update Team
+  const updateTeamForm = useForm<TeamUpdateFormData>({
+    resolver: zodResolver(TeamUpdateSchema),
+    defaultValues: {
+      name: '',
+      description: null,
+      team_lead_id: null,
+    },
+  })
+
+  // React Hook Form - Add Member
+  const addMemberForm = useForm<AddTeamMemberFormData>({
+    resolver: zodResolver(AddTeamMemberSchema),
+    defaultValues: {
+      team_id: '',
+      staff_id: '',
+      role: 'member',
+    },
+  })
 
   const loadTeamDetail = useCallback(async () => {
     if (!teamId) return
@@ -183,39 +232,150 @@ export function AdminTeamDetail() {
     loadTeamDetail()
   }, [loadTeamDetail])
 
+  const loadAvailableStaff = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, avatar_url, role')
+        .eq('role', 'staff')
+        .order('full_name')
+
+      if (error) throw error
+      setAvailableStaff(data || [])
+    } catch (error) {
+      console.error('Error loading staff:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load available staff',
+        variant: 'destructive',
+      })
+    }
+  }, [toast])
+
+  useEffect(() => {
+    loadAvailableStaff()
+  }, [loadAvailableStaff])
+
+  const openEditDialog = () => {
+    if (!team) return
+    updateTeamForm.reset({
+      name: team.name,
+      description: team.description,
+      team_lead_id: team.team_lead_id,
+    })
+    setDialogOpen(true)
+  }
+
+  const openMemberDialog = () => {
+    if (!team) return
+    addMemberForm.reset({
+      team_id: team.id,
+      staff_id: '',
+      role: 'member',
+    })
+    setMemberDialogOpen(true)
+  }
+
+  const onSubmitUpdateTeam = async (data: TeamUpdateFormData) => {
+    if (!team) return
+
+    try {
+      // Transform form data (empty string → null)
+      const transformedData = TeamUpdateTransformSchema.parse(data)
+
+      const { error } = await supabase
+        .from('teams')
+        .update({
+          name: transformedData.name,
+          description: transformedData.description,
+          team_lead_id: transformedData.team_lead_id,
+        })
+        .eq('id', team.id)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Team updated successfully',
+      })
+
+      setDialogOpen(false)
+      updateTeamForm.reset()
+      loadTeamDetail()
+    } catch (error) {
+      console.error('Error updating team:', error)
+      const errorMessage = mapErrorToUserMessage(error, 'team')
+      toast({
+        title: errorMessage.title,
+        description: errorMessage.description,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: data.team_id,
+          staff_id: data.staff_id,
+        })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Member added successfully',
+      })
+
+      setMemberDialogOpen(false)
+      addMemberForm.reset()
+      loadTeamDetail()
+    } catch (error) {
+      console.error('Error adding member:', error)
+      const errorMsg = mapErrorToUserMessage(error, 'team')
+      toast({
+        title: errorMsg.title,
+        description: errorMsg.description,
+        variant: 'destructive',
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
         {/* Back button skeleton */}
-        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-9 sm:h-10 w-20 sm:w-24" />
 
         {/* Header skeleton */}
         <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-0">
               <div className="space-y-2 flex-1">
-                <Skeleton className="h-9 w-64" />
-                <Skeleton className="h-4 w-96" />
+                <Skeleton className="h-7 sm:h-9 w-48 sm:w-64" />
+                <Skeleton className="h-3 sm:h-4 w-64 sm:w-96" />
               </div>
-              <div className="flex gap-2">
-                <Skeleton className="h-10 w-20" />
-                <Skeleton className="h-10 w-20" />
+              <div className="flex gap-1 sm:gap-2 w-full sm:w-auto justify-end">
+                <Skeleton className="h-8 sm:h-9 w-16 sm:w-20" />
+                <Skeleton className="h-8 sm:h-9 w-16 sm:w-20" />
               </div>
             </div>
           </CardHeader>
         </Card>
 
         {/* Stats skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded" />
               </CardHeader>
               <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-12" />
-                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-7 sm:h-8 w-10 sm:w-12" />
+                <Skeleton className="h-2.5 sm:h-3 w-24 sm:w-28" />
               </CardContent>
             </Card>
           ))}
@@ -224,19 +384,19 @@ export function AdminTeamDetail() {
         {/* Content skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
+            <CardHeader className="p-4 sm:p-6">
+              <Skeleton className="h-5 sm:h-6 w-40 sm:w-48" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-64" />
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <Skeleton className="h-48 sm:h-64" />
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
+            <CardHeader className="p-4 sm:p-6">
+              <Skeleton className="h-5 sm:h-6 w-32 sm:w-48" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-64" />
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <Skeleton className="h-48 sm:h-64" />
             </CardContent>
           </Card>
         </div>
@@ -272,6 +432,7 @@ export function AdminTeamDetail() {
       <TeamDetailHeader
         team={team}
         onUpdate={loadTeamDetail}
+        onEdit={openEditDialog}
         basePath={basePath}
       />
 
@@ -284,11 +445,162 @@ export function AdminTeamDetail() {
         <TeamMembersList
           team={team}
           onUpdate={loadTeamDetail}
+          onAddMember={openMemberDialog}
         />
       </div>
 
       {/* Recent Bookings */}
       <TeamRecentBookings teamId={team.id} />
+
+      {/* Edit Team Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open)
+        if (!open) {
+          updateTeamForm.reset()
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team</DialogTitle>
+            <DialogDescription>
+              Update team information
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={updateTeamForm.handleSubmit(onSubmitUpdateTeam)}>
+            <div className="space-y-4 py-4">
+              <Controller
+                name="name"
+                control={updateTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamName">Team Name *</Label>
+                    <Input
+                      id="teamName"
+                      {...field}
+                      placeholder="e.g., Sales Team, Support Team"
+                    />
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+
+              <Controller
+                name="description"
+                control={updateTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamDescription">Description</Label>
+                    <Input
+                      id="teamDescription"
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="Brief description of the team"
+                    />
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+
+              <Controller
+                name="team_lead_id"
+                control={updateTeamForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamLead">Team Lead</Label>
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team lead (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStaff.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Update
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Member Dialog */}
+      <Dialog open={memberDialogOpen} onOpenChange={(open) => {
+        setMemberDialogOpen(open)
+        if (!open) {
+          addMemberForm.reset()
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Team Member</DialogTitle>
+            <DialogDescription>
+              Add a staff member to {team?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={addMemberForm.handleSubmit(onSubmitAddMember)}>
+            <div className="space-y-4 py-4">
+              <Controller
+                name="staff_id"
+                control={addMemberForm.control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="staffSelect">Select Staff Member</Label>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a staff member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStaff
+                          .filter((staff) =>
+                            !team?.members?.some((m) => m.id === staff.id)
+                          )
+                          .map((staff) => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              {staff.full_name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </div>
+                )}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setMemberDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Add Member
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

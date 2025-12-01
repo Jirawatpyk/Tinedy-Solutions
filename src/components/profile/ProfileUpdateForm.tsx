@@ -257,7 +257,6 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Account Role</p>
-                  <p className="text-xs text-gray-500">Your access level in the system</p>
                 </div>
               </div>
               <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm font-semibold capitalize">
@@ -314,7 +313,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
             )}
           </div>
 
-          {/* Phone Number & Staff Number - 2 Columns */}
+          {/* Phone Number & Join Date - 2 Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Phone Number */}
             <div className="space-y-2">
@@ -348,22 +347,8 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
               />
             </div>
 
-            {/* Staff Number (if exists) */}
-            {initialData?.staff_number && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Staff Number (Read-only)</Label>
-                <Input
-                  value={initialData.staff_number}
-                  disabled
-                  className="bg-gray-50"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Join Date - Full Width (if exists and no staff number in previous row) */}
-          {initialData?.created_at && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Join Date (if exists) */}
+            {initialData?.created_at && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Join Date</Label>
                 <div className="relative">
@@ -374,6 +359,20 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                     className="pl-10 bg-gray-50"
                   />
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Staff Number (if exists) */}
+          {initialData?.staff_number && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Staff Number (Read-only)</Label>
+                <Input
+                  value={initialData.staff_number}
+                  disabled
+                  className="bg-gray-50"
+                />
               </div>
             </div>
           )}

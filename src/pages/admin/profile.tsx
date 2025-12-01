@@ -120,7 +120,7 @@ export default function AdminProfile() {
       <div className="bg-white border-b">
         <div className="px-4 sm:px-6 py-6">
           <p className="text-sm text-muted-foreground">
-            Manage your personal information and account settings
+            Manage your personal information
           </p>
         </div>
       </div>

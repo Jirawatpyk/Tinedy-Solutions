@@ -42,17 +42,17 @@ const WeekDayColumnComponent: React.FC<WeekDayColumnProps> = ({
   const dateStr = date ? format(date, 'MMM d') : ''
 
   return (
-    <div className="flex-1 min-w-[120px]">
+    <div className="flex-1 min-w-[80px] sm:min-w-[100px] lg:min-w-[120px]">
       {/* Day header */}
-      <div className={`h-12 border-b text-center font-medium text-sm text-muted-foreground flex flex-col items-center justify-center ${isToday ? 'bg-tinedy-blue/10 border-tinedy-blue' : ''}`}>
-        <div className={isToday ? 'text-tinedy-blue font-bold' : ''}>{day}</div>
-        <div className={`text-xs font-semibold ${isToday ? 'text-tinedy-blue' : 'text-muted-foreground'}`}>
+      <div className={`h-10 sm:h-12 border-b text-center font-medium text-xs sm:text-sm text-muted-foreground flex flex-col items-center justify-center px-1 ${isToday ? 'bg-tinedy-blue/10 border-tinedy-blue' : ''}`}>
+        <div className={`text-[10px] sm:text-xs ${isToday ? 'text-tinedy-blue font-bold' : ''}`}>{day.substring(0, 3)}</div>
+        <div className={`text-[9px] sm:text-[10px] font-semibold ${isToday ? 'text-tinedy-blue' : 'text-muted-foreground'}`}>
           {dateStr}
         </div>
       </div>
 
       {/* Timeline area */}
-      <div className={`relative border-r ${isToday ? 'bg-tinedy-blue/5' : 'bg-gray-50/50'}`} style={{ height: '720px' }}>
+      <div className={`relative border-r ${isToday ? 'bg-tinedy-blue/5' : 'bg-gray-50/50'}`} style={{ height: '500px' }}>
         {/* Hour lines */}
         {TIME_SLOTS.map((_, index) => (
           <div
@@ -64,8 +64,8 @@ const WeekDayColumnComponent: React.FC<WeekDayColumnProps> = ({
 
         {/* Booking bars */}
         {dayBookings.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-muted-foreground">No bookings</p>
+          <div className="absolute inset-0 flex items-center justify-center px-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground text-center">No bookings</p>
           </div>
         ) : (
           bookingLayouts.map((layout) => {

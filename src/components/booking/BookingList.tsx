@@ -95,7 +95,7 @@ function BookingListComponent({
       {metadata.totalItems > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
           <div className="flex items-center gap-2">
-            <Label htmlFor="itemsPerPage" className="text-sm text-muted-foreground">
+            <Label htmlFor="itemsPerPage" className="text-xs sm:text-sm text-muted-foreground">
               Show:
             </Label>
             <Select
@@ -112,13 +112,14 @@ function BookingListComponent({
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
               per page
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Showing {metadata.startIndex} to {metadata.endIndex} of {metadata.totalItems} bookings
+            <span className="text-xs sm:text-sm text-muted-foreground">
+              <span className="hidden sm:inline">Showing {metadata.startIndex} to {metadata.endIndex} of {metadata.totalItems} bookings</span>
+              <span className="sm:hidden">{metadata.startIndex}-{metadata.endIndex} of {metadata.totalItems}</span>
             </span>
           </div>
         </div>
@@ -160,75 +161,77 @@ function BookingListComponent({
                 return (
                   <div
                     key={booking.id}
-                    className={`flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
+                    className={`flex items-start gap-2 sm:gap-3 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
                   >
                     <Checkbox
                       checked={selectedBookings.includes(booking.id)}
                       onCheckedChange={() => onToggleSelect(booking.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="mt-1"
+                      className="mt-0.5 sm:mt-1 flex-shrink-0"
                     />
                     <div
-                      className="flex flex-col sm:flex-row sm:items-center justify-between flex-1 gap-4 cursor-pointer"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between flex-1 gap-3 sm:gap-4 cursor-pointer min-w-0"
                       onClick={() => onBookingClick(booking)}
                     >
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-tinedy-dark">
+                      <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                              <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
                                 {booking.customers?.full_name || 'Unknown Customer'}
-                                <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
+                                <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
                               </p>
                               {isArchived && (
-                                <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                                <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs flex-shrink-0">
                                   Archived
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
                               {booking.customers?.email}
                             </p>
                           </div>
-                          <div className="sm:hidden">
+                          <div className="sm:hidden flex-shrink-0">
                             {getStatusBadge(booking.status)}
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            <Badge variant="outline" className="mr-2">
+                            <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                               {booking.service_packages?.service_type}
                             </Badge>
-                            {booking.service_packages?.name}
+                            <span className="truncate">
+                              {booking.service_packages?.name}
+                            </span>
                           </span>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </div>
                         {booking.profiles && (
-                          <p className="text-sm text-tinedy-blue flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            Staff: {booking.profiles.full_name}
+                          <p className="text-xs sm:text-sm text-tinedy-blue flex items-center gap-1">
+                            <User className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">Staff: {booking.profiles.full_name}</span>
                           </p>
                         )}
                         {booking.teams && (
-                          <p className="text-sm text-tinedy-green flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            Team: {booking.teams.name}
+                          <p className="text-xs sm:text-sm text-tinedy-green flex items-center gap-1">
+                            <Users className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">Team: {booking.teams.name}</span>
                           </p>
                         )}
                       </div>
-                      <div className="flex sm:flex-col items-center sm:items-end gap-4">
+                      <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
                         <div className="flex-1 sm:flex-none">
-                          <p className="font-semibold text-tinedy-dark text-lg">
+                          <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                             {formatCurrency(Number(booking.total_price))}
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-2 items-center sm:items-end">
+                        <div className="hidden sm:flex flex-wrap gap-2 items-end justify-end">
                           {getStatusBadge(booking.status)}
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
                             <Button
                               variant="outline"
@@ -237,10 +240,10 @@ function BookingListComponent({
                                 e.stopPropagation()
                                 onRestoreBooking(booking.id)
                               }}
-                              className="border-green-500 text-green-700 hover:bg-green-50"
+                              className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
                             >
-                              <RotateCcw className="h-4 w-4 mr-1" />
-                              Restore
+                              <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Restore</span>
                             </Button>
                           ) : (
                             <>
@@ -251,7 +254,7 @@ function BookingListComponent({
                                 }
                                 disabled={isArchived}
                               >
-                                <SelectTrigger className="w-32">
+                                <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -268,6 +271,7 @@ function BookingListComponent({
                                 onDelete={() => onDeleteBooking(booking.id)}
                                 onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
                                 cancelText="Archive"
+                                className="h-8 w-8"
                               />
                             </>
                           )}
@@ -285,7 +289,7 @@ function BookingListComponent({
       {/* Pagination Controls - Bottom */}
       {metadata.totalItems > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
           </div>
           <div className="flex items-center gap-2">

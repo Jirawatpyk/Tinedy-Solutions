@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
@@ -172,11 +172,7 @@ export function AdminTeams() {
 
   const stats = getTeamStats()
 
-  useEffect(() => {
-    loadAvailableStaff()
-  }, [])
-
-  async function loadAvailableStaff() {
+  const loadAvailableStaff = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -194,7 +190,11 @@ export function AdminTeams() {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    loadAvailableStaff()
+  }, [loadAvailableStaff])
 
   const onSubmitCreateTeam = async (data: TeamCreateFormData) => {
     try {
@@ -269,9 +269,33 @@ export function AdminTeams() {
 
       if (error) throw error
 
+      // If a new team lead was selected, check if they're already a member
+      if (transformedData.team_lead_id) {
+        const isAlreadyMember = editingTeam.members?.some(
+          (member) => member.id === transformedData.team_lead_id
+        )
+
+        // If not a member yet, add them automatically
+        if (!isAlreadyMember) {
+          const { error: memberError } = await supabase
+            .from('team_members')
+            .insert({
+              team_id: editingTeam.id,
+              staff_id: transformedData.team_lead_id,
+            })
+
+          if (memberError) {
+            console.error('Error adding team lead as member:', memberError)
+            // Don't throw - team was updated successfully, just log the warning
+          }
+        }
+      }
+
       toast({
         title: 'Success',
-        description: 'Team updated successfully',
+        description: transformedData.team_lead_id && !editingTeam.members?.some((m) => m.id === transformedData.team_lead_id)
+          ? 'Team updated and team lead added as member'
+          : 'Team updated successfully',
       })
 
       setDialogOpen(false)
@@ -506,31 +530,31 @@ export function AdminTeams() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Skeleton className="w-12 h-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-5 w-24 rounded-full" />
+              <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                    <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0" />
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
+                      <Skeleton className="h-4 sm:h-5 w-20 sm:w-24 rounded-full" />
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-8 w-8" />
-                    <Skeleton className="h-8 w-8" />
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                    <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
+                    <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-20 w-full rounded-lg" />
-                <div className="space-y-2 pt-3 border-t">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+                <Skeleton className="h-3 sm:h-4 w-full" />
+                <Skeleton className="h-16 sm:h-20 w-full rounded-lg" />
+                <div className="space-y-1.5 sm:space-y-2 pt-2 sm:pt-3 border-t">
                   <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                    <Skeleton className="h-7 w-14 sm:h-8 sm:w-16" />
                   </div>
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-10 sm:h-12 w-full" />
+                  <Skeleton className="h-10 sm:h-12 w-full" />
                 </div>
               </CardContent>
             </Card>

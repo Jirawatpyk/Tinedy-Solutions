@@ -415,10 +415,10 @@ export function AdminStaff() {
 
         {/* Search and filter skeleton */}
         <Card>
-          <CardContent className="py-3">
+          <CardContent className="py-3 px-4 sm:px-6">
             <div className="flex flex-col sm:flex-row gap-3">
-              <Skeleton className="h-8 flex-1" />
-              <Skeleton className="h-8 w-full sm:w-48" />
+              <Skeleton className="h-8 sm:h-9 flex-1" />
+              <Skeleton className="h-8 sm:h-9 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -427,25 +427,25 @@ export function AdminStaff() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: Math.min(staff.length, 9) || 9 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Skeleton className="w-12 h-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-5 w-16 rounded-full" />
+              <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                    <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0" />
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
+                      <Skeleton className="h-4 sm:h-5 w-14 sm:w-16 rounded-full" />
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-8 w-8" />
-                    <Skeleton className="h-8 w-8" />
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                    <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
+                    <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-28" />
+              <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
+                <Skeleton className="h-3 sm:h-4 w-full" />
+                <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
+                <Skeleton className="h-3 w-24 sm:w-28" />
               </CardContent>
             </Card>
           ))}
@@ -471,7 +471,7 @@ export function AdminStaff() {
               New Staff
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
@@ -488,83 +488,89 @@ export function AdminStaff() {
               <form onSubmit={createForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
                 <div className="overflow-y-auto flex-1 pr-4 pl-1">
                   <div className="space-y-4">
-                <Controller
-                  name="email"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
+                {/* Email & Password - 2 Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Controller
+                    name="email"
+                    control={createForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
 
-                <Controller
-                  name="password"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password *</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Minimum 6 characters
-                      </p>
-                    </div>
-                  )}
-                />
+                  <Controller
+                    name="password"
+                    control={createForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password *</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Minimum 6 characters
+                        </p>
+                      </div>
+                    )}
+                  />
+                </div>
 
-                <Controller
-                  name="full_name"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Full Name *</Label>
-                      <Input
-                        id="full_name"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
+                {/* Full Name & Phone - 2 Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Controller
+                    name="full_name"
+                    control={createForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">Full Name *</Label>
+                        <Input
+                          id="full_name"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
 
-                <Controller
-                  name="phone"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
+                  <Controller
+                    name="phone"
+                    control={createForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
 
                 <Controller
                   name="staff_number"
@@ -661,42 +667,45 @@ export function AdminStaff() {
               <form onSubmit={updateForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
                 <div className="overflow-y-auto flex-1 pr-4 pl-1">
                   <div className="space-y-4">
-                <Controller
-                  name="full_name"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Full Name *</Label>
-                      <Input
-                        id="full_name"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
+                {/* Full Name & Phone - 2 Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Controller
+                    name="full_name"
+                    control={updateForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">Full Name *</Label>
+                        <Input
+                          id="full_name"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
 
-                <Controller
-                  name="phone"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
+                  <Controller
+                    name="phone"
+                    control={updateForm.control}
+                    render={({ field, fieldState }) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                        {fieldState.error && (
+                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
 
                 <Controller
                   name="password"
@@ -918,35 +927,35 @@ export function AdminStaff() {
                 className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
                 onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
+                <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                       {member.avatar_url ? (
                         <img
                           src={member.avatar_url}
                           alt={member.full_name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-tinedy-blue"
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-tinedy-blue flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-lg">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-tinedy-blue flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
                           {member.full_name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <CardTitle className="text-lg font-display">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base sm:text-lg font-display truncate">
                           {member.full_name}
                         </CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                           <Badge
                             variant={member.role === 'admin' ? 'default' : member.role === 'manager' ? 'default' : 'secondary'}
-                            className={member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                            className={`text-[10px] sm:text-xs ${member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                           >
                             {member.role === 'admin' ? '👑 Admin' : member.role === 'manager' ? '👔 Manager' : 'Staff'}
                           </Badge>
                           {member.average_rating !== undefined && (
                             <div className="flex items-center gap-1 text-yellow-500">
-                              <Star className="h-3 w-3 fill-yellow-400" />
-                              <span className="text-xs font-semibold text-gray-700">
+                              <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-yellow-400" />
+                              <span className="text-[10px] sm:text-xs font-semibold text-gray-700">
                                 {member.average_rating.toFixed(1)}
                               </span>
                             </div>
@@ -954,7 +963,7 @@ export function AdminStaff() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       {/* Admin: แก้ไขได้ทุกคน | Manager: แก้ไขได้ตัวเอง + Staff | Staff: แก้ไขได้ตัวเอง */}
                       {(profile?.role === 'admin' ||
                         member.id === user?.id ||
@@ -963,8 +972,9 @@ export function AdminStaff() {
                           variant="ghost"
                           size="icon"
                           onClick={() => openEditDialog(member)}
+                          className="h-8 w-8 sm:h-10 sm:w-10"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                       )}
                       {/* ซ่อนปุ่ม Delete ถ้าเป็นโปรไฟล์ตัวเอง */}
@@ -973,37 +983,38 @@ export function AdminStaff() {
                           resource="staff"
                           itemName={member.full_name}
                           onDelete={() => deleteStaff(member.id)}
+                          className="h-8 w-8 sm:h-10 sm:w-10"
                         />
                       )}
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4 mr-2" />
-                    {member.email}
+                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground min-w-0">
+                    <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{member.email}</span>
                   </div>
                   {member.phone && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {member.phone}
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                      <span className="break-words">{member.phone}</span>
                     </div>
                   )}
                   {member.staff_number && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Hash className="h-4 w-4 mr-2" />
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                      <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
                       {member.staff_number}
                     </div>
                   )}
                   {member.skills && member.skills.length > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Award className="h-4 w-4 mr-2" />
+                    <div className="flex items-start sm:items-center gap-2">
+                      <div className="flex items-center text-xs sm:text-sm text-muted-foreground flex-shrink-0">
+                        <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
                         <span className="font-medium">Skills:</span>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {member.skills.map((skill, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
+                          <Badge key={index} variant="outline" className="text-[10px] sm:text-xs">
                             {skill}
                           </Badge>
                         ))}

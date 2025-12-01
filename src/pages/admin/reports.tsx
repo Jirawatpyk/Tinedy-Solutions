@@ -342,34 +342,27 @@ export function AdminReports() {
       <div className="space-y-6">
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Revenue insights and business metrics
-          </p>
+          <Skeleton className="h-3 sm:h-4 w-48 sm:w-64" />
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" disabled className="w-full sm:w-48">
-              Select period
-            </Button>
-            <Button variant="outline" disabled className="gap-2">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
+            <Skeleton className="h-8 sm:h-9 w-full sm:w-48" />
+            <Skeleton className="h-8 sm:h-9 w-full sm:w-32" />
           </div>
         </div>
 
         {/* Tabs skeleton */}
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-9 sm:h-10 w-full" />
 
         {/* Stats cards skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-4 rounded" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-3 w-32" />
+              <CardContent>
+                <Skeleton className="h-6 sm:h-7 w-20 sm:w-24 mb-1" />
+                <Skeleton className="h-2 sm:h-3 w-16 sm:w-20" />
               </CardContent>
             </Card>
           ))}
@@ -380,10 +373,10 @@ export function AdminReports() {
           {Array.from({ length: 2 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
-                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-[300px] w-full" />
+                <Skeleton className="h-[250px] sm:h-[300px] w-full" />
               </CardContent>
             </Card>
           ))}
@@ -393,10 +386,10 @@ export function AdminReports() {
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
-                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-5 sm:h-6 w-40 sm:w-48" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-[300px] w-full" />
+                <Skeleton className="h-[250px] sm:h-[300px] w-full" />
               </CardContent>
             </Card>
           ))}
@@ -409,7 +402,7 @@ export function AdminReports() {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Revenue insights and business metrics
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -432,9 +425,10 @@ export function AdminReports() {
           </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export CSV
+              <Button variant="outline" className="h-8 sm:h-9 gap-1 sm:gap-2">
+                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -479,21 +473,22 @@ export function AdminReports() {
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="revenue" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Revenue & Bookings
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsTrigger value="revenue" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Revenue & Bookings</span>
+            <span className="sm:hidden">Revenue</span>
           </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
+          <TabsTrigger value="customers" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Customers
           </TabsTrigger>
-          <TabsTrigger value="staff" className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
+          <TabsTrigger value="staff" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Staff
           </TabsTrigger>
-          <TabsTrigger value="teams" className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-4 w-4" />
+          <TabsTrigger value="teams" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <BriefcaseBusiness className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Teams
           </TabsTrigger>
         </TabsList>

@@ -33,6 +33,7 @@ import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatTime } from '@/lib/booking-utils'
 import { BookingTimeline } from './booking-timeline'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { CollapsibleSection } from '@/components/common/CollapsibleSection'
 import { supabase } from '@/lib/supabase'
 
 interface Review {
@@ -198,33 +199,47 @@ export function BookingDetailsModal({
 
         <div className="space-y-6">
           {/* Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-base flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Date</span>
+                Schedule
+              </h3>
+            }
+            className="space-y-3"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Date</span>
+                </div>
+                <p className="font-medium">
+                  {format(new Date(currentBooking.booking_date), 'dd MMM yyyy', { locale: enUS })}
+                </p>
               </div>
-              <p className="font-medium">
-                {format(new Date(currentBooking.booking_date), 'dd MMM yyyy', { locale: enUS })}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Time</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>Time</span>
+                </div>
+                <p className="font-medium">{formatTime(currentBooking.start_time)} - {formatTime(currentBooking.end_time)}</p>
               </div>
-              <p className="font-medium">{formatTime(currentBooking.start_time)} - {formatTime(currentBooking.end_time)}</p>
             </div>
-          </div>
+          </CollapsibleSection>
 
           <Separator />
 
           {/* Customer Information */}
-          <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Customer Information
-            </h3>
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Customer Information
+              </h3>
+            }
+            className="space-y-3"
+          >
             <div className="space-y-2 ml-6">
               <div>
                 <p className="text-sm text-muted-foreground">Name</p>
@@ -264,16 +279,20 @@ export function BookingDetailsModal({
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
 
           <Separator />
 
           {/* Service Information */}
-          <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Service Information
-            </h3>
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Service Information
+              </h3>
+            }
+            className="space-y-3"
+          >
             <div className="ml-6 space-y-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -340,21 +359,25 @@ export function BookingDetailsModal({
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Existing Notes */}
           {currentBooking.notes && (
             <>
               <Separator />
-              <div>
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <StickyNote className="h-4 w-4" />
-                  Current Notes
-                </h3>
+              <CollapsibleSection
+                title={
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Current Notes
+                  </h3>
+                }
+                className="space-y-3"
+              >
                 <div className="ml-6 p-3 bg-muted rounded-md">
                   <p className="text-sm whitespace-pre-wrap">{currentBooking.notes}</p>
                 </div>
-              </div>
+              </CollapsibleSection>
             </>
           )}
 
@@ -362,11 +385,15 @@ export function BookingDetailsModal({
           {review && (currentBooking.staff_id || currentBooking.team_id) && currentBooking.status === 'completed' && (
             <>
               <Separator />
-              <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  Service Rating
-                </h3>
+              <CollapsibleSection
+                title={
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    Service Rating
+                  </h3>
+                }
+                className="space-y-3"
+              >
                 <div className="ml-6 space-y-2">
                   {/* Read-only Star Display */}
                   <div className="flex items-center gap-1">
@@ -390,7 +417,7 @@ export function BookingDetailsModal({
                     Last updated: {format(new Date(review.created_at), 'dd MMM yyyy', { locale: enUS })}
                   </p>
                 </div>
-              </div>
+              </CollapsibleSection>
             </>
           )}
 

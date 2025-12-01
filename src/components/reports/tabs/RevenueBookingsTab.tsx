@@ -156,14 +156,15 @@ function RevenueBookingsTabComponent({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Revenue Trend Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Revenue Trend
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
@@ -196,20 +197,22 @@ function RevenueBookingsTabComponent({
                 />
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
         {/* Bookings Trend Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Package className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               Bookings Trend
-              <span className="text-sm font-normal text-muted-foreground">(Paid only)</span>
+              <span className="text-xs sm:text-sm font-normal text-muted-foreground">(Paid only)</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
@@ -234,6 +237,7 @@ function RevenueBookingsTabComponent({
                 />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -242,11 +246,12 @@ function RevenueBookingsTabComponent({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Booking Status Breakdown */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display">Booking Status Breakdown</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display text-base sm:text-lg">Booking Status Breakdown</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={statusBreakdown.filter((item) => item.value > 0) as unknown as Record<string, unknown>[]}
@@ -279,17 +284,18 @@ function RevenueBookingsTabComponent({
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-wrap justify-center gap-4 pt-2 border-t mt-4">
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 pt-2 border-t mt-3 sm:mt-4">
               {statusBreakdown
                 .filter((item) => item.value > 0)
                 .map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-sm font-medium text-tinedy-dark">{item.name}</span>
-                    <span className="text-sm font-bold text-tinedy-dark">{item.value}</span>
+                    <span className="text-xs sm:text-sm font-medium text-tinedy-dark">{item.name}</span>
+                    <span className="text-xs sm:text-sm font-bold text-tinedy-dark">{item.value}</span>
                   </div>
                 ))}
             </div>
@@ -298,11 +304,12 @@ function RevenueBookingsTabComponent({
 
         {/* Revenue by Service Type */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display">Revenue by Service Type</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display text-base sm:text-lg">Revenue by Service Type</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={serviceTypePieData}
@@ -332,16 +339,17 @@ function RevenueBookingsTabComponent({
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Cleaning</p>
-                <p className="text-lg font-bold text-tinedy-dark">
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+              <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
+                <p className="text-xs sm:text-sm text-muted-foreground">Cleaning</p>
+                <p className="text-base sm:text-lg font-bold text-tinedy-dark">
                   {formatCurrency(serviceTypeRevenue.cleaning)}
                 </p>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Training</p>
-                <p className="text-lg font-bold text-tinedy-dark">
+              <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
+                <p className="text-xs sm:text-sm text-muted-foreground">Training</p>
+                <p className="text-base sm:text-lg font-bold text-tinedy-dark">
                   {formatCurrency(serviceTypeRevenue.training)}
                 </p>
               </div>
@@ -354,20 +362,20 @@ function RevenueBookingsTabComponent({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Booking Statistics */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display">Booking Statistics</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display text-base sm:text-lg">Booking Statistics</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Total Bookings</p>
-                <p className="text-2xl font-bold text-tinedy-dark">
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Bookings</p>
+                <p className="text-xl sm:text-2xl font-bold text-tinedy-dark">
                   {bookingMetrics.total}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold text-tinedy-blue">
+                <p className="text-xs sm:text-sm text-muted-foreground">This Month</p>
+                <p className="text-xl sm:text-2xl font-bold text-tinedy-blue">
                   {bookingMetrics.thisMonth}
                 </p>
               </div>
@@ -375,44 +383,44 @@ function RevenueBookingsTabComponent({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Completed</span>
-                <span className="text-sm font-semibold text-green-600">
+                <span className="text-xs sm:text-sm text-muted-foreground">Completed</span>
+                <span className="text-xs sm:text-sm font-semibold text-green-600">
                   {bookingMetrics.completed}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                 <div
-                  className="bg-green-500 h-2 rounded-full"
+                  className="bg-green-500 h-1.5 sm:h-2 rounded-full"
                   style={{ width: `${bookingMetrics.completionRate}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-right">
+              <p className="text-[10px] sm:text-xs text-muted-foreground text-right">
                 {bookingMetrics.completionRate.toFixed(1)}% completion rate
               </p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Cancelled</span>
-                <span className="text-sm font-semibold text-red-600">
+                <span className="text-xs sm:text-sm text-muted-foreground">Cancelled</span>
+                <span className="text-xs sm:text-sm font-semibold text-red-600">
                   {bookingMetrics.cancelled}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                 <div
-                  className="bg-red-500 h-2 rounded-full"
+                  className="bg-red-500 h-1.5 sm:h-2 rounded-full"
                   style={{ width: `${bookingMetrics.cancellationRate}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-right">
+              <p className="text-[10px] sm:text-xs text-muted-foreground text-right">
                 {bookingMetrics.cancellationRate.toFixed(1)}% cancellation rate
               </p>
             </div>
 
             <div className="pt-2 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Pending</span>
-                <span className="text-sm font-semibold text-yellow-600">
+                <span className="text-xs sm:text-sm text-muted-foreground">Pending</span>
+                <span className="text-xs sm:text-sm font-semibold text-yellow-600">
                   {bookingMetrics.pending}
                 </span>
               </div>
@@ -422,15 +430,16 @@ function RevenueBookingsTabComponent({
 
         {/* Top Service Packages */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Package className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               Top Service Packages
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {topPackages.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <div className="h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={topPackages}
                   layout="vertical"
@@ -461,8 +470,9 @@ function RevenueBookingsTabComponent({
                   />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[250px] sm:h-[300px] flex items-center justify-center text-xs sm:text-sm text-muted-foreground">
                 No service package data available
               </div>
             )}
@@ -472,16 +482,16 @@ function RevenueBookingsTabComponent({
 
       {/* Charts Row 4 - Peak Hours Analysis */}
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display">Peak Hours Heatmap</CardTitle>
-          <p className="text-sm text-muted-foreground">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-display text-base sm:text-lg">Peak Hours Heatmap</CardTitle>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Busiest booking times by day and hour
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           <div className="overflow-x-auto">
-            <div className="min-w-[600px]">
-              <div className="grid grid-cols-8 gap-1 text-xs">
+            <div className="min-w-[500px] sm:min-w-[600px]">
+              <div className="grid grid-cols-8 gap-1 text-[10px] sm:text-xs">
                 {/* Header row */}
                 <div className="p-2"></div>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
@@ -508,7 +518,7 @@ function RevenueBookingsTabComponent({
                       return (
                         <div
                           key={`${day}-${hour}`}
-                          className="p-2 rounded text-center font-medium transition-all hover:scale-105"
+                          className="p-2 rounded text-center font-medium transition-all hover:scale-105 text-[9px] sm:text-[10px]"
                           style={{
                             backgroundColor: count > 0 ? bgColor : '#f3f4f6',
                             color: intensity > 0.5 ? 'white' : '#374151',
@@ -524,13 +534,13 @@ function RevenueBookingsTabComponent({
               </div>
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="mt-3 sm:mt-4 flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
             <span>Less busy</span>
             <div className="flex gap-1">
               {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => (
                 <div
                   key={intensity}
-                  className="w-6 h-4 rounded"
+                  className="w-3 h-3 sm:w-4 sm:h-4 rounded"
                   style={{ backgroundColor: `rgba(46, 64, 87, ${intensity})` }}
                 />
               ))}

@@ -1222,7 +1222,7 @@ export function AdminBookings() {
                 htmlFor="show-archived-bookings"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
-                Show archived bookings
+                Show archived
               </label>
             </div>
           </AdminOnly>
@@ -1491,7 +1491,7 @@ export function AdminBookings() {
 
       {/* Bookings list */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <BulkActionsToolbar
             selectedBookings={selectedBookings}
             totalBookings={filteredBookings.length}
@@ -1503,7 +1503,7 @@ export function AdminBookings() {
             onBulkDelete={handleBulkDelete}
           />
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6 pt-0">
           <BookingList
             combinedItems={paginatedCombinedItems}
             allBookings={filteredBookings}

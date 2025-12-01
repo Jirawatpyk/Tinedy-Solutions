@@ -81,118 +81,118 @@ export function RecurringBookingCard({
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader
-        className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+        className="p-3 sm:p-4 cursor-pointer hover:bg-accent/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-1 gap-4">
-          <div className="space-y-2 flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-1 gap-3 sm:gap-4">
+          <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
             {/* Header */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link2 className="h-4 w-4 text-tinedy-blue" />
-              <span className="font-semibold">Recurring Booking Group</span>
-              <Badge variant="outline" className="text-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-tinedy-blue flex-shrink-0" />
+              <span className="font-semibold text-sm sm:text-base">Recurring Booking Group</span>
+              <Badge variant="outline" className="text-[10px] sm:text-xs">
                 {getRecurringPatternLabel(group.pattern)}
               </Badge>
             </div>
 
             {/* ข้อมูลลูกค้าและ package */}
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground truncate">
               {customerName} • {packageName}
             </div>
 
             {/* Staff/Team Assignment */}
-            <div className="flex flex-wrap gap-3 text-sm">
+            <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm">
               {firstBooking.profiles && (
                 <p className="text-tinedy-blue flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Staff: {firstBooking.profiles.full_name}
+                  <User className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Staff: {firstBooking.profiles.full_name}</span>
                 </p>
               )}
               {firstBooking.teams && (
                 <p className="text-tinedy-green flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Team: {firstBooking.teams.name}
+                  <Users className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Team: {firstBooking.teams.name}</span>
                 </p>
               )}
             </div>
 
             {/* Statistics */}
-            <div className="flex gap-4 text-sm flex-wrap">
+            <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap">
               <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span>{group.completedCount} Completed</span>
+                <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                <span>{group.completedCount} <span className="hidden sm:inline">Completed</span></span>
               </div>
               {group.confirmedCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-blue-600" />
-                  <span>{group.confirmedCount} Confirmed</span>
+                  <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                  <span>{group.confirmedCount} <span className="hidden sm:inline">Confirmed</span></span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-orange-600" />
-                <span>{group.upcomingCount} Upcoming</span>
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
+                <span>{group.upcomingCount} <span className="hidden sm:inline">Upcoming</span></span>
               </div>
               {group.noShowCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <XCircle className="h-4 w-4 text-gray-500" />
-                  <span>{group.noShowCount} No Show</span>
+                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 flex-shrink-0" />
+                  <span>{group.noShowCount} <span className="hidden sm:inline">No Show</span></span>
                 </div>
               )}
               {group.cancelledCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  <span>{group.cancelledCount} Cancelled</span>
+                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 flex-shrink-0" />
+                  <span>{group.cancelledCount} <span className="hidden sm:inline">Cancelled</span></span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Section: Total Amount, Delete & Expand Button */}
-          <div className="flex sm:flex-col items-center sm:items-end gap-4">
-            <div className="flex-1 sm:flex-none text-right">
-              <div className="flex items-baseline justify-end gap-2">
-                <p className="text-xs text-muted-foreground">
-                  Total ({group.totalBookings} bookings)
-                </p>
-                <p className="font-semibold text-tinedy-dark text-lg">
+          {/* Right Section: Total Amount, Payment Badge, Delete & Expand Button */}
+          <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
+            <div className="flex-1 sm:flex-none">
+              <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                   {formatCurrency(totalAmount)}
                 </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="hidden sm:inline">Total </span>({group.totalBookings})
+                </p>
               </div>
-              {/* Payment Status - Single badge for entire group */}
-              <div className="flex justify-end mt-1">
-                {(() => {
-                  // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
-                  const paymentStatus = firstBooking.payment_status || 'unpaid'
+            </div>
+            {/* Payment Status Badge - แยกออกมาด้านขวา (เหมือน Individual) */}
+            <div className="hidden sm:flex">
+              {(() => {
+                // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
+                const paymentStatus = firstBooking.payment_status || 'unpaid'
 
-                  if (paymentStatus === 'paid') {
-                    return (
-                      <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
-                        Paid
-                      </Badge>
-                    )
-                  } else if (paymentStatus === 'partial') {
-                    return (
-                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
-                        Partial
-                      </Badge>
-                    )
-                  } else {
-                    return (
-                      <Badge className="bg-red-50 text-red-700 border-red-300 text-xs">
-                        Unpaid
-                      </Badge>
-                    )
-                  }
-                })()}
-              </div>
+                if (paymentStatus === 'paid') {
+                  return (
+                    <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                      Paid
+                    </Badge>
+                  )
+                } else if (paymentStatus === 'partial') {
+                  return (
+                    <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
+                      Partial
+                    </Badge>
+                  )
+                } else {
+                  return (
+                    <Badge className="bg-red-50 text-red-700 border-red-300 text-xs">
+                      Unpaid
+                    </Badge>
+                  )
+                }
+              })()}
             </div>
 
             {/* Expand/Collapse Button & Delete Button */}
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" onClick={(e) => {
                 e.stopPropagation()
                 setExpanded(!expanded)
-              }}>
+              }} className="h-8 w-8 p-0">
                 {expanded ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
@@ -206,6 +206,7 @@ export function RecurringBookingCard({
                   onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
                   onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
                   cancelText="Archive Group"
+                  className="h-8 w-8"
                 />
               )}
             </div>
@@ -215,8 +216,8 @@ export function RecurringBookingCard({
 
       {/* Expanded Content */}
       {expanded && (
-        <CardContent className="pt-0">
-          <div className="space-y-2">
+        <CardContent className="pt-0 px-3 sm:px-4">
+          <div className="space-y-1.5 sm:space-y-2">
             {group.bookings.map((booking) => {
               const isArchived = !!booking.deleted_at
               const bgColor = isArchived
@@ -231,36 +232,36 @@ export function RecurringBookingCard({
                 <div
                   key={booking.id}
                   className={cn(
-                    "flex items-center justify-between rounded-lg border p-3",
+                    "flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border p-2.5 sm:p-3 gap-2 sm:gap-3",
                     "cursor-pointer transition-colors",
                     bgColor
                   )}
                   onClick={() => onBookingClick?.(booking.id)}
                 >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="min-w-[60px] justify-center">
+                  <div className="flex items-center gap-1.5 sm:gap-2 sm:gap-3 flex-1 min-w-0">
+                    <Badge variant="outline" className="min-w-[45px] sm:min-w-[50px] sm:min-w-[60px] justify-center text-[10px] sm:text-xs flex-shrink-0">
                       {booking.recurring_sequence}/{booking.recurring_total}
                     </Badge>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
+                    <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="space-y-0.5 sm:space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span className="text-xs sm:text-sm font-medium">
                           {formatDate(booking.booking_date)}
                         </span>
                         {isArchived && (
-                          <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                          <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs">
                             Archived
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">
                         {formatTime(booking.start_time)} - {booking.end_time ? formatTime(booking.end_time) : 'N/A'}
                       </div>
                     </div>
                   </div>
 
                   {/* Actions: Status Dropdown or Restore Button */}
-                  <div onClick={(e) => e.stopPropagation()}>
+                  <div onClick={(e) => e.stopPropagation()} className="w-full sm:w-auto">
                     {isArchived && onRestoreBooking ? (
                       <Button
                         variant="outline"
@@ -269,10 +270,10 @@ export function RecurringBookingCard({
                           e.stopPropagation()
                           onRestoreBooking(booking.id)
                         }}
-                        className="border-green-500 text-green-700 hover:bg-green-50"
+                        className="border-green-500 text-green-700 hover:bg-green-50 w-full sm:w-auto h-8 text-xs"
                       >
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        Restore
+                        <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Restore</span>
                       </Button>
                     ) : (
                       <Select
@@ -280,7 +281,7 @@ export function RecurringBookingCard({
                         onValueChange={(newStatus) => onStatusChange?.(booking.id, booking.status, newStatus)}
                         disabled={isFinalStatus(booking.status)}
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

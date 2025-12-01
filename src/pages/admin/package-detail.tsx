@@ -388,13 +388,13 @@ export default function AdminPackageDetail() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-64 w-full mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+        <Skeleton className="h-6 sm:h-8 w-36 sm:w-48 mb-4 sm:mb-6" />
+        <Skeleton className="h-48 sm:h-64 w-full mb-4 sm:mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 sm:mb-6">
+          <Skeleton className="h-28 sm:h-32" />
+          <Skeleton className="h-28 sm:h-32" />
+          <Skeleton className="h-28 sm:h-32" />
+          <Skeleton className="h-28 sm:h-32" />
         </div>
         <Skeleton className="h-96 w-full" />
       </div>
@@ -431,38 +431,42 @@ export default function AdminPackageDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
+            className="h-8 w-8 sm:h-10 sm:w-10"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <div>
-            <p className="text-sm text-muted-foreground">Package Details: {packageData.name}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-tinedy-dark truncate">
+              {packageData.name}
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Package Details</p>
           </div>
         </div>
 
         {/* Action Buttons (Admin Only) */}
         <AdminOnly>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-1 sm:gap-2 w-full sm:w-auto justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={handleToggleActive}
-              className="gap-2"
+              className="h-8 sm:h-9"
             >
               {packageData.is_active ? (
                 <>
-                  <XCircle className="h-4 w-4" />
-                  Deactivate
+                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Deactivate</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4" />
-                  Activate
+                  <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Activate</span>
                 </>
               )}
             </Button>
@@ -470,19 +474,19 @@ export default function AdminPackageDetail() {
               variant="outline"
               size="sm"
               onClick={() => setIsEditDialogOpen(true)}
-              className="gap-2"
+              className="h-8 sm:h-9"
             >
-              <Edit className="h-4 w-4" />
-              Edit
+              <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => setIsDeleteDialogOpen(true)}
-              className="gap-2"
+              className="h-8 sm:h-9"
             >
-              <Trash2 className="h-4 w-4" />
-              Delete
+              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
         </AdminOnly>
@@ -492,45 +496,45 @@ export default function AdminPackageDetail() {
       <div className="space-y-6">
         {/* Package Information Card */}
         <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <CardTitle className="flex items-center gap-2">
-                  <PackageIcon className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-4 lg:gap-0">
+              <div className="space-y-1 sm:space-y-2">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <PackageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                   Package Information
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Detailed information about this service package
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className="capitalize">{packageData.service_type}</Badge>
-                <Badge className={packageData.pricing_model === PricingModel.Fixed ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="capitalize text-xs sm:text-sm">{packageData.service_type}</Badge>
+                <Badge className={`text-xs sm:text-sm ${packageData.pricing_model === PricingModel.Fixed ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
                   {packageData.pricing_model === PricingModel.Fixed ? 'Fixed Price' : 'Tiered Price'}
                 </Badge>
                 {packageData.category && (
-                  <Badge variant="outline" className="capitalize">{packageData.category}</Badge>
+                  <Badge variant="outline" className="capitalize text-xs sm:text-sm">{packageData.category}</Badge>
                 )}
-                <Badge className={packageData.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                <Badge className={`text-xs sm:text-sm ${packageData.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {packageData.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Description</label>
-                <p className="mt-1 text-sm">{packageData.description || 'No description provided'}</p>
+                <label className="text-xs sm:text-sm font-medium text-muted-foreground">Description</label>
+                <p className="mt-1 text-xs sm:text-sm">{packageData.description || 'No description provided'}</p>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Created:</span>
-                  <span className="text-sm">{formatDate(packageData.created_at)}</span>
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Created:</span>
+                  <span className="text-xs sm:text-sm">{formatDate(packageData.created_at)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Last Updated:</span>
-                  <span className="text-sm">{formatDate(packageData.updated_at)}</span>
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Last Updated:</span>
+                  <span className="text-xs sm:text-sm">{formatDate(packageData.updated_at)}</span>
                 </div>
               </div>
             </div>
@@ -538,66 +542,66 @@ export default function AdminPackageDetail() {
         </Card>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Total Bookings
               </CardTitle>
-              <BarChart3 className="h-4 w-4 text-blue-500" />
+              <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total_bookings}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-xl sm:text-2xl font-bold">{stats.total_bookings}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 All-time bookings
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Completed
               </CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completed_bookings}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed_bookings}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 Successfully completed
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Total Revenue
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-tinedy-yellow" />
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-tinedy-yellow" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-tinedy-dark">
+              <div className="text-xl sm:text-2xl font-bold text-tinedy-dark">
                 {formatCurrency(stats.total_revenue)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 From completed bookings
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Last Booking
               </CardTitle>
-              <Calendar className="h-4 w-4 text-purple-500" />
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-bold">
+              <div className="text-base sm:text-lg font-bold">
                 {stats.last_booking_date ? formatDate(stats.last_booking_date) : 'N/A'}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 Most recent booking
               </p>
             </CardContent>
@@ -606,29 +610,29 @@ export default function AdminPackageDetail() {
 
         {/* Pricing Information */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               Pricing Information
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {packageData.pricing_model === PricingModel.Fixed ? (
               /* Fixed Pricing */
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b">
-                  <span className="text-sm font-medium">Base Price:</span>
-                  <span className="text-lg font-bold text-tinedy-dark">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between py-2 sm:py-3 border-b">
+                  <span className="text-xs sm:text-sm font-medium">Base Price:</span>
+                  <span className="text-base sm:text-lg font-bold text-tinedy-dark">
                     {formatCurrency(packageData.base_price || 0)}
                   </span>
                 </div>
                 {packageData.duration_minutes && (
-                  <div className="flex items-center justify-between py-3 border-b">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
+                  <div className="flex items-center justify-between py-2 sm:py-3 border-b">
+                    <span className="text-xs sm:text-sm font-medium flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       Duration:
                     </span>
-                    <span className="text-lg font-semibold">
+                    <span className="text-base sm:text-lg font-semibold">
                       {packageData.duration_minutes} minutes
                     </span>
                   </div>
@@ -636,66 +640,68 @@ export default function AdminPackageDetail() {
               </div>
             ) : (
               /* Tiered Pricing */
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
                   <div>
-                    <p className="text-sm font-medium">Price Range</p>
-                    <p className="text-2xl font-bold text-tinedy-dark">
+                    <p className="text-xs sm:text-sm font-medium">Price Range</p>
+                    <p className="text-xl sm:text-2xl font-bold text-tinedy-dark">
                       {formatCurrency(packageData.min_price || 0)} - {formatCurrency(packageData.max_price || 0)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-muted-foreground">Total Tiers</p>
-                    <p className="text-xl font-bold">{packageData.tier_count}</p>
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Tiers</p>
+                    <p className="text-lg sm:text-xl font-bold">{packageData.tier_count}</p>
                   </div>
                 </div>
 
                 {/* Tiers Table */}
                 {packageData.tiers && packageData.tiers.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Area Range (sqm)</TableHead>
-                          <TableHead>Staff</TableHead>
-                          <TableHead className="text-right">1x/month</TableHead>
-                          <TableHead className="text-right">2x/month</TableHead>
-                          <TableHead className="text-right">4x/month</TableHead>
-                          <TableHead className="text-right">8x/month</TableHead>
-                          <TableHead className="text-right">Est. Hours</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {packageData.tiers.map((tier) => (
-                          <TableRow key={tier.id}>
-                            <TableCell className="font-medium">
-                              {tier.area_min} - {tier.area_max}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {tier.required_staff}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(tier.price_1_time)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {tier.price_2_times ? formatCurrency(tier.price_2_times) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {tier.price_4_times ? formatCurrency(tier.price_4_times) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {tier.price_8_times ? formatCurrency(tier.price_8_times) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {tier.estimated_hours ? `${tier.estimated_hours}h` : '-'}
-                            </TableCell>
+                  <div className="overflow-x-auto">
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Area Range (sqm)</TableHead>
+                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Staff</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1x/month</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2x/month</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4x/month</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">8x/month</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Est. Hours</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {packageData.tiers.map((tier) => (
+                            <TableRow key={tier.id}>
+                              <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                                {tier.area_min} - {tier.area_max}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {tier.required_staff}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">
+                                {formatCurrency(tier.price_1_time)}
+                              </TableCell>
+                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                {tier.price_2_times ? formatCurrency(tier.price_2_times) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                {tier.price_4_times ? formatCurrency(tier.price_4_times) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                {tier.price_8_times ? formatCurrency(tier.price_8_times) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
+                                {tier.estimated_hours ? `${tier.estimated_hours}h` : '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -705,73 +711,75 @@ export default function AdminPackageDetail() {
 
         {/* Recent Bookings */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                   Recent Bookings
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-1 text-xs sm:text-sm">
                   Recent bookings using this package
                 </CardDescription>
               </div>
-              <Badge variant="outline">{bookings.length} total</Badge>
+              <Badge variant="outline" className="text-xs sm:text-sm">{bookings.length} total</Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {bookings.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No bookings found for this package</p>
+              <div className="text-center py-8 sm:py-12">
+                <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground">No bookings found for this package</p>
               </div>
             ) : (
               <>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedBookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{booking.customers?.full_name || 'N/A'}</p>
-                              <p className="text-xs text-muted-foreground">{booking.customers?.phone || ''}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{formatDate(booking.booking_date)}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {booking.teams?.name || booking.profiles?.full_name || 'Unassigned'}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {formatCurrency(booking.total_price)}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                <div className="overflow-x-auto">
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Customer</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Date & Time</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Assigned To</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Amount</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedBookings.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell className="whitespace-nowrap">
+                              <div>
+                                <p className="font-medium text-xs sm:text-sm">{booking.customers?.full_name || 'N/A'}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">{booking.customers?.phone || ''}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div>
+                                <p className="font-medium text-xs sm:text-sm">{formatDate(booking.booking_date)}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs sm:text-sm whitespace-nowrap">
+                              {booking.teams?.name || booking.profiles?.full_name || 'Unassigned'}
+                            </TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                              {formatCurrency(booking.total_price)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">{getStatusBadge(booking.status)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Showing {(bookingsPage - 1) * BOOKINGS_PER_PAGE + 1} to{' '}
                       {Math.min(bookingsPage * BOOKINGS_PER_PAGE, bookings.length)} of {bookings.length}
                     </p>
@@ -781,16 +789,18 @@ export default function AdminPackageDetail() {
                         size="sm"
                         onClick={() => setBookingsPage(p => Math.max(1, p - 1))}
                         disabled={bookingsPage === 1}
+                        className="h-8 sm:h-9"
                       >
-                        Previous
+                        <span className="text-xs sm:text-sm">Previous</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setBookingsPage(p => Math.min(totalPages, p + 1))}
                         disabled={bookingsPage === totalPages}
+                        className="h-8 sm:h-9"
                       >
-                        Next
+                        <span className="text-xs sm:text-sm">Next</span>
                       </Button>
                     </div>
                   </div>
@@ -830,7 +840,7 @@ export default function AdminPackageDetail() {
 
       {/* Edit Package Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Package</DialogTitle>
             <DialogDescription>

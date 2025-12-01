@@ -23,14 +23,14 @@ export function TeamDetailStats({ stats }: TeamDetailStatsProps) {
       {/* Total Bookings */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-          <Calendar className="h-4 w-4 text-tinedy-blue" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Total Bookings</CardTitle>
+          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-tinedy-blue" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
+          <div className="text-xl sm:text-2xl font-bold text-tinedy-dark">
             {stats.totalBookings}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             All time bookings
           </p>
         </CardContent>
@@ -39,14 +39,14 @@ export function TeamDetailStats({ stats }: TeamDetailStatsProps) {
       {/* Completed Bookings */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Completed</CardTitle>
-          <CheckCircle className="h-4 w-4 text-green-500" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Completed</CardTitle>
+          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">
             {stats.completedBookings}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {completionRate}% completion rate
           </p>
         </CardContent>
@@ -55,14 +55,14 @@ export function TeamDetailStats({ stats }: TeamDetailStatsProps) {
       {/* Average Rating */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Average Rating</CardTitle>
+          <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 fill-yellow-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
+          <div className="text-xl sm:text-2xl font-bold text-tinedy-dark">
             {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {stats.averageRating > 0 ? 'Out of 5.0' : 'No ratings yet'}
           </p>
         </CardContent>
@@ -71,14 +71,14 @@ export function TeamDetailStats({ stats }: TeamDetailStatsProps) {
       {/* Total Revenue */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <DollarSign className="h-4 w-4 text-tinedy-yellow" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Total Revenue</CardTitle>
+          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-tinedy-yellow" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
+          <div className="text-xl sm:text-2xl font-bold text-tinedy-dark">
             {formatCurrency(stats.totalRevenue)}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             From all bookings
           </p>
         </CardContent>

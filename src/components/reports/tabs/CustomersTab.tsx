@@ -62,10 +62,14 @@ function CustomersTabComponent({
   dateRange,
 }: CustomersTabProps) {
   // Prepare segmentation data for animation
-  const segmentationData = React.useMemo(
-    () => getCustomerSegmentation(customersWithBookings),
-    [customersWithBookings]
-  )
+  const segmentationData = React.useMemo(() => {
+    const data = getCustomerSegmentation(customersWithBookings)
+    const total = data.reduce((sum, item) => sum + item.value, 0)
+    return data.map(item => ({
+      ...item,
+      percentage: total > 0 ? ((item.value / total) * 100).toFixed(1) : '0'
+    }))
+  }, [customersWithBookings])
 
   // Chart animation
   const segmentationChart = useChartAnimation(segmentationData, {
@@ -118,14 +122,15 @@ function CustomersTabComponent({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Customer Acquisition Trend */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Customer Acquisition Trend
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={getCustomerAcquisitionTrend(
                   customersWithBookings,
@@ -159,32 +164,34 @@ function CustomersTabComponent({
                 />
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
         {/* Customer Lifetime Value Distribution */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               Customer Lifetime Value Distribution
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {(() => {
               const clvData = getCustomerCLVDistribution(customersWithBookings)
               const hasData = clvData.some(d => d.count > 0)
 
               if (!hasData) {
                 return (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[250px] sm:h-[300px] flex items-center justify-center text-xs sm:text-sm text-muted-foreground">
                     No customer data available for selected period
                   </div>
                 )
               }
 
               return (
-                <ResponsiveContainer width="100%" height={300}>
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={clvData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
@@ -209,6 +216,7 @@ function CustomersTabComponent({
                     />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               )
             })()}
           </CardContent>
@@ -219,14 +227,15 @@ function CustomersTabComponent({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Customer Segmentation */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Users className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
               Customer Segmentation by Booking Frequency
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={segmentationData}
@@ -251,17 +260,21 @@ function CustomersTabComponent({
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-1 gap-2 mt-4">
+            </div>
+            <div className="grid grid-cols-1 gap-2 mt-3 sm:mt-4">
               {segmentationData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div key={index} className="flex items-center justify-between p-2 sm:p-3 border rounded-md">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-sm text-muted-foreground">{item.name}</span>
+                    <span className="text-xs sm:text-sm font-medium">{item.name}</span>
                   </div>
-                  <span className="text-sm font-semibold">{item.value}</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="text-xs sm:text-sm text-muted-foreground">{item.value}</span>
+                    <span className="text-xs sm:text-sm font-semibold">{item.percentage}%</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -270,14 +283,15 @@ function CustomersTabComponent({
 
         {/* Repeat Customer Rate Trend */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Repeat className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+              <Repeat className="h-4 w-4 sm:h-5 sm:w-5" />
               Repeat Customer Rate Trend
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={getRepeatCustomerRateTrend(
                   customersWithBookings,
@@ -316,37 +330,38 @@ function CustomersTabComponent({
                 />
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Top Customers Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5" />
             Top 10 Customers by Revenue
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b">
                 <tr className="text-left">
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground">#</th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">#</th>
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     Customer Name
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     Email
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Total Bookings
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Total Revenue
                   </th>
-                  <th className="pb-2 font-semibold text-sm text-muted-foreground text-right">
+                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                     Last Booking
                   </th>
                 </tr>
@@ -354,26 +369,26 @@ function CustomersTabComponent({
               <tbody>
                 {topCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="py-6 sm:py-8 text-center text-xs sm:text-sm text-muted-foreground">
                       No customer data available
                     </td>
                   </tr>
                 ) : (
                   topCustomers.map((customer, index) => (
                     <tr key={customer.id} className="border-b hover:bg-accent/20">
-                      <td className="py-3 text-sm">{index + 1}</td>
-                      <td className="py-3 font-medium">{customer.name}</td>
-                      <td className="py-3 text-sm text-muted-foreground">
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">{index + 1}</td>
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap">{customer.name}</td>
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
+                          <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           {customer.email}
                         </div>
                       </td>
-                      <td className="py-3 text-sm text-right">{customer.totalBookings}</td>
-                      <td className="py-3 font-semibold text-right text-tinedy-dark">
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">{customer.totalBookings}</td>
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm font-semibold text-right text-tinedy-dark whitespace-nowrap">
                         {formatCurrency(customer.totalRevenue)}
                       </td>
-                      <td className="py-3 text-sm text-muted-foreground text-right">
+                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
                         {new Date(customer.lastBookingDate).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',

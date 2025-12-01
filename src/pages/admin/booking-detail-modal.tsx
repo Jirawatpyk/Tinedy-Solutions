@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { CollapsibleSection } from '@/components/common/CollapsibleSection'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 
 interface Review {
@@ -272,12 +273,15 @@ export function BookingDetailModal({
         </DialogHeader>
         <div className="space-y-6">
           {/* Customer Info */}
-          <div className="space-y-3 border-b pb-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <User className="h-5 w-5 text-tinedy-blue" />
-              Customer Information
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <User className="h-5 w-5 text-tinedy-blue" />
+                Customer Information
+              </h3>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Name</Label>
                 <p className="font-medium">{booking.customers?.full_name || 'N/A'}</p>
@@ -290,15 +294,18 @@ export function BookingDetailModal({
                 </p>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Service Info */}
-          <div className="space-y-3 border-b pb-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-tinedy-blue" />
-              Service Details
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-tinedy-blue" />
+                Service Details
+              </h3>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Service Package</Label>
                 <p className="font-medium">{booking.service_packages?.name || booking.service_packages_v2?.name || 'N/A'}</p>
@@ -333,15 +340,18 @@ export function BookingDetailModal({
                 <div className="mt-1">{getStatusBadge(booking.status)}</div>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Schedule Info */}
-          <div className="space-y-3 border-b pb-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-tinedy-blue" />
-              Schedule
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5 text-tinedy-blue" />
+                Schedule
+              </h3>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Date</Label>
                 <p className="font-medium">{formatDate(booking.booking_date)}</p>
@@ -353,14 +363,17 @@ export function BookingDetailModal({
                 </p>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Location Info */}
-          <div className="space-y-3 border-b pb-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-tinedy-blue" />
-              Location
-            </h3>
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-tinedy-blue" />
+                Location
+              </h3>
+            }
+          >
             <p className="text-sm break-words">{formatFullAddress(booking)}</p>
             <Button
               variant="outline"
@@ -376,12 +389,13 @@ export function BookingDetailModal({
               <MapPin className="h-4 w-4 mr-2" />
               Open in Google Maps
             </Button>
-          </div>
+          </CollapsibleSection>
 
           {/* Assignment Section */}
           {(booking.profiles || booking.teams) && (
-            <div className="space-y-3 border-b pb-4">
-              <h3 className="font-semibold text-lg">Assignment</h3>
+            <CollapsibleSection
+              title={<h3 className="font-semibold text-lg">Assignment</h3>}
+            >
 
               {/* Assigned Staff (if exists) */}
               {booking.profiles && (
@@ -396,7 +410,7 @@ export function BookingDetailModal({
 
               {/* Assigned Team with Team Lead (2 columns) */}
               {booking.teams && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Assigned Team</Label>
                     <p className="font-medium flex items-center gap-1">
@@ -415,16 +429,19 @@ export function BookingDetailModal({
                   )}
                 </div>
               )}
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Rating Section */}
           {(booking.staff_id || booking.team_id) && booking.status === 'completed' && (
-            <div className="space-y-3 border-b pb-4">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Star className="h-5 w-5 text-yellow-500" />
-                Service Rating
-              </h3>
+            <CollapsibleSection
+              title={
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  Service Rating
+                </h3>
+              }
+            >
               <div className="space-y-3">
                 {/* Star Rating */}
                 <div>
@@ -476,16 +493,19 @@ export function BookingDetailModal({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Payment Info */}
-          <div className="space-y-3 border-b pb-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-tinedy-blue" />
-              Payment Information
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
+          <CollapsibleSection
+            title={
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-tinedy-blue" />
+                Payment Information
+              </h3>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Payment Status</Label>
                 <div className="mt-1">{getPaymentStatusBadge(booking.payment_status)}</div>
@@ -525,7 +545,7 @@ export function BookingDetailModal({
             {booking.payment_status !== 'paid' && (
               <div className="mt-3">
                 <Select onValueChange={(method) => onMarkAsPaid(booking.id, method)} disabled={actionLoading?.markAsPaid}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder={actionLoading?.markAsPaid ? "Processing..." : "Mark as Paid"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -538,15 +558,18 @@ export function BookingDetailModal({
                 </Select>
               </div>
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Payment Link - Show only if unpaid */}
           {booking.payment_status !== 'paid' && (
-            <div className="space-y-3 border-b pb-4">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Link2 className="h-5 w-5 text-tinedy-blue" />
-                Payment Link
-              </h3>
+            <CollapsibleSection
+              title={
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Link2 className="h-5 w-5 text-tinedy-blue" />
+                  Payment Link
+                </h3>
+              }
+            >
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -574,11 +597,11 @@ export function BookingDetailModal({
                   )}
                 </Button>
               </div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Quick Actions */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             <h3 className="font-semibold text-lg">Quick Actions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {onEdit && (

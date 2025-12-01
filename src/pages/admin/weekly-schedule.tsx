@@ -730,26 +730,26 @@ export function AdminWeeklySchedule() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 min-h-[40px]">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           View weekly booking schedules for staff and teams
         </p>
-        <Button variant="outline" onClick={handleExportSchedule}>
-          <Download className="h-4 w-4 mr-2" />
-          Export Schedule
+        <Button variant="outline" onClick={handleExportSchedule} size="sm">
+          <Download className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Export Schedule</span>
         </Button>
       </div>
 
       {/* Filters and View Mode */}
       <Card>
-        <CardContent className="py-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <CardContent className="py-3 px-4 sm:px-6">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <Label className="text-xs font-medium whitespace-nowrap">View Mode:</Label>
-              <div className="inline-flex rounded-md shadow-sm w-full max-w-[380px]" role="group">
+              <div className="inline-flex rounded-md shadow-sm w-full sm:w-auto" role="group">
                 <Button
                   variant={viewMode === 'all' ? 'default' : 'outline'}
                   size="sm"
@@ -758,9 +758,9 @@ export function AdminWeeklySchedule() {
                     setSelectedStaff('all')
                     setSelectedTeam('all')
                   }}
-                  className="rounded-r-none flex-1 h-8 text-xs"
+                  className="rounded-r-none flex-1 sm:flex-none h-8 text-xs"
                 >
-                  All Bookings
+                  All
                 </Button>
                 <Button
                   variant={viewMode === 'staff' ? 'default' : 'outline'}
@@ -769,9 +769,9 @@ export function AdminWeeklySchedule() {
                     setViewMode('staff')
                     setSelectedTeam('all')
                   }}
-                  className="rounded-none border-l-0 flex-1 h-8 text-xs"
+                  className="rounded-none border-l-0 flex-1 sm:flex-none h-8 text-xs"
                 >
-                  Staff View
+                  Staff
                 </Button>
                 <Button
                   variant={viewMode === 'team' ? 'default' : 'outline'}
@@ -780,20 +780,20 @@ export function AdminWeeklySchedule() {
                     setViewMode('team')
                     setSelectedStaff('all')
                   }}
-                  className="rounded-l-none border-l-0 flex-1 h-8 text-xs"
+                  className="rounded-l-none border-l-0 flex-1 sm:flex-none h-8 text-xs"
                 >
-                  Team View
+                  Team
                 </Button>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="h-6 w-px bg-border mx-1"></div>
+            {/* Divider - hidden on mobile */}
+            <div className="hidden lg:block h-6 w-px bg-border mx-1"></div>
 
             {/* Staff Filter */}
-            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
               <Label htmlFor="staff_select" className="text-xs font-medium whitespace-nowrap">
-                Select Staff:
+                Staff:
               </Label>
               <Select
                 value={selectedStaff}
@@ -815,9 +815,9 @@ export function AdminWeeklySchedule() {
             </div>
 
             {/* Team Filter */}
-            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
               <Label htmlFor="team_select" className="text-xs font-medium whitespace-nowrap">
-                Select Team:
+                Team:
               </Label>
               <Select
                 value={selectedTeam}
@@ -843,50 +843,50 @@ export function AdminWeeklySchedule() {
 
       {/* Weekly Calendar Grid */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="font-display flex items-center gap-2 flex-wrap">
-              <Calendar className="h-5 w-5" />
-              {weekStart} - {weekEnd}
-              <span className="text-sm font-normal text-muted-foreground">
+        <CardHeader className="px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="font-display flex items-center gap-2 flex-wrap text-base sm:text-lg">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base">{weekStart} - {weekEnd}</span>
+              <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                 -
                 {viewMode === 'staff' ? (
                   selectedStaff === 'all' ? ' All Staff' : selectedStaffData ? ` ${selectedStaffData.full_name}` : ' Staff'
                 ) : viewMode === 'team' ? (
                   selectedTeam === 'all' ? ' All Teams' : selectedTeamData ? ` ${selectedTeamData.name}` : ' Team'
                 ) : (
-                  ' All Bookings (Staff & Team)'
+                  ' All'
                 )}
               </span>
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
-                <ChevronLeft className="h-4 w-4" />
-                Previous
+              <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="h-8">
+                <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Previous</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
+              <Button variant="outline" size="sm" onClick={goToCurrentWeek} className="h-8">
                 Today
               </Button>
-              <Button variant="outline" size="sm" onClick={goToNextWeek}>
-                Next
-                <ChevronRight className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={goToNextWeek} className="h-8">
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4 sm:ml-1" />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div className="flex gap-2">
+        <CardContent className="px-2 sm:px-4 lg:px-6">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 pb-2">
+            <div className="flex gap-0.5 sm:gap-1 min-w-[700px]">
               {/* Time column */}
-              <div className="flex flex-col w-20 flex-shrink-0">
-                <div className="h-12 border-b font-medium text-sm text-muted-foreground flex items-center">
+              <div className="flex flex-col w-12 sm:w-16 lg:w-20 flex-shrink-0">
+                <div className="h-10 sm:h-12 border-b font-medium text-[10px] sm:text-xs text-muted-foreground flex items-center">
                   Time
                 </div>
-                <div className="relative" style={{ height: '720px' }}>
+                <div className="relative" style={{ height: '500px' }}>
                   {TIME_SLOTS.map((time, index) => (
                     <div
                       key={time}
-                      className="absolute w-full text-sm font-medium text-muted-foreground"
+                      className="absolute w-full text-[9px] sm:text-xs font-medium text-muted-foreground"
                       style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
                     >
                       {time}
@@ -919,27 +919,27 @@ export function AdminWeeklySchedule() {
           </div>
 
           {/* Legend */}
-          <div className="mt-6 pt-4 border-t">
-            <h4 className="text-sm font-medium mb-3">Status Legend</h4>
-            <div className="flex flex-wrap gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-400 rounded"></div>
+          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t">
+            <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Status Legend</h4>
+            <div className="flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-400 rounded flex-shrink-0"></div>
                 <span>Pending</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-tinedy-blue rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-tinedy-blue rounded flex-shrink-0"></div>
                 <span>Confirmed</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                <span>In Progress</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-purple-500 rounded flex-shrink-0"></div>
+                <span className="whitespace-nowrap">In Progress</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded flex-shrink-0"></div>
                 <span>Completed</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500 rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded flex-shrink-0"></div>
                 <span>Cancelled</span>
               </div>
             </div>

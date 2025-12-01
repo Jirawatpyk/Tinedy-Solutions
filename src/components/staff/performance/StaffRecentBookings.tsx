@@ -37,15 +37,15 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
         className?: string
       }
     > = {
-      pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { variant: 'default', label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
+      pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs' },
+      confirmed: { variant: 'default', label: 'Confirmed', className: 'bg-blue-100 text-blue-800 text-[10px] sm:text-xs' },
       in_progress: {
         variant: 'default',
         label: 'In Progress',
-        className: 'bg-purple-100 text-purple-800',
+        className: 'bg-purple-100 text-purple-800 text-[10px] sm:text-xs',
       },
-      completed: { variant: 'default', label: 'Completed', className: 'bg-green-100 text-green-800' },
-      cancelled: { variant: 'outline', label: 'Cancelled', className: 'bg-gray-100 text-gray-800' },
+      completed: { variant: 'default', label: 'Completed', className: 'bg-green-100 text-green-800 text-[10px] sm:text-xs' },
+      cancelled: { variant: 'outline', label: 'Cancelled', className: 'bg-gray-100 text-gray-800 text-[10px] sm:text-xs' },
     }
 
     const config = statusConfig[status] || statusConfig.pending
@@ -59,12 +59,12 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-tinedy-blue" />
-            <CardTitle className="font-display">Recent Bookings</CardTitle>
-            <Badge variant="secondary">{totalBookings}</Badge>
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-tinedy-blue" />
+            <CardTitle className="text-base sm:text-lg">Recent Bookings</CardTitle>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs">{totalBookings}</Badge>
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -73,10 +73,11 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
+                className="h-8 sm:h-9"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -84,40 +85,41 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
+                className="h-8 sm:h-9"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-6 pt-0">
         {paginatedBookings.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No bookings yet</p>
-            <p className="text-sm mt-1">Bookings will appear here</p>
+            <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm sm:text-base">No bookings yet</p>
+            <p className="text-xs sm:text-sm mt-1">Bookings will appear here</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {paginatedBookings.map((booking) => (
               <div
                 key={booking.id}
                 onClick={() => modal.openDetail(booking)}
-                className="flex items-start justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer"
+                className="flex flex-col sm:flex-row items-start justify-between p-3 sm:p-4 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer gap-3 sm:gap-4"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium mb-1">
+                <div className="flex-1 min-w-0 w-full">
+                  <p className="font-medium mb-1 text-sm sm:text-base">
                     {booking.customers?.full_name || 'Unknown Customer'}
-                    <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">
+                    <span className="ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">
                       #{booking.id.slice(0, 8)}
                     </span>
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
                     {booking.service_packages?.name || 'Unknown Service'}
                   </p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
+                  <div className="flex items-center gap-2 mt-1 text-[10px] sm:text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     <span>{booking.booking_date}</span>
                     <span>•</span>
                     <span>
@@ -125,8 +127,8 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                     </span>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-4 space-y-1">
-                  <p className="font-semibold text-tinedy-dark">
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto flex-shrink-0 gap-2 sm:gap-1">
+                  <p className="font-semibold text-tinedy-dark text-sm sm:text-base">
                     ฿{booking.total_price.toLocaleString()}
                   </p>
                   {getStatusBadge(booking.status)}
