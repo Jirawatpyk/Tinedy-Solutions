@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <style>
+      .gold { fill: #e7d188; }
+      .green { fill: #8fb996; }
+      .navy { fill: #2e4057; }
+    </style>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#ffffff"/>
+  <!-- Leaf right (navy) -->
+  <path class="navy" d="M54,26c0,15.46-12.54,28-28,28,0-15.46,12.54-28,28-28Z"/>
+  <!-- Leaf left (green) -->
+  <path class="green" d="M10,26c0,15.46,12.54,28,28,28,0-15.46-12.54-28-28-28Z"/>
+  <!-- Star -->
+  <path class="gold" d="M36.5,23v-.05c-5.08-.03-9.19-4.15-9.21-9.24h-.11c-.01,5.08-4.12,9.2-9.21,9.24v.05c5.08.03,9.19,4.15,9.21,9.24h.11c.01-5.08,4.12-9.2,9.21-9.24Z"/>
+</svg>
