@@ -47,6 +47,7 @@ export function AdminDashboard() {
   // Load teams
   useEffect(() => {
     fetchTeams()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchTeams = async () => {
@@ -61,6 +62,11 @@ export function AdminDashboard() {
       setTeams(data || [])
     } catch (error) {
       console.error('Error fetching teams:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Failed to load teams',
+        description: 'Could not load team list. Please refresh the page.',
+      })
     }
   }
 

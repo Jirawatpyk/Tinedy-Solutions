@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingCreateModal } from '../BookingCreateModal'
 import { createMockSupabaseError } from '@/test/mocks/supabase'
@@ -259,7 +259,7 @@ describe('BookingCreateModal', () => {
       // expect(packageSelection.packageId).toBe('service-1')
     })
 
-    it.skip('should call handleChange when booking date is selected', async () => {
+    it('should update booking date input when date is selected', async () => {
       // Arrange
       const user = userEvent.setup()
       render(<BookingCreateModal {...getDefaultProps()} />)
@@ -268,11 +268,11 @@ describe('BookingCreateModal', () => {
       const input = screen.getByLabelText(/Booking Date/)
       await user.type(input, '2025-10-28')
 
-      // Assert - TODO: Check input value instead
-      // expect(input).toHaveValue('2025-10-28')
+      // Assert - Check input value in DOM
+      expect(input).toHaveValue('2025-10-28')
     })
 
-    it.skip('should call handleChange when start time is selected', async () => {
+    it('should update start time input when time is selected', async () => {
       // Arrange
       const user = userEvent.setup()
       render(<BookingCreateModal {...getDefaultProps()} />)
@@ -281,15 +281,33 @@ describe('BookingCreateModal', () => {
       const input = screen.getByLabelText(/Start Time/)
       await user.type(input, '10:00')
 
-      // Assert - TODO: Check input value instead
-      // expect(input).toHaveValue('10:00')
+      // Assert - Check input value in DOM
+      expect(input).toHaveValue('10:00')
     })
 
-    it.skip('should display calculated end time', () => {
-      // Arrange & Act
-      render(<BookingCreateModal {...getDefaultProps()} defaultStartTime="10:00" />)
+    it('should display calculated end time when start time and package are set', async () => {
+      // Arrange
+      const user = userEvent.setup()
 
-      // Assert
+      render(
+        <BookingCreateModal
+          {...getDefaultProps()}
+          packageSelection={{
+            packageId: 'service-1',
+            pricingModel: 'fixed',
+            price: 2000,
+            requiredStaff: 1,
+            packageName: 'Deep Cleaning',
+            estimatedHours: 2,
+          }}
+        />
+      )
+
+      // Act - Trigger calculation by setting start time
+      const startTimeInput = screen.getByLabelText(/Start Time/)
+      await user.type(startTimeInput, '10:00')
+
+      // Assert - calculateEndTime is called during onChange
       expect(mockCalculateEndTime).toHaveBeenCalled()
     })
 
@@ -432,13 +450,13 @@ describe('BookingCreateModal', () => {
   })
 
   describe('Customer Detection', () => {
-    // TODO: Fix - customer lookup mock with blur event doesn't trigger properly in happy-dom
-    it.skip('should check for existing customer when email field loses focus', async () => {
+    it('should check for existing customer when email field loses focus', async () => {
       // Arrange
       const user = userEvent.setup()
-      const supabaseMock = await import('@/lib/supabase')
       const mockCustomer = createMockCustomer({ email: 'existing@example.com' })
 
+      // Setup Supabase mock BEFORE render
+      const supabaseMock = await import('@/lib/supabase')
       vi.mocked(supabaseMock.supabase.from).mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -450,7 +468,7 @@ describe('BookingCreateModal', () => {
       // Act
       const emailInput = screen.getByLabelText(/Email/)
       await user.type(emailInput, 'existing@example.com')
-      await user.tab() // Trigger blur
+      fireEvent.blur(emailInput) // Trigger blur event directly
 
       // Assert
       await waitFor(() => {
@@ -461,8 +479,7 @@ describe('BookingCreateModal', () => {
       })
     })
 
-    // TODO: Fix - customer lookup mock with blur event doesn't trigger properly in happy-dom
-    it.skip('should check for existing customer when phone field loses focus', async () => {
+    it('should check for existing customer when phone field loses focus', async () => {
       // Arrange
       const user = userEvent.setup()
       const supabaseMock = await import('@/lib/supabase')
@@ -479,7 +496,7 @@ describe('BookingCreateModal', () => {
       // Act
       const phoneInput = screen.getByLabelText(/Phone/)
       await user.type(phoneInput, '0812345678')
-      await user.tab() // Trigger blur
+      fireEvent.blur(phoneInput) // Trigger blur event directly
 
       // Assert
       await waitFor(() => {
@@ -490,8 +507,7 @@ describe('BookingCreateModal', () => {
       })
     })
 
-    // TODO: Fix - customer lookup mock with blur event doesn't trigger properly in happy-dom
-    it.skip('should display alert when existing customer is found', async () => {
+    it('should display alert when existing customer is found', async () => {
       // Arrange
       const user = userEvent.setup()
       const supabaseMock = await import('@/lib/supabase')
@@ -508,7 +524,7 @@ describe('BookingCreateModal', () => {
       // Act
       const emailInput = screen.getByLabelText(/Email/)
       await user.type(emailInput, 'existing@example.com')
-      await user.tab()
+      fireEvent.blur(emailInput) // Trigger blur event directly
 
       // Assert
       await waitFor(() => {
@@ -517,7 +533,7 @@ describe('BookingCreateModal', () => {
       })
     })
 
-    it.skip('should populate form with existing customer data when button is clicked', async () => {
+    it('should populate form with existing customer data when button is clicked', async () => {
       // Arrange
       const user = userEvent.setup()
       const supabaseMock = await import('@/lib/supabase')
@@ -539,7 +555,7 @@ describe('BookingCreateModal', () => {
       // Act
       const emailInput = screen.getByLabelText(/Email/)
       await user.type(emailInput, 'existing@example.com')
-      await user.tab()
+      fireEvent.blur(emailInput) // Trigger blur event directly
 
       await waitFor(() => {
         expect(screen.getByText(/Use Existing Data/)).toBeInTheDocument()
@@ -548,7 +564,7 @@ describe('BookingCreateModal', () => {
       const useDataButton = screen.getByRole('button', { name: /Use Existing Data/i })
       await user.click(useDataButton)
 
-      // Assert - TODO: Check DOM values instead
+      // Assert - Check DOM values
       await waitFor(() => {
         expect(screen.getByLabelText(/Full Name/)).toHaveValue(mockCustomer.full_name)
         expect(screen.getByLabelText(/Email/)).toHaveValue(mockCustomer.email)
