@@ -267,15 +267,13 @@ describe('export', () => {
 
     it('should handle empty bookings array', () => {
       // Arrange
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const bookings: BookingForExport[] = []
 
       // Act
-      exportRevenueBookings(bookings, 'today', 'summary')
+      const result = exportRevenueBookings(bookings, 'today', 'summary')
 
-      // Assert
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No bookings found in the selected date range')
-      consoleWarnSpy.mockRestore()
+      // Assert - function returns false when no bookings found
+      expect(result).toBe(false)
     })
   })
 
@@ -312,17 +310,15 @@ describe('export', () => {
 
     it('should handle no completed bookings', () => {
       // Arrange
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const bookings = [
         createMockBooking({ booking_date: '2025-10-26T10:00:00Z', status: 'pending' }),
       ]
 
       // Act
-      exportRevenueByServiceType(bookings, 'today')
+      const result = exportRevenueByServiceType(bookings, 'today')
 
-      // Assert
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No completed bookings found in the selected date range')
-      consoleWarnSpy.mockRestore()
+      // Assert - function returns false when no completed bookings found
+      expect(result).toBe(false)
     })
   })
 

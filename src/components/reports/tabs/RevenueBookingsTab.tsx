@@ -250,55 +250,65 @@ function RevenueBookingsTabComponent({
             <CardTitle className="font-display text-base sm:text-lg">Booking Status Breakdown</CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="h-[250px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusBreakdown.filter((item) => item.value > 0) as unknown as Record<string, unknown>[]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={5}
-                  dataKey="value"
-                  labelLine={statusChart.showLabels}
-                  label={
-                    statusChart.showLabels
-                      ? ((props: { name?: string; percent?: number }) =>
-                          (props.percent || 0) > 0 ? `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(0)}%` : ''
-                        )
-                      : false
-                  }
-                  animationBegin={0}
-                  animationDuration={statusChart.isReady ? 800 : 0}
-                  animationEasing="ease-out"
-                  opacity={statusChart.isReady ? 1 : 0}
-                  stroke="none"
-                >
+            {statusBreakdown.filter((item) => item.value > 0).length > 0 ? (
+              <>
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusBreakdown.filter((item) => item.value > 0) as unknown as Record<string, unknown>[]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={5}
+                      dataKey="value"
+                      labelLine={statusChart.showLabels}
+                      label={
+                        statusChart.showLabels
+                          ? ((props: { name?: string; percent?: number }) =>
+                              (props.percent || 0) > 0 ? `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(0)}%` : ''
+                            )
+                          : false
+                      }
+                      animationBegin={0}
+                      animationDuration={statusChart.isReady ? 800 : 0}
+                      animationEasing="ease-out"
+                      opacity={statusChart.isReady ? 1 : 0}
+                      stroke="none"
+                    >
+                      {statusBreakdown
+                        .filter((entry) => entry.value > 0)
+                        .map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 pt-2 border-t mt-3 sm:mt-4">
                   {statusBreakdown
-                    .filter((entry) => entry.value > 0)
-                    .map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    .filter((item) => item.value > 0)
+                    .map((item, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs sm:text-sm font-medium text-tinedy-dark">{item.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-tinedy-dark">{item.value}</span>
+                      </div>
                     ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 pt-2 border-t mt-3 sm:mt-4">
-              {statusBreakdown
-                .filter((item) => item.value > 0)
-                .map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-xs sm:text-sm font-medium text-tinedy-dark">{item.name}</span>
-                    <span className="text-xs sm:text-sm font-bold text-tinedy-dark">{item.value}</span>
-                  </div>
-                ))}
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="h-[250px] sm:h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+                <Package className="h-12 w-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No booking data</p>
+                <p className="text-xs">No bookings found for the selected period</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -308,52 +318,62 @@ function RevenueBookingsTabComponent({
             <CardTitle className="font-display text-base sm:text-lg">Revenue by Service Type</CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="h-[250px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={serviceTypePieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={serviceTypeChart.showLabels}
-                  label={
-                    serviceTypeChart.showLabels
-                      ? ((props: { name?: string; percent?: number }) => {
-                          const percent = Number(props.percent || 0)
-                          return `${props.name || ''}: ${(percent * 100).toFixed(0)}%`
-                        })
-                      : false
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  animationBegin={0}
-                  animationDuration={serviceTypeChart.isReady ? 800 : 0}
-                  animationEasing="ease-out"
-                  opacity={serviceTypeChart.isReady ? 1 : 0}
-                >
-                  {serviceTypePieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
-              <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
-                <p className="text-xs sm:text-sm text-muted-foreground">Cleaning</p>
-                <p className="text-base sm:text-lg font-bold text-tinedy-dark">
-                  {formatCurrency(serviceTypeRevenue.cleaning)}
-                </p>
+            {serviceTypePieData.length > 0 ? (
+              <>
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={serviceTypePieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={serviceTypeChart.showLabels}
+                      label={
+                        serviceTypeChart.showLabels
+                          ? ((props: { name?: string; percent?: number }) => {
+                              const percent = Number(props.percent || 0)
+                              return `${props.name || ''}: ${(percent * 100).toFixed(0)}%`
+                            })
+                          : false
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={serviceTypeChart.isReady ? 800 : 0}
+                      animationEasing="ease-out"
+                      opacity={serviceTypeChart.isReady ? 1 : 0}
+                    >
+                      {serviceTypePieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+                  <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Cleaning</p>
+                    <p className="text-base sm:text-lg font-bold text-tinedy-dark">
+                      {formatCurrency(serviceTypeRevenue.cleaning)}
+                    </p>
+                  </div>
+                  <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Training</p>
+                    <p className="text-base sm:text-lg font-bold text-tinedy-dark">
+                      {formatCurrency(serviceTypeRevenue.training)}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="h-[250px] sm:h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+                <DollarSign className="h-12 w-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No revenue data</p>
+                <p className="text-xs">No paid bookings found for the selected period</p>
               </div>
-              <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
-                <p className="text-xs sm:text-sm text-muted-foreground">Training</p>
-                <p className="text-base sm:text-lg font-bold text-tinedy-dark">
-                  {formatCurrency(serviceTypeRevenue.training)}
-                </p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

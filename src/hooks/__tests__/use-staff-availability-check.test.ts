@@ -71,19 +71,25 @@ describe('useStaffAvailabilityCheck', () => {
     },
   ]
 
-  // Helper to create mock chain with proper typing
-  const createMockChain = (data: unknown) => ({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    neq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    or: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data, error: null }),
-    then: vi.fn((callback: (value: { data: unknown; error: null }) => unknown) =>
-      Promise.resolve({ data, error: null }).then(callback)
-    ),
-  })
+  // Helper to create mock chain with proper typing - supports await
+  const createMockChain = (data: unknown) => {
+    const chain = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      neq: vi.fn(() => chain),
+      in: vi.fn(() => chain),
+      or: vi.fn(() => chain),
+      order: vi.fn(() => chain),
+      not: vi.fn(() => chain),
+      single: vi.fn().mockResolvedValue({ data, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
+      // Make it thenable for await support
+      then: (resolve: (value: { data: unknown; error: null }) => void) => {
+        return Promise.resolve({ data, error: null }).then(resolve)
+      },
+    }
+    return chain
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -428,9 +434,10 @@ describe('useStaffAvailabilityCheck', () => {
 
   describe('Staff Availability - Booking Conflicts', () => {
     beforeEach(() => {
-      // Setup booking conflicts
+      // Setup booking conflicts - must include ALL tables the hook queries
       vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'service_packages') {
+        // V1 and V2 service packages
+        if (table === 'service_packages' || table === 'service_packages_v2') {
           return createMockChain(mockService) as unknown as ReturnType<typeof supabase.from>
         }
         if (table === 'profiles') {
@@ -441,6 +448,18 @@ describe('useStaffAvailabilityCheck', () => {
         }
         if (table === 'bookings') {
           return createMockChain(mockBookings) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'team_members') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'staff_availability') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'teams') {
+          return createMockChain(mockTeams) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'reviews') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
         }
         return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
       })
@@ -576,7 +595,8 @@ describe('useStaffAvailabilityCheck', () => {
       ]
 
       vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'service_packages') {
+        // V1 and V2 service packages
+        if (table === 'service_packages' || table === 'service_packages_v2') {
           return createMockChain(mockService) as unknown as ReturnType<typeof supabase.from>
         }
         if (table === 'profiles') {
@@ -587,6 +607,15 @@ describe('useStaffAvailabilityCheck', () => {
         }
         if (table === 'staff_availability') {
           return createMockChain(mockUnavailability) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'team_members') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'bookings') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'teams') {
+          return createMockChain(mockTeams) as unknown as ReturnType<typeof supabase.from>
         }
         return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
       })
@@ -652,7 +681,8 @@ describe('useStaffAvailabilityCheck', () => {
       ]
 
       vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'service_packages') {
+        // V1 and V2 service packages
+        if (table === 'service_packages' || table === 'service_packages_v2') {
           return createMockChain(mockService) as unknown as ReturnType<typeof supabase.from>
         }
         if (table === 'profiles') {
@@ -663,6 +693,15 @@ describe('useStaffAvailabilityCheck', () => {
         }
         if (table === 'staff_availability') {
           return createMockChain(mockAllDayUnavailable) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'team_members') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'bookings') {
+          return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
+        }
+        if (table === 'teams') {
+          return createMockChain(mockTeams) as unknown as ReturnType<typeof supabase.from>
         }
         return createMockChain([]) as unknown as ReturnType<typeof supabase.from>
       })

@@ -20,6 +20,7 @@ describe('error-handling', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'info').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -256,7 +257,8 @@ describe('error-handling', () => {
         showToast: false,
       })
 
-      expect(console.log).toHaveBeenCalled()
+      // Logger uses console.info for LOW severity, console.warn for MEDIUM, console.error for HIGH/CRITICAL
+      expect(console.info).toHaveBeenCalled()
       expect(console.warn).toHaveBeenCalled()
       expect(console.error).toHaveBeenCalled()
     })

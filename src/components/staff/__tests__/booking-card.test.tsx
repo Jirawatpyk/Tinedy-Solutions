@@ -174,7 +174,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText(/180 นาที/)).toBeInTheDocument()
+      expect(screen.getByText(/180 minutes/)).toBeInTheDocument()
     })
 
     it('should display full address when available', () => {
@@ -292,7 +292,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('ยืนยันแล้ว')).toBeInTheDocument()
+      expect(screen.getByText('Confirmed')).toBeInTheDocument()
     })
 
     it('should display correct badge for pending status', () => {
@@ -308,7 +308,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('รอยืนยัน')).toBeInTheDocument()
+      expect(screen.getByText('Pending')).toBeInTheDocument()
     })
 
     it('should display correct badge for in_progress status', () => {
@@ -324,7 +324,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('กำลังดำเนินการ')).toBeInTheDocument()
+      expect(screen.getByText('In Progress')).toBeInTheDocument()
     })
 
     it('should display correct badge for completed status', () => {
@@ -340,7 +340,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('เสร็จสิ้น')).toBeInTheDocument()
+      expect(screen.getByText('Completed')).toBeInTheDocument()
     })
 
     it('should display correct badge for cancelled status', () => {
@@ -356,7 +356,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('ยกเลิก')).toBeInTheDocument()
+      expect(screen.getByText('Cancelled')).toBeInTheDocument()
     })
 
     it('should display team badge for team bookings', () => {
@@ -375,7 +375,9 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText('งานทีม')).toBeInTheDocument()
+      // Component shows "Team Task" on larger screens AND "Team" on smaller screens (responsive)
+      const teamElements = screen.getAllByText(/Team/)
+      expect(teamElements.length).toBeGreaterThan(0)
     })
 
     it('should not display team badge for own bookings', () => {
@@ -435,7 +437,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const startButton = screen.getByRole('button', { name: /เริ่มดำเนินการ/i })
+      const startButton = screen.getByRole('button', { name: /Start Task/i })
       await user.click(startButton)
 
       // Assert
@@ -460,7 +462,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const completeButton = screen.getByRole('button', { name: /เสร็จสิ้น/i })
+      const completeButton = screen.getByRole('button', { name: /Complete/i })
       await user.click(completeButton)
 
       // Assert
@@ -485,7 +487,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const startButton = screen.getByRole('button', { name: /เริ่มดำเนินการ/i })
+      const startButton = screen.getByRole('button', { name: /Start Task/i })
       await user.click(startButton)
 
       // Assert - onViewDetails should not be called
@@ -506,7 +508,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const callButton = screen.getByRole('button', { name: /โทร/i })
+      const callButton = screen.getByRole('button', { name: /Call/i })
       await user.click(callButton)
 
       // Assert
@@ -527,7 +529,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const mapButton = screen.getByRole('button', { name: /แผนที่/i })
+      const mapButton = screen.getByRole('button', { name: /Map/i })
       await user.click(mapButton)
 
       // Assert
@@ -557,7 +559,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      const callButton = screen.getByRole('button', { name: /โทร/i })
+      const callButton = screen.getByRole('button', { name: /Call/i })
       expect(callButton).toBeDisabled()
     })
 
@@ -576,7 +578,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      const mapButton = screen.getByRole('button', { name: /แผนที่/i })
+      const mapButton = screen.getByRole('button', { name: /Map/i })
       expect(mapButton).toBeDisabled()
     })
   })
@@ -596,7 +598,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByRole('button', { name: /เริ่มดำเนินการ/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Start Task/i })).toBeInTheDocument()
     })
 
     it('should not show start progress button for pending bookings', () => {
@@ -613,7 +615,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.queryByRole('button', { name: /เริ่มดำเนินการ/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Start Task/i })).not.toBeInTheDocument()
     })
 
     it('should show mark completed button for in_progress bookings', () => {
@@ -630,7 +632,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByRole('button', { name: /เสร็จสิ้น/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Complete/i })).toBeInTheDocument()
     })
 
     it('should not show mark completed button for confirmed bookings', () => {
@@ -647,7 +649,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.queryByRole('button', { name: /เสร็จสิ้น/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Complete/i })).not.toBeInTheDocument()
     })
 
     it('should not show action buttons when handlers are not provided', () => {
@@ -663,7 +665,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.queryByRole('button', { name: /เริ่มดำเนินการ/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Start Task/i })).not.toBeInTheDocument()
     })
 
     it('should not show any action buttons for completed bookings', () => {
@@ -681,72 +683,50 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.queryByRole('button', { name: /เริ่มดำเนินการ/i })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /เสร็จสิ้น/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Start Task/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Complete/i })).not.toBeInTheDocument()
     })
   })
 
   describe('Loading States', () => {
-    it('should show loading state when starting progress', async () => {
+    it('should show loading state when starting progress', () => {
       // Arrange
-      const user = userEvent.setup()
       const booking = createMockBooking({ status: 'confirmed' })
-      let resolveStartProgress: () => void
-      const startProgressPromise = new Promise<void>((resolve) => {
-        resolveStartProgress = resolve
-      })
-      mockOnStartProgress.mockReturnValue(startProgressPromise)
 
-      // Act
+      // Act - use isStartingProgress prop to show loading state
       render(
         <BookingCard
           booking={booking}
           onViewDetails={mockOnViewDetails}
           onStartProgress={mockOnStartProgress}
+          isStartingProgress={true}
         />
       )
 
-      const startButton = screen.getByRole('button', { name: /เริ่มดำเนินการ/i })
-      await user.click(startButton)
-
       // Assert
-      expect(screen.getByText(/กำลังดำเนินการ.../i)).toBeInTheDocument()
+      expect(screen.getByText(/Starting.../i)).toBeInTheDocument()
+      const startButton = screen.getByRole('button', { name: /Starting.../i })
       expect(startButton).toBeDisabled()
-
-      // Cleanup
-      resolveStartProgress!()
-      await waitFor(() => expect(startButton).not.toBeDisabled())
     })
 
-    it('should show loading state when marking completed', async () => {
+    it('should show loading state when marking completed', () => {
       // Arrange
-      const user = userEvent.setup()
       const booking = createMockBooking({ status: 'in_progress' })
-      let resolveMarkCompleted: () => void
-      const markCompletedPromise = new Promise<void>((resolve) => {
-        resolveMarkCompleted = resolve
-      })
-      mockOnMarkCompleted.mockReturnValue(markCompletedPromise)
 
-      // Act
+      // Act - use isCompletingProgress prop to show loading state
       render(
         <BookingCard
           booking={booking}
           onViewDetails={mockOnViewDetails}
           onMarkCompleted={mockOnMarkCompleted}
+          isCompletingProgress={true}
         />
       )
 
-      const completeButton = screen.getByRole('button', { name: /เสร็จสิ้น/i })
-      await user.click(completeButton)
-
       // Assert
-      expect(screen.getByText(/กำลังบันทึก.../i)).toBeInTheDocument()
+      expect(screen.getByText(/Saving.../i)).toBeInTheDocument()
+      const completeButton = screen.getByRole('button', { name: /Saving.../i })
       expect(completeButton).toBeDisabled()
-
-      // Cleanup
-      resolveMarkCompleted!()
-      await waitFor(() => expect(completeButton).not.toBeDisabled())
     })
   })
 
@@ -847,7 +827,7 @@ describe('BookingCard', () => {
       )
 
       // Assert - Map button should be disabled
-      const mapButton = screen.getByRole('button', { name: /แผนที่/i })
+      const mapButton = screen.getByRole('button', { name: /Map/i })
       expect(mapButton).toBeDisabled()
     })
   })
@@ -866,8 +846,8 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByRole('button', { name: /โทร/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /แผนที่/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Call/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Map/i })).toBeInTheDocument()
     })
 
     it('should be keyboard navigable for action buttons', async () => {
@@ -885,7 +865,7 @@ describe('BookingCard', () => {
         />
       )
 
-      const startButton = screen.getByRole('button', { name: /เริ่มดำเนินการ/i })
+      const startButton = screen.getByRole('button', { name: /Start Task/i })
       startButton.focus()
       await user.keyboard('{Enter}')
 

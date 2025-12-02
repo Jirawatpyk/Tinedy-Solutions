@@ -164,69 +164,79 @@ function TeamsTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="h-[250px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={workloadData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={workloadChart.showLabels}
-                  label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
-                    const percent = Number(props.percent || 0)
-                    return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
-                  } : false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  animationBegin={0}
-                  animationDuration={workloadChart.isReady ? 800 : 0}
-                  opacity={workloadChart.isReady ? 1 : 0}
-                >
-                  {workloadData.map((_: { name: string; value: number }, index: number) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={[
-                        CHART_COLORS.primary,
-                        CHART_COLORS.secondary,
-                        CHART_COLORS.accent,
-                        CHART_COLORS.success,
-                        CHART_COLORS.warning,
-                        CHART_COLORS.danger,
-                      ][index % 6]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            </div>
-            <div className="mt-3 sm:mt-4 space-y-2">
-              {teamPerformance
-                .filter((t: TeamPerformance) => t.totalJobs > 0)
-                .sort((a: TeamPerformance, b: TeamPerformance) => b.totalJobs - a.totalJobs)
-                .slice(0, 5)
-                .map((team: TeamPerformance, index: number) => (
-                  <div key={team.id} className="flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
-                        style={{
-                          backgroundColor: [
+            {workloadData.length > 0 ? (
+              <>
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={workloadData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={workloadChart.showLabels}
+                      label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
+                        const percent = Number(props.percent || 0)
+                        return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
+                      } : false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={workloadChart.isReady ? 800 : 0}
+                      opacity={workloadChart.isReady ? 1 : 0}
+                    >
+                      {workloadData.map((_: { name: string; value: number }, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={[
                             CHART_COLORS.primary,
                             CHART_COLORS.secondary,
                             CHART_COLORS.accent,
                             CHART_COLORS.success,
                             CHART_COLORS.warning,
-                          ][index],
-                        }}
-                      />
-                      <span className="text-muted-foreground">{team.name}</span>
-                    </div>
-                    <span className="font-semibold">{team.totalJobs} jobs</span>
-                  </div>
-                ))}
-            </div>
+                            CHART_COLORS.danger,
+                          ][index % 6]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                </div>
+                <div className="mt-3 sm:mt-4 space-y-2">
+                  {teamPerformance
+                    .filter((t: TeamPerformance) => t.totalJobs > 0)
+                    .sort((a: TeamPerformance, b: TeamPerformance) => b.totalJobs - a.totalJobs)
+                    .slice(0, 5)
+                    .map((team: TeamPerformance, index: number) => (
+                      <div key={team.id} className="flex items-center justify-between text-xs sm:text-sm">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
+                            style={{
+                              backgroundColor: [
+                                CHART_COLORS.primary,
+                                CHART_COLORS.secondary,
+                                CHART_COLORS.accent,
+                                CHART_COLORS.success,
+                                CHART_COLORS.warning,
+                              ][index],
+                            }}
+                          />
+                          <span className="text-muted-foreground">{team.name}</span>
+                        </div>
+                        <span className="font-semibold">{team.totalJobs} jobs</span>
+                      </div>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-[250px] sm:h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+                <Target className="h-12 w-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No workload data</p>
+                <p className="text-xs">No team assignments found for the selected period</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -239,43 +249,51 @@ function TeamsTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
-            {teamPerformance
-              .filter((t: TeamPerformance) => t.totalJobs > 0)
-              .sort((a: TeamPerformance, b: TeamPerformance) => b.completionRate - a.completionRate)
-              .slice(0, 8)
-              .map((team: TeamPerformance) => {
-                const totalJobs = team.totalJobs
-                const completed = team.completed
-                const completionRate = team.completionRate
+            {teamPerformance.filter((t: TeamPerformance) => t.totalJobs > 0).length > 0 ? (
+              teamPerformance
+                .filter((t: TeamPerformance) => t.totalJobs > 0)
+                .sort((a: TeamPerformance, b: TeamPerformance) => b.completionRate - a.completionRate)
+                .slice(0, 8)
+                .map((team: TeamPerformance) => {
+                  const totalJobs = team.totalJobs
+                  const completed = team.completed
+                  const completionRate = team.completionRate
 
-                return (
-                  <div key={team.id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs sm:text-sm font-medium">{team.name}</span>
-                      <span className="text-xs sm:text-sm text-muted-foreground">
-                        {completed}/{totalJobs}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-1.5 sm:h-2">
-                        <div
-                          className={`h-1.5 sm:h-2 rounded-full ${
-                            completionRate >= 80
-                              ? 'bg-green-500'
-                              : completionRate >= 60
-                              ? 'bg-yellow-500'
-                              : 'bg-orange-500'
-                          }`}
-                          style={{ width: `${completionRate}%` }}
-                        />
+                  return (
+                    <div key={team.id}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs sm:text-sm font-medium">{team.name}</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          {completed}/{totalJobs}
+                        </span>
                       </div>
-                      <span className="text-[10px] sm:text-xs font-semibold w-10 sm:w-12 text-right">
-                        {completionRate.toFixed(0)}%
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-1.5 sm:h-2">
+                          <div
+                            className={`h-1.5 sm:h-2 rounded-full ${
+                              completionRate >= 80
+                                ? 'bg-green-500'
+                                : completionRate >= 60
+                                ? 'bg-yellow-500'
+                                : 'bg-orange-500'
+                            }`}
+                            style={{ width: `${completionRate}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-semibold w-10 sm:w-12 text-right">
+                          {completionRate.toFixed(0)}%
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+            ) : (
+              <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground">
+                <Award className="h-12 w-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No completion data</p>
+                <p className="text-xs">No team jobs found for the selected period</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

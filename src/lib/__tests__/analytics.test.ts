@@ -27,23 +27,24 @@ describe('analytics', () => {
     booking_date: '2025-10-26',
     total_price: 1000,
     status: 'completed',
+    payment_status: 'paid', // Required for revenue calculations
     ...overrides,
   })
 
   describe('calculateRevenueMetrics', () => {
-    it('should calculate total revenue from completed bookings only', () => {
+    it('should calculate total revenue from paid bookings only', () => {
       // Arrange
       const bookings: BookingForAnalytics[] = [
-        createMockBooking({ total_price: 1000, status: 'completed' }),
-        createMockBooking({ total_price: 2000, status: 'completed' }),
-        createMockBooking({ total_price: 3000, status: 'pending' }), // Should be excluded
+        createMockBooking({ total_price: 1000, payment_status: 'paid' }),
+        createMockBooking({ total_price: 2000, payment_status: 'paid' }),
+        createMockBooking({ total_price: 3000, payment_status: 'unpaid' }), // Should be excluded
       ]
 
       // Act
       const metrics = calculateRevenueMetrics(bookings)
 
       // Assert
-      expect(metrics.total).toBe(3000) // Only completed bookings
+      expect(metrics.total).toBe(3000) // Only paid bookings
     })
 
     it('should return zero for empty bookings array', () => {
@@ -340,13 +341,13 @@ describe('analytics', () => {
       expect(chartData[2]).toMatchObject({ revenue: 300, bookings: 1 })
     })
 
-    it('should include only completed bookings', () => {
+    it('should include only paid bookings', () => {
       // Arrange
       const startDate = new Date('2025-10-01')
       const endDate = new Date('2025-10-01')
       const bookings: BookingForAnalytics[] = [
-        createMockBooking({ booking_date: '2025-10-01', total_price: 100, status: 'completed' }),
-        createMockBooking({ booking_date: '2025-10-01', total_price: 200, status: 'pending' }),
+        createMockBooking({ booking_date: '2025-10-01', total_price: 100, payment_status: 'paid' }),
+        createMockBooking({ booking_date: '2025-10-01', total_price: 200, payment_status: 'unpaid' }),
       ]
 
       // Act
@@ -434,6 +435,7 @@ describe('analytics', () => {
           booking_date: '2025-10-26',
           total_price: 600,
           status: 'completed',
+          payment_status: 'paid',
           service_type: 'cleaning',
         },
       ]
@@ -457,17 +459,17 @@ describe('analytics', () => {
       expect(revenue.training).toBe(0)
     })
 
-    it('should include only completed bookings', () => {
+    it('should include only paid bookings', () => {
       // Arrange
       const bookings: BookingForAnalytics[] = [
         createMockBooking({
           total_price: 500,
-          status: 'completed',
+          payment_status: 'paid',
           service_packages: { service_type: 'cleaning' },
         }),
         createMockBooking({
           total_price: 300,
-          status: 'pending',
+          payment_status: 'unpaid',
           service_packages: { service_type: 'cleaning' },
         }),
       ]
@@ -643,7 +645,7 @@ describe('analytics', () => {
 
       // Assert
       expect(breakdown.find((item) => item.name === 'Pending')?.color).toBe('#f59e0b')
-      expect(breakdown.find((item) => item.name === 'Completed')?.color).toBe('#10b981')
+      expect(breakdown.find((item) => item.name === 'Completed')?.color).toBe('#22c55e') // green-500
       expect(breakdown.find((item) => item.name === 'Cancelled')?.color).toBe('#ef4444')
     })
   })

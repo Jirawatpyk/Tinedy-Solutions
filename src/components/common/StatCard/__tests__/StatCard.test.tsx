@@ -95,13 +95,10 @@ describe('StatCard', () => {
           value="$10,000"
           icon={DollarSign}
           iconColor="text-green-600"
-          iconBgColor="bg-green-100"
         />
       )
 
-      // Assert
-      const iconDiv = container.querySelector('.bg-green-100')
-      expect(iconDiv).toBeInTheDocument()
+      // Assert - iconColor is applied to the icon SVG element
       const iconSvg = container.querySelector('.text-green-600')
       expect(iconSvg).toBeInTheDocument()
     })

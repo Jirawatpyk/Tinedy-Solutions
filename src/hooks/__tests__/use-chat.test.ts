@@ -171,12 +171,15 @@ describe('useChat', () => {
     it('should not send empty messages', async () => {
       const { result} = renderHook(() => useChat())
 
+      // Clear any previous calls from initialization
+      vi.mocked(supabase.from).mockClear()
+
       await act(async () => {
         await result.current.sendMessage('user-2', '   ')
       })
 
-      // Should not have called insert
-      expect(supabase.from).not.toHaveBeenCalledWith('messages')
+      // Should not have called supabase.from at all for empty message (early return)
+      expect(supabase.from).not.toHaveBeenCalled()
     })
 
     it('should send empty text with attachments', async () => {

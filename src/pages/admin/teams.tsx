@@ -582,7 +582,7 @@ export function AdminTeams() {
                 htmlFor="show-archived"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
-                Show archived teams
+                Show archived
               </label>
             </div>
           </AdminOnly>

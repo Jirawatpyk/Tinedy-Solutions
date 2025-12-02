@@ -183,69 +183,79 @@ function StaffTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="h-[250px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={workloadData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={workloadChart.showLabels}
-                  label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
-                    const percent = Number(props.percent || 0)
-                    return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
-                  } : false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  animationBegin={0}
-                  animationDuration={workloadChart.isReady ? 800 : 0}
-                  opacity={workloadChart.isReady ? 1 : 0}
-                >
-                  {workloadData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={[
-                        CHART_COLORS.primary,
-                        CHART_COLORS.secondary,
-                        CHART_COLORS.accent,
-                        CHART_COLORS.success,
-                        CHART_COLORS.warning,
-                        CHART_COLORS.danger,
-                      ][index % 6]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            </div>
-            <div className="mt-3 sm:mt-4 space-y-2">
-              {staffPerformance
-                .filter(s => s.totalJobs > 0)
-                .sort((a, b) => b.totalJobs - a.totalJobs)
-                .slice(0, 5)
-                .map((staff, index) => (
-                  <div key={staff.id} className="flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
-                        style={{
-                          backgroundColor: [
+            {workloadData.length > 0 ? (
+              <>
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={workloadData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={workloadChart.showLabels}
+                      label={workloadChart.showLabels ? (props: { name?: string; percent?: number }) => {
+                        const percent = Number(props.percent || 0)
+                        return percent > 0.05 ? `${props.name || ''}: ${(percent * 100).toFixed(0)}%` : ''
+                      } : false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={workloadChart.isReady ? 800 : 0}
+                      opacity={workloadChart.isReady ? 1 : 0}
+                    >
+                      {workloadData.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={[
                             CHART_COLORS.primary,
                             CHART_COLORS.secondary,
                             CHART_COLORS.accent,
                             CHART_COLORS.success,
                             CHART_COLORS.warning,
-                          ][index],
-                        }}
-                      />
-                      <span className="text-muted-foreground">{staff.name}</span>
-                    </div>
-                    <span className="font-semibold">{staff.totalJobs} jobs</span>
-                  </div>
-                ))}
-            </div>
+                            CHART_COLORS.danger,
+                          ][index % 6]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                </div>
+                <div className="mt-3 sm:mt-4 space-y-2">
+                  {staffPerformance
+                    .filter(s => s.totalJobs > 0)
+                    .sort((a, b) => b.totalJobs - a.totalJobs)
+                    .slice(0, 5)
+                    .map((staff, index) => (
+                      <div key={staff.id} className="flex items-center justify-between text-xs sm:text-sm">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
+                            style={{
+                              backgroundColor: [
+                                CHART_COLORS.primary,
+                                CHART_COLORS.secondary,
+                                CHART_COLORS.accent,
+                                CHART_COLORS.success,
+                                CHART_COLORS.warning,
+                              ][index],
+                            }}
+                          />
+                          <span className="text-muted-foreground">{staff.name}</span>
+                        </div>
+                        <span className="font-semibold">{staff.totalJobs} jobs</span>
+                      </div>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-[250px] sm:h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+                <Target className="h-12 w-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No workload data</p>
+                <p className="text-xs">No staff assignments found for the selected period</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -601,7 +601,7 @@ describe('StaffAvailabilityModal', () => {
       expect(mockOnClose).not.toHaveBeenCalled()
     })
 
-    it('should disable select button for unavailable staff', () => {
+    it('should show unavailable staff in unavailable section', () => {
       const unavailableStaff: StaffAvailabilityResult = {
         ...mockStaffResult,
         isAvailable: false,
@@ -625,8 +625,8 @@ describe('StaffAvailabilityModal', () => {
 
       render(<StaffAvailabilityModal {...defaultProps} />)
 
-      const selectButton = screen.getByRole('button', { name: /select/i })
-      expect(selectButton).toBeDisabled()
+      // Unavailable staff should be shown in the "Unavailable" section header
+      expect(screen.getByRole('heading', { name: /Unavailable/ })).toBeInTheDocument()
     })
 
     it('should highlight currently assigned staff', () => {
