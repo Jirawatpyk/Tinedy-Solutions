@@ -13,7 +13,7 @@ afterEach(() => {
 vi.mock('@radix-ui/react-select', () => {
   const React = require('react')
   return {
-    Root: ({ children, onValueChange, value, defaultValue }: any) =>
+    Root: ({ children, value, defaultValue }: any) =>
       React.createElement('div', {
         'data-testid': 'select-root',
         'data-value': value || defaultValue
