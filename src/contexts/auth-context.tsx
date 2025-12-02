@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user])
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -117,9 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     // Sanitize and validate inputs
     const sanitizedEmail = email.trim().toLowerCase()
 
@@ -156,9 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return profileData
     }
     return null
-  }
+  }, [fetchProfile])
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -184,9 +184,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user)
       await fetchProfile(data.user.id)
     }
-  }
+  }, [fetchProfile])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       // Attempt to sign out from Supabase (best effort)
       const { error } = await supabase.auth.signOut({ scope: 'local' })
@@ -206,16 +206,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Let Supabase client handle its own storage cleanup
       // This is more robust than manual localStorage removal
     }
-  }
+  }, [])
 
-  const value = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     profile,
     loading,
     signIn,
     signUp,
     signOut,
-  }
+  }), [user, profile, loading, signIn, signUp, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
