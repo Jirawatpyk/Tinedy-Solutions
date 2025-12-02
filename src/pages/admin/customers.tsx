@@ -14,7 +14,8 @@ import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
-import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw } from 'lucide-react'
+import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
@@ -387,10 +388,31 @@ export function AdminCustomers() {
       {/* Customers list */}
       {filteredCustomers.length === 0 ? (
         <Card>
-          <CardContent className="py-6 sm:py-8 px-4 sm:px-6">
-            <p className="text-center text-muted-foreground text-sm">
-              No customers found
-            </p>
+          <CardContent className="py-4 sm:py-6">
+            <EmptyState
+              icon={searchQuery || relationshipFilter !== 'all' ? Search : UserX}
+              title={searchQuery || relationshipFilter !== 'all' ? 'No customers found' : 'No customers yet'}
+              description={
+                searchQuery || relationshipFilter !== 'all'
+                  ? 'Try adjusting your search or filters'
+                  : 'Get started by adding your first customer'
+              }
+              action={
+                searchQuery || relationshipFilter !== 'all'
+                  ? {
+                      label: 'Clear filters',
+                      onClick: () => {
+                        setSearchQuery('')
+                        setRelationshipFilter('all')
+                      },
+                    }
+                  : {
+                      label: 'Add Customer',
+                      onClick: openCreateDialog,
+                      icon: Plus,
+                    }
+              }
+            />
           </CardContent>
         </Card>
       ) : (

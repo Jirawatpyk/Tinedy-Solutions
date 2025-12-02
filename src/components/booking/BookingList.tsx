@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User, Users, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
+import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
@@ -128,9 +129,11 @@ function BookingListComponent({
       {/* Booking Cards */}
       <div className="space-y-4">
         {combinedItems.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            No bookings found
-          </p>
+          <EmptyState
+            icon={Calendar}
+            title="No bookings found"
+            description="No bookings match the selected criteria"
+          />
         ) : (
           <>
             {/* Combined Recurring Groups and Standalone Bookings */}
