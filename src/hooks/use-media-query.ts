@@ -11,9 +11,16 @@
 import { useState, useEffect } from 'react'
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+  const [matches, setMatches] = useState(() => {
+    // SSR safety check
+    if (typeof window === 'undefined') return false
+    return window.matchMedia(query).matches
+  })
 
   useEffect(() => {
+    // SSR safety check
+    if (typeof window === 'undefined') return
+
     // Create media query list
     const media = window.matchMedia(query)
 
