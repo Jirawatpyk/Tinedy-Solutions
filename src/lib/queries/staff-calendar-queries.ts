@@ -113,13 +113,6 @@ function isServicePackageV1(
 }
 
 /**
- * Get date string in YYYY-MM-DD format
- */
-function formatDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-/**
  * Build filter condition for staff + teams bookings
  */
 function buildFilterCondition(userId: string, teamIds: string[]): string | null {
@@ -190,26 +183,13 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
 // ============================================================================
 
 /**
- * Fetch Staff Calendar Events (3 months ahead)
+ * Fetch Staff Calendar Events (all bookings)
  */
 export async function fetchStaffCalendarEvents(
   userId: string,
   teamIds: string[]
 ): Promise<CalendarEvent[]> {
   try {
-    // Calculate date range (1 month ago → 3 months ahead)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const oneMonthAgo = new Date()
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-
-    const threeMonthsLater = new Date()
-    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3)
-
-    const startDate = formatDate(oneMonthAgo)
-    const endDate = formatDate(threeMonthsLater)
-
     const filterCondition = buildFilterCondition(userId, teamIds)
 
     let query = supabase
@@ -235,8 +215,6 @@ export async function fetchStaffCalendarEvents(
         profiles!bookings_staff_id_fkey (full_name),
         teams (name)
       `)
-      .gte('booking_date', startDate)
-      .lte('booking_date', endDate)
       .is('deleted_at', null)
       .order('booking_date', { ascending: true })
 

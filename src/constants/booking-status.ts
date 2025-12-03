@@ -20,6 +20,7 @@ export const STATUS_DOTS = {
   in_progress: 'bg-purple-500',
   completed: 'bg-green-500',
   cancelled: 'bg-red-500',
+  no_show: 'bg-gray-500',
   unpaid: 'bg-orange-500',
   paid: 'bg-emerald-500',
 } as const

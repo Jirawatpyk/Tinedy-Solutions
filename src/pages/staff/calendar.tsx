@@ -22,6 +22,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import type { Booking } from '@/types/booking'
+import { STATUS_DOTS } from '@/constants/booking-status'
 import './calendar.css'
 
 const STATUS_COLORS = {
@@ -30,14 +31,6 @@ const STATUS_COLORS = {
   in_progress: 'bg-purple-100 text-purple-800 border-purple-300',
   completed: 'bg-green-100 text-green-800 border-green-300',
   cancelled: 'bg-red-100 text-red-800 border-red-300',
-}
-
-const STATUS_DOTS = {
-  pending: 'bg-yellow-500',
-  confirmed: 'bg-blue-500',
-  in_progress: 'bg-purple-500',
-  completed: 'bg-green-500',
-  cancelled: 'bg-red-500',
 }
 
 // Staff can only view - no status transitions from calendar dropdown
@@ -352,7 +345,7 @@ export default function StaffCalendar() {
 
                 {/* Legend */}
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
-                  <p className="text-[10px] sm:text-xs font-semibold mb-1.5 sm:mb-2">Status:</p>
+                  <p className="text-[10px] sm:text-xs font-semibold mb-1.5 sm:mb-2">Status Legend:</p>
                   <div className="flex flex-wrap gap-1.5 sm:gap-2 text-[9px] sm:text-[10px]">
                     <div className="flex items-center gap-0.5 sm:gap-1">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-yellow-500" />
@@ -373,6 +366,10 @@ export default function StaffCalendar() {
                     <div className="flex items-center gap-0.5 sm:gap-1">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500" />
                       <span>Cancelled</span>
+                    </div>
+                    <div className="flex items-center gap-0.5 sm:gap-1">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gray-500" />
+                      <span>No Show</span>
                     </div>
                   </div>
                 </div>
