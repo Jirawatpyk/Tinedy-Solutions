@@ -1,5 +1,5 @@
 import type { CustomerRecord, Booking } from '@/types'
-import { startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subMonths, subWeeks, subDays, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
+import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subMonths, subWeeks, subDays, subYears, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
 
 // Type alias for analytics - accepts either full Booking or partial data
 export type BookingForAnalytics = Booking | {
@@ -262,8 +262,10 @@ export const getDateRangePreset = (preset: string): { start: Date; end: Date } =
       return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) }
     case 'last3months':
       return { start: startOfMonth(subMonths(now, 3)), end: endOfMonth(subMonths(now, 1)) }
-    case 'allTime':
-      return { start: new Date('2020-01-01'), end: endOfDay(now) }
+    case 'thisYear':
+      return { start: startOfYear(now), end: endOfYear(now) }
+    case 'lastYear':
+      return { start: startOfYear(subYears(now, 1)), end: endOfYear(subYears(now, 1)) }
     default:
       return { start: startOfMonth(now), end: endOfMonth(now) }
   }

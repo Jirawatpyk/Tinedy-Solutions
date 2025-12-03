@@ -43,7 +43,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 
 // Icons
 import {
@@ -120,13 +120,12 @@ export default function AdminPackageDetail() {
   const [deleting, setDeleting] = useState(false)
   const [bookingsPage, setBookingsPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const BOOKINGS_PER_PAGE = 10
 
   // Reset to page 1 when status filter changes
   useEffect(() => {
     setBookingsPage(1)
-  }, [statusFilter, paymentStatusFilter])
+  }, [statusFilter])
 
   useEffect(() => {
     if (packageId) {
@@ -432,11 +431,9 @@ export default function AdminPackageDetail() {
     )
   }
 
-  // Filter bookings by booking status and payment status
+  // Filter bookings by booking status
   const filteredBookings = bookings.filter(b => {
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
-    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
-    return matchesStatus && matchesPayment
+    return statusFilter === 'all' || b.status === statusFilter
   })
 
   const paginatedBookings = filteredBookings.slice(
@@ -729,22 +726,19 @@ export default function AdminPackageDetail() {
         {/* Recent Bookings */}
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Recent Bookings
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-xs sm:text-sm">
-                    Recent bookings using this package
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs sm:text-sm">{filteredBookings.length} total</Badge>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Recent Bookings
+                </CardTitle>
+                <CardDescription className="mt-1 text-xs sm:text-sm">
+                  Recent bookings using this package
+                </CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
                     <SelectValue placeholder="Booking" />
                   </SelectTrigger>
                   <SelectContent>
@@ -754,17 +748,7 @@ export default function AdminPackageDetail() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                  <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
-                    <SelectValue placeholder="Payment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Payment</SelectItem>
-                    {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Badge variant="outline" className="text-xs sm:text-sm">{filteredBookings.length} total</Badge>
               </div>
             </div>
           </CardHeader>

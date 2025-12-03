@@ -23,7 +23,7 @@ export function getBookingStatusVariant(status: string): StatusBadgeVariant {
     pending: 'warning',
     cancelled: 'danger',
     in_progress: 'purple',
-    no_show: 'danger',
+    no_show: 'default',
   }
   return statusMap[status] || 'default'
 }

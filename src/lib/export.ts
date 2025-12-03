@@ -1,4 +1,4 @@
-import { format, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns'
+import { format, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, subYears } from 'date-fns'
 
 // Type definitions
 interface BookingForExport {
@@ -74,8 +74,10 @@ const getDateRangePreset = (preset: string): { start: Date; end: Date } => {
       return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) }
     case 'last3months':
       return { start: startOfMonth(subMonths(now, 3)), end: endOfMonth(subMonths(now, 1)) }
-    case 'allTime':
-      return { start: new Date('2020-01-01'), end: endOfDay(now) }
+    case 'thisYear':
+      return { start: startOfYear(now), end: endOfYear(now) }
+    case 'lastYear':
+      return { start: startOfYear(subYears(now, 1)), end: endOfYear(subYears(now, 1)) }
     default:
       return { start: startOfMonth(now), end: endOfMonth(now) }
   }

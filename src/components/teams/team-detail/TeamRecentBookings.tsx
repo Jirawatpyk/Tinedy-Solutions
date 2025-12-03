@@ -27,19 +27,31 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
 
   const loadRecentBookings = useCallback(async () => {
     try {
-      // Get total count
-      const { count } = await supabase
+      // Build count query with filters
+      let countQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .eq('team_id', teamId)
+        .is('deleted_at', null)
 
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        countQuery = countQuery.eq('status', statusFilter)
+      }
+
+      // Apply payment status filter
+      if (paymentStatusFilter !== 'all') {
+        countQuery = countQuery.eq('payment_status', paymentStatusFilter)
+      }
+
+      const { count } = await countQuery
       setTotalCount(count || 0)
 
-      // Get paginated data
+      // Get paginated data with filters
       const from = (currentPage - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
 
-      const { data, error } = await supabase
+      let dataQuery = supabase
         .from('bookings')
         .select(`
           id,
@@ -61,6 +73,18 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
         `)
         .eq('team_id', teamId)
         .is('deleted_at', null)
+
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        dataQuery = dataQuery.eq('status', statusFilter)
+      }
+
+      // Apply payment status filter
+      if (paymentStatusFilter !== 'all') {
+        dataQuery = dataQuery.eq('payment_status', paymentStatusFilter)
+      }
+
+      const { data, error } = await dataQuery
         .order('booking_date', { ascending: false })
         .range(from, to)
 
@@ -80,7 +104,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     } catch (error) {
       console.error('Error loading recent bookings:', error)
     }
-  }, [teamId, currentPage])
+  }, [teamId, currentPage, statusFilter, paymentStatusFilter])
 
   const modal = useBookingDetailModal({ refresh: loadRecentBookings })
 
@@ -93,12 +117,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     setCurrentPage(1)
   }, [statusFilter, paymentStatusFilter])
 
-  // Filter bookings by booking status and payment status (client-side)
-  const filteredBookings = bookings.filter(b => {
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
-    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
-    return matchesStatus && matchesPayment
-  })
+  // No need for client-side filtering anymore - it's done server-side
+  const filteredBookings = bookings
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; className?: string }> = {
@@ -126,7 +146,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-tinedy-blue" />
             <CardTitle className="text-base sm:text-lg">Recent Bookings</CardTitle>
-            <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredBookings.length}</Badge>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs">{totalCount}</Badge>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Select value={statusFilter} onValueChange={setStatusFilter}>

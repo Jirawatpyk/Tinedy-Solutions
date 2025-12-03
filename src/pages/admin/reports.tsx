@@ -420,7 +420,8 @@ export function AdminReports() {
               <SelectItem value="thisMonth">This Month</SelectItem>
               <SelectItem value="lastMonth">Last Month</SelectItem>
               <SelectItem value="last3months">Last 3 Months</SelectItem>
-              <SelectItem value="allTime">All Time</SelectItem>
+              <SelectItem value="thisYear">This Year</SelectItem>
+              <SelectItem value="lastYear">Last Year</SelectItem>
             </SelectContent>
           </Select>
           <DropdownMenu>
