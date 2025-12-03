@@ -11,10 +11,7 @@
  * - Shared cache ข้ามหน้าต่างๆ
  */
 
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { queryKeys } from '@/lib/query-keys'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { bookingQueryOptions, type BookingFilters } from '@/lib/queries/booking-queries'
 import type { Booking } from '@/types/booking'
 
@@ -25,8 +22,6 @@ import type { Booking } from '@/types/booking'
 interface UseBookingsOptions {
   /** แสดง bookings ที่ archived (soft-deleted) ด้วยหรือไม่ */
   showArchived?: boolean
-  /** Enable realtime subscription หรือไม่ */
-  enableRealtime?: boolean
 }
 
 interface UseBookingsReturn {
@@ -43,17 +38,17 @@ interface UseBookingsReturn {
 /**
  * Hook สำหรับโหลด Bookings ด้วย React Query
  *
+ * Realtime updates are now handled by BookingRealtimeProvider
+ *
  * @example
  * ```tsx
  * const { bookings, loading, error, refresh } = useBookings({
- *   showArchived: false,
- *   enableRealtime: true
+ *   showArchived: false
  * })
  * ```
  */
 export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn {
-  const { showArchived = false, enableRealtime = true } = options
-  const queryClient = useQueryClient()
+  const { showArchived = false } = options
 
   // Fetch bookings list
   const {
@@ -62,35 +57,6 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
     error,
     refetch,
   } = useQuery(bookingQueryOptions.list(showArchived))
-
-  // Realtime subscription - invalidate queries when bookings change
-  useEffect(() => {
-    if (!enableRealtime) return
-
-    console.log('[Bookings] Setting up realtime subscription')
-
-    const channel = supabase
-      .channel('bookings-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-        },
-        (payload) => {
-          console.log('[Bookings] Booking changed:', payload.eventType)
-          // Invalidate all booking queries to refetch
-          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      console.log('[Bookings] Cleanup subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient, enableRealtime])
 
   // Refresh function - refetch current query
   const refresh = async () => {
@@ -117,8 +83,6 @@ interface UseBookingsByDateRangeOptions {
   }
   /** Filters */
   filters?: BookingFilters
-  /** Enable realtime subscription หรือไม่ */
-  enableRealtime?: boolean
   /** Enable query หรือไม่ (ใช้สำหรับ disable query ถ้า date range ยังไม่พร้อม) */
   enabled?: boolean
 }
@@ -140,6 +104,7 @@ interface UseBookingsByDateRangeReturn {
  * Hook สำหรับโหลด Bookings by Date Range
  *
  * ใช้สำหรับ Calendar (month view) และ Weekly Schedule (week view)
+ * Realtime updates are now handled by BookingRealtimeProvider
  *
  * @example
  * ```tsx
@@ -153,8 +118,7 @@ interface UseBookingsByDateRangeReturn {
  *     viewMode: 'staff',
  *     staffId: selectedStaff !== 'all' ? selectedStaff : undefined,
  *     status: selectedStatus !== 'all' ? selectedStatus : undefined
- *   },
- *   enableRealtime: true
+ *   }
  * })
  * ```
  *
@@ -167,7 +131,6 @@ interface UseBookingsByDateRangeReturn {
  *     end: formatLocalDate(weekDates[6])
  *   },
  *   filters: { viewMode, staffId, teamId },
- *   enableRealtime: true,
  *   enabled: weekDates.length === 7  // Only fetch when weekDates is ready
  * })
  * ```
@@ -178,10 +141,8 @@ export function useBookingsByDateRange(
   const {
     dateRange,
     filters,
-    enableRealtime = true,
     enabled = true,
   } = options
-  const queryClient = useQueryClient()
 
   // Fetch bookings
   const {
@@ -195,35 +156,6 @@ export function useBookingsByDateRange(
     enabled: enabled && !!dateRange.start && !!dateRange.end, // Only fetch if date range is valid
     placeholderData: keepPreviousData, // Keep showing previous data while refetching (prevents flash)
   })
-
-  // Realtime subscription - invalidate when bookings change
-  useEffect(() => {
-    if (!enableRealtime) return
-
-    console.log('[Bookings DateRange] Setting up realtime subscription')
-
-    const channel = supabase
-      .channel('bookings-daterange-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-        },
-        (payload) => {
-          console.log('[Bookings DateRange] Booking changed:', payload.eventType)
-          // Invalidate bookings queries
-          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      console.log('[Bookings DateRange] Cleanup subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient, enableRealtime])
 
   // Refresh function
   const refetch = async () => {
@@ -248,8 +180,6 @@ interface UseBookingsByCustomerOptions {
   customerId: string
   /** แสดง bookings ที่ archived (soft-deleted) ด้วยหรือไม่ */
   showArchived?: boolean
-  /** Enable realtime subscription หรือไม่ */
-  enableRealtime?: boolean
   /** Enable query หรือไม่ */
   enabled?: boolean
 }
@@ -271,13 +201,13 @@ interface UseBookingsByCustomerReturn {
  * Hook สำหรับโหลด Bookings ของ Customer คนใดคนหนึ่ง
  *
  * ใช้สำหรับ Customer Detail page - ดึงประวัติ bookings ทั้งหมดของ customer
+ * Realtime updates are now handled by BookingRealtimeProvider
  *
  * @example
  * ```tsx
  * const { bookings, isLoading, refetch } = useBookingsByCustomer({
  *   customerId: '123',
- *   showArchived: false,
- *   enableRealtime: true
+ *   showArchived: false
  * })
  * ```
  */
@@ -287,10 +217,8 @@ export function useBookingsByCustomer(
   const {
     customerId,
     showArchived = false,
-    enableRealtime = true,
     enabled = true,
   } = options
-  const queryClient = useQueryClient()
 
   // Fetch customer bookings
   const {
@@ -303,37 +231,6 @@ export function useBookingsByCustomer(
     ...bookingQueryOptions.byCustomer(customerId, showArchived),
     enabled: enabled && !!customerId, // Only fetch if customerId is valid
   })
-
-  // Realtime subscription - invalidate when bookings change
-  useEffect(() => {
-    if (!enableRealtime) return
-
-    console.log('[Bookings Customer] Setting up realtime subscription')
-
-    const channel = supabase
-      .channel('bookings-customer-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-        },
-        (payload) => {
-          console.log('[Bookings Customer] Booking changed:', payload.eventType)
-          // Invalidate customer bookings query
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.bookings.byCustomer(customerId, showArchived),
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      console.log('[Bookings Customer] Cleanup subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient, enableRealtime, customerId, showArchived])
 
   // Refresh function
   const refetch = async () => {

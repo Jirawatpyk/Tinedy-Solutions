@@ -128,7 +128,6 @@ export function AdminWeeklySchedule() {
       staffId: selectedStaff !== 'all' ? selectedStaff : undefined,
       teamId: selectedTeam !== 'all' ? selectedTeam : undefined,
     },
-    enableRealtime: true,
     enabled: weekDates.length === 7, // Only fetch when weekDates is ready
   })
 

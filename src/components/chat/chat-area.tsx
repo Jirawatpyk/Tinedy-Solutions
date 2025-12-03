@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MessageCircle, Loader2, ArrowLeft } from 'lucide-react'
 import { MessageBubble } from './message-bubble'
-import { MessageInput } from './message-input'
+import { MessageInput, type MessageInputHandle } from './message-input'
 import { ImageLightbox } from './image-lightbox'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { formatRole } from '@/lib/role-utils'
@@ -36,8 +36,8 @@ export function ChatArea({
   hasMoreMessages = false,
 }: ChatAreaProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const messageInputRef = useRef<MessageInputHandle>(null)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
-  const [inputKey, setInputKey] = useState(0)
 
   // Handle scroll - with flex-col-reverse, scrollTop is negative when scrolling up
   const handleScroll = useCallback(() => {
@@ -53,9 +53,11 @@ export function ChatArea({
     }
   }, [hasMoreMessages, isLoadingMore, onLoadMore])
 
-  // Re-render input when user changes to trigger auto focus
+  // Focus input when selected user changes
   useEffect(() => {
-    setInputKey((prev) => prev + 1)
+    if (selectedUser) {
+      messageInputRef.current?.focus()
+    }
   }, [selectedUser])
 
   if (!selectedUser) {
@@ -166,7 +168,7 @@ export function ChatArea({
       </CardContent>
 
       {/* Message Input */}
-      <MessageInput key={inputKey} onSendMessage={onSendMessage} disabled={isSending} />
+      <MessageInput ref={messageInputRef} onSendMessage={onSendMessage} disabled={isSending} />
 
       {/* Image Lightbox */}
       <ImageLightbox

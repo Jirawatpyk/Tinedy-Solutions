@@ -173,7 +173,6 @@ export function AdminCustomerDetail() {
   } = useBookingsByCustomer({
     customerId: id || '',
     showArchived: false,
-    enableRealtime: true,
     enabled: !!id,
   })
 

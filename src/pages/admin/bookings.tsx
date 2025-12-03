@@ -52,8 +52,7 @@ export function AdminBookings() {
 
   // Use React Query hook for bookings data
   const { bookings, loading, refresh, error: bookingsError } = useBookings({
-    showArchived,
-    enableRealtime: true
+    showArchived
   })
 
   // ใช้ custom hook สำหรับโหลด packages ทั้ง V1 และ V2

@@ -115,7 +115,7 @@ describe('useBookings', () => {
       mockFetchBookings.mockReturnValue(new Promise(() => {}))
 
       // Act
-      const { result } = renderHook(() => useBookings({ enableRealtime: false }), {
+      const { result } = renderHook(() => useBookings(), {
         wrapper: createWrapper(),
       })
 
@@ -132,7 +132,7 @@ describe('useBookings', () => {
       mockFetchBookings.mockResolvedValue(mockBookings)
 
       // Act
-      const { result } = renderHook(() => useBookings({ enableRealtime: false }), {
+      const { result } = renderHook(() => useBookings(), {
         wrapper: createWrapper(),
       })
 
@@ -152,7 +152,7 @@ describe('useBookings', () => {
       mockFetchBookings.mockResolvedValue([])
 
       // Act
-      const { result } = renderHook(() => useBookings({ enableRealtime: false }), {
+      const { result } = renderHook(() => useBookings(), {
         wrapper: createWrapper(),
       })
 
@@ -172,7 +172,7 @@ describe('useBookings', () => {
       mockFetchBookings.mockRejectedValue(new Error('Failed to fetch bookings'))
 
       // Act
-      const { result } = renderHook(() => useBookings({ enableRealtime: false }), {
+      const { result } = renderHook(() => useBookings(), {
         wrapper: createWrapper(),
       })
 
@@ -186,33 +186,7 @@ describe('useBookings', () => {
     })
   })
 
-  describe('Realtime Subscription', () => {
-    it('should set up realtime subscription when enabled', () => {
-      // Arrange
-      mockFetchBookings.mockResolvedValue(mockBookings)
-
-      // Act
-      renderHook(() => useBookings({ enableRealtime: true }), {
-        wrapper: createWrapper(),
-      })
-
-      // Assert
-      expect(supabase.channel).toHaveBeenCalledWith('bookings-realtime')
-    })
-
-    it('should not set up realtime subscription when disabled', () => {
-      // Arrange
-      mockFetchBookings.mockResolvedValue(mockBookings)
-
-      // Act
-      renderHook(() => useBookings({ enableRealtime: false }), {
-        wrapper: createWrapper(),
-      })
-
-      // Assert
-      expect(supabase.channel).not.toHaveBeenCalled()
-    })
-  })
+  // NOTE: Realtime subscription tests removed - now handled by BookingRealtimeProvider
 
   describe('Refresh', () => {
     it('should have refresh function', async () => {
@@ -220,7 +194,7 @@ describe('useBookings', () => {
       mockFetchBookings.mockResolvedValue(mockBookings)
 
       // Act
-      const { result } = renderHook(() => useBookings({ enableRealtime: false }), {
+      const { result } = renderHook(() => useBookings(), {
         wrapper: createWrapper(),
       })
 
@@ -253,7 +227,6 @@ describe('useBookingsByDateRange', () => {
         () =>
           useBookingsByDateRange({
             dateRange: { start: '2025-12-01', end: '2025-12-31' },
-            enableRealtime: false,
             enabled: false,
           }),
         { wrapper: createWrapper() }
@@ -273,7 +246,6 @@ describe('useBookingsByDateRange', () => {
         () =>
           useBookingsByDateRange({
             dateRange: { start: '2025-12-01', end: '2025-12-31' },
-            enableRealtime: false,
           }),
         { wrapper: createWrapper() }
       )
@@ -288,25 +260,7 @@ describe('useBookingsByDateRange', () => {
     })
   })
 
-  describe('Realtime Subscription', () => {
-    it('should set up realtime subscription for date range', () => {
-      // Arrange
-      mockFetchBookingsByDateRange.mockResolvedValue(mockBookings)
-
-      // Act
-      renderHook(
-        () =>
-          useBookingsByDateRange({
-            dateRange: { start: '2025-12-01', end: '2025-12-31' },
-            enableRealtime: true,
-          }),
-        { wrapper: createWrapper() }
-      )
-
-      // Assert
-      expect(supabase.channel).toHaveBeenCalledWith('bookings-daterange-realtime')
-    })
-  })
+  // NOTE: Realtime subscription tests removed - now handled by BookingRealtimeProvider
 })
 
 describe('useBookingsByCustomer', () => {
@@ -328,7 +282,6 @@ describe('useBookingsByCustomer', () => {
         () =>
           useBookingsByCustomer({
             customerId: 'cust-1',
-            enableRealtime: false,
             enabled: false,
           }),
         { wrapper: createWrapper() }
@@ -349,7 +302,6 @@ describe('useBookingsByCustomer', () => {
         () =>
           useBookingsByCustomer({
             customerId: 'cust-1',
-            enableRealtime: false,
           }),
         { wrapper: createWrapper() }
       )
@@ -375,7 +327,6 @@ describe('useBookingsByCustomer', () => {
         () =>
           useBookingsByCustomer({
             customerId: 'cust-1',
-            enableRealtime: true,
           }),
         { wrapper: createWrapper() }
       )
@@ -395,7 +346,6 @@ describe('useBookingsByCustomer', () => {
         () =>
           useBookingsByCustomer({
             customerId: 'cust-1',
-            enableRealtime: false,
           }),
         { wrapper: createWrapper() }
       )
@@ -416,7 +366,6 @@ describe('useBookingsByCustomer', () => {
           useBookingsByCustomer({
             customerId: 'cust-1',
             showArchived: true,
-            enableRealtime: false,
           }),
         { wrapper: createWrapper() }
       )

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { getErrorMessage } from '@/lib/error-utils'
+import { logger } from '@/lib/logger'
 
 interface BookingData {
   id: string
@@ -198,7 +199,7 @@ export function useStaffCalendar() {
 
       setEvents(calendarEvents)
     } catch (err) {
-      console.error('Error loading calendar events:', err)
+      logger.error('Error loading calendar events', { error: err }, { context: 'StaffCalendar' })
       setError(getErrorMessage(err))
     } finally {
       setLoading(false)
@@ -210,26 +211,8 @@ export function useStaffCalendar() {
 
     loadEvents()
 
-    // Real-time subscription for booking changes
-    const channel = supabase
-      .channel('staff-calendar')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `staff_id=eq.${user.id}`,
-        },
-        () => {
-          loadEvents()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    // Real-time subscription is now handled by BookingRealtimeProvider
+    // This hook no longer needs its own subscription to avoid duplicates
   }, [user, loadEvents])
 
   return {

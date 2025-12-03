@@ -12,12 +12,9 @@
  * Pattern: Same as useStaffDashboard (Phase 2 migration)
  */
 
-import { useEffect, useMemo } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
-import { supabase } from '@/lib/supabase'
-import { queryKeys } from '@/lib/query-keys'
-import { logger } from '@/lib/logger'
 import {
   staffCalendarQueryOptions,
   type CalendarEvent,
@@ -72,7 +69,6 @@ export interface UseStaffCalendarReturn {
  */
 export function useStaffCalendar(): UseStaffCalendarReturn {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
 
   const userId = user?.id || ''
 
@@ -99,35 +95,9 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
   // Combined error state
   const error = teamMembershipQuery.error || eventsQuery.error || null
 
-  // Real-time subscriptions
-  useEffect(() => {
-    if (!userId || !teamsLoaded) return
-
-    logger.debug('Setting up calendar real-time subscription', { userId, teamIds }, { context: 'StaffCalendar' })
-
-    const channel = supabase
-      .channel('staff-calendar')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'bookings',
-        },
-        (payload) => {
-          logger.debug('Calendar real-time update received', { event: payload.eventType }, { context: 'StaffCalendar' })
-
-          // Invalidate calendar events query to refetch
-          queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.events(userId, teamIds) })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      logger.debug('Cleaning up calendar real-time subscription', {}, { context: 'StaffCalendar' })
-      supabase.removeChannel(channel)
-    }
-  }, [userId, teamsLoaded, teamIds, queryClient])
+  // Real-time subscriptions are now handled by BookingRealtimeProvider
+  // This hook no longer needs its own subscription to avoid duplicates
+  // BookingRealtimeProvider invalidates queryKeys.staffCalendar.all which covers all calendar queries
 
   // Refetch all queries
   const refresh = () => {

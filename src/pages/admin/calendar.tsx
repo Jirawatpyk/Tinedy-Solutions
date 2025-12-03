@@ -220,7 +220,6 @@ export function AdminCalendar() {
       end: format(monthEnd, 'yyyy-MM-dd'),
     },
     filters: bookingFilters,
-    enableRealtime: true,
   })
 
   // Service packages โหลดผ่าน useServicePackages hook แล้ว

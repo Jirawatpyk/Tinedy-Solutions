@@ -293,6 +293,7 @@ export function useChat() {
         `)
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
+        .limit(500) // Limit to recent 500 messages for conversation list performance
 
       if (messagesError) {
         logger.error('Error fetching messages:', messagesError, { context: 'Chat' })

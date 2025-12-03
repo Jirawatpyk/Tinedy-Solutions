@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, useRef, useEffect } from 'react'
+import { useState, type KeyboardEvent, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Send, Paperclip, X } from 'lucide-react'
@@ -8,11 +8,23 @@ interface MessageInputProps {
   disabled?: boolean
 }
 
-export function MessageInput({ onSendMessage, disabled = false }: MessageInputProps) {
+export interface MessageInputHandle {
+  focus: () => void
+}
+
+export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
+  ({ onSendMessage, disabled = false }, ref) => {
   const [message, setMessage] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Expose focus method to parent component
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus()
+    },
+  }))
 
   const handleSend = () => {
     if ((message.trim() || selectedFile) && !disabled) {
@@ -78,6 +90,7 @@ export function MessageInput({ onSendMessage, disabled = false }: MessageInputPr
           className="hidden"
           onChange={handleFileSelect}
           disabled={disabled}
+          aria-label="Attach file"
         />
 
         {/* Attach button */}
@@ -118,4 +131,6 @@ export function MessageInput({ onSendMessage, disabled = false }: MessageInputPr
       </p>
     </div>
   )
-}
+})
+
+MessageInput.displayName = 'MessageInput'
