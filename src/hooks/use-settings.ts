@@ -198,18 +198,17 @@ export function useSettings() {
       if (settings.business_logo_url) {
         const oldPath = settings.business_logo_url.split('/').pop()
         if (oldPath) {
-          await supabase.storage.from('business').remove([`logos/${oldPath}`])
+          await supabase.storage.from('business-logos').remove([oldPath])
         }
       }
 
       // Upload new logo
       const fileExt = file.name.split('.').pop()
-      const fileName = `logo-${Date.now()}.${fileExt}`
-      const filePath = `logos/${fileName}`
+      const fileName = `business-logo-${Date.now()}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
-        .from('business')
-        .upload(filePath, file, {
+        .from('business-logos')
+        .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false,
         })
@@ -217,7 +216,7 @@ export function useSettings() {
       if (uploadError) throw uploadError
 
       // Get public URL
-      const { data } = supabase.storage.from('business').getPublicUrl(filePath)
+      const { data } = supabase.storage.from('business-logos').getPublicUrl(fileName)
 
       // Update settings with new logo URL
       await updateGeneralSettings({ business_logo_url: data.publicUrl })

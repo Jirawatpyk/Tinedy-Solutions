@@ -35,4 +35,16 @@ export const STATUS_COLORS_TIMELINE = {
   paid: 'bg-emerald-500 hover:bg-emerald-600',
 } as const
 
+// Human-readable labels for booking statuses
+export const STATUS_LABELS = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  no_show: 'No Show',
+  unpaid: 'Unpaid',
+  paid: 'Paid',
+} as const
+
 export type BookingStatus = keyof typeof STATUS_COLORS

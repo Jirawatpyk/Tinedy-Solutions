@@ -136,19 +136,20 @@ export const ADMIN_ROUTES = {
     breadcrumbs: ['Dashboard', 'Calendar'],
     showInNav: true,
   },
-  WEEKLY_SCHEDULE: {
-    key: 'admin-weekly-schedule',
-    path: '/admin/weekly-schedule',
-    title: 'Weekly Schedule',
-    description: 'ตารางงานรายสัปดาห์',
-    icon: Calendar,
-    allowedRoles: ['admin', 'manager'],
-    permissions: {
-      view: 'bookings',
-    },
-    breadcrumbs: ['Dashboard', 'Weekly Schedule'],
-    showInNav: true,
-  },
+  // DISABLED: Weekly Schedule - ใช้ Calendar แทน
+  // WEEKLY_SCHEDULE: {
+  //   key: 'admin-weekly-schedule',
+  //   path: '/admin/weekly-schedule',
+  //   title: 'Weekly Schedule',
+  //   description: 'ตารางงานรายสัปดาห์',
+  //   icon: Calendar,
+  //   allowedRoles: ['admin', 'manager'],
+  //   permissions: {
+  //     view: 'bookings',
+  //   },
+  //   breadcrumbs: ['Dashboard', 'Weekly Schedule'],
+  //   showInNav: false,
+  // },
   CUSTOMERS: {
     key: 'admin-customers',
     path: '/admin/customers',

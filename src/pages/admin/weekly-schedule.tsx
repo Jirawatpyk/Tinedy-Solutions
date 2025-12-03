@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTeamsList } from '@/hooks/useTeams'
 import { useBookingsByDateRange } from '@/hooks/useBookings'
+import { useSwipe } from '@/hooks/useSwipe'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { ChevronLeft, ChevronRight, Download, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Calendar, List, LayoutGrid } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -24,6 +25,7 @@ import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
+import { MobileBookingList } from '@/components/schedule/MobileBookingList'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import type { BookingFormState } from '@/hooks/useBookingForm'
@@ -57,6 +59,16 @@ export function AdminWeeklySchedule() {
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+
+  // Mobile-specific state
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('list')
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => {
+    // Default to today's day index (0-6, Monday-Sunday)
+    const today = new Date()
+    const dayOfWeek = today.getDay()
+    // Convert Sunday (0) to 6, and shift other days by -1 (Monday = 0)
+    return dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  })
 
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -104,6 +116,34 @@ export function AdminWeeklySchedule() {
   const goToCurrentWeek = () => {
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
   }
+
+  // Mobile day navigation
+  const goToNextDay = useCallback(() => {
+    if (selectedDayIndex < 6) {
+      setSelectedDayIndex(prev => prev + 1)
+    } else {
+      // Go to next week, start from Monday
+      goToNextWeek()
+      setSelectedDayIndex(0)
+    }
+  }, [selectedDayIndex])
+
+  const goToPreviousDay = useCallback(() => {
+    if (selectedDayIndex > 0) {
+      setSelectedDayIndex(prev => prev - 1)
+    } else {
+      // Go to previous week, start from Sunday
+      goToPreviousWeek()
+      setSelectedDayIndex(6)
+    }
+  }, [selectedDayIndex])
+
+  // Swipe handlers for mobile
+  const swipeHandlers = useSwipe({
+    threshold: 50,
+    onSwipeLeft: goToNextDay,
+    onSwipeRight: goToPreviousDay,
+  })
 
   // Helper function สำหรับ format date
   const formatLocalDate = (date: Date) => {
@@ -859,6 +899,26 @@ export function AdminWeeklySchedule() {
               </span>
             </CardTitle>
             <div className="flex items-center gap-2">
+              {/* Mobile View Toggle */}
+              <div className="flex sm:hidden border rounded-md">
+                <Button
+                  variant={mobileViewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setMobileViewMode('list')}
+                  className="h-8 px-2 rounded-r-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={mobileViewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setMobileViewMode('grid')}
+                  className="h-8 px-2 rounded-l-none border-l"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              </div>
+
               <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="h-8">
                 <ChevronLeft className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Previous</span>
@@ -874,7 +934,21 @@ export function AdminWeeklySchedule() {
           </div>
         </CardHeader>
         <CardContent className="px-2 sm:px-4 lg:px-6">
-          <div className="overflow-x-auto -mx-2 sm:mx-0 pb-2">
+          {/* Mobile List View */}
+          {mobileViewMode === 'list' && (
+            <div className="block sm:hidden" {...swipeHandlers}>
+              <MobileBookingList
+                bookings={bookings}
+                weekDates={weekDates}
+                selectedDayIndex={selectedDayIndex}
+                onDayChange={setSelectedDayIndex}
+                onBookingClick={handleBookingClick}
+              />
+            </div>
+          )}
+
+          {/* Desktop Grid View (always visible on sm+) / Mobile Grid View (when selected) */}
+          <div className={`${mobileViewMode === 'grid' ? 'block' : 'hidden'} sm:block overflow-x-auto -mx-2 sm:mx-0 pb-2`}>
             <div className="flex gap-0.5 sm:gap-1 min-w-[700px]">
               {/* Time column */}
               <div className="flex flex-col w-12 sm:w-16 lg:w-20 flex-shrink-0">
@@ -917,8 +991,8 @@ export function AdminWeeklySchedule() {
             </div>
           </div>
 
-          {/* Legend */}
-          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t">
+          {/* Legend - hidden on mobile list view, shown on desktop/mobile grid */}
+          <div className={`${mobileViewMode === 'list' ? 'hidden sm:block' : 'block'} mt-4 sm:mt-6 pt-3 sm:pt-4 border-t`}>
             <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Status Legend</h4>
             <div className="flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs">
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -942,6 +1016,13 @@ export function AdminWeeklySchedule() {
                 <span>Cancelled</span>
               </div>
             </div>
+          </div>
+
+          {/* Swipe hint for mobile list view */}
+          <div className={`${mobileViewMode === 'list' ? 'block sm:hidden' : 'hidden'} mt-4 text-center`}>
+            <p className="text-[10px] text-muted-foreground">
+              ← Swipe เพื่อเปลี่ยนวัน →
+            </p>
           </div>
         </CardContent>
       </Card>

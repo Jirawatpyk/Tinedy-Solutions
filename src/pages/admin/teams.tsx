@@ -434,6 +434,11 @@ export function AdminTeams() {
 
     setIsRemoving(true)
     try {
+      // Check if member being removed is the team lead
+      const team = teams.find(t => t.id === pendingRemove.teamId)
+      const isTeamLead = team?.team_lead_id === pendingRemove.staffId
+
+      // Delete from team_members
       const { error } = await supabase
         .from('team_members')
         .delete()
@@ -442,9 +447,21 @@ export function AdminTeams() {
 
       if (error) throw error
 
+      // If removing team lead, clear team_lead_id
+      if (isTeamLead) {
+        const { error: updateError } = await supabase
+          .from('teams')
+          .update({ team_lead_id: null })
+          .eq('id', pendingRemove.teamId)
+
+        if (updateError) throw updateError
+      }
+
       toast({
         title: 'Success',
-        description: 'Member removed successfully',
+        description: isTeamLead
+          ? 'Team lead removed. Please assign a new team lead.'
+          : 'Member removed successfully',
       })
 
       setShowRemoveConfirm(false)

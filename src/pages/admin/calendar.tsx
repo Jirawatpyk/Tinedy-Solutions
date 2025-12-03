@@ -13,6 +13,8 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { CalendarCell } from '@/components/calendar/CalendarCell'
 import { BookingListSidebar } from '@/components/calendar/BookingListSidebar'
 import { CalendarFilters } from '@/components/calendar/filters/CalendarFilters'
+import { MobileCalendar } from '@/components/calendar/MobileCalendar'
+import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import { useCalendarFilters } from '@/hooks/useCalendarFilters'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
@@ -800,128 +802,152 @@ export function AdminCalendar() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-sm text-muted-foreground">View and manage your bookings</p>
-        <Button onClick={goToToday} variant="outline">
-          <CalendarIcon className="h-4 w-4 mr-2" />
-          Today
-        </Button>
+      {/* Mobile Calendar View - แสดงเฉพาะ mobile */}
+      <div className="block md:hidden h-[calc(100vh-120px)]">
+        <CalendarErrorBoundary>
+          <MobileCalendar
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            bookings={bookings}
+            conflictMap={conflictMap}
+            bookingsByDate={bookingsByDate}
+            onDateSelect={handleDateClick}
+            onMonthChange={setCurrentDate}
+            onBookingClick={openBookingDetail}
+            onCreateBooking={handleCreateBooking}
+            onStatusChange={handleInlineStatusChange}
+            getAvailableStatuses={getAvailableStatuses}
+          />
+        </CalendarErrorBoundary>
       </div>
 
-      {/* New Filter System (Sprint 2 - UX Improvements) */}
-      <CalendarFilters
-        filterControls={filterControls}
-        onPresetDateChange={handlePresetDateChange}
-      />
+      {/* Desktop View - ซ่อนบน mobile */}
+      <div className="hidden md:block space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
+          <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          <Button onClick={goToToday} variant="outline">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Today
+          </Button>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="font-display text-2xl">
-                  {format(currentDate, 'MMMM yyyy')}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToPreviousMonth}
-                    className="h-8 w-8"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToNextMonth}
-                    className="h-8 w-8"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {/* Day headers */}
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div
-                  key={day}
-                  className="text-center text-xs font-semibold text-muted-foreground py-2"
-                >
-                  {day}
-                </div>
-              ))}
-
-              {/* Calendar days - OPTIMIZED: Use memoized CalendarCell component */}
-              {calendarDays.map((day, index) => {
-                const dayBookings = getBookingsForDate(day)
-                const dateStr = format(day, 'yyyy-MM-dd')
-
-                // Get pre-calculated conflict IDs for this date (OPTIMIZED)
-                const dayConflictIds = conflictIdsByDate.get(dateStr) || new Set<string>()
-
-                return (
-                  <CalendarCell
-                    key={index}
-                    day={day}
-                    currentDate={currentDate}
-                    selectedDate={selectedDate}
-                    dayBookings={dayBookings}
-                    conflictingBookingIds={dayConflictIds}
-                    onDateClick={handleDateClick}
-                    onCreateBooking={handleCreateBooking}
-                  />
-                )
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-6 pt-4 border-t">
-              <p className="text-sm font-semibold mb-2">Status Legend:</p>
-              <div className="flex flex-wrap gap-3 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span>Pending</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span>Confirmed</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-purple-500" />
-                  <span>In Progress</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span>Completed</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span>Cancelled</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-gray-500" />
-                  <span>No Show</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Booking List Sidebar */}
-        <BookingListSidebar
-          selectedDate={selectedDate}
-          selectedDateRange={selectedDateRange}
-          bookings={selectedDateBookings}
-          conflictMap={conflictMap}
-          onBookingClick={openBookingDetail}
-          onStatusChange={handleInlineStatusChange}
-          getAvailableStatuses={getAvailableStatuses}
+        {/* New Filter System (Sprint 2 - UX Improvements) */}
+        <CalendarFilters
+          filterControls={filterControls}
+          onPresetDateChange={handlePresetDateChange}
         />
+
+        <CalendarErrorBoundary>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Calendar */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display text-2xl">
+                    {format(currentDate, 'MMMM yyyy')}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={goToPreviousMonth}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={goToNextMonth}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {/* Day headers */}
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <div
+                    key={day}
+                    className="text-center text-xs font-semibold text-muted-foreground py-2"
+                  >
+                    {day}
+                  </div>
+                ))}
+
+                {/* Calendar days - OPTIMIZED: Use memoized CalendarCell component */}
+                {calendarDays.map((day, index) => {
+                  const dayBookings = getBookingsForDate(day)
+                  const dateStr = format(day, 'yyyy-MM-dd')
+
+                  // Get pre-calculated conflict IDs for this date (OPTIMIZED)
+                  const dayConflictIds = conflictIdsByDate.get(dateStr) || new Set<string>()
+
+                  return (
+                    <CalendarCell
+                      key={index}
+                      day={day}
+                      currentDate={currentDate}
+                      selectedDate={selectedDate}
+                      dayBookings={dayBookings}
+                      conflictingBookingIds={dayConflictIds}
+                      onDateClick={handleDateClick}
+                      onCreateBooking={handleCreateBooking}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-6 pt-4 border-t">
+                <p className="text-sm font-semibold mb-2">Status Legend:</p>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <span>Pending</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span>Confirmed</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-purple-500" />
+                    <span>In Progress</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span>Completed</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span>Cancelled</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                    <span>No Show</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Booking List Sidebar */}
+          <BookingListSidebar
+            selectedDate={selectedDate}
+            selectedDateRange={selectedDateRange}
+            bookings={selectedDateBookings}
+            conflictMap={conflictMap}
+            onBookingClick={openBookingDetail}
+            onStatusChange={handleInlineStatusChange}
+            getAvailableStatuses={getAvailableStatuses}
+          />
+          </div>
+        </CalendarErrorBoundary>
       </div>
 
       {/* Booking Detail Modal */}

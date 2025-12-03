@@ -34,6 +34,15 @@ const BookingBarComponent: React.FC<BookingBarProps> = ({
   const widthPercent = (100 / totalColumns) - gap
   const leftPercent = (column / totalColumns) * 100 + (gap / 2)
 
+  // Parse height to determine if we should show minimal content
+  const heightNum = parseFloat(height)
+  const isCompact = heightNum < 8 // Less than 8% height = very short booking
+  const isMedium = heightNum >= 8 && heightNum < 15 // Medium height
+  // const isLarge = heightNum >= 15 // Large enough for all content
+
+  // Check if we have many overlapping columns (narrow width)
+  const isNarrow = totalColumns >= 3
+
   return (
     <div
       className={`absolute rounded-md ${bgColor} text-white shadow-sm transition-all duration-300 ease-in-out cursor-pointer overflow-hidden group animate-in fade-in slide-in-from-right-4`}
@@ -46,16 +55,25 @@ const BookingBarComponent: React.FC<BookingBarProps> = ({
       onClick={() => onClick(booking)}
       title={`${booking.service_packages?.name} - ${booking.customers?.full_name || 'No Customer'}\n${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`}
     >
-      <div className="px-2 py-1 h-full flex flex-col items-center justify-center text-xs">
-        <div className="font-semibold truncate text-center w-full">
+      <div className="px-1 sm:px-2 py-0.5 sm:py-1 h-full flex flex-col items-center justify-center text-xs">
+        {/* Time - always show */}
+        <div className="font-semibold truncate text-center w-full text-[10px] sm:text-xs">
           {formatTime(booking.start_time)}
         </div>
-        <div className="text-[10px] truncate text-center w-full opacity-90">
-          {booking.customers?.full_name || 'No Customer'}
-        </div>
-        <div className="text-[10px] truncate text-center w-full opacity-75">
-          {booking.service_packages?.name}
-        </div>
+
+        {/* Customer name - hide on compact or when narrow with many overlaps */}
+        {!isCompact && !(isNarrow && isMedium) && (
+          <div className="text-[9px] sm:text-[10px] truncate text-center w-full opacity-90 hidden sm:block">
+            {booking.customers?.full_name || 'No Customer'}
+          </div>
+        )}
+
+        {/* Service name - only show on large bookings with space */}
+        {!isCompact && !isMedium && !isNarrow && (
+          <div className="text-[9px] sm:text-[10px] truncate text-center w-full opacity-75 hidden lg:block">
+            {booking.service_packages?.name}
+          </div>
+        )}
       </div>
     </div>
   )

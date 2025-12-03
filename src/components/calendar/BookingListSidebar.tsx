@@ -17,6 +17,48 @@ import { Badge } from '@/components/ui/badge'
 import { BookingCard } from './BookingCard'
 import type { Booking } from '@/types/booking'
 
+// Wrapper component to memoize conflict and status calculations per booking
+interface BookingCardWrapperProps {
+  booking: Booking
+  conflictMap: Map<string, Set<string>>
+  onBookingClick: (booking: Booking) => void
+  onStatusChange: (bookingId: string, newStatus: string) => Promise<void>
+  getAvailableStatuses: (currentStatus: string) => string[]
+}
+
+const BookingCardWrapper: React.FC<BookingCardWrapperProps> = React.memo(({
+  booking,
+  conflictMap,
+  onBookingClick,
+  onStatusChange,
+  getAvailableStatuses,
+}) => {
+  const conflicts = conflictMap.get(booking.id)
+  const availableStatuses = getAvailableStatuses(booking.status)
+
+  return (
+    <BookingCard
+      booking={booking}
+      onClick={onBookingClick}
+      hasConflict={!!conflicts && conflicts.size > 0}
+      conflictCount={conflicts?.size || 0}
+      onStatusChange={onStatusChange}
+      availableStatuses={availableStatuses}
+    />
+  )
+}, (prev, next) => {
+  // Custom comparison: only re-render if booking or conflicts changed
+  return (
+    prev.booking === next.booking &&
+    prev.conflictMap === next.conflictMap &&
+    prev.onBookingClick === next.onBookingClick &&
+    prev.onStatusChange === next.onStatusChange &&
+    prev.getAvailableStatuses === next.getAvailableStatuses
+  )
+})
+
+BookingCardWrapper.displayName = 'BookingCardWrapper'
+
 interface BookingListSidebarProps {
   /** Selected single date */
   selectedDate: Date | null
@@ -43,20 +85,52 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
   onStatusChange,
   getAvailableStatuses,
 }) => {
-  // คำนวณ Quick Stats
+  // คำนวณ Quick Stats - Optimize: loop ครั้งเดียวแทนที่จะ filter 7 ครั้ง
   const stats = useMemo(() => {
-    const pending = bookings.filter((b) => b.status === 'pending').length
-    const confirmed = bookings.filter((b) => b.status === 'confirmed').length
-    const inProgress = bookings.filter((b) => b.status === 'in_progress').length
-    const completed = bookings.filter((b) => b.status === 'completed').length
-    const cancelled = bookings.filter((b) => b.status === 'cancelled').length
-    const unpaid = bookings.filter((b) => b.payment_status === 'unpaid').length
-    const paid = bookings.filter((b) => b.payment_status === 'paid').length
+    const result = {
+      pending: 0,
+      confirmed: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+      unpaid: 0,
+      paid: 0,
+    }
 
-    return { pending, confirmed, inProgress, completed, cancelled, unpaid, paid }
+    for (const booking of bookings) {
+      // Count by status
+      switch (booking.status) {
+        case 'pending':
+          result.pending++
+          break
+        case 'confirmed':
+          result.confirmed++
+          break
+        case 'in_progress':
+          result.inProgress++
+          break
+        case 'completed':
+          result.completed++
+          break
+        case 'cancelled':
+          result.cancelled++
+          break
+      }
+
+      // Count by payment status
+      if (booking.payment_status === 'unpaid') {
+        result.unpaid++
+      } else if (booking.payment_status === 'paid') {
+        result.paid++
+      }
+    }
+
+    return result
   }, [bookings])
 
   // สร้าง title สำหรับ header (compact format)
+  // Remove bookings.length from deps - only use for fallback, doesn't need reactivity
+  const hasBookingsForFallback = bookings.length > 0
   const headerTitle = useMemo(() => {
     if (selectedDate) {
       return format(selectedDate, 'MMM d, yyyy')
@@ -79,11 +153,11 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
       return `${format(selectedDateRange.start, 'MMM d, yyyy')} - ${format(selectedDateRange.end, 'MMM d, yyyy')}`
     }
     // ถ้ามี bookings แสดงว่ากำลังใช้ filter (preset, search, etc.)
-    if (bookings.length > 0) {
+    if (hasBookingsForFallback) {
       return 'Filtered Results'
     }
     return 'Select a date'
-  }, [selectedDate, selectedDateRange, bookings.length])
+  }, [selectedDate, selectedDateRange, hasBookingsForFallback])
 
   // ตรวจสอบว่ามีการเลือกวันหรือไม่
   const hasSelection = selectedDate || selectedDateRange
@@ -178,22 +252,16 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
           /* Booking List with visible scrollbar */
           <ScrollArea className="h-full px-4 py-3">
             <div className="space-y-2.5 pr-2">
-              {bookings.map((booking) => {
-                const conflicts = conflictMap.get(booking.id)
-                const availableStatuses = getAvailableStatuses(booking.status)
-
-                return (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    onClick={onBookingClick}
-                    hasConflict={!!conflicts && conflicts.size > 0}
-                    conflictCount={conflicts?.size || 0}
-                    onStatusChange={onStatusChange}
-                    availableStatuses={availableStatuses}
-                  />
-                )
-              })}
+              {bookings.map((booking) => (
+                <BookingCardWrapper
+                  key={booking.id}
+                  booking={booking}
+                  conflictMap={conflictMap}
+                  onBookingClick={onBookingClick}
+                  onStatusChange={onStatusChange}
+                  getAvailableStatuses={getAvailableStatuses}
+                />
+              ))}
             </div>
           </ScrollArea>
         )}

@@ -28,6 +28,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { PeakHoursHeatmap, PeakHoursMobile } from '@/components/reports/peak-hours'
 
 interface RevenueMetrics {
   total: number
@@ -509,63 +510,14 @@ function RevenueBookingsTabComponent({
           </p>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="overflow-x-auto">
-            <div className="min-w-[500px] sm:min-w-[600px]">
-              <div className="grid grid-cols-8 gap-1 text-[10px] sm:text-xs">
-                {/* Header row */}
-                <div className="p-2"></div>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <div key={day} className="p-2 text-center font-semibold">
-                    {day}
-                  </div>
-                ))}
-
-                {/* Hour rows */}
-                {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
-                  <div key={hour} className="contents">
-                    <div className="p-2 font-semibold">
-                      {hour.toString().padStart(2, '0')}:00
-                    </div>
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => {
-                      const data = peakHoursData.find(
-                        (d) => d.day === day && d.hour === hour
-                      )
-                      const count = data?.count || 0
-                      const maxCount = Math.max(...peakHoursData.map((d) => d.count))
-                      const intensity = maxCount > 0 ? count / maxCount : 0
-                      const bgColor = `rgba(46, 64, 87, ${intensity * 0.8 + 0.1})`
-
-                      return (
-                        <div
-                          key={`${day}-${hour}`}
-                          className="p-2 rounded text-center font-medium transition-all hover:scale-105 text-[9px] sm:text-[10px]"
-                          style={{
-                            backgroundColor: count > 0 ? bgColor : '#f3f4f6',
-                            color: intensity > 0.5 ? 'white' : '#374151',
-                          }}
-                          title={`${day} ${hour}:00 - ${count} bookings`}
-                        >
-                          {count > 0 ? count : ''}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Desktop View */}
+          <div className="hidden lg:block">
+            <PeakHoursHeatmap data={peakHoursData} />
           </div>
-          <div className="mt-3 sm:mt-4 flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
-            <span>Less busy</span>
-            <div className="flex gap-1">
-              {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => (
-                <div
-                  key={intensity}
-                  className="w-3 h-3 sm:w-4 sm:h-4 rounded"
-                  style={{ backgroundColor: `rgba(46, 64, 87, ${intensity})` }}
-                />
-              ))}
-            </div>
-            <span>More busy</span>
+
+          {/* Mobile & Tablet View */}
+          <div className="lg:hidden">
+            <PeakHoursMobile data={peakHoursData} />
           </div>
         </CardContent>
       </Card>

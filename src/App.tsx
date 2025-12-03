@@ -19,7 +19,8 @@ const AdminCustomers = lazy(() => import('./pages/admin/customers').then(m => ({
 const AdminCustomerDetail = lazy(() => import('./pages/admin/customer-detail').then(m => ({ default: m.AdminCustomerDetail })))
 const AdminStaff = lazy(() => import('./pages/admin/staff').then(m => ({ default: m.AdminStaff })))
 const AdminStaffPerformance = lazy(() => import('./pages/admin/staff-performance').then(m => ({ default: m.AdminStaffPerformance })))
-const AdminWeeklySchedule = lazy(() => import('./pages/admin/weekly-schedule').then(m => ({ default: m.AdminWeeklySchedule })))
+// DISABLED: Weekly Schedule - ใช้ Calendar แทน
+// const AdminWeeklySchedule = lazy(() => import('./pages/admin/weekly-schedule').then(m => ({ default: m.AdminWeeklySchedule })))
 const AdminServicePackages = lazy(() => import('./pages/admin/service-packages').then(m => ({ default: m.AdminServicePackages })))
 const AdminPackageDetail = lazy(() => import('./pages/admin/package-detail'))
 const AdminReports = lazy(() => import('./pages/admin/reports').then(m => ({ default: m.AdminReports })))
@@ -105,7 +106,8 @@ function App() {
               <Route path="customers/:id" element={<AdminCustomerDetail />} />
               <Route path="staff" element={<AdminStaff />} />
               <Route path="staff/:id" element={<AdminStaffPerformance />} />
-              <Route path="weekly-schedule" element={<AdminWeeklySchedule />} />
+              {/* DISABLED: Weekly Schedule - ใช้ Calendar แทน */}
+              {/* <Route path="weekly-schedule" element={<AdminWeeklySchedule />} /> */}
               <Route path="calendar" element={<AdminCalendar />} />
               <Route path="chat" element={<AdminChat />} />
               <Route path="packages" element={<AdminServicePackages />} />

@@ -53,6 +53,10 @@ export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersList
 
   const handleRemoveMember = async (staffId: string) => {
     try {
+      // Check if member being removed is the team lead
+      const isTeamLead = team.team_lead_id === staffId
+
+      // Delete from team_members
       const { error } = await supabase
         .from('team_members')
         .delete()
@@ -61,9 +65,21 @@ export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersList
 
       if (error) throw error
 
+      // If removing team lead, clear team_lead_id
+      if (isTeamLead) {
+        const { error: updateError } = await supabase
+          .from('teams')
+          .update({ team_lead_id: null })
+          .eq('id', team.id)
+
+        if (updateError) throw updateError
+      }
+
       toast({
         title: 'Success',
-        description: 'Member removed successfully',
+        description: isTeamLead
+          ? 'Team lead removed. Please assign a new team lead.'
+          : 'Member removed successfully',
       })
 
       onUpdate()

@@ -44,9 +44,49 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
   // Check if current status is a final state (cannot be edited)
   const isFinalState = ['completed', 'cancelled', 'no_show'].includes(booking.status)
 
+  // Generate accessible description for booking card
+  const bookingDescription = React.useMemo(() => {
+    const parts = [
+      `Booking on ${new Date(booking.booking_date).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      })}`,
+      `from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`,
+      `for ${booking.customers?.full_name || 'Unknown customer'}`,
+      `service: ${booking.service_packages?.name || 'Unknown service'}`,
+      `status: ${booking.status.replace('_', ' ')}`
+    ]
+
+    if (booking.payment_status) {
+      parts.push(`payment: ${booking.payment_status}`)
+    }
+
+    if (hasConflict) {
+      parts.push(`has ${conflictCount} conflict${conflictCount > 1 ? 's' : ''}`)
+    }
+
+    if (booking.profiles) {
+      parts.push(`assigned to staff: ${booking.profiles.full_name}`)
+    } else if (booking.teams) {
+      parts.push(`assigned to team: ${booking.teams.name}`)
+    }
+
+    return parts.join(', ')
+  }, [booking, hasConflict, conflictCount])
+
   return (
     <div
+      role="article"
+      aria-label={bookingDescription}
       onClick={() => onClick(booking)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(booking)
+        }
+      }}
+      tabIndex={0}
       className={`
         group relative p-3 rounded-lg border-2 cursor-pointer
         transition-all duration-200 hover:shadow-lg
@@ -92,7 +132,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
 
           {/* Booking Status Badge with Inline Editor */}
           {onStatusChange && !disableStatusEdit && !isFinalState ? (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} aria-label={`Change booking status from ${booking.status.replace('_', ' ')}`}>
               <StatusBadgeEditor
                 currentStatus={booking.status}
                 onStatusChange={handleStatusChange}
@@ -100,7 +140,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
               />
             </div>
           ) : (
-            <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 py-0.5">
+            <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 py-0.5" aria-label={`Booking status: ${booking.status.replace('_', ' ')}`}>
               {booking.status.replace('_', ' ')}
             </Badge>
           )}
