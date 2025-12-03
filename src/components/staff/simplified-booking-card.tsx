@@ -64,58 +64,57 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
         'bg-gradient-to-r from-gray-500 via-gray-400 to-transparent'
       }`} />
 
-      <CardContent className="relative p-3 sm:p-4">
+      <CardContent className="relative p-2.5 sm:p-4">
         {/* Header - Time and Status */}
         <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="rounded-md bg-primary/10 p-1.5">
-              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+            <div className="rounded-md bg-primary/10 p-1 sm:p-1.5">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-bold text-base sm:text-lg text-foreground/90">
+              <div className="font-bold text-sm sm:text-lg text-foreground/90">
                 {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
               </div>
               {formattedDate && (
-                <div className="text-xs text-muted-foreground">
+                <div className="text-[10px] sm:text-xs text-muted-foreground">
                   {formattedDate}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex flex-col gap-1 items-end shrink-0">
-            <StatusBadge variant={getBookingStatusVariant(booking.status)} className="text-xs">
+          <div className="flex flex-col gap-0.5 items-end shrink-0">
+            <StatusBadge variant={getBookingStatusVariant(booking.status)} className="text-[10px] sm:text-xs">
               {getBookingStatusLabel(booking.status)}
             </StatusBadge>
             {isTeamBooking && (
-              <Badge className="bg-gradient-to-r from-indigo-100 to-indigo-50 text-indigo-700 border-indigo-200 dark:from-indigo-900/30 dark:to-indigo-900/20 dark:text-indigo-300 text-xs" variant="outline">
-                <Users className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Team</span>
-                <span className="sm:hidden">T</span>
+              <Badge className="bg-gradient-to-r from-indigo-100 to-indigo-50 text-indigo-700 border-indigo-200 dark:from-indigo-900/30 dark:to-indigo-900/20 dark:text-indigo-300 text-[10px] sm:text-xs px-1.5 py-0" variant="outline">
+                <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
+                Team
               </Badge>
             )}
           </div>
         </div>
 
         {/* Customer Info - Compact */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 p-2 rounded-lg bg-muted/30">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 p-1.5 sm:p-2 rounded-lg bg-muted/30">
           <AvatarWithFallback
             src={booking.customers?.avatar_url}
             alt={booking.customers?.full_name || 'Unknown'}
             size="sm"
-            className="ring-2 ring-primary/10"
+            className="ring-2 ring-primary/10 h-7 w-7 sm:h-8 sm:w-8"
           />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-sm sm:text-base line-clamp-1">
+            <div className="font-semibold text-xs sm:text-base line-clamp-1">
               {booking.customers?.full_name || 'Unknown Customer'}
             </div>
-            <div className="text-xs sm:text-sm text-muted-foreground line-clamp-1">
+            <div className="text-[10px] sm:text-sm text-muted-foreground line-clamp-1">
               {booking.service_packages?.name || 'Unknown Service'}
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2">
           {/* Quick Call */}
           <Button
             onClick={(e) => {
@@ -124,11 +123,11 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
             }}
             variant="outline"
             size="sm"
-            className="flex-1 min-h-[40px] sm:min-h-[44px]"
+            className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
             disabled={!booking.customers?.phone}
           >
-            <Phone className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline text-xs">Call</span>
+            <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="ml-1 text-[10px] sm:text-xs">Call</span>
           </Button>
 
           {/* Quick Map */}
@@ -142,11 +141,11 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
             }}
             variant="outline"
             size="sm"
-            className="flex-1 min-h-[40px] sm:min-h-[44px]"
+            className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
             disabled={!booking.address}
           >
-            <MapPin className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline text-xs">Map</span>
+            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="ml-1 text-[10px] sm:text-xs">Map</span>
           </Button>
 
           {/* Main Action */}
@@ -160,18 +159,15 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               disabled={isStartingProgress}
               variant="default"
-              className="flex-1 min-h-[40px] sm:min-h-[44px]"
+              className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
               size="sm"
             >
               {isStartingProgress ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
-                  <span className="hidden sm:inline text-xs">Starting...</span>
-                </>
+                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
               ) : (
                 <>
-                  <Play className="h-4 w-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline text-xs">Start</span>
+                  <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="ml-1 text-[10px] sm:text-xs">Start</span>
                 </>
               )}
             </Button>
@@ -187,18 +183,15 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               disabled={isCompletingProgress}
               variant="default"
-              className="flex-1 min-h-[40px] sm:min-h-[44px] bg-green-600 hover:bg-green-700"
+              className="flex-1 min-h-[32px] sm:min-h-[44px] px-2 bg-green-600 hover:bg-green-700"
               size="sm"
             >
               {isCompletingProgress ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
-                  <span className="hidden sm:inline text-xs">Saving...</span>
-                </>
+                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
               ) : (
                 <>
-                  <CheckCircle2 className="h-4 w-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline text-xs">Done</span>
+                  <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="ml-1 text-[10px] sm:text-xs">Done</span>
                 </>
               )}
             </Button>

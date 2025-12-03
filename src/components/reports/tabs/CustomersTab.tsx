@@ -6,10 +6,10 @@ import {
   Repeat,
   DollarSign,
   TrendingUp,
-  Mail,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { MetricCard } from '@/components/reports/MetricCard'
+import { TopCustomersCard } from '@/components/reports/TopCustomersCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset, type CustomerWithBookings } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
 import { useChartAnimation } from '@/hooks/useChartAnimation'
@@ -61,6 +61,38 @@ function CustomersTabComponent({
   topCustomers,
   dateRange,
 }: CustomersTabProps) {
+  // Memoize date range preset to avoid recalculation
+  const dateRangePreset = React.useMemo(
+    () => getDateRangePreset(dateRange),
+    [dateRange]
+  )
+
+  // Memoize Customer Acquisition Trend data
+  const acquisitionTrendData = React.useMemo(
+    () => getCustomerAcquisitionTrend(
+      customersWithBookings,
+      dateRangePreset.start,
+      dateRangePreset.end
+    ),
+    [customersWithBookings, dateRangePreset]
+  )
+
+  // Memoize CLV Distribution data
+  const clvDistributionData = React.useMemo(
+    () => getCustomerCLVDistribution(customersWithBookings),
+    [customersWithBookings]
+  )
+
+  // Memoize Repeat Customer Rate data
+  const repeatRateTrendData = React.useMemo(
+    () => getRepeatCustomerRateTrend(
+      customersWithBookings,
+      dateRangePreset.start,
+      dateRangePreset.end
+    ),
+    [customersWithBookings, dateRangePreset]
+  )
+
   // Prepare segmentation data for animation
   const segmentationData = React.useMemo(() => {
     const data = getCustomerSegmentation(customersWithBookings)
@@ -78,10 +110,16 @@ function CustomersTabComponent({
     enabled: true
   })
 
+  // Check if CLV data has values
+  const hasClvData = React.useMemo(
+    () => clvDistributionData.some(d => d.count > 0),
+    [clvDistributionData]
+  )
+
   return (
     <div className="space-y-6">
       {/* Customer Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Total Customers"
           value={customerMetrics.total}
@@ -109,12 +147,11 @@ function CustomersTabComponent({
 
         <MetricCard
           variant="subtitle"
-          title="Avg Customer Lifetime Value"
+          title="Avg CLV"
           value={formatCurrency(customerMetrics.averageCLV)}
           icon={DollarSign}
           iconClassName="h-4 w-4 text-tinedy-yellow"
           subtitle="Revenue per customer"
-          className="sm:col-span-2"
         />
       </div>
 
@@ -131,13 +168,7 @@ function CustomersTabComponent({
           <CardContent className="p-4 sm:p-6">
             <div className="h-[250px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={getCustomerAcquisitionTrend(
-                  customersWithBookings,
-                  getDateRangePreset(dateRange).start,
-                  getDateRangePreset(dateRange).end
-                )}
-              >
+              <LineChart data={acquisitionTrendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="date"
@@ -177,22 +208,14 @@ function CustomersTabComponent({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            {(() => {
-              const clvData = getCustomerCLVDistribution(customersWithBookings)
-              const hasData = clvData.some(d => d.count > 0)
-
-              if (!hasData) {
-                return (
-                  <div className="h-[250px] sm:h-[300px] flex items-center justify-center text-xs sm:text-sm text-muted-foreground">
-                    No customer data available for selected period
-                  </div>
-                )
-              }
-
-              return (
-                <div className="h-[250px] sm:h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={clvData}>
+            {!hasClvData ? (
+              <div className="h-[250px] sm:h-[300px] flex items-center justify-center text-xs sm:text-sm text-muted-foreground">
+                No customer data available for selected period
+              </div>
+            ) : (
+              <div className="h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={clvDistributionData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
                       dataKey="range"
@@ -216,9 +239,8 @@ function CustomersTabComponent({
                     />
                   </BarChart>
                 </ResponsiveContainer>
-                </div>
-              )
-            })()}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -292,13 +314,7 @@ function CustomersTabComponent({
           <CardContent className="p-4 sm:p-6">
             <div className="h-[250px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={getRepeatCustomerRateTrend(
-                  customersWithBookings,
-                  getDateRangePreset(dateRange).start,
-                  getDateRangePreset(dateRange).end
-                )}
-              >
+              <LineChart data={repeatRateTrendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="date"
@@ -335,7 +351,7 @@ function CustomersTabComponent({
         </Card>
       </div>
 
-      {/* Top Customers Table */}
+      {/* Top Customers */}
       <Card>
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="font-display flex items-center gap-2 text-base sm:text-lg">
@@ -344,63 +360,7 @@ function CustomersTabComponent({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b">
-                <tr className="text-left">
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">#</th>
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                    Customer Name
-                  </th>
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                    Email
-                  </th>
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
-                    Total Bookings
-                  </th>
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
-                    Total Revenue
-                  </th>
-                  <th className="pb-2 font-semibold text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
-                    Last Booking
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {topCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-6 sm:py-8 text-center text-xs sm:text-sm text-muted-foreground">
-                      No customer data available
-                    </td>
-                  </tr>
-                ) : (
-                  topCustomers.map((customer, index) => (
-                    <tr key={customer.id} className="border-b hover:bg-accent/20">
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">{index + 1}</td>
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap">{customer.name}</td>
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                          {customer.email}
-                        </div>
-                      </td>
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap">{customer.totalBookings}</td>
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm font-semibold text-right text-tinedy-dark whitespace-nowrap">
-                        {formatCurrency(customer.totalRevenue)}
-                      </td>
-                      <td className="py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground text-right whitespace-nowrap">
-                        {new Date(customer.lastBookingDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TopCustomersCard customers={topCustomers} />
         </CardContent>
       </Card>
     </div>

@@ -46,6 +46,8 @@ interface MobileCalendarProps {
   onCreateBooking: (date: Date) => void
   onStatusChange: (bookingId: string, newStatus: string) => Promise<void>
   getAvailableStatuses: (currentStatus: string) => string[]
+  /** Hide create booking button (for Staff Portal) */
+  hideCreateButton?: boolean
 }
 
 type ViewMode = 'week' | 'month'
@@ -62,6 +64,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
   onCreateBooking,
   onStatusChange,
   getAvailableStatuses,
+  hideCreateButton = false,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }))
@@ -371,7 +374,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
               </p>
             )}
           </div>
-          {selectedDate && (
+          {selectedDate && !hideCreateButton && (
             <Button
               size="sm"
               onClick={() => handleCreateBookingClick(selectedDate)}
@@ -399,14 +402,16 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                 <p className="text-sm text-muted-foreground mb-3">
                   No bookings on this date
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => handleCreateBookingClick(selectedDate)}
-                  aria-label="Create new booking"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Create Booking
-                </Button>
+                {!hideCreateButton && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleCreateBookingClick(selectedDate)}
+                    aria-label="Create new booking"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Booking
+                  </Button>
+                )}
               </div>
             ) : (
               selectedDateBookings.map((booking) => {

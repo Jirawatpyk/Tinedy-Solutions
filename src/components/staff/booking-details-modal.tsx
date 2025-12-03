@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast'
 import { formatFullAddress } from '@/lib/booking-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatTime } from '@/lib/booking-utils'
+import { formatCurrency } from '@/lib/utils'
 import { BookingTimeline } from './booking-timeline'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
@@ -326,24 +327,19 @@ export function BookingDetailsModal({
                   </p>
                 </div>
               </div>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {((currentBooking as any).area_sqm || (currentBooking as any).frequency) && (
+              {(currentBooking.area_sqm || currentBooking.frequency) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(currentBooking as any).area_sqm && (
+                  {currentBooking.area_sqm && (
                     <div>
                       <p className="text-sm text-muted-foreground">Area Size</p>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <p className="font-medium">{(currentBooking as any).area_sqm} sqm</p>
+                      <p className="font-medium">{currentBooking.area_sqm} sqm</p>
                     </div>
                   )}
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(currentBooking as any).frequency && (
+                  {currentBooking.frequency && (
                     <div>
                       <p className="text-sm text-muted-foreground">Frequency</p>
                       <p className="font-medium">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {getFrequencyLabel((currentBooking as any).frequency)}
+                        {getFrequencyLabel(currentBooking.frequency)}
                       </p>
                     </div>
                   )}
@@ -354,7 +350,7 @@ export function BookingDetailsModal({
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ฿{currentBooking.service_packages?.price?.toLocaleString() ?? '0'}
+                    {formatCurrency(currentBooking.service_packages?.price ?? 0)}
                   </p>
                 </div>
               )}

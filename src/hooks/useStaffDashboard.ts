@@ -196,6 +196,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       // Always refetch after mutation
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+      // Also invalidate calendar queries for Staff Calendar page
+      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 
@@ -247,6 +249,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+      // Also invalidate calendar queries for Staff Calendar page
+      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 
@@ -267,6 +271,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.upcoming(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
+      // Also invalidate calendar queries for Staff Calendar page
+      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 

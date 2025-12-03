@@ -237,6 +237,7 @@ export async function fetchStaffCalendarEvents(
       `)
       .gte('booking_date', startDate)
       .lte('booking_date', endDate)
+      .is('deleted_at', null)
       .order('booking_date', { ascending: true })
 
     if (filterCondition) {

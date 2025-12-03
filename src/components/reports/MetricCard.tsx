@@ -34,24 +34,24 @@ export function MetricCard(props: MetricCardProps) {
     value,
     icon: Icon,
     iconClassName = 'h-4 w-4 text-tinedy-blue',
-    valueClassName = 'text-2xl font-bold text-tinedy-dark',
+    valueClassName = 'text-xl sm:text-2xl font-bold text-tinedy-dark',
     className,
   } = props
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 sm:pt-3 px-3 sm:px-6">
+        <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
         <Icon className={iconClassName} />
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-2 sm:pb-3 px-3 sm:px-6">
         <div className={valueClassName}>{value}</div>
 
         {/* Render variant-specific content */}
         {props.variant === 'subtitle' && (
-          <p className="text-xs text-muted-foreground mt-0">{props.subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0">{props.subtitle}</p>
         )}
 
         {props.variant === 'trend' && (
@@ -62,13 +62,13 @@ export function MetricCard(props: MetricCardProps) {
               <TrendingDown className="h-3 w-3 text-red-500" />
             )}
             <p
-              className={`text-xs font-medium ${
+              className={`text-[10px] sm:text-xs font-medium ${
                 props.trend.value >= 0 ? 'text-green-500' : 'text-red-500'
               }`}
             >
               {formatGrowth(props.trend.value)}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               {props.trend.comparisonText}
             </p>
           </div>

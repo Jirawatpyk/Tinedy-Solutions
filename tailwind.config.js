@@ -6,6 +6,15 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    screens: {
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+      // iPad/Tablet landscape mode (landscape orientation, tablet-sized screens, not desktop)
+      'tablet-landscape': { 'raw': '(orientation: landscape) and (min-width: 768px) and (max-width: 1366px) and (max-height: 1024px)' },
+    },
     extend: {
       colors: {
         'tinedy-blue': '#2e4057',

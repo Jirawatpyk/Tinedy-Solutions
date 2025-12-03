@@ -133,7 +133,7 @@ export default function StaffDashboard() {
         return (
           <div className="space-y-4">
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
@@ -142,7 +142,7 @@ export default function StaffDashboard() {
               <EmptyState type="today" />
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                   {todayBookings.slice(0, todayLimit).map((booking, index) => (
                     <div
                       key={booking.id}
@@ -182,7 +182,7 @@ export default function StaffDashboard() {
         return (
           <div className="space-y-4">
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
@@ -191,7 +191,7 @@ export default function StaffDashboard() {
               <EmptyState type="upcoming" />
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                   {upcomingBookings.slice(0, upcomingLimit).map((booking, index) => (
                     <div
                       key={booking.id}
@@ -231,7 +231,7 @@ export default function StaffDashboard() {
         return (
           <div className="space-y-4">
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
@@ -240,7 +240,7 @@ export default function StaffDashboard() {
               <EmptyState type="past" />
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                   {completedBookings.slice(0, completedLimit).map((booking, index) => (
                     <div
                       key={booking.id}
@@ -280,7 +280,7 @@ export default function StaffDashboard() {
         return (
           <div className="space-y-6">
             {/* Stats Cards - Responsive Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 tablet-landscape:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {loading ? (
                 <>
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -365,12 +365,12 @@ export default function StaffDashboard() {
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-gray-50/50 to-primary/5">
       {/* Modern Header */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-20 shadow-sm">
-        <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+        <div className="px-3 sm:px-6 lg:px-8 py-2 tablet-landscape:py-3 sm:py-6">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-lg tablet-landscape:text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
               My Bookings
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+            <p className="text-[10px] tablet-landscape:text-xs sm:text-sm text-muted-foreground font-medium">
               Manage your tasks efficiently
             </p>
           </div>
@@ -387,7 +387,7 @@ export default function StaffDashboard() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-24">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 pb-24">
         {/* Notification Permission Prompt */}
         {isSupported && !hasPermission && (
           <div className="animate-in fade-in-50 slide-in-from-top-4 duration-500 mb-4">
