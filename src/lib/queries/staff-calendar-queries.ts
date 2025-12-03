@@ -6,9 +6,10 @@
  *
  * Features:
  * - Team membership (reuse from staff-bookings-queries)
- * - Calendar events (3 months ahead)
+ * - Calendar events (6 months back → 6 months ahead, total 12 months)
  * - Supports both individual staff and team bookings
  * - Handles V1/V2 packages
+ * - Performance logging for query optimization
  */
 
 import { supabase } from '@/lib/supabase'
@@ -104,6 +105,13 @@ interface BookingData {
 // ============================================================================
 
 /**
+ * Format date to YYYY-MM-DD for Supabase queries
+ */
+function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+/**
  * Type guard to check if service package is V1 (has price property)
  */
 function isServicePackageV1(
@@ -183,13 +191,26 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
 // ============================================================================
 
 /**
- * Fetch Staff Calendar Events (all bookings)
+ * Fetch Staff Calendar Events
+ * Date Range: 6 months back → 6 months ahead (12 months total)
  */
 export async function fetchStaffCalendarEvents(
   userId: string,
   teamIds: string[]
 ): Promise<CalendarEvent[]> {
+  const startTime = Date.now()
+
   try {
+    // Calculate date range: 6 months back → 6 months ahead
+    const today = new Date()
+    const startDate = new Date(today)
+    startDate.setMonth(startDate.getMonth() - 6)
+    const endDate = new Date(today)
+    endDate.setMonth(endDate.getMonth() + 6)
+
+    const startDateStr = formatDate(startDate)
+    const endDateStr = formatDate(endDate)
+
     const filterCondition = buildFilterCondition(userId, teamIds)
 
     let query = supabase
@@ -216,6 +237,8 @@ export async function fetchStaffCalendarEvents(
         teams (name)
       `)
       .is('deleted_at', null)
+      .gte('booking_date', startDateStr)
+      .lte('booking_date', endDateStr)
       .order('booking_date', { ascending: true })
 
     if (filterCondition) {
@@ -234,11 +257,31 @@ export async function fetchStaffCalendarEvents(
     // Transform to calendar events
     const calendarEvents = (data as BookingData[] || []).map(transformToCalendarEvent)
 
-    logger.debug('Calendar Events', { count: calendarEvents.length }, { context: 'StaffCalendar' })
+    // Performance logging
+    const queryTime = Date.now() - startTime
+    if (queryTime > 1000) {
+      logger.warn('Slow calendar query detected', {
+        queryTime: `${queryTime}ms`,
+        eventCount: calendarEvents.length,
+        dateRange: `${startDateStr} to ${endDateStr}`,
+        userId
+      }, { context: 'StaffCalendar' })
+    } else {
+      logger.debug('Calendar Events', {
+        count: calendarEvents.length,
+        queryTime: `${queryTime}ms`,
+        dateRange: `${startDateStr} to ${endDateStr}`
+      }, { context: 'StaffCalendar' })
+    }
 
     return calendarEvents
   } catch (err) {
-    logger.error('Error fetching calendar events', { error: err, userId }, { context: 'StaffCalendar' })
+    const queryTime = Date.now() - startTime
+    logger.error('Error fetching calendar events', {
+      error: err,
+      userId,
+      queryTime: `${queryTime}ms`
+    }, { context: 'StaffCalendar' })
     return []
   }
 }

@@ -10,6 +10,7 @@ export const STATUS_COLORS = {
   in_progress: 'bg-purple-100 text-purple-800 border-purple-300',
   completed: 'bg-green-100 text-green-800 border-green-300',
   cancelled: 'bg-red-100 text-red-800 border-red-300',
+  no_show: 'bg-gray-100 text-gray-800 border-gray-300',
   unpaid: 'bg-orange-100 text-orange-800 border-orange-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
 } as const
@@ -32,6 +33,7 @@ export const STATUS_COLORS_TIMELINE = {
   in_progress: 'bg-purple-500 hover:bg-purple-600',
   completed: 'bg-green-500 hover:bg-green-600',
   cancelled: 'bg-red-500 hover:bg-red-600',
+  no_show: 'bg-gray-500 hover:bg-gray-600',
   unpaid: 'bg-orange-500 hover:bg-orange-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
 } as const

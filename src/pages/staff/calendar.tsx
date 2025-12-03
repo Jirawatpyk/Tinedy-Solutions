@@ -22,16 +22,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import type { Booking } from '@/types/booking'
-import { STATUS_DOTS } from '@/constants/booking-status'
+import { STATUS_DOTS, STATUS_COLORS, STATUS_LABELS } from '@/constants/booking-status'
 import './calendar.css'
-
-const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
-  in_progress: 'bg-purple-100 text-purple-800 border-purple-300',
-  completed: 'bg-green-100 text-green-800 border-green-300',
-  cancelled: 'bg-red-100 text-red-800 border-red-300',
-}
 
 // Staff can only view - no status transitions from calendar dropdown
 const getAvailableStatuses = (_currentStatus: string): string[] => {
@@ -419,11 +411,7 @@ export default function StaffCalendar() {
                             </span>
                           </div>
                           <span className="text-[10px] sm:text-xs font-medium uppercase px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0">
-                            {event.status === 'pending' && 'Pending'}
-                            {event.status === 'confirmed' && 'Confirmed'}
-                            {event.status === 'in_progress' && 'In Progress'}
-                            {event.status === 'completed' && 'Completed'}
-                            {event.status === 'cancelled' && 'Cancelled'}
+                            {STATUS_LABELS[event.status as keyof typeof STATUS_LABELS] || event.status}
                           </span>
                         </div>
 
