@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 
 interface TeamRecentBookingsProps {
   teamId: string
@@ -19,6 +21,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const itemsPerPage = 5
 
   const loadRecentBookings = useCallback(async () => {
@@ -84,6 +88,18 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     loadRecentBookings()
   }, [loadRecentBookings])
 
+  // Reset to page 1 when status filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, paymentStatusFilter])
+
+  // Filter bookings by booking status and payment status (client-side)
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
+    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
+    return matchesStatus && matchesPayment
+  })
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; className?: string }> = {
       pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs' },
@@ -106,24 +122,47 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   return (
     <Card className={`transition-opacity duration-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <CardHeader className="p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-tinedy-blue" />
             <CardTitle className="text-base sm:text-lg">Recent Bookings</CardTitle>
-            <Badge variant="secondary" className="text-[10px] sm:text-xs">{totalCount}</Badge>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredBookings.length}</Badge>
           </div>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="h-8 sm:h-9"
-              >
-                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
-              <span className="text-xs sm:text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                <SelectValue placeholder="Booking" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Booking</SelectItem>
+                {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                <SelectValue placeholder="Payment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment</SelectItem>
+                {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 sm:h-9"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </Button>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -137,10 +176,11 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
               </Button>
             </div>
           )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0">
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="text-center py-6 sm:py-8 text-muted-foreground">
             <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3 opacity-50" />
             <p className="text-sm sm:text-base">No bookings yet</p>
@@ -148,7 +188,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-3">
-            {bookings.map((booking) => (
+            {filteredBookings.map((booking) => (
               <div
                 key={booking.id}
                 onClick={() => modal.openDetail(booking)}

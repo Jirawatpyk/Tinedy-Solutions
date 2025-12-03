@@ -42,6 +42,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 
 // Icons
 import {
@@ -75,6 +77,7 @@ interface BookingWithRelations {
   end_time: string
   status: string
   total_price: number
+  payment_status?: string
   customers: {
     id: string
     full_name: string
@@ -116,7 +119,14 @@ export default function AdminPackageDetail() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [bookingsPage, setBookingsPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const BOOKINGS_PER_PAGE = 10
+
+  // Reset to page 1 when status filter changes
+  useEffect(() => {
+    setBookingsPage(1)
+  }, [statusFilter, paymentStatusFilter])
 
   useEffect(() => {
     if (packageId) {
@@ -422,11 +432,18 @@ export default function AdminPackageDetail() {
     )
   }
 
-  const paginatedBookings = bookings.slice(
+  // Filter bookings by booking status and payment status
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
+    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
+    return matchesStatus && matchesPayment
+  })
+
+  const paginatedBookings = filteredBookings.slice(
     (bookingsPage - 1) * BOOKINGS_PER_PAGE,
     bookingsPage * BOOKINGS_PER_PAGE
   )
-  const totalPages = Math.ceil(bookings.length / BOOKINGS_PER_PAGE)
+  const totalPages = Math.ceil(filteredBookings.length / BOOKINGS_PER_PAGE)
 
   return (
     <div className="space-y-6">
@@ -712,17 +729,43 @@ export default function AdminPackageDetail() {
         {/* Recent Bookings */}
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Recent Bookings
-                </CardTitle>
-                <CardDescription className="mt-1 text-xs sm:text-sm">
-                  Recent bookings using this package
-                </CardDescription>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Recent Bookings
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-xs sm:text-sm">
+                    Recent bookings using this package
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs sm:text-sm">{filteredBookings.length} total</Badge>
               </div>
-              <Badge variant="outline" className="text-xs sm:text-sm">{bookings.length} total</Badge>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                    <SelectValue placeholder="Booking" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Booking</SelectItem>
+                    {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                  <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                    <SelectValue placeholder="Payment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payment</SelectItem>
+                    {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0">

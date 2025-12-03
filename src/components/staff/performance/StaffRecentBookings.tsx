@@ -1,12 +1,14 @@
-import { memo, useState } from 'react'
+import { memo, useState, useEffect } from 'react'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 
 interface StaffRecentBookingsProps {
   bookings: Booking[]
@@ -20,13 +22,27 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
   onRefresh = () => {},
 }: StaffRecentBookingsProps) {
   const [currentPage, setCurrentPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const modal = useBookingDetailModal({ refresh: onRefresh })
 
-  const totalBookings = bookings.length
+  // Filter bookings by booking status and payment status
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
+    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
+    return matchesStatus && matchesPayment
+  })
+
+  const totalBookings = filteredBookings.length
   const totalPages = Math.ceil(totalBookings / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
-  const paginatedBookings = bookings.slice(startIndex, endIndex)
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex)
+
+  // Reset to page 1 when status filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, paymentStatusFilter])
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
@@ -60,37 +76,61 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
   return (
     <Card>
       <CardHeader className="p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-tinedy-blue" />
             <CardTitle className="text-base sm:text-lg">Recent Bookings</CardTitle>
             <Badge variant="secondary" className="text-[10px] sm:text-xs">{totalBookings}</Badge>
           </div>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="h-8 sm:h-9"
-              >
-                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
-              <span className="text-xs sm:text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="h-8 sm:h-9"
-              >
-                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                <SelectValue placeholder="Booking" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Booking</SelectItem>
+                {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+                <SelectValue placeholder="Payment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment</SelectItem>
+                {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 sm:h-9"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </Button>
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 sm:h-9"
+                >
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0">

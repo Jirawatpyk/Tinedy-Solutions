@@ -48,6 +48,8 @@ import { formatTime } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -179,6 +181,8 @@ export function AdminCustomerDetail() {
   // Cast bookings to CustomerBooking[] type (compatible with Booking type from hook)
   const bookings = rawBookings as unknown as CustomerBooking[]
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
@@ -545,13 +549,28 @@ export function AdminCustomerDetail() {
   }
 
   const filteredBookings = bookings.filter((booking) => {
-    if (!searchQuery) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      booking.service?.name?.toLowerCase().includes(query) ||
-      booking.staff?.full_name?.toLowerCase().includes(query) ||
-      booking.status.toLowerCase().includes(query)
-    )
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = (
+        booking.service?.name?.toLowerCase().includes(query) ||
+        booking.staff?.full_name?.toLowerCase().includes(query) ||
+        booking.status.toLowerCase().includes(query)
+      )
+      if (!matchesSearch) return false
+    }
+
+    // Booking Status filter
+    if (statusFilter !== 'all' && booking.status !== statusFilter) {
+      return false
+    }
+
+    // Payment Status filter
+    if (paymentStatusFilter !== 'all' && booking.payment_status !== paymentStatusFilter) {
+      return false
+    }
+
+    return true
   })
 
   // Group bookings by recurring groups (similar to BookingList component)
@@ -658,10 +677,10 @@ export function AdminCustomerDetail() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, totalBookingsCount)
 
-  // Reset to page 1 when search query changes
+  // Reset to page 1 when search query or status filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery])
+  }, [searchQuery, statusFilter, paymentStatusFilter])
 
   // Prepare chart data - bookings by month for last 6 months (only months with data, up to current month)
   const getChartData = (): ChartDataPoint[] => {
@@ -1084,7 +1103,7 @@ export function AdminCustomerDetail() {
         <CardHeader className="px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <CardTitle className="text-lg sm:text-xl">Booking History</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div className="w-full sm:w-64">
                 <Input
                   placeholder="Search bookings..."
@@ -1093,6 +1112,28 @@ export function AdminCustomerDetail() {
                   className="h-9 text-sm"
                 />
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                  <SelectValue placeholder="Booking Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Booking Status</SelectItem>
+                  {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                  <SelectValue placeholder="Payment Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payment Status</SelectItem>
+                  {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
                 size="sm"
