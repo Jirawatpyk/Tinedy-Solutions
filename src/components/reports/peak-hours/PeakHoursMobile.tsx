@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -7,28 +7,28 @@ import {
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import type { PeakHourData, DayData, DayOfWeek } from './types'
-import { DAYS_OF_WEEK, OPERATING_HOURS } from './types'
+import { DAYS_OF_WEEK, OPERATING_HOURS, DAY_NAMES, PEAK_HOURS_COLORS } from './types'
 import { PeakHoursDetailModal } from './PeakHoursDetailModal'
 
 interface PeakHoursMobileProps {
   data: PeakHourData[]
 }
 
-const DAY_NAMES: Record<DayOfWeek, string> = {
-  Sun: 'Sunday',
-  Mon: 'Monday',
-  Tue: 'Tuesday',
-  Wed: 'Wednesday',
-  Thu: 'Thursday',
-  Fri: 'Friday',
-  Sat: 'Saturday',
-}
-
 export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
   const [selectedCell, setSelectedCell] = useState<PeakHourData | null>(null)
 
+  // Early return for empty data
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        <p>No peak hours data available</p>
+      </div>
+    )
+  }
+
   // Calculate max count for intensity calculation
   const maxCount = useMemo(() => {
+    if (!data || data.length === 0) return 1
     return Math.max(...data.map((d) => d.count), 1)
   }, [data])
 
@@ -64,9 +64,9 @@ export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
     return 'bg-tinedy-green/20 text-tinedy-dark'
   }
 
-  const handleHourClick = (day: string, hour: number, count: number) => {
+  const handleHourClick = useCallback((day: string, hour: number, count: number) => {
     setSelectedCell({ day, hour, count })
-  }
+  }, [])
 
   return (
     <>
@@ -123,13 +123,16 @@ export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
         <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground">Less busy</span>
           <div className="flex gap-1 flex-1">
-            {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => (
-              <div
-                key={intensity}
-                className="flex-1 h-4 rounded"
-                style={{ backgroundColor: `rgba(143, 185, 150, ${intensity})` }}
-              />
-            ))}
+            {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => {
+              const { r, g, b } = PEAK_HOURS_COLORS.baseColor
+              return (
+                <div
+                  key={intensity}
+                  className="flex-1 h-4 rounded"
+                  style={{ backgroundColor: `rgba(${r}, ${g}, ${b}, ${intensity})` }}
+                />
+              )
+            })}
           </div>
           <span className="text-muted-foreground">More busy</span>
         </div>

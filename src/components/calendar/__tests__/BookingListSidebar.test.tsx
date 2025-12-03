@@ -175,8 +175,9 @@ describe('BookingListSidebar', () => {
       // Arrange & Act
       render(<BookingListSidebar {...defaultProps} />)
 
-      // Assert
-      expect(screen.queryByText(/booking/)).not.toBeInTheDocument()
+      // Assert - Should not show the "X booking(s)" badge (count badge)
+      // Note: "bookings" word may appear in empty state message
+      expect(screen.queryByText(/\d+ booking/)).not.toBeInTheDocument()
     })
   })
 
@@ -627,7 +628,8 @@ describe('BookingListSidebar', () => {
 
       // Assert - Should show selectedDate (not date range)
       expect(screen.getByText('Jan 15, 2025')).toBeInTheDocument()
-      expect(screen.queryByText(/Jan 1/)).not.toBeInTheDocument()
+      // Note: "Jan 1" may appear elsewhere, check for full date range format instead
+      expect(screen.queryByText('Jan 1-31, 2025')).not.toBeInTheDocument()
     })
   })
 

@@ -8,21 +8,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Calendar, Clock } from 'lucide-react'
 import type { PeakHourData, DayOfWeek } from './types'
+import { DAY_NAMES } from './types'
 
 interface PeakHoursDetailModalProps {
   data: PeakHourData | null
   open: boolean
   onClose: () => void
-}
-
-const DAY_NAMES: Record<DayOfWeek, string> = {
-  Sun: 'Sunday',
-  Mon: 'Monday',
-  Tue: 'Tuesday',
-  Wed: 'Wednesday',
-  Thu: 'Thursday',
-  Fri: 'Friday',
-  Sat: 'Saturday',
 }
 
 export function PeakHoursDetailModal({ data, open, onClose }: PeakHoursDetailModalProps) {
@@ -35,13 +26,13 @@ export function PeakHoursDetailModal({ data, open, onClose }: PeakHoursDetailMod
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="peak-hours-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Calendar className="h-5 w-5 text-tinedy-blue" />
             Peak Hour Details
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="peak-hours-description">
             Booking information for the selected time slot
           </DialogDescription>
         </DialogHeader>

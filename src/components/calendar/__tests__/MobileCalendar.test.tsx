@@ -551,9 +551,9 @@ describe('MobileCalendar', () => {
       const selectedDate = new Date('2025-01-15')
       render(<MobileCalendar {...defaultProps} selectedDate={selectedDate} />)
 
-      // Assert - There should be 2 "Create Booking" buttons (header Add + empty state)
-      const createButtons = screen.getAllByRole('button', { name: /create booking/i })
-      expect(createButtons.length).toBeGreaterThanOrEqual(1)
+      // Assert - Should have "Create new booking" button in empty state
+      const createButton = screen.getByRole('button', { name: /create new booking/i })
+      expect(createButton).toBeInTheDocument()
     })
 
     it('should call onCreateBooking from empty state button', async () => {

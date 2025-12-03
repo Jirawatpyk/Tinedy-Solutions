@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { PeakHourData, DayOfWeek } from './types'
-import { DAYS_OF_WEEK, OPERATING_HOURS } from './types'
+import { DAYS_OF_WEEK, OPERATING_HOURS, PEAK_HOURS_COLORS } from './types'
 import { PeakHoursDetailModal } from './PeakHoursDetailModal'
 
 interface PeakHoursHeatmapProps {
@@ -10,8 +10,18 @@ interface PeakHoursHeatmapProps {
 export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
   const [selectedCell, setSelectedCell] = useState<PeakHourData | null>(null)
 
+  // Early return for empty data
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        <p>No peak hours data available</p>
+      </div>
+    )
+  }
+
   // Calculate max count for intensity calculation
   const maxCount = useMemo(() => {
+    if (!data || data.length === 0) return 1
     return Math.max(...data.map((d) => d.count), 1) // Minimum 1 to avoid division by zero
   }, [data])
 
@@ -34,20 +44,21 @@ export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
   }
 
   const getBackgroundColor = (intensity: number, count: number) => {
-    if (count === 0) return '#f3f4f6' // gray-100
+    if (count === 0) return PEAK_HOURS_COLORS.empty
     // Green gradient from light to dark based on intensity
-    return `rgba(143, 185, 150, ${intensity * 0.8 + 0.2})` // tinedy-green
+    const { r, g, b } = PEAK_HOURS_COLORS.baseColor
+    return `rgba(${r}, ${g}, ${b}, ${intensity * 0.8 + 0.2})`
   }
 
   const getTextColor = (intensity: number) => {
-    return intensity > 0.5 ? 'white' : '#374151' // gray-700
+    return intensity > 0.5 ? PEAK_HOURS_COLORS.text.light : PEAK_HOURS_COLORS.text.dark
   }
 
-  const handleCellClick = (day: DayOfWeek, hour: number, count: number) => {
+  const handleCellClick = useCallback((day: DayOfWeek, hour: number, count: number) => {
     if (count > 0) {
       setSelectedCell({ day, hour, count })
     }
-  }
+  }, [])
 
   // Generate hours array
   const hours = Array.from(
@@ -105,13 +116,16 @@ export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
       <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
         <span>Less busy</span>
         <div className="flex gap-1">
-          {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => (
-            <div
-              key={intensity}
-              className="w-4 h-4 rounded"
-              style={{ backgroundColor: `rgba(143, 185, 150, ${intensity})` }}
-            />
-          ))}
+          {[0.2, 0.4, 0.6, 0.8, 1].map((intensity) => {
+            const { r, g, b } = PEAK_HOURS_COLORS.baseColor
+            return (
+              <div
+                key={intensity}
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: `rgba(${r}, ${g}, ${b}, ${intensity})` }}
+              />
+            )
+          })}
         </div>
         <span>More busy</span>
       </div>
