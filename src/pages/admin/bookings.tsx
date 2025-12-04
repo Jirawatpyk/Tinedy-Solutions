@@ -123,9 +123,14 @@ export function AdminBookings() {
         return false
       }
 
+      // Payment status filter
+      if (filters.paymentStatus !== 'all' && booking.payment_status !== filters.paymentStatus) {
+        return false
+      }
+
       return true
     })
-  }, [bookings, debouncedSearchQuery, filters.status, filters.staffId, filters.teamId, filters.dateFrom, filters.dateTo, filters.serviceType])
+  }, [bookings, debouncedSearchQuery, filters.status, filters.paymentStatus, filters.staffId, filters.teamId, filters.dateFrom, filters.dateTo, filters.serviceType])
 
   // Group filtered bookings into recurring groups and standalone bookings
   // This must happen BEFORE pagination to keep groups together
@@ -374,6 +379,7 @@ export function AdminBookings() {
   }, [
     filters.searchQuery,
     filters.status,
+    filters.paymentStatus,
     filters.staffId,
     filters.teamId,
     filters.dateFrom,

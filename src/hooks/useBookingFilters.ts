@@ -14,6 +14,8 @@ export interface BookingFilterState {
   searchQuery: string
   /** Filter by booking status (pending, confirmed, in_progress, completed, cancelled) */
   status: string
+  /** Filter by payment status (unpaid, pending_verification, paid, partial, refunded) */
+  paymentStatus: string
   /** Filter by date range - start date */
   dateFrom: string
   /** Filter by date range - end date */
@@ -32,6 +34,7 @@ export interface BookingFilterState {
 const DEFAULT_FILTERS: BookingFilterState = {
   searchQuery: '',
   status: 'all',
+  paymentStatus: 'all',
   dateFrom: '',
   dateTo: '',
   staffId: 'all',
@@ -133,6 +136,7 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
     return (
       filters.searchQuery !== '' ||
       filters.status !== 'all' ||
+      filters.paymentStatus !== 'all' ||
       filters.dateFrom !== '' ||
       filters.dateTo !== '' ||
       filters.staffId !== 'all' ||
@@ -150,6 +154,7 @@ export function useBookingFilters(initialFilters?: Partial<BookingFilterState>) 
     let count = 0
     if (filters.searchQuery !== '') count++
     if (filters.status !== 'all') count++
+    if (filters.paymentStatus !== 'all') count++
     if (filters.staffId !== 'all') count++
     if (filters.teamId !== 'all') count++
     if (filters.dateFrom !== '') count++

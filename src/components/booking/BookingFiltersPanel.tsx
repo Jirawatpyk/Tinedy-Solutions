@@ -142,8 +142,10 @@ const BookingFiltersPanelComponent = ({
             </Button>
           </div>
 
-          {/* Primary Filters: Search + Status */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          {/* Primary Filters: Search + Status + Payment */}
+          {/* จอเล็ก: Search แถวบน, Status+Payment แถวล่าง (ข้างกัน) */}
+          {/* จอปกติ: Search + Status + Payment อยู่แถวเดียวกัน */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
             {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -155,21 +157,39 @@ const BookingFiltersPanelComponent = ({
               />
             </div>
 
-            {/* Status */}
-            <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
-              <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="no_show">No Show</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Status + Payment */}
+            <div className="grid grid-cols-2 sm:flex gap-2">
+              {/* Status */}
+              <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
+                <SelectTrigger className="h-9 text-sm sm:w-[150px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="no_show">No Show</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Payment Status */}
+              <Select value={filters.paymentStatus} onValueChange={(value) => updateFilter('paymentStatus', value)}>
+                <SelectTrigger className="h-9 text-sm sm:w-[150px]">
+                  <SelectValue placeholder="All Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payment</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
+                  <SelectItem value="pending_verification">Verifying</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -206,6 +226,7 @@ export const BookingFiltersPanel = memo(
     const filtersEqual =
       prevProps.filters.searchQuery === nextProps.filters.searchQuery &&
       prevProps.filters.status === nextProps.filters.status &&
+      prevProps.filters.paymentStatus === nextProps.filters.paymentStatus &&
       prevProps.filters.dateFrom === nextProps.filters.dateFrom &&
       prevProps.filters.dateTo === nextProps.filters.dateTo &&
       prevProps.filters.staffId === nextProps.filters.staffId &&
