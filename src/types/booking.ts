@@ -36,12 +36,14 @@ export type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus]
  * @enum {string}
  *
  * @property {string} Unpaid - No payment has been received
+ * @property {string} PendingVerification - Customer sent payment, awaiting verification
  * @property {string} Paid - Full payment has been received
  * @property {string} Partial - Partial payment has been received
  * @property {string} Refunded - Payment has been refunded to customer
  */
 export const PaymentStatus = {
   Unpaid: 'unpaid',
+  PendingVerification: 'pending_verification',
   Paid: 'paid',
   Partial: 'partial',
   Refunded: 'refunded'

@@ -37,6 +37,7 @@ export function getPaymentStatusVariant(status: string): StatusBadgeVariant {
   const statusMap: Record<string, StatusBadgeVariant> = {
     paid: 'success',
     unpaid: 'danger',
+    pending_verification: 'warning',
     partial: 'warning',
     refunded: 'purple',
   }
@@ -69,6 +70,7 @@ export function getPaymentStatusLabel(status: string): string {
   const labelMap: Record<string, string> = {
     paid: 'Paid',
     unpaid: 'Unpaid',
+    pending_verification: 'Verifying',
     partial: 'Partial',
     refunded: 'Refunded',
   }

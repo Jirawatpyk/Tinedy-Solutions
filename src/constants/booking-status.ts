@@ -51,16 +51,19 @@ export const BOOKING_STATUS_LABELS = {
 
 export const PAYMENT_STATUS_COLORS = {
   unpaid: 'bg-orange-100 text-orange-800 border-orange-300',
+  pending_verification: 'bg-amber-100 text-amber-800 border-amber-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
 } as const
 
 export const PAYMENT_STATUS_DOTS = {
   unpaid: 'bg-orange-500',
+  pending_verification: 'bg-amber-500',
   paid: 'bg-emerald-500',
 } as const
 
 export const PAYMENT_STATUS_LABELS = {
   unpaid: 'Unpaid',
+  pending_verification: 'Verifying',
   paid: 'Paid',
 } as const
 
@@ -82,6 +85,7 @@ export const STATUS_DOTS = {
 export const STATUS_COLORS_TIMELINE = {
   ...BOOKING_STATUS_COLORS_TIMELINE,
   unpaid: 'bg-orange-500 hover:bg-orange-600',
+  pending_verification: 'bg-amber-500 hover:bg-amber-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
 } as const
 

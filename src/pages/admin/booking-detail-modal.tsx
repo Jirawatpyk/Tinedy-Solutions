@@ -511,7 +511,7 @@ export function BookingDetailModal({
                 <div className="mt-1">{getPaymentStatusBadge(booking.payment_status)}</div>
               </div>
               <div>
-                <Label className="text-muted-foreground">Amount Paid</Label>
+                <Label className="text-muted-foreground">Amount</Label>
                 <p className="font-semibold text-green-600 text-lg">
                   {formatCurrency(Number(booking.total_price || 0))}
                 </p>
@@ -537,25 +537,41 @@ export function BookingDetailModal({
                     className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1"
                   >
                     <Link2 className="h-4 w-4" />
-                    View Payment Slip
+                    View Slip
                   </a>
                 </div>
               )}
             </div>
+
+            {/* Payment Actions */}
             {booking.payment_status !== 'paid' && (
-              <div className="mt-3">
-                <Select onValueChange={(method) => onMarkAsPaid(booking.id, method)} disabled={actionLoading?.markAsPaid}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder={actionLoading?.markAsPaid ? "Processing..." : "Mark as Paid"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="line_pay">LINE Pay</SelectItem>
-                    <SelectItem value="promptpay">PromptPay</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
+                {/* Verify button - for pending_verification with slip */}
+                {booking.payment_status === 'pending_verification' && booking.payment_slip_url && (
+                  <Button
+                    onClick={() => onMarkAsPaid(booking.id, booking.payment_method || 'bank_transfer')}
+                    disabled={actionLoading?.markAsPaid}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {actionLoading?.markAsPaid ? "Verifying..." : "Verify Payment"}
+                  </Button>
+                )}
+                {/* Mark as Paid dropdown - for unpaid */}
+                {booking.payment_status === 'unpaid' && (
+                  <Select onValueChange={(method) => onMarkAsPaid(booking.id, method)} disabled={actionLoading?.markAsPaid}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder={actionLoading?.markAsPaid ? "Processing..." : "Mark as Paid"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="line_pay">LINE Pay</SelectItem>
+                      <SelectItem value="promptpay">PromptPay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
           </CollapsibleSection>

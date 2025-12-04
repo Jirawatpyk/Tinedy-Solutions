@@ -71,7 +71,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
       setUploading(true)
 
       // Check if auto-verify is enabled
-      const autoVerify = import.meta.env.VITE_AUTO_VERIFY_PAYMENT === 'true' || true
+      const autoVerify = import.meta.env.VITE_AUTO_VERIFY_PAYMENT === 'true'
 
       // Generate unique filename
       const fileExt = file.name.split('.').pop()
@@ -153,20 +153,25 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
       setUploaded(true)
 
       const successMessage = recurringGroupId
-        ? `Payment confirmed for ${bookingCount} recurring bookings! You will receive a confirmation email shortly.`
+        ? autoVerify
+          ? `Payment confirmed for ${bookingCount} recurring bookings! You will receive a confirmation email shortly.`
+          : `Payment slip uploaded for ${bookingCount} recurring bookings. We will verify your payment soon.`
         : autoVerify
           ? 'Payment confirmed! You will receive a confirmation email shortly.'
           : 'Payment slip uploaded successfully. We will verify your payment soon.'
 
       toast({
-        title: 'Success!',
+        title: autoVerify ? 'Payment Confirmed!' : 'Slip Uploaded!',
         description: successMessage,
       })
 
-      // Call success callback after 2 seconds
-      setTimeout(() => {
-        onSuccess?.()
-      }, 2000)
+      // Only navigate to success page if auto-verified (payment is complete)
+      // If pending verification, stay on upload success screen
+      if (autoVerify) {
+        setTimeout(() => {
+          onSuccess?.()
+        }, 2000)
+      }
     } catch (error) {
       console.error('Error uploading slip:', error)
       toast({
