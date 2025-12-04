@@ -48,6 +48,16 @@ export interface CalendarEvent {
   team_name: string | null
   area_sqm: number | null
   frequency: 1 | 2 | 4 | 8 | null
+  // Team details for BookingDetailsModal
+  teams: {
+    id: string
+    name: string
+    team_lead_id: string | null
+    team_lead: {
+      id: string
+      full_name: string
+    } | null
+  } | null
 }
 
 interface BookingData {
@@ -94,9 +104,27 @@ interface BookingData {
     full_name: string
   } | null
   teams: Array<{
+    id: string
     name: string
+    team_lead_id: string | null
+    team_lead: Array<{
+      id: string
+      full_name: string
+    }> | {
+      id: string
+      full_name: string
+    } | null
   }> | {
+    id: string
     name: string
+    team_lead_id: string | null
+    team_lead: Array<{
+      id: string
+      full_name: string
+    }> | {
+      id: string
+      full_name: string
+    } | null
   } | null
 }
 
@@ -183,6 +211,14 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
     team_name: team?.name || null,
     area_sqm: booking.area_sqm || null,
     frequency: booking.frequency || null,
+    // Include full teams data for BookingDetailsModal
+    // Handle team_lead as array or single object
+    teams: team ? {
+      id: team.id,
+      name: team.name,
+      team_lead_id: team.team_lead_id,
+      team_lead: Array.isArray(team.team_lead) ? team.team_lead[0] || null : team.team_lead || null,
+    } : null,
   }
 }
 
@@ -234,7 +270,15 @@ export async function fetchStaffCalendarEvents(
         service_packages (name, duration_minutes, price),
         service_packages_v2:package_v2_id (name),
         profiles!bookings_staff_id_fkey (full_name),
-        teams (name)
+        teams (
+          id,
+          name,
+          team_lead_id,
+          team_lead:profiles!teams_team_lead_id_fkey (
+            id,
+            full_name
+          )
+        )
       `)
       .is('deleted_at', null)
       .gte('booking_date', startDateStr)

@@ -217,7 +217,7 @@ export async function fetchReportsStaff(): Promise<{
       .select('team_id, staff_id'),
     supabase
       .from('bookings')
-      .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, created_at')
+      .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, team_member_count, created_at')
       .not('team_id', 'is', null)
   ])
 
@@ -288,12 +288,17 @@ export async function fetchReportsStaff(): Promise<{
     const teams = staffToTeamsMap.get(staffMember.id) || []
     teams.forEach((teamId) => {
       const teamBookings = teamBookingsMap.get(teamId) || []
-      const memberCount = teamMemberCounts.get(teamId) || 1
 
       teamBookings.forEach((booking) => {
         if (!staffBookingsMap.has(staffMember.id)) {
           staffBookingsMap.set(staffMember.id, [])
         }
+
+        // Use stored team_member_count for fair distribution
+        // Fallback to current team count for old bookings without team_member_count
+        const memberCount = (booking as { team_member_count?: number | null }).team_member_count
+          || teamMemberCounts.get(teamId)
+          || 1
 
         // Divide revenue by team member count for fair distribution
         const bookingWithDividedRevenue = {

@@ -116,7 +116,7 @@ export default function StaffCalendar() {
           <div className="bg-white border-b flex-shrink-0">
             <div className="px-4 py-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">View your schedule</p>
+                <p className="text-sm text-muted-foreground">View your schedule (6 months back - 6 months ahead)</p>
                 <Button onClick={goToToday} variant="outline" size="sm">
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   Today
@@ -176,7 +176,7 @@ export default function StaffCalendar() {
           <div className="px-4 sm:px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                View your schedule and bookings
+                View your schedule and bookings (6 months back - 6 months ahead)
               </p>
               <Button onClick={goToToday} variant="outline" size="sm" className="sm:size-default w-full sm:w-auto">
                 <CalendarIcon className="h-4 w-4 mr-2" />

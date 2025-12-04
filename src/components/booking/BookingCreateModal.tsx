@@ -455,6 +455,15 @@ export function BookingCreateModal({
         return
       }
 
+      // Get team member count if team is assigned (for earnings calculation)
+      let teamMemberCount: number | null = null
+      if (assignmentType === 'team' && data.team_id) {
+        const { data: members } = await supabase
+          .rpc('get_team_members_by_team_id', { p_team_id: data.team_id })
+        teamMemberCount = members?.length || 1
+        logger.debug('Team member count for booking', { teamId: data.team_id, count: teamMemberCount }, { context: 'BookingCreateModal' })
+      }
+
       // Build base booking data
       const baseBookingData = {
         customer_id: customerId!,
@@ -474,6 +483,7 @@ export function BookingCreateModal({
         area_sqm: data.area_sqm || null,
         frequency: data.frequency || null,
         package_v2_id: data.package_v2_id || null,
+        team_member_count: teamMemberCount,
       }
 
       // Validation สำหรับ recurring bookings (frequency > 1)

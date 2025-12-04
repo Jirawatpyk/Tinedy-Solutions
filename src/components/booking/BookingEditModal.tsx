@@ -213,6 +213,28 @@ export function BookingEditModal({
       const hasFixedPackage = data.service_package_id && data.service_package_id.trim()
       const hasTieredPackage = data.package_v2_id && data.package_v2_id.trim()
 
+      // Get team member count if team is assigned (for earnings calculation)
+      // IMPORTANT: Only update team_member_count if team actually changed
+      // to preserve the original count from when booking was created
+      let teamMemberCount: number | null = null
+      const newTeamId = data.team_id && data.team_id.trim() ? data.team_id : null
+      const originalTeamId = booking?.team_id || null
+
+      if (newTeamId) {
+        if (newTeamId === originalTeamId) {
+          // Team unchanged - preserve existing team_member_count
+          teamMemberCount = (booking as { team_member_count?: number | null })?.team_member_count ?? null
+          logger.debug('Team unchanged, preserving team_member_count', { teamId: newTeamId, count: teamMemberCount }, { context: 'BookingEditModal' })
+        } else {
+          // Team changed - get new member count
+          const { data: members } = await supabase
+            .rpc('get_team_members_by_team_id', { p_team_id: newTeamId })
+          teamMemberCount = members?.length || 1
+          logger.debug('Team changed, new team_member_count', { oldTeamId: originalTeamId, newTeamId, count: teamMemberCount }, { context: 'BookingEditModal' })
+        }
+      }
+      // If team_id is cleared (switching to staff or unassigned), teamMemberCount stays null
+
       // Base update data (common fields)
       const updateData: {
         booking_date: string
@@ -226,6 +248,7 @@ export function BookingEditModal({
         total_price: number
         staff_id: string | null
         team_id: string | null
+        team_member_count: number | null
         status: string
         service_package_id?: string | null
         package_v2_id?: string | null
@@ -242,7 +265,8 @@ export function BookingEditModal({
         notes: data.notes && data.notes.trim() ? data.notes : null,
         total_price: data.total_price,
         staff_id: data.staff_id && data.staff_id.trim() ? data.staff_id : null,
-        team_id: data.team_id && data.team_id.trim() ? data.team_id : null,
+        team_id: newTeamId,
+        team_member_count: teamMemberCount,
         status: data.status || 'pending',
       }
 

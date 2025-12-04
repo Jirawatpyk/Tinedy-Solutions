@@ -133,6 +133,8 @@ export interface BookingRecord {
   recurring_pattern?: string | null
   is_recurring?: boolean
   parent_booking_id?: string | null
+  // Team Earnings Calculation
+  team_member_count?: number | null
 }
 
 /**
@@ -238,6 +240,8 @@ export interface Booking {
   recurring_pattern?: string | null
   is_recurring?: boolean
   parent_booking_id?: string | null
+  // Team Earnings Calculation
+  team_member_count?: number | null
   // Relations
   customers: { id: string; full_name: string; email: string; phone?: string | null } | null
   service_packages: { name: string; service_type: string } | null

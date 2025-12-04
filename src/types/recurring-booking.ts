@@ -101,6 +101,7 @@ export interface RecurringGroupInput {
     staff_id?: string | null
     team_id?: string | null
     notes?: string | null
+    team_member_count?: number | null
   }
 
   /** รูปแบบการเกิดซ้ำ */

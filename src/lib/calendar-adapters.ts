@@ -120,6 +120,13 @@ export function bookingToCalendarEvent(booking: Booking): CalendarEvent {
     team_name: booking.teams?.name || null,
     area_sqm: null,
     frequency: null,
+    // Map teams data for BookingDetailsModal
+    teams: booking.teams ? {
+      id: booking.team_id || '',
+      name: booking.teams.name,
+      team_lead_id: booking.teams.team_lead?.id || null,
+      team_lead: booking.teams.team_lead || null,
+    } : null,
   }
 }
 
@@ -224,6 +231,13 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
       price: event.service_price,
     },
     service_packages_v2: null,
-    teams: null,
+    // Map teams data for BookingDetailsModal to display team info
+    teams: event.teams ? {
+      id: event.teams.id,
+      name: event.teams.name,
+      team_lead_id: event.teams.team_lead_id,
+      team_lead: event.teams.team_lead,
+      team_members: [], // Will be fetched separately in BookingDetailsModal
+    } : null,
   }
 }
