@@ -59,22 +59,18 @@ describe('booking-status constants', () => {
       // Assert - all payment statuses should be defined
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('unpaid')
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('paid')
-      expect(PAYMENT_STATUS_LABELS).toHaveProperty('partial')
-      expect(PAYMENT_STATUS_LABELS).toHaveProperty('refunded')
     })
 
     it('should have correct label values', () => {
       // Assert - labels should be human-readable
       expect(PAYMENT_STATUS_LABELS.unpaid).toBe('Unpaid')
       expect(PAYMENT_STATUS_LABELS.paid).toBe('Paid')
-      expect(PAYMENT_STATUS_LABELS.partial).toBe('Partial')
-      expect(PAYMENT_STATUS_LABELS.refunded).toBe('Refunded')
     })
 
-    it('should have exactly 4 payment statuses', () => {
+    it('should have exactly 2 payment statuses', () => {
       // Assert - ensure no extra or missing statuses
       const statusCount = Object.keys(PAYMENT_STATUS_LABELS).length
-      expect(statusCount).toBe(4)
+      expect(statusCount).toBe(2)
     })
   })
 
@@ -238,7 +234,7 @@ describe('booking-status constants', () => {
 
     it('PaymentStatus type should match PAYMENT_STATUS_COLORS keys', () => {
       // This is a compile-time check - if it compiles, the test passes
-      const validStatuses: PaymentStatus[] = ['unpaid', 'paid', 'partial', 'refunded']
+      const validStatuses: PaymentStatus[] = ['unpaid', 'paid']
       validStatuses.forEach((status) => {
         expect(PAYMENT_STATUS_COLORS[status]).toBeDefined()
       })

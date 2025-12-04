@@ -138,6 +138,7 @@ describe('BookingList', () => {
       bookings,
       completedCount: 1,
       confirmedCount: 1,
+      inProgressCount: 0,
       cancelledCount: 0,
       noShowCount: 0,
       upcomingCount: 2,

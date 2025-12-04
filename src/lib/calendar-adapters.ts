@@ -224,5 +224,6 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
       price: event.service_price,
     },
     service_packages_v2: null,
+    teams: null,
   }
 }

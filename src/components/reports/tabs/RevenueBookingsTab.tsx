@@ -506,7 +506,7 @@ function RevenueBookingsTabComponent({
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="font-display text-base sm:text-lg">Peak Hours Heatmap</CardTitle>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Busiest booking times by day and hour
+            Booking frequency by start time across each day
           </p>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">

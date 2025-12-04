@@ -419,6 +419,7 @@ export async function getRecurringGroup(
       bookings: sorted,
       completedCount: stats.completed,
       confirmedCount: stats.confirmed,
+      inProgressCount: stats.inProgress,
       cancelledCount: stats.cancelled,
       noShowCount: stats.noShow,
       upcomingCount: stats.upcoming

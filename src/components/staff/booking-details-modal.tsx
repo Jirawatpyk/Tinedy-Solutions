@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   Clock,
   User,
+  Users,
   Package,
   Phone,
   Calendar,
@@ -23,6 +24,7 @@ import {
   MapPin,
   Play,
   Star,
+  Crown,
 } from 'lucide-react'
 import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { format } from 'date-fns'
@@ -42,6 +44,13 @@ interface Review {
   booking_id: string
   rating: number
   created_at: string
+}
+
+interface TeamMember {
+  id: string
+  is_active: boolean
+  staff_id: string
+  full_name: string
 }
 
 interface BookingDetailsModalProps {
@@ -68,6 +77,7 @@ export function BookingDetailsModal({
   const [isMarking, setIsMarking] = useState(false)
   const [review, setReview] = useState<Review | null>(null)
   const [_loadingReview, setLoadingReview] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const { toast } = useToast()
 
   // Update currentBooking when booking prop changes (from optimistic update or real-time)
@@ -110,6 +120,39 @@ export function BookingDetailsModal({
 
     fetchReview()
   }, [open, booking])
+
+  // Fetch team members using SECURITY DEFINER function (bypasses RLS)
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (!open || !booking?.team_id) {
+        setTeamMembers([])
+        return
+      }
+
+      try {
+        // Use RPC function to get all team members (bypasses RLS restrictions)
+        const { data, error } = await supabase
+          .rpc('get_team_members_by_team_id', { p_team_id: booking.team_id })
+
+        if (error) throw error
+
+        // Data is already in flat structure from function
+        const members: TeamMember[] = (data || []).map((m: { id: string; is_active: boolean; staff_id: string; full_name: string }) => ({
+          id: m.id,
+          is_active: m.is_active,
+          staff_id: m.staff_id,
+          full_name: m.full_name || 'Unknown',
+        }))
+
+        setTeamMembers(members)
+      } catch (error) {
+        console.error('[BookingDetails] Error fetching team members:', error)
+        setTeamMembers([])
+      }
+    }
+
+    fetchTeamMembers()
+  }, [open, booking?.team_id])
 
   if (!currentBooking) return null
 
@@ -356,6 +399,55 @@ export function BookingDetailsModal({
               )}
             </div>
           </CollapsibleSection>
+
+          {/* Team Assignment (only show for team bookings) */}
+          {currentBooking.team_id && currentBooking.teams && (
+            <>
+              <Separator />
+              <CollapsibleSection
+                title={
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Team Assignment
+                  </h3>
+                }
+                className="space-y-3"
+              >
+                <div className="ml-6 space-y-3">
+                  {/* Team Name */}
+                  <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                    <p className="text-sm text-muted-foreground">Team</p>
+                    <p className="font-medium">{currentBooking.teams.name}</p>
+                  </div>
+
+                  {/* Team Lead */}
+                  {currentBooking.teams.team_lead && (
+                    <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                      <p className="text-sm text-muted-foreground">Lead</p>
+                      <p className="font-medium flex items-center gap-1.5">
+                        <Crown className="h-3.5 w-3.5 text-amber-500" />
+                        {currentBooking.teams.team_lead.full_name}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Team Members - fetched separately for complete data */}
+                  {teamMembers.length > 0 && (
+                    <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                      <p className="text-sm text-muted-foreground">Members</p>
+                      <p className="font-medium">
+                        {teamMembers.map(m => m.full_name).join(', ')}
+                        {' '}
+                        <span className="text-muted-foreground text-sm">
+                          ({teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'})
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleSection>
+            </>
+          )}
 
           {/* Existing Notes */}
           {currentBooking.notes && (

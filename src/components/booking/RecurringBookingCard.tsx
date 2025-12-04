@@ -28,7 +28,8 @@ import {
   Link2,
   User,
   Users,
-  RotateCcw
+  RotateCcw,
+  PlayCircle
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { getRecurringPatternLabel } from '@/types/recurring-booking'
@@ -126,6 +127,12 @@ export function RecurringBookingCard({
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
                   <span>{group.confirmedCount} <span className="hidden sm:inline">Confirmed</span></span>
+                </div>
+              )}
+              {group.inProgressCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
+                  <span>{group.inProgressCount} <span className="hidden sm:inline">In Progress</span></span>
                 </div>
               )}
               <div className="flex items-center gap-1">

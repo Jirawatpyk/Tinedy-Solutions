@@ -41,8 +41,9 @@ import {
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  Download,
+  FileSpreadsheet,
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { formatDate, getBangkokDateString } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
@@ -596,6 +597,7 @@ export function AdminCustomerDetail() {
           bookings: sortedBookings,
           completedCount: stats.completed,
           confirmedCount: stats.confirmed,
+          inProgressCount: stats.inProgress,
           cancelledCount: stats.cancelled,
           noShowCount: stats.noShow,
           upcomingCount: stats.upcoming,
@@ -723,47 +725,52 @@ export function AdminCustomerDetail() {
 
   const chartData = getChartData()
 
-  // Export to CSV function
-  const exportToCSV = () => {
+  // Export to Excel function
+  const exportToExcel = () => {
     if (!customer) return
 
-    // Prepare CSV data
-    const headers = ['Date', 'Time', 'Service', 'Service Type', 'Staff', 'Status', 'Amount', 'Notes']
-    const rows = filteredBookings.map((booking) => [
-      formatDate(booking.booking_date),
-      booking.start_time,
-      booking.service?.name || 'N/A',
-      booking.service?.service_type || 'N/A',
-      booking.staff?.full_name || 'N/A',
-      booking.status,
-      `฿${booking.total_price || 0}`,
-      booking.notes || '',
-    ])
+    // Prepare data for Excel
+    const data = filteredBookings.map((booking) => ({
+      'Date': formatDate(booking.booking_date),
+      'Time': booking.start_time,
+      'Service': booking.service?.name || booking.service_packages?.name || 'N/A',
+      'Service Type': booking.service?.service_type || booking.service_packages?.service_type || 'N/A',
+      'Staff': booking.staff?.full_name || booking.profiles?.full_name || 'N/A',
+      'Team': booking.teams?.name || 'N/A',
+      'Status': booking.status,
+      'Amount (฿)': booking.total_price || 0,
+      'Payment Status': booking.payment_status || 'unpaid',
+      'Notes': booking.notes || '',
+    }))
 
-    // Create CSV content
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-      ),
-    ].join('\n')
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(data)
 
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
+    // Set column widths for better readability
+    worksheet['!cols'] = [
+      { wch: 12 },  // Date
+      { wch: 10 },  // Time
+      { wch: 25 },  // Service
+      { wch: 15 },  // Service Type
+      { wch: 20 },  // Staff
+      { wch: 15 },  // Team
+      { wch: 12 },  // Status
+      { wch: 12 },  // Amount
+      { wch: 15 },  // Payment Status
+      { wch: 30 },  // Notes
+    ]
 
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${customer.full_name}_booking_history_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Booking History')
 
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    // Generate filename and download
+    const filename = `${customer.full_name}_booking_history_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, filename)
 
     toast({
       title: 'Success',
-      description: 'Booking history exported successfully',
+      description: 'Booking history exported to Excel successfully',
     })
   }
 
@@ -1137,12 +1144,12 @@ export function AdminCustomerDetail() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={exportToCSV}
+                onClick={exportToExcel}
                 disabled={filteredBookings.length === 0}
                 className="h-9"
               >
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export Excel</span>
               </Button>
             </div>
           </div>

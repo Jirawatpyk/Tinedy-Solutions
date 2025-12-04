@@ -61,6 +61,24 @@ export interface StaffBooking {
     name: string
     service_type: string
   } | null
+  // Team relation (for team bookings)
+  teams: {
+    id: string
+    name: string
+    team_lead_id: string | null
+    team_lead: {
+      id: string
+      full_name: string
+    } | null
+    team_members: {
+      id: string
+      is_active: boolean
+      profiles: {
+        id: string
+        full_name: string
+      } | null
+    }[]
+  } | null
 }
 
 export interface TeamMembership {
@@ -210,7 +228,18 @@ export async function fetchStaffBookingsToday(
       *,
       customers:customer_id (id, full_name, phone, avatar_url),
       service_packages (id, name, service_type, duration_minutes, price),
-      service_packages_v2:package_v2_id (id, name, service_type)
+      service_packages_v2:package_v2_id (id, name, service_type),
+      teams:team_id (
+        id,
+        name,
+        team_lead_id,
+        team_lead:team_lead_id (id, full_name),
+        team_members (
+          id,
+          is_active,
+          profiles:staff_id (id, full_name)
+        )
+      )
     `)
     .eq('booking_date', todayStr)
     .is('deleted_at', null) // Exclude archived bookings
@@ -259,7 +288,18 @@ export async function fetchStaffBookingsUpcoming(
       *,
       customers:customer_id (id, full_name, phone, avatar_url),
       service_packages (id, name, service_type, duration_minutes, price),
-      service_packages_v2:package_v2_id (id, name, service_type)
+      service_packages_v2:package_v2_id (id, name, service_type),
+      teams:team_id (
+        id,
+        name,
+        team_lead_id,
+        team_lead:team_lead_id (id, full_name),
+        team_members (
+          id,
+          is_active,
+          profiles:staff_id (id, full_name)
+        )
+      )
     `)
     .gte('booking_date', tomorrowStr)
     .lte('booking_date', nextWeekStr)
@@ -308,7 +348,18 @@ export async function fetchStaffBookingsCompleted(
       *,
       customers:customer_id (id, full_name, phone, avatar_url),
       service_packages (id, name, service_type, duration_minutes, price),
-      service_packages_v2:package_v2_id (id, name, service_type)
+      service_packages_v2:package_v2_id (id, name, service_type),
+      teams:team_id (
+        id,
+        name,
+        team_lead_id,
+        team_lead:team_lead_id (id, full_name),
+        team_members (
+          id,
+          is_active,
+          profiles:staff_id (id, full_name)
+        )
+      )
     `)
     .gte('booking_date', thirtyDaysAgoStr)
     .lte('booking_date', yesterdayStr)

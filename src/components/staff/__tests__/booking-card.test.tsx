@@ -51,6 +51,7 @@ describe('BookingCard', () => {
       price: 1500,
     },
     service_packages_v2: null,
+    teams: null,
     ...overrides,
   })
 

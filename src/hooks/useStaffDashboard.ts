@@ -14,7 +14,7 @@
  * Pattern: Same as useReportStats (Phase 2 migration)
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -140,9 +140,63 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     statsQuery.error ||
     null
 
-  // Real-time subscriptions are now handled by BookingRealtimeProvider
-  // This hook no longer needs its own subscription to avoid duplicates
-  // BookingRealtimeProvider invalidates queryKeys.staffBookings.all which covers all staff queries
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!userId || !teamsLoaded) return
+
+    logger.debug('Setting up real-time subscription', { userId, teamIds }, { context: 'StaffDashboard' })
+
+    const channel = supabase
+      .channel('staff-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'bookings',
+          // No filter - listen to all booking changes, then filter in callback
+        },
+        (payload) => {
+          // Filter relevant bookings in callback
+          const booking = payload.new as { staff_id?: string; team_id?: string } | null
+          const oldBooking = payload.old as { staff_id?: string; team_id?: string } | null
+
+          // For DELETE events, check old booking data
+          const relevantBooking = booking || oldBooking
+
+          // Check if this booking is relevant to this staff
+          const isMyBooking = relevantBooking?.staff_id === userId
+          const isMyTeamBooking = relevantBooking?.team_id && teamIds.includes(relevantBooking.team_id)
+
+          if (!isMyBooking && !isMyTeamBooking) {
+            // Not relevant to this staff, skip
+            return
+          }
+
+          logger.debug('Real-time update received', { event: payload.eventType }, { context: 'StaffDashboard' })
+
+          // Use moderate delay for UPDATE events to avoid conflict with mutations
+          // Reduced from 1000ms to 300ms to improve UX while maintaining safety
+          const delay = payload.eventType === 'UPDATE' ? 300 : 100
+
+          logger.debug(`Scheduling invalidation with ${delay}ms delay`, { eventType: payload.eventType }, { context: 'StaffDashboard' })
+
+          setTimeout(() => {
+            // Invalidate all bookings queries to refetch
+            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.upcoming(userId, teamIds) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+          }, delay)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      logger.debug('Cleaning up real-time subscription', {}, { context: 'StaffDashboard' })
+      supabase.removeChannel(channel)
+    }
+  }, [userId, teamsLoaded, teamIds, queryClient])
 
   // Mutation: Start Progress
   const startProgressMutation = useMutation({
@@ -196,8 +250,6 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       // Always refetch after mutation
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
-      // Also invalidate calendar queries for Staff Calendar page
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 
@@ -249,8 +301,6 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
-      // Also invalidate calendar queries for Staff Calendar page
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 
@@ -271,8 +321,6 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.upcoming(userId, teamIds) })
       queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
-      // Also invalidate calendar queries for Staff Calendar page
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.all })
     },
   })
 

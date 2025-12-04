@@ -52,22 +52,16 @@ export const BOOKING_STATUS_LABELS = {
 export const PAYMENT_STATUS_COLORS = {
   unpaid: 'bg-orange-100 text-orange-800 border-orange-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  partial: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  refunded: 'bg-gray-100 text-gray-800 border-gray-300',
 } as const
 
 export const PAYMENT_STATUS_DOTS = {
   unpaid: 'bg-orange-500',
   paid: 'bg-emerald-500',
-  partial: 'bg-yellow-500',
-  refunded: 'bg-gray-500',
 } as const
 
 export const PAYMENT_STATUS_LABELS = {
   unpaid: 'Unpaid',
   paid: 'Paid',
-  partial: 'Partial',
-  refunded: 'Refunded',
 } as const
 
 // ============================================================================
@@ -89,8 +83,6 @@ export const STATUS_COLORS_TIMELINE = {
   ...BOOKING_STATUS_COLORS_TIMELINE,
   unpaid: 'bg-orange-500 hover:bg-orange-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
-  partial: 'bg-yellow-500 hover:bg-yellow-600',
-  refunded: 'bg-gray-500 hover:bg-gray-600',
 } as const
 
 export const STATUS_LABELS = {

@@ -5,6 +5,13 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { logger } from '@/lib/logger'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
+// Types for realtime payload
+interface RealtimeBookingPayload {
+  staff_id: string | null
+  team_id: string | null
+  [key: string]: unknown
+}
+
 interface ReviewData {
   rating: number
 }
@@ -421,8 +428,43 @@ export function useStaffBookings() {
 
     fetchData()
 
-    // Real-time subscription is now handled by BookingRealtimeProvider
-    // This hook no longer needs its own subscription to avoid duplicates
+    // Real-time subscription for new bookings
+    // Note: Supabase realtime filters don't support OR conditions directly
+    // We'll subscribe to all changes and filter in the callback
+    const channel = supabase
+      .channel('staff-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+        },
+        (payload) => {
+          const booking = payload.new as RealtimeBookingPayload
+
+          // Reload if booking is for current user OR for any team they belong to
+          const isMyBooking = booking?.staff_id === user.id
+          const isMyTeamBooking = booking?.team_id && myTeamIds.includes(booking.team_id)
+
+          if (isMyBooking || isMyTeamBooking) {
+            // ถ้าเป็น UPDATE event ให้ข้ามการโหลดใหม่
+            // เพราะเรามี optimistic update ที่จัดการไว้แล้วใน addNotes(), startProgress(), markAsCompleted()
+            if (payload.eventType === 'UPDATE') {
+              return
+            }
+
+            // โหลดใหม่เฉพาะ INSERT และ DELETE เท่านั้น
+            fetchData()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      logger.debug('Cleanup', {}, { context: 'StaffBookings' })
+      supabase.removeChannel(channel)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, teamsLoaded, myTeamIds])
 

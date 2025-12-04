@@ -151,6 +151,7 @@ export function AdminBookings() {
           bookings: sortedBookings,
           completedCount: stats.completed,
           confirmedCount: stats.confirmed,
+          inProgressCount: stats.inProgress,
           cancelledCount: stats.cancelled,
           noShowCount: stats.noShow,
           upcomingCount: stats.upcoming,

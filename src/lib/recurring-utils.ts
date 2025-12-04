@@ -232,6 +232,7 @@ export function findParentBooking<T extends RecurringBookingBase>(
 export function countBookingsByStatus<T extends RecurringBookingBase>(bookings: T[]): {
   completed: number
   confirmed: number
+  inProgress: number
   cancelled: number
   noShow: number
   upcoming: number
@@ -240,12 +241,14 @@ export function countBookingsByStatus<T extends RecurringBookingBase>(bookings: 
   return {
     completed: bookings.filter(b => b.status === 'completed').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
+    inProgress: bookings.filter(b => b.status === 'in_progress').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
     noShow: bookings.filter(b => b.status === 'no_show').length,
     upcoming: bookings.filter(b =>
       b.status !== 'completed' &&
       b.status !== 'cancelled' &&
       b.status !== 'confirmed' &&
+      b.status !== 'in_progress' &&
       b.status !== 'no_show'
     ).length,
     total: bookings.length
