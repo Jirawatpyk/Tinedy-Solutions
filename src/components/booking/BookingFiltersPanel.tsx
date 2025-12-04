@@ -185,8 +185,6 @@ const BookingFiltersPanelComponent = ({
                   <SelectItem value="unpaid">Unpaid</SelectItem>
                   <SelectItem value="pending_verification">Verifying</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
