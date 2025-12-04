@@ -531,11 +531,11 @@ export async function fetchStaffStats(
         return Math.round((totalRating / reviews.length) * 10) / 10
       })(),
 
-      // Total earnings (current month)
+      // Total earnings (current month) - divided by team member count for team bookings
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('total_price')
+          .select('total_price, team_id, staff_id')
           .eq('status', 'completed')
           .eq('payment_status', 'paid')
           .gte('booking_date', startOfMonthStr)
@@ -552,7 +552,34 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return 0
 
-        return bookings.reduce((sum, booking) => sum + (booking.total_price || 0), 0)
+        // Get team member counts for team bookings
+        const teamIdsInBookings = [...new Set(bookings.filter(b => b.team_id).map(b => b.team_id!))]
+
+        let teamMemberCounts: Record<string, number> = {}
+        if (teamIdsInBookings.length > 0) {
+          // Use RPC function to get team members (bypasses RLS)
+          const memberCountPromises = teamIdsInBookings.map(async (teamId) => {
+            const { data } = await supabase.rpc('get_team_members_by_team_id', { p_team_id: teamId })
+            return { teamId, count: data?.length || 1 }
+          })
+          const results = await Promise.all(memberCountPromises)
+          results.forEach(({ teamId, count }) => {
+            teamMemberCounts[teamId] = count
+          })
+        }
+
+        // Calculate earnings: divide by team member count for team bookings
+        return bookings.reduce((sum, booking) => {
+          const price = booking.total_price || 0
+          if (booking.team_id) {
+            // Team booking: divide by number of active members
+            const memberCount = teamMemberCounts[booking.team_id] || 1
+            return sum + (price / memberCount)
+          } else {
+            // Individual booking: full amount
+            return sum + price
+          }
+        }, 0)
       })(),
 
       // Total tasks (6 months)
@@ -572,11 +599,11 @@ export async function fetchStaffStats(
         return r.count || 0
       })(),
 
-      // Monthly breakdown (6 months) for performance chart
+      // Monthly breakdown (6 months) for performance chart - revenue divided by team members
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('booking_date, status, total_price')
+          .select('booking_date, status, total_price, team_id, staff_id')
           .gte('booking_date', sixMonthsAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null)
@@ -592,7 +619,22 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return []
 
-        // Group by month
+        // Get team member counts for team bookings
+        const teamIdsInBookings = [...new Set(bookings.filter(b => b.team_id).map(b => b.team_id!))]
+
+        let teamMemberCounts: Record<string, number> = {}
+        if (teamIdsInBookings.length > 0) {
+          const memberCountPromises = teamIdsInBookings.map(async (teamId) => {
+            const { data } = await supabase.rpc('get_team_members_by_team_id', { p_team_id: teamId })
+            return { teamId, count: data?.length || 1 }
+          })
+          const results = await Promise.all(memberCountPromises)
+          results.forEach(({ teamId, count }) => {
+            teamMemberCounts[teamId] = count
+          })
+        }
+
+        // Group by month with revenue divided by team members
         const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
         bookings.forEach((booking) => {
           const month = booking.booking_date.slice(0, 7) // YYYY-MM
@@ -602,7 +644,15 @@ export async function fetchStaffStats(
           const data = monthlyMap.get(month)!
           data.jobs += 1
           if (booking.status === 'completed') {
-            data.revenue += booking.total_price || 0
+            const price = booking.total_price || 0
+            if (booking.team_id) {
+              // Team booking: divide by number of active members
+              const memberCount = teamMemberCounts[booking.team_id] || 1
+              data.revenue += price / memberCount
+            } else {
+              // Individual booking: full amount
+              data.revenue += price
+            }
           }
         })
 
@@ -610,7 +660,7 @@ export async function fetchStaffStats(
           .map(([month, data]) => ({
             month,
             jobs: data.jobs,
-            revenue: data.revenue,
+            revenue: Math.round(data.revenue), // Round to avoid decimal issues
           }))
           .sort((a, b) => a.month.localeCompare(b.month))
       })(),
@@ -625,7 +675,7 @@ export async function fetchStaffStats(
       jobsThisWeek: jobsWeekResult,
       completionRate,
       averageRating: reviewsResult,
-      totalEarnings: earningsResult,
+      totalEarnings: Math.round(earningsResult), // Round to avoid decimal issues
       totalTasks6Months: totalTasks6MonthsResult,
       monthlyData: monthlyDataResult,
     }
