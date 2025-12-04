@@ -166,6 +166,11 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
                   <CreditCard className="h-2.5 w-2.5" />
                   Paid
                 </Badge>
+              ) : booking.payment_status === 'pending_verification' ? (
+                <Badge className="text-[10px] font-medium bg-yellow-100 text-yellow-800 border-yellow-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
+                  <DollarSign className="h-2.5 w-2.5" />
+                  Verifying
+                </Badge>
               ) : booking.payment_status === 'unpaid' ? (
                 <Badge className="text-[10px] font-medium bg-orange-100 text-orange-800 border-orange-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
                   <DollarSign className="h-2.5 w-2.5" />
