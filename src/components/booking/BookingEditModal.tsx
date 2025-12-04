@@ -671,7 +671,7 @@ export function BookingEditModal({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_state">State</Label>
+              <Label htmlFor="edit_state">Province</Label>
               <Input
                 id="edit_state"
                 {...form.register('state')}
