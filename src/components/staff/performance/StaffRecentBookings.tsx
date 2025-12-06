@@ -8,7 +8,7 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 
 interface StaffRecentBookingsProps {
   bookings: Booking[]
@@ -23,14 +23,12 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 }: StaffRecentBookingsProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const modal = useBookingDetailModal({ refresh: onRefresh })
 
-  // Filter bookings by booking status and payment status
+  // Filter bookings by booking status only
   const filteredBookings = bookings.filter(b => {
     const matchesStatus = statusFilter === 'all' || b.status === statusFilter
-    const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
-    return matchesStatus && matchesPayment
+    return matchesStatus
   })
 
   const totalBookings = filteredBookings.length
@@ -42,7 +40,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
   // Reset to page 1 when status filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [statusFilter, paymentStatusFilter])
+  }, [statusFilter])
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
@@ -90,17 +88,6 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
               <SelectContent>
                 <SelectItem value="all">All Booking</SelectItem>
                 {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
-                <SelectValue placeholder="Payment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payment</SelectItem>
-                {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>

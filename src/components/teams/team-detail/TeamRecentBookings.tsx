@@ -10,7 +10,7 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 
 interface TeamRecentBookingsProps {
   teamId: string
@@ -22,7 +22,6 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   const [totalCount, setTotalCount] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const itemsPerPage = 5
 
   const loadRecentBookings = useCallback(async () => {
@@ -37,11 +36,6 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
       // Apply status filter
       if (statusFilter !== 'all') {
         countQuery = countQuery.eq('status', statusFilter)
-      }
-
-      // Apply payment status filter
-      if (paymentStatusFilter !== 'all') {
-        countQuery = countQuery.eq('payment_status', paymentStatusFilter)
       }
 
       const { count } = await countQuery
@@ -79,11 +73,6 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
         dataQuery = dataQuery.eq('status', statusFilter)
       }
 
-      // Apply payment status filter
-      if (paymentStatusFilter !== 'all') {
-        dataQuery = dataQuery.eq('payment_status', paymentStatusFilter)
-      }
-
       const { data, error } = await dataQuery
         .order('booking_date', { ascending: false })
         .range(from, to)
@@ -104,7 +93,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     } catch (error) {
       console.error('Error loading recent bookings:', error)
     }
-  }, [teamId, currentPage, statusFilter, paymentStatusFilter])
+  }, [teamId, currentPage, statusFilter])
 
   const modal = useBookingDetailModal({ refresh: loadRecentBookings })
 
@@ -115,7 +104,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   // Reset to page 1 when status filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [statusFilter, paymentStatusFilter])
+  }, [statusFilter])
 
   // No need for client-side filtering anymore - it's done server-side
   const filteredBookings = bookings
@@ -156,17 +145,6 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
               <SelectContent>
                 <SelectItem value="all">All Booking</SelectItem>
                 {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
-                <SelectValue placeholder="Payment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payment</SelectItem>
-                {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>
