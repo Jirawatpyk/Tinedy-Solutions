@@ -194,8 +194,10 @@ export function AdminCalendar() {
     return (
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
+          <div>
+            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          </div>
           <Button variant="outline" disabled>
             <CalendarIcon className="h-4 w-4 mr-2" />
             Today
@@ -234,8 +236,10 @@ export function AdminCalendar() {
     return (
       <div className="space-y-6">
         {/* Page Header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
+          <div>
+            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          </div>
           <Button variant="outline" disabled>
             <CalendarIcon className="h-4 w-4 mr-2" />
             Today
@@ -327,7 +331,9 @@ export function AdminCalendar() {
       <div className="hidden md:block space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          <div>
+            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          </div>
           <Button onClick={calendar.dateControls.goToToday} variant="outline">
             <CalendarIcon className="h-4 w-4 mr-2" />
             Today
