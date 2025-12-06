@@ -174,6 +174,29 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
               </span>
             </div>
 
+            {/* Payment Status */}
+            {booking.payment_status && (
+              <div className="flex items-center gap-2 mt-1.5">
+                {booking.payment_status === 'paid' ? (
+                  <Badge className="text-[10px] font-medium bg-emerald-100 text-emerald-800 border-emerald-300">
+                    Paid
+                  </Badge>
+                ) : booking.payment_status === 'pending_verification' ? (
+                  <Badge className="text-[10px] font-medium bg-yellow-100 text-yellow-800 border-yellow-300">
+                    Verifying
+                  </Badge>
+                ) : booking.payment_status === 'unpaid' ? (
+                  <Badge className="text-[10px] font-medium bg-orange-100 text-orange-800 border-orange-300">
+                    Unpaid
+                  </Badge>
+                ) : booking.payment_status === 'partial' ? (
+                  <Badge className="text-[10px] font-medium bg-amber-100 text-amber-800 border-amber-300">
+                    Partial
+                  </Badge>
+                ) : null}
+              </div>
+            )}
+
             {/* Conflict Warning */}
             {hasConflict && (
               <div className="flex items-center gap-1.5 mt-2 text-red-600">

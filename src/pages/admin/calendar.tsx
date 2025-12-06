@@ -516,6 +516,8 @@ export function AdminCalendar() {
     switch (status) {
       case 'paid':
         return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
+      case 'pending_verification':
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Verifying</Badge>
       case 'partial':
         return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
       case 'refunded':
