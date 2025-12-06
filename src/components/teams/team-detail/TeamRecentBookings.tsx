@@ -103,6 +103,30 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     loadRecentBookings()
   }, [loadRecentBookings])
 
+  // Realtime subscription for booking changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('team-bookings-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `team_id=eq.${teamId}`,
+        },
+        (payload) => {
+          console.log('[TeamRecentBookings] Booking changed:', payload.eventType)
+          loadRecentBookings()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [teamId, loadRecentBookings])
+
   // Reset to page 1 when status filter changes
   useEffect(() => {
     setCurrentPage(1)
