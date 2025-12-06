@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -36,6 +36,19 @@ export function AdminCalendar() {
   // ========== Calendar Data Hook (replaces 20+ useState calls) ==========
   const calendar = useCalendarData()
   const { toast } = useToast()
+
+  // ========== Create bookingsByDate Map for Mobile Calendar ==========
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, Booking[]>()
+    calendar.bookingData.bookings.forEach((booking) => {
+      const dateKey = booking.booking_date
+      if (!map.has(dateKey)) {
+        map.set(dateKey, [])
+      }
+      map.get(dateKey)!.push(booking)
+    })
+    return map
+  }, [calendar.bookingData.bookings])
 
   // ========== Local Modal States (NOT in hook - UI-only) ==========
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -316,7 +329,7 @@ export function AdminCalendar() {
             selectedDate={calendar.dateControls.selectedDate}
             bookings={calendar.bookingData.bookings}
             conflictMap={new Map()} // TODO: Add conflict detection to hook
-            bookingsByDate={new Map()} // TODO: Add bookingsByDate to hook
+            bookingsByDate={bookingsByDate}
             onDateSelect={calendar.dateControls.handleDateClick}
             onMonthChange={calendar.dateControls.setCurrentDate}
             onBookingClick={openBookingDetail}
