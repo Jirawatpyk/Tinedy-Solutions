@@ -177,6 +177,118 @@ export function useCalendarData() {
     }
   }, [getBookingsForDate])
 
+  /**
+   * Detect time conflicts between bookings
+   *
+   * Returns a Map of booking IDs that have time conflicts
+   */
+  const conflictMap = useMemo(() => {
+    const conflicts = new Map<string, Set<string>>()
+
+    // Helper: Check if two time ranges overlap
+    const checkTimeOverlap = (
+      start1: string,
+      end1: string,
+      start2: string,
+      end2: string
+    ): boolean => {
+      const toMinutes = (time: string): number => {
+        const [hours, minutes] = time.split(':').map(Number)
+        return hours * 60 + minutes
+      }
+
+      const s1 = toMinutes(start1)
+      const e1 = toMinutes(end1)
+      const s2 = toMinutes(start2)
+      const e2 = toMinutes(end2)
+
+      return s1 < e2 && e1 > s2
+    }
+
+    // Group bookings by date for efficient comparison
+    const bookingsByDate = new Map<string, Booking[]>()
+    bookings.forEach((booking) => {
+      const dateKey = booking.booking_date
+      if (!bookingsByDate.has(dateKey)) {
+        bookingsByDate.set(dateKey, [])
+      }
+      bookingsByDate.get(dateKey)!.push(booking)
+    })
+
+    // Check for conflicts within each date
+    bookingsByDate.forEach((dateBookings) => {
+      for (let i = 0; i < dateBookings.length; i++) {
+        const booking1 = dateBookings[i]
+
+        // Skip cancelled/no-show bookings
+        if (booking1.status === 'cancelled' || booking1.status === 'no_show') {
+          continue
+        }
+
+        for (let j = i + 1; j < dateBookings.length; j++) {
+          const booking2 = dateBookings[j]
+
+          // Skip cancelled/no-show bookings
+          if (booking2.status === 'cancelled' || booking2.status === 'no_show') {
+            continue
+          }
+
+          // Check if they share the same staff or team
+          const sameStaff = booking1.staff_id && booking2.staff_id &&
+                           booking1.staff_id === booking2.staff_id
+          const sameTeam = booking1.team_id && booking2.team_id &&
+                          booking1.team_id === booking2.team_id
+
+          if (sameStaff || sameTeam) {
+            // Check time overlap
+            const hasOverlap = checkTimeOverlap(
+              booking1.start_time,
+              booking1.end_time || booking1.start_time,
+              booking2.start_time,
+              booking2.end_time || booking2.start_time
+            )
+
+            if (hasOverlap) {
+              // Add both bookings to conflict map
+              if (!conflicts.has(booking1.id)) {
+                conflicts.set(booking1.id, new Set())
+              }
+              if (!conflicts.has(booking2.id)) {
+                conflicts.set(booking2.id, new Set())
+              }
+              conflicts.get(booking1.id)!.add(booking2.id)
+              conflicts.get(booking2.id)!.add(booking1.id)
+            }
+          }
+        }
+      }
+    })
+
+    return conflicts
+  }, [bookings])
+
+  /**
+   * Get conflict IDs grouped by date
+   *
+   * Returns a Map where key is date string and value is Set of conflicting booking IDs
+   */
+  const conflictIdsByDate = useMemo(() => {
+    const idsByDate = new Map<string, Set<string>>()
+
+    conflictMap.forEach((conflictingIds, bookingId) => {
+      const booking = bookings.find(b => b.id === bookingId)
+      if (booking) {
+        const dateKey = booking.booking_date
+        if (!idsByDate.has(dateKey)) {
+          idsByDate.set(dateKey, new Set())
+        }
+        idsByDate.get(dateKey)!.add(bookingId)
+      }
+    })
+
+    return idsByDate
+  }, [conflictMap, bookings])
+
   // ========== Return Unified Interface ==========
   return {
     // Date Controls
@@ -230,6 +342,8 @@ export function useCalendarData() {
       selectedDateBookings,
       getBookingsForDate,
       getBookingCountForDate,
+      conflictMap,
+      conflictIdsByDate,
     },
 
     // Modal Controls

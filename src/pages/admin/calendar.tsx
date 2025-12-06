@@ -328,7 +328,7 @@ export function AdminCalendar() {
             currentDate={calendar.dateControls.currentDate}
             selectedDate={calendar.dateControls.selectedDate}
             bookings={calendar.bookingData.bookings}
-            conflictMap={new Map()} // TODO: Add conflict detection to hook
+            conflictMap={calendar.bookingData.conflictMap}
             bookingsByDate={bookingsByDate}
             onDateSelect={calendar.dateControls.handleDateClick}
             onMonthChange={calendar.dateControls.setCurrentDate}
@@ -405,8 +405,9 @@ export function AdminCalendar() {
                 {calendar.dateControls.calendarDays.map((day: Date, index: number) => {
                   const dayBookings = calendar.bookingData.getBookingsForDate(day)
 
-                  // Get pre-calculated conflict IDs for this date (OPTIMIZED)
-                  const dayConflictIds = new Set<string>() // TODO: Add conflictIdsByDate to hook
+                  // Get pre-calculated conflict IDs for this date (use yyyy-MM-dd format to match booking_date)
+                  const dateKey = format(day, 'yyyy-MM-dd')
+                  const dayConflictIds = calendar.bookingData.conflictIdsByDate.get(dateKey) || new Set<string>()
 
                   return (
                     <CalendarCell
@@ -461,7 +462,7 @@ export function AdminCalendar() {
             selectedDate={calendar.dateControls.selectedDate}
             selectedDateRange={calendar.dateControls.selectedDateRange}
             bookings={calendar.bookingData.selectedDateBookings}
-            conflictMap={new Map()} // TODO: Add conflict detection to hook
+            conflictMap={calendar.bookingData.conflictMap}
             onBookingClick={openBookingDetail}
             onStatusChange={calendar.actions.handleInlineStatusChange}
             getAvailableStatuses={getAvailableStatuses}
