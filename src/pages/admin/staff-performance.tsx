@@ -18,7 +18,7 @@ export function AdminStaffPerformance() {
   const basePath = '/admin'
 
   // Use custom hook for data fetching and stats calculation
-  const { staff, bookings, stats, monthlyData, loading, error } = useStaffPerformance(id)
+  const { staff, bookings, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
 
   if (loading) {
     return (
@@ -92,7 +92,7 @@ export function AdminStaffPerformance() {
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Recent Bookings">
-          <StaffRecentBookings bookings={bookings} />
+          <StaffRecentBookings bookings={bookings} onRefresh={refresh} />
         </SectionErrorBoundary>
       </div>
     </ErrorBoundary>

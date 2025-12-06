@@ -215,6 +215,7 @@ export function AdminDashboard() {
         onDelete={actions.deleteBooking}
         onStatusChange={actions.handleStatusChange}
         onMarkAsPaid={actions.markAsPaid}
+        onVerifyPayment={actions.verifyPayment}
         getStatusBadge={getStatusBadge}
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}

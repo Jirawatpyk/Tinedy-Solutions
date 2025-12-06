@@ -548,7 +548,7 @@ export function BookingDetailModal({
             {/* Payment Actions */}
             {booking.payment_status !== 'paid' && (
               <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
-                {/* Verify button - for pending_verification with slip */}
+                {/* Verify button - for pending_verification status with slip */}
                 {booking.payment_status === 'pending_verification' && booking.payment_slip_url && onVerifyPayment && (
                   <Button
                     onClick={() => onVerifyPayment(booking.id)}

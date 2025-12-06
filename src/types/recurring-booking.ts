@@ -29,6 +29,7 @@ export interface RecurringBookingBase {
   status: string
   total_price: number
   payment_status?: string
+  payment_slip_url?: string | null
   // Recurring fields (required when is_recurring is true)
   recurring_group_id: string
   recurring_sequence: number

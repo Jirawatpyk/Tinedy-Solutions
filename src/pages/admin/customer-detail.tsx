@@ -1198,6 +1198,49 @@ export function AdminCustomerDetail() {
                           })
                         }
                       }}
+                      onVerifyPayment={async (bookingId) => {
+                        try {
+                          // Find the booking to get recurring_group_id
+                          const booking = bookings.find(b => b.id === bookingId)
+                          if (!booking?.recurring_group_id) {
+                            // If not a recurring booking, update single booking
+                            const { error } = await supabase
+                              .from('bookings')
+                              .update({
+                                payment_status: 'paid',
+                                payment_date: getBangkokDateString(),
+                              })
+                              .eq('id', bookingId)
+
+                            if (error) throw error
+                          } else {
+                            // Update all bookings in the recurring group
+                            const { error } = await supabase
+                              .from('bookings')
+                              .update({
+                                payment_status: 'paid',
+                                payment_date: getBangkokDateString(),
+                              })
+                              .eq('recurring_group_id', booking.recurring_group_id)
+
+                            if (error) throw error
+                          }
+
+                          toast({
+                            title: 'Success',
+                            description: 'Payment verified successfully',
+                          })
+
+                          refetchBookings()
+                        } catch (error) {
+                          const errorMsg = mapErrorToUserMessage(error, 'booking')
+                          toast({
+                            title: errorMsg.title,
+                            description: errorMsg.description,
+                            variant: 'destructive',
+                          })
+                        }
+                      }}
                       getAvailableStatuses={(currentStatus) => {
                         const statusFlow: Record<string, string[]> = {
                           pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
@@ -1604,6 +1647,33 @@ export function AdminCustomerDetail() {
               toast({
                 title: 'Error',
                 description: 'Failed to update payment status',
+                variant: 'destructive',
+              })
+            }
+          }}
+          onVerifyPayment={async (bookingId) => {
+            try {
+              const { error } = await supabase
+                .from('bookings')
+                .update({
+                  payment_status: 'paid',
+                  payment_date: getBangkokDateString(),
+                })
+                .eq('id', bookingId)
+
+              if (error) throw error
+
+              toast({
+                title: 'Success',
+                description: 'Payment verified successfully',
+              })
+
+              refetchBookings()
+            } catch (error) {
+              const errorMsg = mapErrorToUserMessage(error, 'booking')
+              toast({
+                title: errorMsg.title,
+                description: errorMsg.description,
                 variant: 'destructive',
               })
             }

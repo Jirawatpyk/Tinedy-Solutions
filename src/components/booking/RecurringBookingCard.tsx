@@ -45,6 +45,7 @@ interface RecurringBookingCardProps {
   onArchiveGroup?: (groupId: string) => void
   onRestoreBooking?: (bookingId: string) => void
   onStatusChange?: (bookingId: string, currentStatus: string, newStatus: string) => void
+  onVerifyPayment?: (bookingId: string) => void
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
 }
@@ -61,6 +62,7 @@ export function RecurringBookingCard({
   onArchiveGroup,
   onRestoreBooking,
   onStatusChange,
+  onVerifyPayment,
   getAvailableStatuses,
   getStatusLabel
 }: RecurringBookingCardProps) {
@@ -167,7 +169,7 @@ export function RecurringBookingCard({
               </div>
             </div>
             {/* Payment Status Badge - แยกออกมาด้านขวา (เหมือน Individual) */}
-            <div className="hidden sm:flex">
+            <div className="hidden sm:flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               {(() => {
                 // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
                 const paymentStatus = firstBooking.payment_status || 'unpaid'
@@ -177,6 +179,27 @@ export function RecurringBookingCard({
                     <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
                       Paid
                     </Badge>
+                  )
+                } else if (paymentStatus === 'pending_verification') {
+                  return (
+                    <>
+                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
+                        Verifying
+                      </Badge>
+                      {onVerifyPayment && firstBooking.payment_slip_url && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onVerifyPayment(firstBooking.id)
+                          }}
+                          className="h-7 text-xs border-green-500 text-green-700 hover:bg-green-50"
+                        >
+                          Verify
+                        </Button>
+                      )}
+                    </>
                   )
                 } else if (paymentStatus === 'partial') {
                   return (

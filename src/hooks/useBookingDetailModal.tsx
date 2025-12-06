@@ -29,6 +29,7 @@ export interface UseBookingDetailModalReturn {
     onDelete: (bookingId: string) => void
     onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
     onMarkAsPaid: (bookingId: string, method: string) => void
+    onVerifyPayment?: (bookingId: string) => void
     getStatusBadge: (status: string) => React.ReactNode
     getPaymentStatusBadge: (status?: string) => React.ReactNode
     getAvailableStatuses: (currentStatus: string) => string[]
@@ -122,6 +123,44 @@ export function useBookingDetailModal({
         toast({
           title: 'Success',
           description: 'Payment marked as paid',
+        })
+
+        refresh()
+      } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
+        toast({
+          title: errorMsg.title,
+          description: errorMsg.description,
+          variant: 'destructive',
+        })
+      }
+    },
+    [selectedBooking, toast, refresh]
+  )
+
+  const handleVerifyPayment = useCallback(
+    async (bookingId: string) => {
+      try {
+        const updateData = {
+          payment_status: 'paid',
+          payment_date: getBangkokDateString(),
+        }
+
+        const { error } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('id', bookingId)
+
+        if (error) throw error
+
+        // Update local state immediately
+        if (selectedBooking && selectedBooking.id === bookingId) {
+          setSelectedBooking({ ...selectedBooking, ...updateData })
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Payment verified successfully',
         })
 
         refresh()
@@ -231,6 +270,7 @@ export function useBookingDetailModal({
       onDelete: deleteBooking,
       onStatusChange: handleStatusChange,
       onMarkAsPaid: handleMarkAsPaid,
+      onVerifyPayment: handleVerifyPayment,
       getStatusBadge,
       getPaymentStatusBadge,
       getAvailableStatuses,

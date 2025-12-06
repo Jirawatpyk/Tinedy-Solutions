@@ -161,11 +161,53 @@ export function useDashboardActions(
     [softDelete, refresh]
   )
 
+  const verifyPayment = useCallback(
+    async (bookingId: string) => {
+      setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
+      try {
+        const { error } = await supabase
+          .from('bookings')
+          .update({
+            payment_status: 'paid',
+            payment_date: getBangkokDateString(),
+          })
+          .eq('id', bookingId)
+
+        if (error) throw error
+
+        toast({
+          title: 'Success',
+          description: 'Payment verified successfully',
+        })
+
+        if (selectedBooking && selectedBooking.id === bookingId && onBookingUpdate) {
+          onBookingUpdate({
+            ...selectedBooking,
+            payment_status: 'paid',
+            payment_date: getBangkokDateString(),
+          })
+        }
+
+        refresh()
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: getErrorMessage(error),
+          variant: 'destructive',
+        })
+      } finally {
+        setActionLoading((prev) => ({ ...prev, markAsPaid: false }))
+      }
+    },
+    [selectedBooking, toast, refresh, onBookingUpdate]
+  )
+
   return {
     handleStatusChange,
     deleteBooking,
     archiveBooking,
     markAsPaid,
+    verifyPayment,
     actionLoading,
     // Delete confirmation dialog
     deleteConfirm,

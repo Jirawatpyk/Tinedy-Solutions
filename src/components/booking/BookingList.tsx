@@ -42,6 +42,7 @@ interface BookingListProps {
   onArchiveRecurringGroup?: (groupId: string) => void
   onArchiveBooking?: (bookingId: string) => void
   onRestoreBooking?: (bookingId: string) => void
+  onVerifyPayment?: (bookingId: string) => void
   showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
@@ -82,6 +83,7 @@ function BookingListComponent({
   onArchiveRecurringGroup,
   onArchiveBooking,
   onRestoreBooking,
+  onVerifyPayment,
   showArchived: _showArchived,
   onStatusChange,
   formatTime,
@@ -153,6 +155,7 @@ function BookingListComponent({
                     onArchiveGroup={onArchiveRecurringGroup}
                     onRestoreBooking={onRestoreBooking}
                     onStatusChange={onStatusChange}
+                    onVerifyPayment={onVerifyPayment}
                     getAvailableStatuses={getAvailableStatuses}
                     getStatusLabel={getStatusLabel}
                   />
