@@ -145,7 +145,7 @@ export function AdminCalendar() {
         // แสดงทุก bookings ในสัปดาห์นี้
         const weekStart = startOfWeek(today)
         const weekEnd = endOfWeek(today)
-        setCurrentDate(weekStart)
+        setCurrentDate(today) // Keep calendar on current month
         setSelectedDate(null)
         setSelectedDateRange({ start: weekStart, end: weekEnd })
         break
