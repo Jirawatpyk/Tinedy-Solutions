@@ -253,24 +253,27 @@ function BookingListComponent({
                             </Button>
                           ) : (
                             <>
-                              <Select
-                                value={booking.status}
-                                onValueChange={(value) =>
-                                  onStatusChange(booking.id, booking.status, value)
-                                }
-                                disabled={isArchived}
-                              >
-                                <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getAvailableStatuses(booking.status).map((status) => (
-                                    <SelectItem key={status} value={status}>
-                                      {getStatusLabel(status)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              {/* Hide status dropdown for final states (completed, cancelled, no_show) */}
+                              {!['completed', 'cancelled', 'no_show'].includes(booking.status) && (
+                                <Select
+                                  value={booking.status}
+                                  onValueChange={(value) =>
+                                    onStatusChange(booking.id, booking.status, value)
+                                  }
+                                  disabled={isArchived}
+                                >
+                                  <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getAvailableStatuses(booking.status).map((status) => (
+                                      <SelectItem key={status} value={status}>
+                                        {getStatusLabel(status)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
                               <PermissionAwareDeleteButton
                                 resource="bookings"
                                 itemName={`Booking #${booking.id.slice(0, 8)}`}

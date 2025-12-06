@@ -12,7 +12,7 @@ import type { Booking } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Clock, User, Package, ChevronRight } from 'lucide-react'
-import { STATUS_COLORS_TIMELINE } from '@/constants/booking-status'
+import { STATUS_COLORS_TIMELINE, BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
 import { formatTime } from '@/lib/booking-utils'
 import { cn } from '@/lib/utils'
 
@@ -24,14 +24,6 @@ interface MobileBookingListProps {
   onBookingClick: (booking: Booking) => void
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  in_progress: 'In Progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  no_show: 'No Show',
-}
 
 export const MobileBookingList: React.FC<MobileBookingListProps> = ({
   bookings,
@@ -171,15 +163,10 @@ export const MobileBookingList: React.FC<MobileBookingListProps> = ({
                         variant="outline"
                         className={cn(
                           'text-[10px] px-1.5 py-0',
-                          booking.status === 'pending' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
-                          booking.status === 'confirmed' && 'bg-blue-50 text-blue-700 border-blue-200',
-                          booking.status === 'in_progress' && 'bg-purple-50 text-purple-700 border-purple-200',
-                          booking.status === 'completed' && 'bg-green-50 text-green-700 border-green-200',
-                          booking.status === 'cancelled' && 'bg-red-50 text-red-700 border-red-200',
-                          booking.status === 'no_show' && 'bg-red-50 text-red-700 border-red-200'
+                          BOOKING_STATUS_COLORS[booking.status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
                         )}
                       >
-                        {STATUS_LABELS[booking.status] || booking.status}
+                        {BOOKING_STATUS_LABELS[booking.status as BookingStatus] || booking.status}
                       </Badge>
                     </div>
                   </div>

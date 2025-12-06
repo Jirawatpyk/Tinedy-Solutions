@@ -12,7 +12,7 @@
 
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal, User, Users, BookmarkCheck } from 'lucide-react'
+import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -23,7 +23,7 @@ import { FilterBadge, FilterBadgeList } from './FilterBadge'
 import { FilterPresets } from './FilterPresets'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
-import { BOOKING_STATUSES } from '@/types/calendar-filters'
+import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
 import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
 
 interface CalendarFiltersDesktopProps {
@@ -79,6 +79,17 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
     []
   )
 
+  // Payment status options from constants
+  const paymentStatusOptions = useMemo(
+    () =>
+      PAYMENT_STATUSES.map((status) => ({
+        value: status.value,
+        label: status.label,
+        icon: <CreditCard className="h-3.5 w-3.5" />,
+      })),
+    []
+  )
+
   // Get selected staff names for badges
   const selectedStaffNames = useMemo(
     () =>
@@ -104,6 +115,15 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
         .map((status) => BOOKING_STATUSES.find((s) => s.value === status)?.label)
         .filter(Boolean),
     [filters.statuses]
+  )
+
+  // Get selected payment status labels for badges
+  const selectedPaymentStatusLabels = useMemo(
+    () =>
+      filters.paymentStatuses
+        .map((status) => PAYMENT_STATUSES.find((s) => s.value === status)?.label)
+        .filter(Boolean),
+    [filters.paymentStatuses]
   )
 
   return (
@@ -195,6 +215,24 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
                   showCount
                   showClear
                 />
+
+                <Separator />
+
+                {/* Payment Status Filter */}
+                <FilterMultiSelect
+                  label="Payment Status"
+                  icon={<CreditCard className="h-4 w-4" />}
+                  options={paymentStatusOptions}
+                  selectedValues={filters.paymentStatuses}
+                  onChange={filterControls.setPaymentStatus}
+                  onToggle={filterControls.togglePaymentStatus}
+                  maxHeight={200}
+                  minHeight={100}
+                  itemHeight={40}
+                  showSelectAll
+                  showCount
+                  showClear
+                />
               </div>
             </ScrollArea>
           </PopoverContent>
@@ -267,6 +305,18 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
               onRemove={() => filterControls.toggleStatus(filters.statuses[index])}
               icon={<BookmarkCheck className="h-3 w-3" />}
               variant="success"
+            />
+          ))}
+
+          {/* Payment Status Badges */}
+          {selectedPaymentStatusLabels.map((label, index) => (
+            <FilterBadge
+              key={`payment-${filters.paymentStatuses[index]}`}
+              label="Payment"
+              value={label || 'Unknown'}
+              onRemove={() => filterControls.togglePaymentStatus(filters.paymentStatuses[index])}
+              icon={<CreditCard className="h-3 w-3" />}
+              variant="warning"
             />
           ))}
         </FilterBadgeList>

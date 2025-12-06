@@ -84,6 +84,7 @@ export interface BookingFilters {
   staffIds?: string[]
   teamIds?: string[]
   statuses?: string[]
+  paymentStatuses?: string[]
   searchQuery?: string
 }
 
@@ -153,6 +154,11 @@ export async function fetchBookingsByDateRange(
   } else if (filters?.status && filters.status !== 'all') {
     // Legacy single-value filter
     query = query.eq('status', filters.status)
+  }
+
+  // Payment Status filters
+  if (filters?.paymentStatuses && filters.paymentStatuses.length > 0) {
+    query = query.in('payment_status', filters.paymentStatuses)
   }
 
   // Customer filter (for compatibility)
@@ -346,6 +352,7 @@ export const bookingQueryOptions = {
       staffIds: filters.staffIds?.length ? [...filters.staffIds].sort() : undefined,
       teamIds: filters.teamIds?.length ? [...filters.teamIds].sort() : undefined,
       statuses: filters.statuses?.length ? [...filters.statuses].sort() : undefined,
+      paymentStatuses: filters.paymentStatuses?.length ? [...filters.paymentStatuses].sort() : undefined,
       searchQuery: filters.searchQuery?.trim() || undefined,
 
       // Legacy single-value filters (สำหรับ Weekly Schedule & Calendar)

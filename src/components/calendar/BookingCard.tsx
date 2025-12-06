@@ -12,7 +12,7 @@ import React from 'react'
 import { Clock, User, Briefcase, Users, AlertTriangle, Calendar, DollarSign, CreditCard } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
-import { STATUS_COLORS } from '@/constants/booking-status'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS } from '@/constants/booking-status'
 import { StatusBadgeEditor } from './StatusBadgeEditor'
 import { Badge } from '@/components/ui/badge'
 
@@ -90,7 +90,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
       className={`
         group relative p-3 rounded-lg border-2 cursor-pointer
         transition-all duration-200 hover:shadow-lg
-        ${STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS]}
+        ${BOOKING_STATUS_CARD_COLORS[booking.status as keyof typeof BOOKING_STATUS_CARD_COLORS] || 'bg-gray-50 border-gray-200'}
         ${hasConflict ? '!border-red-500 !bg-red-50 dark:!bg-red-950/20' : ''}
       `}
     >
@@ -140,7 +140,11 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
               />
             </div>
           ) : (
-            <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 py-0.5" aria-label={`Booking status: ${booking.status.replace('_', ' ')}`}>
+            <Badge
+              variant="outline"
+              className={`text-[10px] font-medium uppercase px-1.5 py-0.5 ${BOOKING_STATUS_COLORS[booking.status as keyof typeof BOOKING_STATUS_COLORS] || 'bg-gray-100 text-gray-800 border-gray-300'}`}
+              aria-label={`Booking status: ${booking.status.replace('_', ' ')}`}
+            >
               {booking.status.replace('_', ' ')}
             </Badge>
           )}

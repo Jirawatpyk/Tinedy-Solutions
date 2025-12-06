@@ -10,7 +10,7 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
-import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
 
 interface TeamRecentBookingsProps {
   teamId: string
@@ -136,18 +136,12 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
   const filteredBookings = bookings
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; className?: string }> = {
-      pending: { variant: 'secondary', label: 'Pending', className: 'bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs' },
-      confirmed: { variant: 'default', label: 'Confirmed', className: 'bg-blue-100 text-blue-800 text-[10px] sm:text-xs' },
-      in_progress: { variant: 'default', label: 'In Progress', className: 'bg-purple-100 text-purple-800 text-[10px] sm:text-xs' },
-      completed: { variant: 'default', label: 'Completed', className: 'bg-green-100 text-green-800 text-[10px] sm:text-xs' },
-      cancelled: { variant: 'outline', label: 'Cancelled', className: 'bg-gray-100 text-gray-800 text-[10px] sm:text-xs' },
-    }
+    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || BOOKING_STATUS_COLORS.pending
+    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || 'Unknown'
 
-    const config = statusConfig[status] || statusConfig.pending
     return (
-      <Badge variant={config.variant} className={config.className}>
-        {config.label}
+      <Badge variant="outline" className={`${colorClass} text-[10px] sm:text-xs`}>
+        {label}
       </Badge>
     )
   }

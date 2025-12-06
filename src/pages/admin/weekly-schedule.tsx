@@ -1,6 +1,7 @@
 import type { Booking } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { useTeamsList } from '@/hooks/useTeams'
 import { useBookingsByDateRange } from '@/hooks/useBookings'
 import { useSwipe } from '@/hooks/useSwipe'
@@ -476,21 +477,10 @@ export function AdminWeeklySchedule() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { className: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pending' },
-      confirmed: { className: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Confirmed' },
-      in_progress: { className: 'bg-purple-100 text-purple-800 border-purple-200', label: 'In Progress' },
-      completed: { className: 'bg-green-100 text-green-800 border-green-200', label: 'Completed' },
-      cancelled: { className: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelled' },
-      no_show: { className: 'bg-red-100 text-red-800 border-red-200', label: 'No Show' },
-    }
+    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
+    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
 
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      className: 'bg-gray-100 text-gray-800 border-gray-200',
-      label: status,
-    }
-
-    return <Badge variant="outline" className={config.className}>{config.label}</Badge>
+    return <Badge variant="outline" className={colorClass}>{label}</Badge>
   }
 
   const getPaymentStatusBadge = (status?: string) => {

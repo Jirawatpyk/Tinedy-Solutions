@@ -28,7 +28,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -211,10 +210,6 @@ export function AdminCalendar() {
           <div>
             <p className="text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
-          <Button variant="outline" disabled>
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Today
-          </Button>
         </div>
 
         {/* Error Card */}
@@ -253,10 +248,6 @@ export function AdminCalendar() {
           <div>
             <p className="text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
-          <Button variant="outline" disabled>
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Today
-          </Button>
         </div>
 
         {/* Filters skeleton */}
@@ -320,9 +311,16 @@ export function AdminCalendar() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Mobile Calendar View - แสดงเฉพาะ mobile */}
       <div className="block md:hidden h-[calc(100vh-120px)]">
+        {/* Mobile Filter Button */}
+        <div className="flex justify-end mb-2 px-2">
+          <CalendarFilters
+            filterControls={calendar.filterControls}
+            onPresetDateChange={calendar.dateControls.handlePresetDateChange}
+          />
+        </div>
         <CalendarErrorBoundary>
           <MobileCalendar
             currentDate={calendar.dateControls.currentDate}
@@ -347,10 +345,6 @@ export function AdminCalendar() {
           <div>
             <p className="text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
-          <Button onClick={calendar.dateControls.goToToday} variant="outline">
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Today
-          </Button>
         </div>
 
         {/* New Filter System (Sprint 2 - UX Improvements) */}
@@ -362,8 +356,8 @@ export function AdminCalendar() {
         <CalendarErrorBoundary>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Calendar */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
+            <Card className="lg:col-span-2 flex flex-col h-fit">
+              <CardHeader className="flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-display text-2xl">
                     {format(calendar.dateControls.currentDate, 'MMMM yyyy')}
@@ -388,9 +382,9 @@ export function AdminCalendar() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 min-h-0 flex flex-col overflow-auto">
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1 flex-1">
                 {/* Day headers */}
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                   <div
@@ -425,7 +419,7 @@ export function AdminCalendar() {
               </div>
 
               {/* Legend */}
-              <div className="mt-6 pt-4 border-t">
+              <div className="mt-6 pt-4 border-t flex-shrink-0">
                 <p className="text-sm font-semibold mb-2">Status Legend:</p>
                 <div className="flex flex-wrap gap-3 text-xs">
                   <div className="flex items-center gap-1">

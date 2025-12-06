@@ -6,6 +6,7 @@ import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getBangkokDateString } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getPaymentStatusBadge as getPaymentBadge } from '@/lib/booking-badges'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import type { Booking } from '@/types/booking'
 
 export interface UseBookingDetailModalProps {
@@ -217,16 +218,9 @@ export function useBookingDetailModal({
   )
 
   const getStatusBadge = useCallback((status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-      confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-700 border-blue-300' },
-      in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700 border-purple-300' },
-      completed: { label: 'Completed', className: 'bg-green-100 text-green-700 border-green-300' },
-      cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 border-red-300' },
-      no_show: { label: 'No Show', className: 'bg-gray-100 text-gray-700 border-gray-300' },
-    }
-    const config = statusConfig[status] || { label: status, className: '' }
-    return <Badge variant="outline" className={config.className}>{config.label}</Badge>
+    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
+    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
+    return <Badge variant="outline" className={colorClass}>{label}</Badge>
   }, [])
 
   const getPaymentStatusBadge = useCallback((status?: string) => {

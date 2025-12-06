@@ -275,7 +275,7 @@ export function useCalendarData() {
   const conflictIdsByDate = useMemo(() => {
     const idsByDate = new Map<string, Set<string>>()
 
-    conflictMap.forEach((conflictingIds, bookingId) => {
+    conflictMap.forEach((_conflictingIds, bookingId) => {
       const booking = bookings.find(b => b.id === bookingId)
       if (booking) {
         const dateKey = booking.booking_date
@@ -324,6 +324,9 @@ export function useCalendarData() {
       toggleStatus: filterControls.toggleStatus,
       setStatus: filterControls.setStatus,
       clearStatus: filterControls.clearStatus,
+      togglePaymentStatus: filterControls.togglePaymentStatus,
+      setPaymentStatus: filterControls.setPaymentStatus,
+      clearPaymentStatus: filterControls.clearPaymentStatus,
       setSearch: filterControls.setSearch,
       clearSearch: filterControls.clearSearch,
       setPreset: filterControls.setPreset,

@@ -11,7 +11,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal, User, Users, BookmarkCheck } from 'lucide-react'
+import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -30,7 +30,7 @@ import { FilterMultiSelect } from './FilterMultiSelect'
 import { FilterPresets } from './FilterPresets'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
-import { BOOKING_STATUSES } from '@/types/calendar-filters'
+import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
 import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
 
 interface CalendarFiltersMobileProps {
@@ -83,6 +83,17 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
         value: status.value,
         label: status.label,
         icon: <BookmarkCheck className="h-3.5 w-3.5" />,
+      })),
+    []
+  )
+
+  // Payment status options from constants
+  const paymentStatusOptions = useMemo(
+    () =>
+      PAYMENT_STATUSES.map((status) => ({
+        value: status.value,
+        label: status.label,
+        icon: <CreditCard className="h-3.5 w-3.5" />,
       })),
     []
   )
@@ -198,7 +209,24 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
               icon={<BookmarkCheck className="h-4 w-4" />}
               options={statusOptions}
               selectedValues={filters.statuses}
+              onChange={filterControls.setStatus}
               onToggle={filterControls.toggleStatus}
+              maxHeight={200}
+              showSelectAll
+              showCount
+              showClear
+            />
+
+            <Separator />
+
+            {/* Payment Status Filter */}
+            <FilterMultiSelect
+              label="Payment Status"
+              icon={<CreditCard className="h-4 w-4" />}
+              options={paymentStatusOptions}
+              selectedValues={filters.paymentStatuses}
+              onChange={filterControls.setPaymentStatus}
+              onToggle={filterControls.togglePaymentStatus}
               maxHeight={200}
               showSelectAll
               showCount

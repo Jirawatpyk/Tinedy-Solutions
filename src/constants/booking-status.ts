@@ -9,6 +9,7 @@
 // BOOKING STATUS (for booking.status field)
 // ============================================================================
 
+// For Badge components (more saturated)
 export const BOOKING_STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -16,6 +17,16 @@ export const BOOKING_STATUS_COLORS = {
   completed: 'bg-green-100 text-green-800 border-green-300',
   cancelled: 'bg-red-100 text-red-800 border-red-300',
   no_show: 'bg-gray-100 text-gray-800 border-gray-300',
+} as const
+
+// For Card backgrounds (lighter/softer)
+export const BOOKING_STATUS_CARD_COLORS = {
+  pending: 'bg-yellow-50 border-yellow-200',
+  confirmed: 'bg-blue-50 border-blue-200',
+  in_progress: 'bg-purple-50 border-purple-200',
+  completed: 'bg-green-50 border-green-200',
+  cancelled: 'bg-red-50 border-red-200',
+  no_show: 'bg-gray-50 border-gray-200',
 } as const
 
 export const BOOKING_STATUS_DOTS = {

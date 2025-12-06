@@ -12,16 +12,25 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { StatusChangeConfirmDialog } from './StatusChangeConfirmDialog'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 
-// All status options with labels
-const ALL_STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'text-yellow-800' },
-  { value: 'confirmed', label: 'Confirmed', color: 'text-blue-800' },
-  { value: 'in_progress', label: 'In Progress', color: 'text-purple-800' },
-  { value: 'completed', label: 'Completed', color: 'text-green-800' },
-  { value: 'cancelled', label: 'Cancelled', color: 'text-red-800' },
-  { value: 'no_show', label: 'No Show', color: 'text-gray-800' },
-] as const
+// Text colors for radio group labels
+const STATUS_TEXT_COLORS: Record<BookingStatus, string> = {
+  pending: 'text-yellow-800',
+  confirmed: 'text-blue-800',
+  in_progress: 'text-purple-800',
+  completed: 'text-green-800',
+  cancelled: 'text-red-800',
+  no_show: 'text-gray-800',
+}
+
+// Build status options from constants
+const ALL_STATUS_OPTIONS = (Object.keys(BOOKING_STATUS_LABELS) as BookingStatus[]).map(status => ({
+  value: status,
+  label: BOOKING_STATUS_LABELS[status],
+  color: STATUS_TEXT_COLORS[status],
+  badgeColor: BOOKING_STATUS_COLORS[status],
+}))
 
 interface StatusBadgeEditorProps {
   currentStatus: string
@@ -33,7 +42,7 @@ interface StatusBadgeEditorProps {
 export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
   currentStatus,
   onStatusChange,
-  disabled = false,
+  disabled: _disabled = false,
   availableStatuses,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
@@ -95,8 +104,8 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
-            className="text-xs font-medium uppercase px-2 py-0.5 rounded hover:opacity-70 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-tinedy-blue disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={disabled}
+            type="button"
+            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${BOOKING_STATUS_COLORS[currentStatus as keyof typeof BOOKING_STATUS_COLORS] || 'bg-gray-100 text-gray-800 border-gray-300'}`}
             title="Click to change status"
           >
             {currentStatus.replace('_', ' ')}

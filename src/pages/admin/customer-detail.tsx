@@ -2,6 +2,7 @@ import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { useStaffList } from '@/hooks/useStaff'
 import { useBookingsByCustomer } from '@/hooks/useBookings'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,7 +51,7 @@ import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
+import { PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -809,15 +810,12 @@ export function AdminCustomerDetail() {
 
   const relationshipInfo = relationshipConfig[customer.relationship_level]
 
-  // Status badge config
-  const statusConfig = {
-    pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-    confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-700 border-blue-300' },
-    in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700 border-purple-300' },
-    completed: { label: 'Completed', className: 'bg-green-100 text-green-700 border-green-300' },
-    cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 border-red-300' },
-    no_show: { label: 'No Show', className: 'bg-gray-100 text-gray-700 border-gray-300' },
-  }
+  // Status badge config - use constants from booking-status.ts
+  const getStatusBadgeClass = (status: string) =>
+    BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
+
+  const getStatusLabel = (status: string) =>
+    BOOKING_STATUS_LABELS[status as BookingStatus] || status
 
   return (
     <div className="space-y-6">
@@ -1268,9 +1266,9 @@ export function AdminCustomerDetail() {
                 } else {
                   // Render Individual Booking Card
                   const booking = item.data
-                  const statusInfo = statusConfig[booking.status] || {
-                    label: booking.status,
-                    className: 'bg-gray-100 text-gray-700 border-gray-300'
+                  const statusInfo = {
+                    label: getStatusLabel(booking.status),
+                    className: getStatusBadgeClass(booking.status)
                   }
                   return (
                     <Card
@@ -1679,16 +1677,11 @@ export function AdminCustomerDetail() {
             }
           }}
           getStatusBadge={(status) => {
-            const statusConfig: Record<string, { label: string; className: string }> = {
-              pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-              confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-700 border-blue-300' },
-              in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700 border-purple-300' },
-              completed: { label: 'Completed', className: 'bg-green-100 text-green-700 border-green-300' },
-              cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 border-red-300' },
-              no_show: { label: 'No Show', className: 'bg-gray-100 text-gray-700 border-gray-300' },
-            }
-            const config = statusConfig[status] || { label: status, className: '' }
-            return <Badge variant="outline" className={config.className}>{config.label}</Badge>
+            return (
+              <Badge variant="outline" className={getStatusBadgeClass(status)}>
+                {getStatusLabel(status)}
+              </Badge>
+            )
           }}
           getPaymentStatusBadge={(status) => {
             // Map 'pending' to 'unpaid' for display

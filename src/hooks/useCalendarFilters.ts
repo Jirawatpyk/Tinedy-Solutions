@@ -30,6 +30,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
       // Date-based presets: clear all filters (Calendar handles date range)
       return {
         statuses: [],
+        paymentStatuses: [],
         staffIds: [],
         teamIds: [],
         searchQuery: '',
@@ -39,6 +40,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
     case 'pending':
       return {
         statuses: ['pending'],
+        paymentStatuses: [],
         staffIds: [],
         teamIds: [],
         searchQuery: '',
@@ -48,6 +50,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
     case 'confirmed':
       return {
         statuses: ['confirmed'],
+        paymentStatuses: [],
         staffIds: [],
         teamIds: [],
         searchQuery: '',
@@ -158,6 +161,32 @@ function calendarFiltersReducer(
         preset: null,
       }
 
+    // Payment Status Filter Actions
+    case 'TOGGLE_PAYMENT_STATUS': {
+      const paymentStatuses = state.paymentStatuses.includes(action.payload)
+        ? state.paymentStatuses.filter((s) => s !== action.payload)
+        : [...state.paymentStatuses, action.payload]
+      return {
+        ...state,
+        paymentStatuses,
+        preset: null,
+      }
+    }
+
+    case 'SET_PAYMENT_STATUS':
+      return {
+        ...state,
+        paymentStatuses: action.payload,
+        preset: null,
+      }
+
+    case 'CLEAR_PAYMENT_STATUS':
+      return {
+        ...state,
+        paymentStatuses: [],
+        preset: null,
+      }
+
     // Search Actions
     case 'SET_SEARCH':
       return {
@@ -206,6 +235,11 @@ function loadFiltersFromStorage(): CalendarFilters {
         start: new Date(parsed.dateRange.start),
         end: new Date(parsed.dateRange.end),
       }
+    }
+
+    // Ensure paymentStatuses field exists (for backward compatibility)
+    if (!parsed.paymentStatuses) {
+      parsed.paymentStatuses = []
     }
 
     return parsed
@@ -292,6 +326,18 @@ export function useCalendarFilters(
     dispatch({ type: 'CLEAR_STATUS' })
   }, [])
 
+  const togglePaymentStatus = useCallback((paymentStatus: string) => {
+    dispatch({ type: 'TOGGLE_PAYMENT_STATUS', payload: paymentStatus })
+  }, [])
+
+  const setPaymentStatus = useCallback((paymentStatuses: string[]) => {
+    dispatch({ type: 'SET_PAYMENT_STATUS', payload: paymentStatuses })
+  }, [])
+
+  const clearPaymentStatus = useCallback(() => {
+    dispatch({ type: 'CLEAR_PAYMENT_STATUS' })
+  }, [])
+
   const setSearch = useCallback((query: string) => {
     dispatch({ type: 'SET_SEARCH', payload: query })
   }, [])
@@ -315,6 +361,7 @@ export function useCalendarFilters(
       filters.staffIds.length > 0 ||
       filters.teamIds.length > 0 ||
       filters.statuses.length > 0 ||
+      filters.paymentStatuses.length > 0 ||
       filters.searchQuery.trim() !== ''
     )
   }, [filters])
@@ -325,6 +372,7 @@ export function useCalendarFilters(
     if (filters.staffIds.length > 0) count++
     if (filters.teamIds.length > 0) count++
     if (filters.statuses.length > 0) count++
+    if (filters.paymentStatuses.length > 0) count++
     if (filters.searchQuery.trim()) count++
     return count
   }, [filters])
@@ -346,6 +394,9 @@ export function useCalendarFilters(
     toggleStatus,
     setStatus,
     clearStatus,
+    togglePaymentStatus,
+    setPaymentStatus,
+    clearPaymentStatus,
     setSearch,
     clearSearch,
     setPreset,
@@ -367,6 +418,9 @@ export function useCalendarFilters(
     toggleStatus,
     setStatus,
     clearStatus,
+    togglePaymentStatus,
+    setPaymentStatus,
+    clearPaymentStatus,
     setSearch,
     clearSearch,
     setPreset,

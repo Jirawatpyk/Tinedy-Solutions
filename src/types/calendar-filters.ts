@@ -27,6 +27,7 @@ export interface CalendarFilters {
   staffIds: string[]        // ['staff-id-1', 'staff-id-2']
   teamIds: string[]         // ['team-id-1', 'team-id-2']
   statuses: string[]        // ['pending', 'confirmed', 'in_progress']
+  paymentStatuses: string[] // ['unpaid', 'paid', 'verifying']
 
   // Search Query
   searchQuery: string       // 'John Doe' or 'Cleaning' or phone number
@@ -41,6 +42,7 @@ export const INITIAL_CALENDAR_FILTERS: CalendarFilters = {
   staffIds: [],
   teamIds: [],
   statuses: [],
+  paymentStatuses: [],
   searchQuery: '',
   preset: null,
 }
@@ -66,6 +68,11 @@ export type CalendarFilterAction =
   | { type: 'SET_STATUS'; payload: string[] }
   | { type: 'CLEAR_STATUS' }
 
+  // Payment Status Filter Actions
+  | { type: 'TOGGLE_PAYMENT_STATUS'; payload: string }
+  | { type: 'SET_PAYMENT_STATUS'; payload: string[] }
+  | { type: 'CLEAR_PAYMENT_STATUS' }
+
   // Search Actions
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'CLEAR_SEARCH' }
@@ -85,9 +92,17 @@ export const BOOKING_STATUSES = [
   { value: 'completed', label: 'Completed', color: 'text-green-800' },
   { value: 'cancelled', label: 'Cancelled', color: 'text-red-800' },
   { value: 'no_show', label: 'No Show', color: 'text-gray-800' },
+] as const
+
+// Payment status constants (for payment filter options)
+export const PAYMENT_STATUSES = [
   { value: 'unpaid', label: 'Unpaid', color: 'text-orange-800' },
   { value: 'paid', label: 'Paid', color: 'text-emerald-800' },
+  { value: 'pending_verification', label: 'Verifying', color: 'text-blue-800' },
 ] as const
 
 // Helper type for booking status values
 export type BookingStatusValue = typeof BOOKING_STATUSES[number]['value']
+
+// Helper type for payment status values
+export type PaymentStatusValue = typeof PAYMENT_STATUSES[number]['value']

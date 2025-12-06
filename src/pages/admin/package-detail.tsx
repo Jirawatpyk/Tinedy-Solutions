@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
@@ -43,7 +44,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 
 // Icons
 import {
@@ -380,17 +380,10 @@ export default function AdminPackageDetail() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      completed: { label: 'Completed', className: 'bg-green-100 text-green-800' },
-      pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
-      in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-800' },
-      cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-800' },
-    }
+    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
+    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
 
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' }
-
-    return <Badge className={config.className}>{config.label}</Badge>
+    return <Badge className={colorClass}>{label}</Badge>
   }
 
   // Loading state
