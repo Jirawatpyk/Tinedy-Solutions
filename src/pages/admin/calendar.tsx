@@ -220,6 +220,7 @@ export function AdminCalendar() {
   const {
     bookings,
     isLoading,
+    isFetching,
     error,
     refetch: refetchBookings,
   } = useBookingsByDateRange({
@@ -971,6 +972,7 @@ export function AdminCalendar() {
             onBookingClick={openBookingDetail}
             onStatusChange={handleInlineStatusChange}
             getAvailableStatuses={getAvailableStatuses}
+            loading={isFetching && !isLoading}
           />
           </div>
         </CalendarErrorBoundary>

@@ -74,6 +74,8 @@ interface BookingListSidebarProps {
   onStatusChange: (bookingId: string, newStatus: string) => Promise<void>
   /** Get available status transitions */
   getAvailableStatuses: (currentStatus: string) => string[]
+  /** Loading state for refetching */
+  loading?: boolean
 }
 
 const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
@@ -84,6 +86,7 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
   onBookingClick,
   onStatusChange,
   getAvailableStatuses,
+  loading = false,
 }) => {
   // คำนวณ Quick Stats - Optimize: loop ครั้งเดียวแทนที่จะ filter 7 ครั้ง
   const stats = useMemo(() => {
@@ -250,20 +253,30 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
           </div>
         ) : (
           /* Booking List with visible scrollbar */
-          <ScrollArea className="h-full px-4 py-3">
-            <div className="space-y-2.5 pr-2">
-              {bookings.map((booking) => (
-                <BookingCardWrapper
-                  key={booking.id}
-                  booking={booking}
-                  conflictMap={conflictMap}
-                  onBookingClick={onBookingClick}
-                  onStatusChange={onStatusChange}
-                  getAvailableStatuses={getAvailableStatuses}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="relative h-full">
+            {loading && (
+              <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  <p className="text-xs text-muted-foreground">Updating...</p>
+                </div>
+              </div>
+            )}
+            <ScrollArea className="h-full px-4 py-3">
+              <div className="space-y-2.5 pr-2">
+                {bookings.map((booking) => (
+                  <BookingCardWrapper
+                    key={booking.id}
+                    booking={booking}
+                    conflictMap={conflictMap}
+                    onBookingClick={onBookingClick}
+                    onStatusChange={onStatusChange}
+                    getAvailableStatuses={getAvailableStatuses}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -281,7 +294,8 @@ export const BookingListSidebar = React.memo(BookingListSidebarComponent, (prev,
     prev.conflictMap === next.conflictMap &&
     prev.onBookingClick === next.onBookingClick &&
     prev.onStatusChange === next.onStatusChange &&
-    prev.getAvailableStatuses === next.getAvailableStatuses
+    prev.getAvailableStatuses === next.getAvailableStatuses &&
+    prev.loading === next.loading
   )
 })
 
