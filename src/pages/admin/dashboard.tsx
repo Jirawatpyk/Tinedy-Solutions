@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
-import { supabase } from '@/lib/supabase'
+import { useTeamsList } from '@/hooks/useTeams'
 import { calculateEndTime } from '@/lib/dashboard-utils'
 import { getStatusBadge, getPaymentStatusBadge, getAvailableStatuses, getStatusLabel } from '@/lib/booking-badges'
 
@@ -17,7 +17,7 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Types
-import type { Team, TodayBooking } from '@/types/dashboard'
+import type { TodayBooking } from '@/types/dashboard'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 
@@ -36,39 +36,13 @@ export function AdminDashboard() {
   // Service Packages & Staff/Team Data
   const { packages: servicePackages } = useServicePackages()
   const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
-  const [teams, setTeams] = useState<Team[]>([])
+  const { teamsList: teams } = useTeamsList({ enableRealtime: true })
 
   // Edit Modal State
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
   const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
   const [editFormData, setEditFormData] = useState<BookingFormState>({})
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
-
-  // Load teams
-  useEffect(() => {
-    fetchTeams()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const fetchTeams = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) throw error
-      setTeams(data || [])
-    } catch (error) {
-      console.error('Error fetching teams:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Failed to load teams',
-        description: 'Could not load team list. Please refresh the page.',
-      })
-    }
-  }
 
   // Edit Form Helpers
   const editForm = {
@@ -154,6 +128,46 @@ export function AdminDashboard() {
     modal.setIsDetailOpen(false)
   }
 
+  // Error state
+  if (dashboardData.error) {
+    return (
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's what's happening today.
+          </p>
+        </div>
+
+        {/* Error Card */}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-red-100 p-2">
+              <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900">Failed to Load Dashboard</h3>
+              <p className="mt-1 text-sm text-red-700">{dashboardData.error}</p>
+              <button
+                type="button"
+                onClick={() => dashboardData.refresh()}
+                className="mt-3 inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -168,24 +182,27 @@ export function AdminDashboard() {
       <DashboardStats
         stats={dashboardData.stats}
         statsChange={dashboardData.statsChange}
-        loading={dashboardData.loading}
+        loading={dashboardData.loadingStates.stats || dashboardData.loadingStates.todayStats}
       />
 
       {/* Quick Insights */}
-      <QuickInsights miniStats={dashboardData.miniStats} loading={dashboardData.loading} />
+      <QuickInsights
+        miniStats={dashboardData.miniStats}
+        loading={dashboardData.loadingStates.miniStats}
+      />
 
       {/* Charts Row */}
       <DashboardCharts
         bookingsByStatus={dashboardData.bookingsByStatus}
         dailyRevenue={dashboardData.dailyRevenue}
-        loading={dashboardData.loading}
+        loading={dashboardData.loadingStates.byStatus || dashboardData.loadingStates.revenue}
       />
 
       {/* Today's Appointments */}
       <TodayAppointmentsList
         bookings={dashboardData.todayBookings}
         onBookingClick={modal.openDetail}
-        loading={dashboardData.loading}
+        loading={dashboardData.loadingStates.todayBookings}
       />
 
       {/* Booking Detail Modal */}

@@ -63,6 +63,12 @@ export interface TodayBooking {
   } | null
   teams: {
     name: string
+    team_lead?: {
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+    } | null
   } | null
 }
 
@@ -79,6 +85,16 @@ export interface MiniStats {
   completionRate: number
 }
 
+// Loading States
+export interface DashboardLoadingStates {
+  stats: boolean
+  todayStats: boolean
+  byStatus: boolean
+  todayBookings: boolean
+  revenue: boolean
+  miniStats: boolean
+}
+
 // Complete Dashboard Data
 export interface DashboardData {
   stats: Stats
@@ -87,6 +103,10 @@ export interface DashboardData {
   todayBookings: TodayBooking[]
   dailyRevenue: DailyRevenue[]
   miniStats: MiniStats
+  loading: boolean
+  loadingStates: DashboardLoadingStates
+  error: string | null
+  refresh: () => Promise<void>
 }
 
 // Staff and Team Types (for modals)

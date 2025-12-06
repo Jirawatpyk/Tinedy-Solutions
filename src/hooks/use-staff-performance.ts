@@ -123,6 +123,8 @@ export function useStaffPerformance(staffId: string | undefined) {
           status,
           total_price,
           payment_status,
+          payment_slip_url,
+          payment_method,
           created_at,
           staff_id,
           team_id,

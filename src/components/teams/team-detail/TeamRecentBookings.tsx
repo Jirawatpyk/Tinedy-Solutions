@@ -55,6 +55,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           status,
           total_price,
           payment_status,
+          payment_slip_url,
+          payment_method,
           address,
           city,
           state,

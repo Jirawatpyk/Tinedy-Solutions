@@ -167,7 +167,7 @@ export async function fetchTodayBookings(): Promise<TodayBooking[]> {
       service_packages (name, service_type),
       service_packages_v2:package_v2_id (name, service_type),
       profiles!bookings_staff_id_fkey (full_name),
-      teams (name)
+      teams(name, team_lead:team_lead_id(id, full_name, email, avatar_url))
     `
     )
     .eq('booking_date', todayStr)

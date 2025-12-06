@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { getStatusBadge, getPaymentStatusBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
@@ -193,10 +193,18 @@ export const TodayAppointmentsList = ({
                       </p>
                     )}
                     {booking.teams && (
-                      <p className="text-sm text-tinedy-green flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        Team: {booking.teams.name}
-                      </p>
+                      <div className="text-sm text-tinedy-green space-y-1">
+                        <p className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Team: {booking.teams.name}
+                        </p>
+                        {booking.teams.team_lead && (
+                          <p className="flex items-center gap-1 ml-4 text-xs text-muted-foreground">
+                            <Crown className="h-3 w-3 text-amber-600" />
+                            Lead: {booking.teams.team_lead.full_name}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex sm:flex-col items-center sm:items-end gap-4">

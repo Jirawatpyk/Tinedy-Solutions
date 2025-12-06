@@ -16,7 +16,6 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { dashboardQueryOptions } from '@/lib/queries/dashboard-queries'
-import type { DashboardData } from '@/types/dashboard'
 
 export function useDashboardStats() {
   const queryClient = useQueryClient()
@@ -63,13 +62,23 @@ export function useDashboardStats() {
     error: errorMiniStats,
   } = useQuery(dashboardQueryOptions.miniStats)
 
-  // Combined loading state (only true if ALL queries are loading initially)
+  // Individual loading states for each section
+  const loadingStates = {
+    stats: loadingStats,
+    todayStats: loadingTodayStats,
+    byStatus: loadingByStatus,
+    todayBookings: loadingTodayBookings,
+    revenue: loadingRevenue,
+    miniStats: loadingMiniStats,
+  }
+
+  // Combined loading state (true if ANY query is loading)
   const loading =
-    loadingStats &&
-    loadingTodayStats &&
-    loadingByStatus &&
-    loadingTodayBookings &&
-    loadingRevenue &&
+    loadingStats ||
+    loadingTodayStats ||
+    loadingByStatus ||
+    loadingTodayBookings ||
+    loadingRevenue ||
     loadingMiniStats
 
   // Combined error state
@@ -128,19 +137,15 @@ export function useDashboardStats() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
   }
 
-  // Combine data
-  const data: DashboardData = {
+  return {
     stats,
     statsChange,
     bookingsByStatus,
     todayBookings,
     dailyRevenue,
     miniStats,
-  }
-
-  return {
-    ...data,
     loading,
+    loadingStates,
     error,
     refresh,
   }
