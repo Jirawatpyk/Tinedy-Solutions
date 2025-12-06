@@ -42,6 +42,7 @@ interface BookingDetailModalProps {
   onCancel?: (bookingId: string) => void
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   onMarkAsPaid: (bookingId: string, method: string) => void
+  onVerifyPayment?: (bookingId: string) => void
   getStatusBadge: (status: string) => React.ReactNode
   getPaymentStatusBadge: (status?: string) => React.ReactNode
   getAvailableStatuses: (currentStatus: string) => string[]
@@ -65,6 +66,7 @@ export function BookingDetailModal({
   onCancel,
   onStatusChange,
   onMarkAsPaid,
+  onVerifyPayment,
   getStatusBadge,
   getPaymentStatusBadge,
   getAvailableStatuses,
@@ -547,9 +549,9 @@ export function BookingDetailModal({
             {booking.payment_status !== 'paid' && (
               <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                 {/* Verify button - for pending_verification with slip */}
-                {booking.payment_status === 'pending_verification' && booking.payment_slip_url && (
+                {booking.payment_status === 'pending_verification' && booking.payment_slip_url && onVerifyPayment && (
                   <Button
-                    onClick={() => onMarkAsPaid(booking.id, booking.payment_method || 'bank_transfer')}
+                    onClick={() => onVerifyPayment(booking.id)}
                     disabled={actionLoading?.markAsPaid}
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"

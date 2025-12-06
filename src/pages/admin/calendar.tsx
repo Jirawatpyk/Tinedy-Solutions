@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
@@ -25,6 +24,12 @@ import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
 import { useTeamsList } from '@/hooks/useTeams'
 import { useBookingsByDateRange } from '@/hooks/useBookings'
+import {
+  getStatusBadge,
+  getPaymentStatusBadge,
+  getStatusLabel,
+  getAvailableStatuses
+} from '@/lib/booking-badges'
 import {
   ChevronLeft,
   ChevronRight,
@@ -215,6 +220,7 @@ export function AdminCalendar() {
   const {
     bookings,
     isLoading,
+    error,
     refetch: refetchBookings,
   } = useBookingsByDateRange({
     dateRange: {
@@ -494,51 +500,6 @@ export function AdminCalendar() {
     setIsDetailOpen(true)
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { className: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pending' },
-      confirmed: { className: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Confirmed' },
-      in_progress: { className: 'bg-purple-100 text-purple-800 border-purple-200', label: 'In Progress' },
-      completed: { className: 'bg-green-100 text-green-800 border-green-200', label: 'Completed' },
-      cancelled: { className: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelled' },
-      no_show: { className: 'bg-red-100 text-red-800 border-red-200', label: 'No Show' },
-    }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      className: 'bg-gray-100 text-gray-800 border-gray-200',
-      label: status,
-    }
-
-    return <Badge variant="outline" className={config.className}>{config.label}</Badge>
-  }
-
-  const getPaymentStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
-      case 'pending_verification':
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Verifying</Badge>
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
-      case 'refunded':
-        return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
-      default:
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Unpaid</Badge>
-    }
-  }
-
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    }
-    return labels[status] || status
-  }
-
   const handleStatusChange = useCallback(async (bookingId: string, currentStatus: string, newStatus: string) => {
     if (currentStatus === newStatus) return
 
@@ -576,33 +537,14 @@ export function AdminCalendar() {
     }
   }, [toast, selectedBooking, refetchBookings])
 
-  // Status transition validation (from useBookingStatusManager logic)
-  const getValidTransitions = useCallback((currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['in_progress', 'cancelled', 'no_show'],
-      in_progress: ['completed', 'cancelled'],
-      completed: [], // Final state
-      cancelled: [], // Final state
-      no_show: [], // Final state
-    }
-    return transitions[currentStatus] || []
-  }, [])
-
-  // Get available statuses (current + valid transitions)
-  const getAvailableStatuses = useCallback((currentStatus: string): string[] => {
-    const validTransitions = getValidTransitions(currentStatus)
-    return [currentStatus, ...validTransitions]
-  }, [getValidTransitions])
-
   // Inline status change handler for BookingCard (without currentStatus parameter)
   const handleInlineStatusChange = useCallback(async (bookingId: string, newStatus: string) => {
     const booking = bookings.find(b => b.id === bookingId)
     if (!booking) return
 
-    // Validate transition before making the change
-    const validTransitions = getValidTransitions(booking.status)
-    if (!validTransitions.includes(newStatus) && booking.status !== newStatus) {
+    // Validate transition before making the change using getAvailableStatuses from shared utility
+    const availableStatuses = getAvailableStatuses(booking.status)
+    if (!availableStatuses.includes(newStatus)) {
       toast({
         title: 'Invalid Status Transition',
         description: `Cannot change from "${booking.status}" to "${newStatus}".`,
@@ -612,7 +554,7 @@ export function AdminCalendar() {
     }
 
     await handleStatusChange(bookingId, booking.status, newStatus)
-  }, [bookings, handleStatusChange, getValidTransitions, toast])
+  }, [bookings, handleStatusChange, toast])
 
   const handleMarkAsPaid = async (bookingId: string, method: string = 'cash') => {
     setIsUpdatingPayment(true)
@@ -641,6 +583,47 @@ export function AdminCalendar() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
+          payment_date: getBangkokDateString(),
+        })
+      }
+
+      // Refetch bookings to update data
+      await refetchBookings()
+    } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
+      toast({
+        title: errorMsg.title,
+        description: errorMsg.description,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUpdatingPayment(false)
+    }
+  }
+
+  const handleVerifyPayment = async (bookingId: string) => {
+    setIsUpdatingPayment(true)
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          payment_status: 'paid',
+          payment_date: getBangkokDateString(),
+        })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Payment verified successfully',
+      })
+
+      if (selectedBooking) {
+        setSelectedBooking({
+          ...selectedBooking,
+          payment_status: 'paid',
           payment_date: getBangkokDateString(),
         })
       }
@@ -729,6 +712,47 @@ export function AdminCalendar() {
 
     return []
   }, [selectedDate, selectedDateRange, getBookingsForDate, bookings, filterControls.hasActiveFilters])
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+          <Button variant="outline" disabled>
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Today
+          </Button>
+        </div>
+
+        {/* Error Card */}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-red-100 p-2">
+              <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900">Failed to Load Calendar</h3>
+              <p className="mt-1 text-sm text-red-700">{error || 'Unknown error'}</p>
+              <button
+                type="button"
+                onClick={() => refetchBookings()}
+                className="mt-3 inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -962,6 +986,7 @@ export function AdminCalendar() {
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
         onMarkAsPaid={handleMarkAsPaid}
+        onVerifyPayment={handleVerifyPayment}
         getStatusBadge={getStatusBadge}
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
