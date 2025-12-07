@@ -13,9 +13,9 @@ import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { getBangkokDateString } from '@/lib/utils'
 import { getAvailableStatuses } from '@/lib/booking-badges'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
+import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
 import type { Booking } from '@/types/booking'
 
 /**
@@ -187,21 +187,20 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     setIsUpdatingPayment(true)
 
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking?.total_price || 0,
-          payment_date: getBangkokDateString(),
-        })
-        .eq('id', bookingId)
+      const result = await markAsPaidService({
+        bookingId,
+        recurringGroupId: selectedBooking?.recurring_group_id,
+        paymentMethod: method,
+        amount: selectedBooking?.total_price || 0,
+      })
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error)
 
       toast({
         title: 'Success',
-        description: 'Booking marked as paid',
+        description: result.count > 1
+          ? `${result.count} bookings marked as paid`
+          : 'Booking marked as paid',
       })
 
       if (selectedBooking) {
@@ -210,7 +209,6 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
-          payment_date: getBangkokDateString(),
         })
       }
 
@@ -237,26 +235,24 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     setIsUpdatingPayment(true)
 
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'paid',
-          payment_date: getBangkokDateString(),
-        })
-        .eq('id', bookingId)
+      const result = await verifyPaymentService({
+        bookingId,
+        recurringGroupId: selectedBooking?.recurring_group_id,
+      })
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error)
 
       toast({
         title: 'Success',
-        description: 'Payment verified successfully',
+        description: result.count > 1
+          ? `${result.count} bookings verified successfully`
+          : 'Payment verified successfully',
       })
 
       if (selectedBooking) {
         setSelectedBooking({
           ...selectedBooking,
           payment_status: 'paid',
-          payment_date: getBangkokDateString(),
         })
       }
 

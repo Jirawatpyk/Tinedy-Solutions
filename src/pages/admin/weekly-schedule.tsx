@@ -28,7 +28,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { MobileBookingList } from '@/components/schedule/MobileBookingList'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { getBangkokDateString } from '@/lib/utils'
+import { markAsPaid as markAsPaidService } from '@/services/payment-service'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
@@ -438,21 +438,20 @@ export function AdminWeeklySchedule() {
 
   const handleMarkAsPaid = async (bookingId: string, method: string = 'cash') => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking?.total_price || 0,
-          payment_date: getBangkokDateString(),
-        })
-        .eq('id', bookingId)
+      const result = await markAsPaidService({
+        bookingId,
+        recurringGroupId: selectedBooking?.recurring_group_id,
+        paymentMethod: method,
+        amount: selectedBooking?.total_price || 0,
+      })
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error)
 
       toast({
         title: 'Success',
-        description: 'Booking marked as paid',
+        description: result.count > 1
+          ? `${result.count} bookings marked as paid`
+          : 'Booking marked as paid',
       })
 
       if (selectedBooking) {
@@ -461,7 +460,6 @@ export function AdminWeeklySchedule() {
           payment_status: 'paid',
           payment_method: method,
           amount_paid: selectedBooking.total_price,
-          payment_date: getBangkokDateString(),
         })
       }
 

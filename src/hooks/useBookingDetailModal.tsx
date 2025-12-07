@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { getBangkokDateString } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getPaymentStatusBadge as getPaymentBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
+import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
 import type { Booking } from '@/types/booking'
 
 export interface UseBookingDetailModalProps {
@@ -102,28 +102,30 @@ export function useBookingDetailModal({
   const handleMarkAsPaid = useCallback(
     async (bookingId: string, method: string = 'cash') => {
       try {
-        const updateData = {
-          payment_status: 'paid',
-          payment_method: method,
-          payment_date: getBangkokDateString(),
-          amount_paid: selectedBooking?.total_price || 0,
-        }
+        const result = await markAsPaidService({
+          bookingId,
+          recurringGroupId: selectedBooking?.recurring_group_id,
+          paymentMethod: method,
+          amount: selectedBooking?.total_price || 0,
+        })
 
-        const { error } = await supabase
-          .from('bookings')
-          .update(updateData)
-          .eq('id', bookingId)
-
-        if (error) throw error
+        if (!result.success) throw new Error(result.error)
 
         // Update local state immediately
         if (selectedBooking && selectedBooking.id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, ...updateData })
+          setSelectedBooking({
+            ...selectedBooking,
+            payment_status: 'paid',
+            payment_method: method,
+            amount_paid: selectedBooking.total_price || 0,
+          })
         }
 
         toast({
           title: 'Success',
-          description: 'Payment marked as paid',
+          description: result.count > 1
+            ? `${result.count} bookings marked as paid`
+            : 'Payment marked as paid',
         })
 
         refresh()
@@ -142,26 +144,26 @@ export function useBookingDetailModal({
   const handleVerifyPayment = useCallback(
     async (bookingId: string) => {
       try {
-        const updateData = {
-          payment_status: 'paid',
-          payment_date: getBangkokDateString(),
-        }
+        const result = await verifyPaymentService({
+          bookingId,
+          recurringGroupId: selectedBooking?.recurring_group_id,
+        })
 
-        const { error } = await supabase
-          .from('bookings')
-          .update(updateData)
-          .eq('id', bookingId)
-
-        if (error) throw error
+        if (!result.success) throw new Error(result.error)
 
         // Update local state immediately
         if (selectedBooking && selectedBooking.id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, ...updateData })
+          setSelectedBooking({
+            ...selectedBooking,
+            payment_status: 'paid',
+          })
         }
 
         toast({
           title: 'Success',
-          description: 'Payment verified successfully',
+          description: result.count > 1
+            ? `${result.count} bookings verified successfully`
+            : 'Payment verified successfully',
         })
 
         refresh()

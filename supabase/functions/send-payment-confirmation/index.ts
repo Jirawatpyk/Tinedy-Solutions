@@ -15,6 +15,7 @@ interface BookingData {
   address?: string
   city?: string
   state?: string
+  zip_code?: string
   recurring_group_id?: string
   customers: {
     full_name: string
@@ -120,6 +121,7 @@ serve(async (req) => {
         address,
         city,
         state,
+        zip_code,
         recurring_group_id,
         customers (full_name, email),
         service_packages (name),
@@ -146,8 +148,8 @@ serve(async (req) => {
     // Get staff name if available
     const staffName = bookingData.profiles?.full_name || undefined
 
-    // Get location if available
-    const location = [bookingData.address, bookingData.city, bookingData.state]
+    // Get location if available (address, city, state, zip_code)
+    const location = [bookingData.address, bookingData.city, bookingData.state, bookingData.zip_code]
       .filter(Boolean)
       .join(', ') || undefined
 

@@ -340,6 +340,7 @@ export function PaymentPage() {
                   amount={totalAmount}
                   bookingId={booking.id}
                   recurringGroupId={isRecurring ? (booking.recurring_group_id || undefined) : undefined}
+                  onSuccess={() => navigate(`/payment/${booking.id}/success`)}
                 />
               </Suspense>
             )}

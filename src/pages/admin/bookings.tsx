@@ -31,11 +31,11 @@ import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
-import { getBangkokDateString } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringEditScope, RecurringPattern, RecurringGroup, CombinedItem } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
+import { verifyPayment as verifyPaymentService } from '@/services/payment-service'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
 
@@ -342,38 +342,25 @@ export function AdminBookings() {
     onSuccess: refresh,
   })
 
-  // Verify payment handler
+  // Verify payment handler - ใช้ payment-service
   const handleVerifyPayment = async (bookingId: string) => {
     try {
-      // Find the booking to get recurring_group_id
       const booking = bookings.find((b: Booking) => b.id === bookingId)
 
-      const updateData = {
-        payment_status: 'paid',
-        payment_date: getBangkokDateString(),
-      }
+      const result = await verifyPaymentService({
+        bookingId,
+        recurringGroupId: booking?.recurring_group_id,
+      })
 
-      if (!booking?.recurring_group_id) {
-        // If not a recurring booking, update single booking
-        const { error } = await supabase
-          .from('bookings')
-          .update(updateData)
-          .eq('id', bookingId)
-
-        if (error) throw error
-      } else {
-        // Update all bookings in the recurring group
-        const { error } = await supabase
-          .from('bookings')
-          .update(updateData)
-          .eq('recurring_group_id', booking.recurring_group_id)
-
-        if (error) throw error
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
       toast({
         title: 'Success',
-        description: 'Payment verified successfully',
+        description: result.count > 1
+          ? `${result.count} bookings verified successfully`
+          : 'Payment verified successfully',
       })
 
       await refresh()

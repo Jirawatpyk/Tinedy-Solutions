@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { getErrorMessage } from '@/lib/error-utils'
-import { getBangkokDateString } from '@/lib/dashboard-utils'
+import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
 import type { TodayBooking, ActionLoading } from '@/types/dashboard'
 
 interface DeleteConfirmState {
@@ -114,26 +114,27 @@ export function useDashboardActions(
     async (bookingId: string, method: string = 'cash') => {
       setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
       try {
-        const updateData = {
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking?.total_price || 0,
-          payment_date: getBangkokDateString(),
-        }
+        const result = await markAsPaidService({
+          bookingId,
+          paymentMethod: method,
+          amount: selectedBooking?.total_price || 0,
+        })
 
-        const { error } = await supabase.from('bookings').update(updateData).eq('id', bookingId)
-
-        if (error) throw error
+        if (!result.success) throw new Error(result.error)
 
         toast({
           title: 'Success',
-          description: 'Booking marked as paid',
+          description: result.count > 1
+            ? `${result.count} bookings marked as paid`
+            : 'Booking marked as paid',
         })
 
         if (selectedBooking && selectedBooking.id === bookingId && onBookingUpdate) {
           onBookingUpdate({
             ...selectedBooking,
-            ...updateData,
+            payment_status: 'paid',
+            payment_method: method,
+            amount_paid: selectedBooking.total_price || 0,
           })
         }
 
@@ -165,15 +166,11 @@ export function useDashboardActions(
     async (bookingId: string) => {
       setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
       try {
-        const { error } = await supabase
-          .from('bookings')
-          .update({
-            payment_status: 'paid',
-            payment_date: getBangkokDateString(),
-          })
-          .eq('id', bookingId)
+        const result = await verifyPaymentService({
+          bookingId,
+        })
 
-        if (error) throw error
+        if (!result.success) throw new Error(result.error)
 
         toast({
           title: 'Success',
@@ -184,7 +181,6 @@ export function useDashboardActions(
           onBookingUpdate({
             ...selectedBooking,
             payment_status: 'paid',
-            payment_date: getBangkokDateString(),
           })
         }
 
