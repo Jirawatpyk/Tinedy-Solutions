@@ -1,6 +1,34 @@
 import '@testing-library/jest-dom'
 import { expect, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import * as React from 'react'
+
+// ========== Types for Radix UI Select Mock ==========
+interface SelectRootProps {
+  children: ReactNode | ((props: { value: string }) => ReactNode)
+  value?: string
+  defaultValue?: string
+}
+
+interface SelectTriggerProps {
+  children: ReactNode
+  [key: string]: unknown
+}
+
+interface SelectValueProps {
+  children?: ReactNode
+  placeholder?: string
+}
+
+interface SelectItemProps {
+  children: ReactNode
+  value: string
+}
+
+interface ChildrenOnlyProps {
+  children?: ReactNode
+}
 
 // Cleanup after each test
 afterEach(() => {
@@ -10,44 +38,41 @@ afterEach(() => {
 
 // Mock Radix UI Select - doesn't work properly in happy-dom
 // Note: Cannot use JSX in vi.mock(), must use createElement
-vi.mock('@radix-ui/react-select', () => {
-  const React = require('react')
-  return {
-    Root: ({ children, value, defaultValue }: any) =>
-      React.createElement('div', {
-        'data-testid': 'select-root',
-        'data-value': value || defaultValue
-      }, typeof children === 'function' ? children({ value: value || defaultValue }) : children),
-    Trigger: ({ children, ...props }: any) =>
-      React.createElement('button', {
-        ...props,
-        'data-testid': 'select-trigger',
-        type: 'button',
-        role: 'combobox',
-        'aria-expanded': 'false'
-      }, children),
-    Value: ({ children, placeholder }: any) =>
-      React.createElement('span', { 'data-testid': 'select-value' }, children || placeholder),
-    Content: ({ children }: any) =>
-      React.createElement('div', { 'data-testid': 'select-content' }, children),
-    Item: ({ children, value }: any) =>
-      React.createElement('div', {
-        'data-testid': `select-item-${value}`,
-        'data-value': value,
-        role: 'option'
-      }, children),
-    Portal: ({ children }: any) => React.createElement('div', {}, children),
-    Group: ({ children }: any) => React.createElement('div', {}, children),
-    Label: ({ children }: any) => React.createElement('div', {}, children),
-    Separator: () => React.createElement('div', {}),
-    Icon: ({ children }: any) => React.createElement('span', {}, children),
-    ItemIndicator: ({ children }: any) => React.createElement('span', {}, children),
-    ItemText: ({ children }: any) => React.createElement('span', {}, children),
-    ScrollUpButton: () => React.createElement('div', {}),
-    ScrollDownButton: () => React.createElement('div', {}),
-    Viewport: ({ children }: any) => React.createElement('div', {}, children),
-  }
-})
+vi.mock('@radix-ui/react-select', () => ({
+  Root: ({ children, value, defaultValue }: SelectRootProps) =>
+    React.createElement('div', {
+      'data-testid': 'select-root',
+      'data-value': value || defaultValue
+    }, typeof children === 'function' ? children({ value: value || defaultValue || '' }) : children),
+  Trigger: ({ children, ...props }: SelectTriggerProps) =>
+    React.createElement('button', {
+      ...props,
+      'data-testid': 'select-trigger',
+      type: 'button',
+      role: 'combobox',
+      'aria-expanded': 'false'
+    }, children),
+  Value: ({ children, placeholder }: SelectValueProps) =>
+    React.createElement('span', { 'data-testid': 'select-value' }, children || placeholder),
+  Content: ({ children }: ChildrenOnlyProps) =>
+    React.createElement('div', { 'data-testid': 'select-content' }, children),
+  Item: ({ children, value }: SelectItemProps) =>
+    React.createElement('div', {
+      'data-testid': `select-item-${value}`,
+      'data-value': value,
+      role: 'option'
+    }, children),
+  Portal: ({ children }: ChildrenOnlyProps) => React.createElement('div', {}, children),
+  Group: ({ children }: ChildrenOnlyProps) => React.createElement('div', {}, children),
+  Label: ({ children }: ChildrenOnlyProps) => React.createElement('div', {}, children),
+  Separator: () => React.createElement('div', {}),
+  Icon: ({ children }: ChildrenOnlyProps) => React.createElement('span', {}, children),
+  ItemIndicator: ({ children }: ChildrenOnlyProps) => React.createElement('span', {}, children),
+  ItemText: ({ children }: ChildrenOnlyProps) => React.createElement('span', {}, children),
+  ScrollUpButton: () => React.createElement('div', {}),
+  ScrollDownButton: () => React.createElement('div', {}),
+  Viewport: ({ children }: ChildrenOnlyProps) => React.createElement('div', {}, children),
+}))
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

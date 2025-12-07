@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
-import type { TodayBooking } from '@/types/dashboard'
+import type { Booking } from '@/types/booking'
 
 export function useBookingModal() {
-  const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
-  const openDetail = useCallback((booking: TodayBooking) => {
+  const openDetail = useCallback((booking: Booking) => {
     setSelectedBooking(booking)
     setIsDetailOpen(true)
   }, [])
@@ -25,7 +25,7 @@ export function useBookingModal() {
     setSelectedBooking(null)
   }, [])
 
-  const updateSelectedBooking = useCallback((booking: TodayBooking) => {
+  const updateSelectedBooking = useCallback((booking: Booking) => {
     setSelectedBooking(booking)
   }, [])
 

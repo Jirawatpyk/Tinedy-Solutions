@@ -10,15 +10,6 @@ interface PeakHoursHeatmapProps {
 export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
   const [selectedCell, setSelectedCell] = useState<PeakHourData | null>(null)
 
-  // Early return for empty data
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        <p>No peak hours data available</p>
-      </div>
-    )
-  }
-
   // Calculate max count for intensity calculation
   const maxCount = useMemo(() => {
     if (!data || data.length === 0) return 1
@@ -28,12 +19,29 @@ export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
   // Create a lookup map for quick data access
   const dataMap = useMemo(() => {
     const map = new Map<string, number>()
-    data.forEach((item) => {
-      const key = `${item.day}-${item.hour}`
-      map.set(key, item.count)
-    })
+    if (data) {
+      data.forEach((item) => {
+        const key = `${item.day}-${item.hour}`
+        map.set(key, item.count)
+      })
+    }
     return map
   }, [data])
+
+  const handleCellClick = useCallback((day: DayOfWeek, hour: number, count: number) => {
+    if (count > 0) {
+      setSelectedCell({ day, hour, count })
+    }
+  }, [])
+
+  // Early return for empty data - MUST be after all hooks
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        <p>No peak hours data available</p>
+      </div>
+    )
+  }
 
   const getCellData = (day: DayOfWeek, hour: number) => {
     const key = `${day}-${hour}`
@@ -53,12 +61,6 @@ export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
   const getTextColor = (intensity: number) => {
     return intensity > 0.5 ? PEAK_HOURS_COLORS.text.light : PEAK_HOURS_COLORS.text.dark
   }
-
-  const handleCellClick = useCallback((day: DayOfWeek, hour: number, count: number) => {
-    if (count > 0) {
-      setSelectedCell({ day, hour, count })
-    }
-  }, [])
 
   // Generate hours array
   const hours = Array.from(

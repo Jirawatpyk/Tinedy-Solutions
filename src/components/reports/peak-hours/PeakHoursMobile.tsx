@@ -17,15 +17,6 @@ interface PeakHoursMobileProps {
 export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
   const [selectedCell, setSelectedCell] = useState<PeakHourData | null>(null)
 
-  // Early return for empty data
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        <p>No peak hours data available</p>
-      </div>
-    )
-  }
-
   // Calculate max count for intensity calculation
   const maxCount = useMemo(() => {
     if (!data || data.length === 0) return 1
@@ -34,6 +25,8 @@ export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
 
   // Group data by day
   const dayData = useMemo(() => {
+    if (!data || data.length === 0) return []
+
     const grouped: DayData[] = DAYS_OF_WEEK.map((day) => {
       const dayBookings = data.filter((item) => item.day === day)
       const hours = Array.from(
@@ -56,6 +49,19 @@ export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
     return grouped.sort((a, b) => b.totalBookings - a.totalBookings)
   }, [data, maxCount])
 
+  const handleHourClick = useCallback((day: string, hour: number, count: number) => {
+    setSelectedCell({ day, hour, count })
+  }, [])
+
+  // Early return for empty data - MUST be after all hooks
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        <p>No peak hours data available</p>
+      </div>
+    )
+  }
+
   const getIntensityColor = (intensity: number) => {
     if (intensity >= 0.8) return 'bg-tinedy-green text-white'
     if (intensity >= 0.6) return 'bg-tinedy-green/80 text-white'
@@ -63,10 +69,6 @@ export function PeakHoursMobile({ data }: PeakHoursMobileProps) {
     if (intensity >= 0.2) return 'bg-tinedy-green/40 text-tinedy-dark'
     return 'bg-tinedy-green/20 text-tinedy-dark'
   }
-
-  const handleHourClick = useCallback((day: string, hour: number, count: number) => {
-    setSelectedCell({ day, hour, count })
-  }, [])
 
   return (
     <>

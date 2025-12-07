@@ -494,7 +494,7 @@ describe('BookingListSidebar', () => {
       const bookings = [
         createMockBooking({
           id: 'booking-1',
-          customers: null as any
+          customers: null as unknown as Booking['customers']
         }),
       ]
 

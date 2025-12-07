@@ -124,7 +124,7 @@ export function AdminCalendar() {
   }
 
   const openBookingDetail = (booking: Booking) => {
-    calendar.modalControls.setSelectedBooking(booking as any)
+    calendar.modalControls.setSelectedBooking(booking)
     calendar.modalControls.setIsDetailOpen(true)
   }
 
@@ -196,7 +196,7 @@ export function AdminCalendar() {
       }
     }
 
-    calendar.modalControls.setSelectedBooking(booking as any)
+    calendar.modalControls.setSelectedBooking(booking)
     calendar.modalControls.setIsEditOpen(true)
     calendar.modalControls.setIsDetailOpen(false)
   }

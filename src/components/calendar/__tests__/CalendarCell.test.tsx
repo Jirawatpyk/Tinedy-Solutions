@@ -629,7 +629,7 @@ describe('CalendarCell', () => {
       const renderSpy = vi.fn()
 
       // Wrap component to track renders
-      const TestComponent = (props: any) => {
+      const TestComponent = (props: React.ComponentProps<typeof CalendarCell>) => {
         renderSpy()
         return <CalendarCell {...props} />
       }
@@ -717,7 +717,7 @@ describe('CalendarCell', () => {
         createMockBooking({
           id: 'booking-1',
           start_time: '09:00:00',
-          customers: null as any
+          customers: null as unknown as Booking['customers']
         }),
       ]
 
@@ -743,7 +743,7 @@ describe('CalendarCell', () => {
       const bookings = [
         createMockBooking({
           id: 'booking-1',
-          start_time: null as any
+          start_time: null as unknown as Booking['start_time']
         }),
       ]
 

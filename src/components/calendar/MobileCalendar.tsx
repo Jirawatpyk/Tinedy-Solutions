@@ -55,7 +55,7 @@ type ViewMode = 'week' | 'month'
 export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
   currentDate,
   selectedDate,
-  bookings: _bookings, // eslint-disable-line @typescript-eslint/no-unused-vars
+  bookings: _bookings,
   conflictMap,
   bookingsByDate,
   onDateSelect,

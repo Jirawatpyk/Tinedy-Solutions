@@ -17,7 +17,7 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Types
-import type { TodayBooking } from '@/types/dashboard'
+import type { Booking } from '@/types/booking'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 
@@ -59,7 +59,7 @@ export function AdminDashboard() {
     },
   }
 
-  const handleEditBooking = (booking: TodayBooking) => {
+  const handleEditBooking = (booking: Booking) => {
     // Populate edit form with booking data
     setEditFormData({
       service_package_id: booking.service_package_id,

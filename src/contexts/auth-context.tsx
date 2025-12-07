@@ -32,6 +32,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (error) throw error
+
+      // If no profile exists, set to null (don't throw error)
+      setProfile(data)
+      return data
+    } catch (error) {
+      logger.error('Error fetching profile', { error, userId }, { context: 'AuthContext' })
+      // Set profile to null instead of throwing
+      setProfile(null)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -57,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [fetchProfile])
 
   // Realtime subscription for profile updates
   useEffect(() => {
@@ -95,29 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileSubscription.unsubscribe()
     }
   }, [user])
-
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (error) throw error
-
-      // If no profile exists, set to null (don't throw error)
-      setProfile(data)
-      return data
-    } catch (error) {
-      logger.error('Error fetching profile', { error, userId }, { context: 'AuthContext' })
-      // Set profile to null instead of throwing
-      setProfile(null)
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
     // Sanitize and validate inputs

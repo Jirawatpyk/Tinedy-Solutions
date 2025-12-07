@@ -4,7 +4,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { getErrorMessage } from '@/lib/error-utils'
 import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
-import type { TodayBooking, ActionLoading } from '@/types/dashboard'
+import type { Booking } from '@/types/booking'
+import type { ActionLoading } from '@/types/dashboard'
 
 interface DeleteConfirmState {
   show: boolean
@@ -13,8 +14,8 @@ interface DeleteConfirmState {
 
 export function useDashboardActions(
   refresh: () => void,
-  selectedBooking: TodayBooking | null,
-  onBookingUpdate?: (booking: TodayBooking) => void
+  selectedBooking: Booking | null,
+  onBookingUpdate?: (booking: Booking) => void
 ) {
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
