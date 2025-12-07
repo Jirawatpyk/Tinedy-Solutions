@@ -5,6 +5,71 @@
  * These functions have no side effects and can be used across the application.
  */
 
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
+
+// ============================================================================
+// STATUS TRANSITIONS - Single Source of Truth
+// ============================================================================
+
+/**
+ * Status transition rules - defines what statuses each status can transition to
+ * This is the single source of truth for status flow across the application
+ *
+ * Note: Status transitions are forward-only (no reverting cancelled → pending)
+ */
+export const STATUS_TRANSITIONS: Record<string, string[]> = {
+  pending: ['pending', 'confirmed', 'cancelled'],
+  confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
+  in_progress: ['in_progress', 'completed', 'cancelled'],
+  completed: ['completed'],
+  cancelled: ['cancelled'],
+  no_show: ['no_show'],
+}
+
+/**
+ * Get human-readable label for a booking status
+ *
+ * @param status - The booking status key
+ * @returns Human-readable status label
+ *
+ * @example
+ * getStatusLabel('in_progress')
+ * // Returns: "In Progress"
+ */
+export function getStatusLabel(status: string): string {
+  return BOOKING_STATUS_LABELS[status as keyof typeof BOOKING_STATUS_LABELS] || status
+}
+
+/**
+ * Get all available statuses that a booking can be changed to from current status
+ * This includes the current status itself
+ *
+ * @param currentStatus - The current booking status
+ * @returns Array of available status options including current
+ *
+ * @example
+ * getAvailableStatuses('pending')
+ * // Returns: ['pending', 'confirmed', 'cancelled']
+ */
+export function getAvailableStatuses(currentStatus: string): string[] {
+  return STATUS_TRANSITIONS[currentStatus] || [currentStatus]
+}
+
+/**
+ * Get only the statuses that a booking can transition TO (excluding current)
+ *
+ * @param currentStatus - The current booking status
+ * @returns Array of valid transition statuses (excluding current)
+ *
+ * @example
+ * getValidTransitions('pending')
+ * // Returns: ['confirmed', 'cancelled']
+ */
+export function getValidTransitions(currentStatus: string): string[] {
+  const all = STATUS_TRANSITIONS[currentStatus] || []
+  return all.filter(s => s !== currentStatus)
+}
+
 /**
  * Interface for booking address fields
  */

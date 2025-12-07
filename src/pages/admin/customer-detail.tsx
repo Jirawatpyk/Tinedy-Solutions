@@ -46,7 +46,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { formatDate, getBangkokDateString } from '@/lib/utils'
-import { formatTime } from '@/lib/booking-utils'
+import { formatTime, getStatusLabel } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
@@ -814,8 +814,7 @@ export function AdminCustomerDetail() {
   const getStatusBadgeClass = (status: string) =>
     BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
 
-  const getStatusLabel = (status: string) =>
-    BOOKING_STATUS_LABELS[status as BookingStatus] || status
+  // getStatusLabel imported from @/lib/booking-utils
 
   return (
     <div className="space-y-6">

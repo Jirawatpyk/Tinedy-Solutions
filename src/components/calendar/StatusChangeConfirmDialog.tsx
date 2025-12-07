@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { AlertTriangle } from 'lucide-react'
+import { getStatusLabel } from '@/lib/booking-utils'
 
 interface StatusChangeConfirmDialogProps {
   isOpen: boolean
@@ -24,19 +25,6 @@ interface StatusChangeConfirmDialogProps {
   onCancel: () => void
   currentStatus: string
   newStatus: string
-}
-
-// Get status display label
-const getStatusLabel = (status: string): string => {
-  const labels: Record<string, string> = {
-    pending: 'Pending',
-    confirmed: 'Confirmed',
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    no_show: 'No Show',
-  }
-  return labels[status] || status
 }
 
 // Get appropriate message and warning for status transition

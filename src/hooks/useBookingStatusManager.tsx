@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { queryKeys } from '@/lib/query-keys'
-import { markAsPaid as markAsPaidService } from '@/services/payment-service'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { getStatusLabel, getAvailableStatuses, getValidTransitions } from '@/lib/booking-utils'
 import type { BookingBase } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 
@@ -54,6 +55,13 @@ export function useBookingStatusManager<T extends BookingBase>({
   const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null)
 
+  // Use centralized payment actions
+  const { markAsPaid } = usePaymentActions({
+    selectedBooking: selectedBooking as Booking | null,
+    setSelectedBooking: setSelectedBooking as unknown as (booking: Booking) => void,
+    onSuccess,
+  })
+
   const getStatusBadge = (status: string) => {
     return (
       <StatusBadge variant={getBookingStatusVariant(status)}>
@@ -62,41 +70,9 @@ export function useBookingStatusManager<T extends BookingBase>({
     )
   }
 
-  // Status Transition Rules
-  const getValidTransitions = (currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['in_progress', 'cancelled', 'no_show'],
-      in_progress: ['completed', 'cancelled'],
-      completed: [], // Final state
-      cancelled: [], // Final state
-      no_show: [], // Final state
-    }
-    return transitions[currentStatus] || []
-  }
-
-  // Get available status options for dropdown (current + valid transitions)
-  const getAvailableStatuses = (currentStatus: string): string[] => {
-    const validTransitions = getValidTransitions(currentStatus)
-    return [currentStatus, ...validTransitions]
-  }
-
-  // Get status label
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    }
-    return labels[status] || status
-  }
-
   const isValidTransition = (currentStatus: string, newStatus: string): boolean => {
-    const validTransitions = getValidTransitions(currentStatus)
-    return validTransitions.includes(newStatus)
+    const validTransitionsList = getValidTransitions(currentStatus)
+    return validTransitionsList.includes(newStatus)
   }
 
   const getStatusTransitionMessage = (currentStatus: string, newStatus: string): string => {
@@ -218,52 +194,6 @@ export function useBookingStatusManager<T extends BookingBase>({
   const cancelStatusChange = () => {
     setShowStatusConfirmDialog(false)
     setPendingStatusChange(null)
-  }
-
-  const markAsPaid = async (bookingId: string, method: string = 'cash') => {
-    try {
-      // ดึงข้อมูล recurring_group_id จาก DB
-      const { data: booking } = await supabase
-        .from('bookings')
-        .select('recurring_group_id, total_price')
-        .eq('id', bookingId)
-        .single()
-
-      const result = await markAsPaidService({
-        bookingId,
-        recurringGroupId: booking?.recurring_group_id,
-        paymentMethod: method,
-        amount: booking?.total_price || selectedBooking?.total_price || 0,
-      })
-
-      if (!result.success) throw new Error(result.error)
-
-      toast({
-        title: 'Success',
-        description: result.count > 1
-          ? `${result.count} recurring bookings marked as paid`
-          : 'Booking marked as paid',
-      })
-
-      // Update selected booking in state
-      if (selectedBooking) {
-        setSelectedBooking({
-          ...selectedBooking,
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking.total_price,
-        })
-      }
-
-      onSuccess()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
   }
 
   const getPaymentStatusBadge = (status?: string) => {

@@ -193,7 +193,7 @@ export function PaymentSuccessPage() {
                     <div className="flex items-start gap-2 max-w-xs text-right">
                       <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        {[booking.address, booking.city, booking.state]
+                        {[booking.address, booking.city, booking.state, booking.zip_code]
                           .filter(Boolean)
                           .join(', ')}
                       </span>

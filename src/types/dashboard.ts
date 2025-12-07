@@ -127,4 +127,5 @@ export interface ActionLoading {
   statusChange: boolean
   delete: boolean
   markAsPaid: boolean
+  verifyPayment: boolean
 }

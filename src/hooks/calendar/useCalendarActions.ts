@@ -13,9 +13,9 @@ import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { getAvailableStatuses } from '@/lib/booking-badges'
+import { getAvailableStatuses } from '@/lib/booking-utils'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
 import type { Booking } from '@/types/booking'
 
 /**
@@ -96,6 +96,13 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Use centralized payment actions
+  const { markAsPaid: paymentMarkAsPaid, verifyPayment: paymentVerifyPayment } = usePaymentActions({
+    selectedBooking,
+    setSelectedBooking: setSelectedBooking as (booking: Booking) => void,
+    onSuccess: async () => { await refetchBookings() },
+  })
 
   /**
    * Update booking status
@@ -185,46 +192,12 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     method: string = 'cash'
   ) => {
     setIsUpdatingPayment(true)
-
     try {
-      const result = await markAsPaidService({
-        bookingId,
-        recurringGroupId: selectedBooking?.recurring_group_id,
-        paymentMethod: method,
-        amount: selectedBooking?.total_price || 0,
-      })
-
-      if (!result.success) throw new Error(result.error)
-
-      toast({
-        title: 'Success',
-        description: result.count > 1
-          ? `${result.count} bookings marked as paid`
-          : 'Booking marked as paid',
-      })
-
-      if (selectedBooking) {
-        setSelectedBooking({
-          ...selectedBooking,
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking.total_price,
-        })
-      }
-
-      // Refetch bookings to update data
-      await refetchBookings()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      await paymentMarkAsPaid(bookingId, method)
     } finally {
       setIsUpdatingPayment(false)
     }
-  }, [toast, selectedBooking, setSelectedBooking, refetchBookings])
+  }, [paymentMarkAsPaid])
 
   /**
    * Verify payment (admin verification)
@@ -233,42 +206,12 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
    */
   const handleVerifyPayment = useCallback(async (bookingId: string) => {
     setIsUpdatingPayment(true)
-
     try {
-      const result = await verifyPaymentService({
-        bookingId,
-        recurringGroupId: selectedBooking?.recurring_group_id,
-      })
-
-      if (!result.success) throw new Error(result.error)
-
-      toast({
-        title: 'Success',
-        description: result.count > 1
-          ? `${result.count} bookings verified successfully`
-          : 'Payment verified successfully',
-      })
-
-      if (selectedBooking) {
-        setSelectedBooking({
-          ...selectedBooking,
-          payment_status: 'paid',
-        })
-      }
-
-      // Refetch bookings to update data
-      await refetchBookings()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      await paymentVerifyPayment(bookingId)
     } finally {
       setIsUpdatingPayment(false)
     }
-  }, [toast, selectedBooking, setSelectedBooking, refetchBookings])
+  }, [paymentVerifyPayment])
 
   /**
    * Hard delete booking

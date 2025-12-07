@@ -28,7 +28,8 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { MobileBookingList } from '@/components/schedule/MobileBookingList'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { markAsPaid as markAsPaidService } from '@/services/payment-service'
+import { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
@@ -436,43 +437,12 @@ export function AdminWeeklySchedule() {
     }
   }
 
-  const handleMarkAsPaid = async (bookingId: string, method: string = 'cash') => {
-    try {
-      const result = await markAsPaidService({
-        bookingId,
-        recurringGroupId: selectedBooking?.recurring_group_id,
-        paymentMethod: method,
-        amount: selectedBooking?.total_price || 0,
-      })
-
-      if (!result.success) throw new Error(result.error)
-
-      toast({
-        title: 'Success',
-        description: result.count > 1
-          ? `${result.count} bookings marked as paid`
-          : 'Booking marked as paid',
-      })
-
-      if (selectedBooking) {
-        setSelectedBooking({
-          ...selectedBooking,
-          payment_status: 'paid',
-          payment_method: method,
-          amount_paid: selectedBooking.total_price,
-        })
-      }
-
-      refetchBookings()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
-  }
+  // Use centralized payment actions
+  const { markAsPaid: handleMarkAsPaid } = usePaymentActions({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refetchBookings,
+  })
 
   const getStatusBadge = (status: string) => {
     const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
@@ -494,29 +464,7 @@ export function AdminWeeklySchedule() {
     }
   }
 
-  const getAvailableStatuses = (currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['pending', 'confirmed', 'cancelled'],
-      confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-      in_progress: ['in_progress', 'completed', 'cancelled'],
-      completed: ['completed'],
-      cancelled: ['cancelled'],
-      no_show: ['no_show'],
-    }
-    return transitions[currentStatus] || [currentStatus]
-  }
-
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    }
-    return labels[status] || status
-  }
+  // getAvailableStatuses and getStatusLabel imported from @/lib/booking-utils
 
   const handleExportSchedule = () => {
     try {

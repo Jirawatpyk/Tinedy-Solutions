@@ -19,7 +19,7 @@ import { useServicePackages } from '@/hooks/useServicePackages'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
-import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage, mapErrorToUserMessage } from '@/lib/error-messages'
+import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage } from '@/lib/error-messages'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
 import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
@@ -35,7 +35,7 @@ import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringEditScope, RecurringPattern, RecurringGroup, CombinedItem } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
-import { verifyPayment as verifyPaymentService } from '@/services/payment-service'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
 
@@ -342,37 +342,12 @@ export function AdminBookings() {
     onSuccess: refresh,
   })
 
-  // Verify payment handler - ใช้ payment-service
-  const handleVerifyPayment = async (bookingId: string) => {
-    try {
-      const booking = bookings.find((b: Booking) => b.id === bookingId)
-
-      const result = await verifyPaymentService({
-        bookingId,
-        recurringGroupId: booking?.recurring_group_id,
-      })
-
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-
-      toast({
-        title: 'Success',
-        description: result.count > 1
-          ? `${result.count} bookings verified successfully`
-          : 'Payment verified successfully',
-      })
-
-      await refresh()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
-  }
+  // Use centralized payment actions for verifyPayment
+  const { verifyPayment: handleVerifyPayment } = usePaymentActions({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refresh,
+  })
 
   useEffect(() => {
     // OPTIMIZE: Run all queries in parallel for better performance

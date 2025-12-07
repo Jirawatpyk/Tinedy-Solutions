@@ -6,7 +6,8 @@ import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { Badge } from '@/components/ui/badge'
 import { getPaymentStatusBadge as getPaymentBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
-import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { getStatusLabel, getAvailableStatuses } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
 
 export interface UseBookingDetailModalProps {
@@ -56,6 +57,13 @@ export function useBookingDetailModal({
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
+  // Use centralized payment actions
+  const { markAsPaid: handleMarkAsPaid, verifyPayment: handleVerifyPayment } = usePaymentActions({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refresh,
+  })
+
   const openDetail = useCallback((booking: Booking) => {
     setSelectedBooking(booking)
     setIsOpen(true)
@@ -84,86 +92,6 @@ export function useBookingDetailModal({
         toast({
           title: 'Success',
           description: `Status updated to ${newStatus}`,
-        })
-
-        refresh()
-      } catch (error) {
-        const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
-      }
-    },
-    [selectedBooking, toast, refresh]
-  )
-
-  const handleMarkAsPaid = useCallback(
-    async (bookingId: string, method: string = 'cash') => {
-      try {
-        const result = await markAsPaidService({
-          bookingId,
-          recurringGroupId: selectedBooking?.recurring_group_id,
-          paymentMethod: method,
-          amount: selectedBooking?.total_price || 0,
-        })
-
-        if (!result.success) throw new Error(result.error)
-
-        // Update local state immediately
-        if (selectedBooking && selectedBooking.id === bookingId) {
-          setSelectedBooking({
-            ...selectedBooking,
-            payment_status: 'paid',
-            payment_method: method,
-            amount_paid: selectedBooking.total_price || 0,
-          })
-        }
-
-        toast({
-          title: 'Success',
-          description: result.count > 1
-            ? `${result.count} bookings marked as paid`
-            : 'Payment marked as paid',
-        })
-
-        refresh()
-      } catch (error) {
-        const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
-      }
-    },
-    [selectedBooking, toast, refresh]
-  )
-
-  const handleVerifyPayment = useCallback(
-    async (bookingId: string) => {
-      try {
-        const result = await verifyPaymentService({
-          bookingId,
-          recurringGroupId: selectedBooking?.recurring_group_id,
-        })
-
-        if (!result.success) throw new Error(result.error)
-
-        // Update local state immediately
-        if (selectedBooking && selectedBooking.id === bookingId) {
-          setSelectedBooking({
-            ...selectedBooking,
-            payment_status: 'paid',
-          })
-        }
-
-        toast({
-          title: 'Success',
-          description: result.count > 1
-            ? `${result.count} bookings verified successfully`
-            : 'Payment verified successfully',
         })
 
         refresh()
@@ -229,28 +157,13 @@ export function useBookingDetailModal({
     return getPaymentBadge(status)
   }, [])
 
-  const getAvailableStatuses = useCallback((currentStatus: string) => {
-    const statusFlow: Record<string, string[]> = {
-      pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
-      confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-      in_progress: ['in_progress', 'completed', 'cancelled'],
-      completed: ['completed'],
-      cancelled: ['cancelled', 'pending'],
-      no_show: ['no_show', 'pending'],
-    }
-    return statusFlow[currentStatus] || [currentStatus]
+  // Use centralized status utilities (wrapped in useCallback for stable reference)
+  const getAvailableStatusesCallback = useCallback((currentStatus: string) => {
+    return getAvailableStatuses(currentStatus)
   }, [])
 
-  const getStatusLabel = useCallback((status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    }
-    return labels[status] || status
+  const getStatusLabelCallback = useCallback((status: string) => {
+    return getStatusLabel(status)
   }, [])
 
   return {
@@ -269,8 +182,8 @@ export function useBookingDetailModal({
       onVerifyPayment: handleVerifyPayment,
       getStatusBadge,
       getPaymentStatusBadge,
-      getAvailableStatuses,
-      getStatusLabel,
+      getAvailableStatuses: getAvailableStatusesCallback,
+      getStatusLabel: getStatusLabelCallback,
     },
   }
 }

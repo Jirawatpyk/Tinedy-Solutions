@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { getErrorMessage } from '@/lib/error-utils'
-import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { usePaymentActions } from '@/hooks/usePaymentActions'
 import type { Booking } from '@/types/booking'
 import type { ActionLoading } from '@/types/dashboard'
 
@@ -23,12 +23,27 @@ export function useDashboardActions(
     statusChange: false,
     delete: false,
     markAsPaid: false,
+    verifyPayment: false,
   })
 
   // Delete confirmation dialog state
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
     show: false,
     bookingId: null,
+  })
+
+  // Wrapper to update booking via callback
+  const handleBookingUpdate = useCallback((booking: Booking) => {
+    if (onBookingUpdate) {
+      onBookingUpdate(booking)
+    }
+  }, [onBookingUpdate])
+
+  // Use centralized payment actions
+  const { markAsPaid: paymentMarkAsPaid, verifyPayment: paymentVerifyPayment } = usePaymentActions({
+    selectedBooking,
+    setSelectedBooking: handleBookingUpdate,
+    onSuccess: refresh,
   })
 
   const handleStatusChange = useCallback(
@@ -55,9 +70,10 @@ export function useDashboardActions(
 
         refresh()
       } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
         toast({
-          title: 'Error',
-          description: getErrorMessage(error),
+          title: errorMsg.title,
+          description: errorMsg.description,
           variant: 'destructive',
         })
       } finally {
@@ -94,9 +110,10 @@ export function useDashboardActions(
         setDeleteConfirm({ show: false, bookingId: null })
         refresh()
       } catch (error) {
+        const errorMsg = mapErrorToUserMessage(error, 'booking')
         toast({
-          title: 'Error',
-          description: 'Failed to delete booking',
+          title: errorMsg.title,
+          description: errorMsg.description,
           variant: 'destructive',
         })
       } finally {
@@ -111,46 +128,17 @@ export function useDashboardActions(
     setDeleteConfirm({ show: false, bookingId: null })
   }, [])
 
+  // Wrap payment actions with loading state
   const markAsPaid = useCallback(
     async (bookingId: string, method: string = 'cash') => {
       setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
       try {
-        const result = await markAsPaidService({
-          bookingId,
-          paymentMethod: method,
-          amount: selectedBooking?.total_price || 0,
-        })
-
-        if (!result.success) throw new Error(result.error)
-
-        toast({
-          title: 'Success',
-          description: result.count > 1
-            ? `${result.count} bookings marked as paid`
-            : 'Booking marked as paid',
-        })
-
-        if (selectedBooking && selectedBooking.id === bookingId && onBookingUpdate) {
-          onBookingUpdate({
-            ...selectedBooking,
-            payment_status: 'paid',
-            payment_method: method,
-            amount_paid: selectedBooking.total_price || 0,
-          })
-        }
-
-        refresh()
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: getErrorMessage(error),
-          variant: 'destructive',
-        })
+        await paymentMarkAsPaid(bookingId, method)
       } finally {
         setActionLoading((prev) => ({ ...prev, markAsPaid: false }))
       }
     },
-    [selectedBooking, toast, refresh, onBookingUpdate]
+    [paymentMarkAsPaid]
   )
 
   const archiveBooking = useCallback(
@@ -165,38 +153,14 @@ export function useDashboardActions(
 
   const verifyPayment = useCallback(
     async (bookingId: string) => {
-      setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
+      setActionLoading((prev) => ({ ...prev, verifyPayment: true }))
       try {
-        const result = await verifyPaymentService({
-          bookingId,
-        })
-
-        if (!result.success) throw new Error(result.error)
-
-        toast({
-          title: 'Success',
-          description: 'Payment verified successfully',
-        })
-
-        if (selectedBooking && selectedBooking.id === bookingId && onBookingUpdate) {
-          onBookingUpdate({
-            ...selectedBooking,
-            payment_status: 'paid',
-          })
-        }
-
-        refresh()
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: getErrorMessage(error),
-          variant: 'destructive',
-        })
+        await paymentVerifyPayment(bookingId)
       } finally {
-        setActionLoading((prev) => ({ ...prev, markAsPaid: false }))
+        setActionLoading((prev) => ({ ...prev, verifyPayment: false }))
       }
     },
-    [selectedBooking, toast, refresh, onBookingUpdate]
+    [paymentVerifyPayment]
   )
 
   return {

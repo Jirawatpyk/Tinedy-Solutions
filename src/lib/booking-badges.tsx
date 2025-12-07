@@ -1,4 +1,6 @@
 import { Badge } from '@/components/ui/badge'
+// Re-export from centralized utilities for backwards compatibility
+export { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
 
 // Status Configuration
 interface StatusConfig {
@@ -79,32 +81,4 @@ export function getPaymentStatusBadge(status?: string): JSX.Element {
   }
 }
 
-/**
- * Get available status transitions for a current status
- */
-export function getAvailableStatuses(currentStatus: string): string[] {
-  const transitions: Record<string, string[]> = {
-    pending: ['pending', 'confirmed', 'cancelled'],
-    confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-    in_progress: ['in_progress', 'completed', 'cancelled'],
-    completed: ['completed'],
-    cancelled: ['cancelled'],
-    no_show: ['no_show'],
-  }
-  return transitions[currentStatus] || [currentStatus]
-}
-
-/**
- * Get human-readable label for a status
- */
-export function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    pending: 'Pending',
-    confirmed: 'Confirmed',
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    no_show: 'No Show',
-  }
-  return labels[status] || status
-}
+// getAvailableStatuses and getStatusLabel are re-exported from @/lib/booking-utils at the top of this file

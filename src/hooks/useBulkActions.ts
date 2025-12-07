@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
-import { formatFullAddress } from '@/lib/booking-utils'
-import { getErrorMessage } from '@/lib/error-utils'
+import { formatFullAddress, getValidTransitions } from '@/lib/booking-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import type { Booking } from '@/types/booking'
 
 interface UseBulkActionsProps {
@@ -64,18 +64,7 @@ export function useBulkActions({
     }
   }
 
-  // Status Transition Rules (same as useBookingStatusManager)
-  const getValidTransitions = (currentStatus: string): string[] => {
-    const transitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['in_progress', 'cancelled', 'no_show'],
-      in_progress: ['completed', 'cancelled'],
-      completed: [], // Final state
-      cancelled: [], // Final state
-      no_show: [], // Final state
-    }
-    return transitions[currentStatus] || []
-  }
+  // getValidTransitions imported from @/lib/booking-utils
 
   const handleBulkStatusUpdate = async () => {
     if (!bulkStatus || selectedBookings.length === 0) return
@@ -126,9 +115,10 @@ export function useBulkActions({
       setBulkStatus('')
       onSuccess()
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     }
@@ -161,9 +151,10 @@ export function useBulkActions({
       setShowDeleteConfirm(false)
       onSuccess()
     } catch (error) {
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
-        title: 'Error',
-        description: getErrorMessage(error),
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: 'destructive',
       })
     } finally {
