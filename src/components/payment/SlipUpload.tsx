@@ -207,7 +207,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Upload Payment Slip</CardTitle>
+        <CardTitle className="text-lg">Bank Transfer</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Amount Display */}
@@ -297,7 +297,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Payment Slip
+                Upload Slip
               </>
             )}
           </Button>

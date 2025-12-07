@@ -322,8 +322,8 @@ export function PaymentPage() {
                       <Upload className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900">Upload Slip</p>
-                      <p className="text-sm text-gray-600">Bank transfer slip</p>
+                      <p className="font-semibold text-gray-900">Bank Transfer</p>
+                      <p className="text-sm text-gray-600">Upload transfer slip</p>
                     </div>
                     {paymentMethod === 'slip' && (
                       <CheckCircle2 className="h-6 w-6 text-blue-600" />
