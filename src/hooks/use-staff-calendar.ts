@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 interface BookingData {
   id: string
@@ -199,7 +199,8 @@ export function useStaffCalendar() {
       setEvents(calendarEvents)
     } catch (err) {
       console.error('Error loading calendar events:', err)
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'booking')
+      setError(errorMsg.description)
     } finally {
       setLoading(false)
     }

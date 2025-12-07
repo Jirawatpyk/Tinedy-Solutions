@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
@@ -377,7 +377,8 @@ export function useStaffBookings() {
       setCompletedBookings(completedData as StaffBooking[])
     } catch (err) {
       logger.error('Error loading bookings', { error: err }, { context: 'StaffBookings' })
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'booking')
+      setError(errorMsg.description)
       setLoading(false)
     }
     // ไม่ setLoading(false) ที่นี่ เพราะยัง calculateStats() ไม่เสร็จ

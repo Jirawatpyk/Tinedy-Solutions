@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 export interface Settings {
   id: string
@@ -81,7 +81,8 @@ export function useSettings() {
       }
     } catch (err) {
       console.error('Error loading settings:', err)
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'settings')
+      setError(errorMsg.description)
     } finally {
       setLoading(false)
     }

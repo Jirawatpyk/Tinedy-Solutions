@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
-import { getErrorMessage } from '@/lib/error-utils'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 export interface StaffProfile {
   id: string
@@ -52,7 +52,8 @@ export function useStaffProfile() {
       })
     } catch (err) {
       console.error('Error loading profile:', err)
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'profile')
+      setError(errorMsg.description)
     }
   }, [profile])
 
@@ -162,7 +163,8 @@ export function useStaffProfile() {
       })
     } catch (err) {
       console.error('Error loading performance stats:', err)
-      setError(getErrorMessage(err))
+      const errorMsg = mapErrorToUserMessage(err, 'profile')
+      setError(errorMsg.description)
     } finally {
       setLoading(false)
     }

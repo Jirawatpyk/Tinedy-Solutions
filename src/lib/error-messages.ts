@@ -16,6 +16,8 @@ export type ErrorContext =
   | 'customer'
   | 'team'
   | 'service_package'
+  | 'profile'
+  | 'settings'
   | 'general'
 
 export interface UserFriendlyError {
@@ -58,6 +60,14 @@ const ERROR_MESSAGES = {
       title: 'Unable to Load Teams',
       description: 'Unable to load teams. Please refresh the page or check your connection.',
     },
+    profile: {
+      title: 'Unable to Load Profile',
+      description: 'Unable to load your profile. Please refresh the page or check your connection.',
+    },
+    settings: {
+      title: 'Unable to Load Settings',
+      description: 'Unable to load settings. Please refresh the page or check your connection.',
+    },
   },
 
   // Save/Create errors
@@ -93,6 +103,18 @@ const ERROR_MESSAGES = {
     team: {
       title: 'Cannot Delete Team',
       description: 'Cannot delete this team. It may have active bookings or members assigned. Try archiving instead.',
+    },
+  },
+
+  // Profile/Settings update errors
+  UPDATE_FAILED: {
+    profile: {
+      title: 'Profile Update Failed',
+      description: 'Unable to update your profile. Please try again or contact support.',
+    },
+    settings: {
+      title: 'Settings Update Failed',
+      description: 'Unable to save settings. Please try again or contact support.',
     },
   },
 
