@@ -1,5 +1,5 @@
 import type { CustomerRecord } from '@/types'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
@@ -46,7 +46,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { formatDate, getBangkokDateString } from '@/lib/utils'
-import { formatTime, getStatusLabel } from '@/lib/booking-utils'
+import { formatTime, getStatusLabel, getAvailableStatuses } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
@@ -85,6 +85,7 @@ import {
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
+import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
 
 interface CustomerStats {
   total_bookings: number
@@ -252,21 +253,11 @@ export function AdminCustomerDetail() {
     }
   }
 
-  const fetchCustomerDetails = useCallback(async () => {
+  // Fetch stats only (for realtime updates)
+  const fetchStats = useCallback(async () => {
+    if (!id) return
+
     try {
-      setLoading(true)
-
-      // Fetch customer data
-      const { data: customerData, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (customerError) throw customerError
-      setCustomer(customerData)
-
-      // Fetch customer stats from view
       const { data: statsData, error: statsError } = await supabase
         .from('customer_lifetime_value')
         .select('*')
@@ -275,7 +266,6 @@ export function AdminCustomerDetail() {
 
       if (statsError) {
         console.warn('Stats view not available:', statsError)
-        // Set default stats if view doesn't exist
         setStats({
           total_bookings: 0,
           lifetime_value: 0,
@@ -293,6 +283,27 @@ export function AdminCustomerDetail() {
         setStats(statsData)
       }
     } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }, [id])
+
+  const fetchCustomerDetails = useCallback(async () => {
+    try {
+      setLoading(true)
+
+      // Fetch customer data
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (customerError) throw customerError
+      setCustomer(customerData)
+
+      // Fetch stats
+      await fetchStats()
+    } catch (error) {
       console.error('Error fetching customer details:', error)
       toast({
         title: 'Error',
@@ -302,7 +313,7 @@ export function AdminCustomerDetail() {
     } finally {
       setLoading(false)
     }
-  }, [id, toast])
+  }, [id, toast, fetchStats])
 
   const fetchModalData = useCallback(async () => {
     try {
@@ -346,6 +357,21 @@ export function AdminCustomerDetail() {
       }
     }
   }, [bookings, selectedBooking])
+
+  // Refetch stats when bookings change (realtime update)
+  // Create a simple hash of booking states that affect stats
+  const bookingsHash = useMemo(() => {
+    return bookings.map(b => `${b.id}:${b.status}:${b.payment_status}:${b.total_price}`).join('|')
+  }, [bookings])
+
+  const prevBookingsHashRef = useRef(bookingsHash)
+  useEffect(() => {
+    // Refetch if any booking status/payment changed (affects lifetime value)
+    if (bookingsHash !== prevBookingsHashRef.current) {
+      prevBookingsHashRef.current = bookingsHash
+      fetchStats()
+    }
+  }, [bookingsHash, fetchStats])
 
   // Calculate end_time from start_time and duration
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -1197,35 +1223,19 @@ export function AdminCustomerDetail() {
                       }}
                       onVerifyPayment={async (bookingId) => {
                         try {
-                          // Find the booking to get recurring_group_id
                           const booking = bookings.find(b => b.id === bookingId)
-                          if (!booking?.recurring_group_id) {
-                            // If not a recurring booking, update single booking
-                            const { error } = await supabase
-                              .from('bookings')
-                              .update({
-                                payment_status: 'paid',
-                                payment_date: getBangkokDateString(),
-                              })
-                              .eq('id', bookingId)
+                          const result = await verifyPaymentService({
+                            bookingId,
+                            recurringGroupId: booking?.recurring_group_id || undefined,
+                          })
 
-                            if (error) throw error
-                          } else {
-                            // Update all bookings in the recurring group
-                            const { error } = await supabase
-                              .from('bookings')
-                              .update({
-                                payment_status: 'paid',
-                                payment_date: getBangkokDateString(),
-                              })
-                              .eq('recurring_group_id', booking.recurring_group_id)
-
-                            if (error) throw error
-                          }
+                          if (!result.success) throw new Error(result.error)
 
                           toast({
                             title: 'Success',
-                            description: 'Payment verified successfully',
+                            description: result.count > 1
+                              ? `${result.count} bookings verified successfully`
+                              : 'Payment verified successfully',
                           })
 
                           refetchBookings()
@@ -1238,28 +1248,8 @@ export function AdminCustomerDetail() {
                           })
                         }
                       }}
-                      getAvailableStatuses={(currentStatus) => {
-                        const statusFlow: Record<string, string[]> = {
-                          pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
-                          confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-                          in_progress: ['in_progress', 'completed', 'cancelled'],
-                          completed: ['completed'],
-                          cancelled: ['cancelled'],
-                          no_show: ['no_show']
-                        }
-                        return statusFlow[currentStatus] || [currentStatus]
-                      }}
-                      getStatusLabel={(status) => {
-                        const labels: Record<string, string> = {
-                          pending: 'Pending',
-                          confirmed: 'Confirmed',
-                          in_progress: 'In Progress',
-                          completed: 'Completed',
-                          cancelled: 'Cancelled',
-                          no_show: 'No Show'
-                        }
-                        return labels[status] || status
-                      }}
+                      getAvailableStatuses={getAvailableStatuses}
+                      getStatusLabel={getStatusLabel}
                     />
                   )
                 } else {
@@ -1622,47 +1612,47 @@ export function AdminCustomerDetail() {
           onMarkAsPaid={async (bookingId, method) => {
             try {
               const booking = bookings.find(b => b.id === bookingId)
-              const { error } = await supabase
-                .from('bookings')
-                .update({
-                  payment_status: 'paid',
-                  payment_method: method,
-                  payment_date: getBangkokDateString(),
-                  amount_paid: booking?.total_price || 0,
-                })
-                .eq('id', bookingId)
+              const result = await markAsPaidService({
+                bookingId,
+                recurringGroupId: booking?.recurring_group_id || undefined,
+                paymentMethod: method,
+                amount: booking?.total_price || 0,
+              })
 
-              if (error) throw error
+              if (!result.success) throw new Error(result.error)
 
               toast({
                 title: 'Success',
-                description: 'Payment marked as paid',
+                description: result.count > 1
+                  ? `${result.count} bookings marked as paid`
+                  : 'Payment marked as paid',
               })
 
               refetchBookings()
             } catch (error) {
+              const errorMsg = mapErrorToUserMessage(error, 'booking')
               toast({
-                title: 'Error',
-                description: 'Failed to update payment status',
+                title: errorMsg.title,
+                description: errorMsg.description,
                 variant: 'destructive',
               })
             }
           }}
           onVerifyPayment={async (bookingId) => {
             try {
-              const { error } = await supabase
-                .from('bookings')
-                .update({
-                  payment_status: 'paid',
-                  payment_date: getBangkokDateString(),
-                })
-                .eq('id', bookingId)
+              const booking = bookings.find(b => b.id === bookingId)
+              const result = await verifyPaymentService({
+                bookingId,
+                recurringGroupId: booking?.recurring_group_id || undefined,
+              })
 
-              if (error) throw error
+              if (!result.success) throw new Error(result.error)
 
               toast({
                 title: 'Success',
-                description: 'Payment verified successfully',
+                description: result.count > 1
+                  ? `${result.count} bookings verified successfully`
+                  : 'Payment verified successfully',
               })
 
               refetchBookings()
@@ -1691,28 +1681,8 @@ export function AdminCustomerDetail() {
               </StatusBadge>
             )
           }}
-          getAvailableStatuses={(currentStatus) => {
-            const statusFlow: Record<string, string[]> = {
-              pending: ['pending', 'confirmed', 'cancelled', 'no_show'],
-              confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-              in_progress: ['in_progress', 'completed', 'cancelled'],
-              completed: ['completed'],
-              cancelled: ['cancelled', 'pending'],
-              no_show: ['no_show', 'pending'],
-            }
-            return statusFlow[currentStatus] || [currentStatus]
-          }}
-          getStatusLabel={(status) => {
-            const labels: Record<string, string> = {
-              pending: 'Pending',
-              confirmed: 'Confirmed',
-              in_progress: 'In Progress',
-              completed: 'Completed',
-              cancelled: 'Cancelled',
-              no_show: 'No Show',
-            }
-            return labels[status] || status
-          }}
+          getAvailableStatuses={getAvailableStatuses}
+          getStatusLabel={getStatusLabel}
         />
       )}
 
