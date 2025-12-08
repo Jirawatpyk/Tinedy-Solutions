@@ -32,6 +32,11 @@ export type StaffSkill = (typeof STAFF_SKILL_SUGGESTIONS)[number]
 export function getSkillColor(skill: string): string {
   const normalizedSkill = skill.toLowerCase()
 
+  // Training - cyan/teal
+  if (normalizedSkill === 'training') {
+    return 'bg-cyan-100 text-cyan-800 border-cyan-200'
+  }
+
   // Cleaning services - blue
   if (['cleaning', 'deep cleaning', 'window cleaning', 'carpet cleaning'].includes(normalizedSkill)) {
     return 'bg-blue-100 text-blue-800 border-blue-200'
