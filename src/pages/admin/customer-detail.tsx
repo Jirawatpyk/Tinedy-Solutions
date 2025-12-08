@@ -45,7 +45,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { formatDate, getBangkokDateString } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { formatTime, getStatusLabel, getAvailableStatuses } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
