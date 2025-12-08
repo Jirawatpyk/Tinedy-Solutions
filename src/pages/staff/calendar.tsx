@@ -22,7 +22,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import type { Booking } from '@/types/booking'
-import { STATUS_DOTS, STATUS_COLORS, STATUS_LABELS } from '@/constants/booking-status'
+import { STATUS_DOTS, STATUS_COLORS } from '@/constants/booking-status'
+import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import './calendar.css'
 
 // Staff can only view - no status transitions from calendar dropdown
@@ -410,9 +411,12 @@ export default function StaffCalendar() {
                               {formatTime(format(event.start, 'HH:mm:ss'))} - {formatTime(format(event.end, 'HH:mm:ss'))}
                             </span>
                           </div>
-                          <span className="text-[10px] sm:text-xs font-medium uppercase px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0">
-                            {STATUS_LABELS[event.status as keyof typeof STATUS_LABELS] || event.status}
-                          </span>
+                          <StatusBadge
+                            variant={getBookingStatusVariant(event.status)}
+                            className="text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0"
+                          >
+                            {getBookingStatusLabel(event.status)}
+                          </StatusBadge>
                         </div>
 
                         <div className="space-y-1 text-xs sm:text-sm">

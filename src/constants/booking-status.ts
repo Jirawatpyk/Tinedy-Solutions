@@ -47,6 +47,16 @@ export const BOOKING_STATUS_COLORS_TIMELINE = {
   no_show: 'bg-gray-500 hover:bg-gray-600',
 } as const
 
+// For Calendar Event Component (solid background with border-left)
+export const BOOKING_STATUS_COLORS_CALENDAR = {
+  pending: 'bg-yellow-500 border-yellow-600',
+  confirmed: 'bg-blue-500 border-blue-600',
+  in_progress: 'bg-purple-500 border-purple-600',
+  completed: 'bg-green-500 border-green-600',
+  cancelled: 'bg-red-500 border-red-600',
+  no_show: 'bg-gray-500 border-gray-600',
+} as const
+
 export const BOOKING_STATUS_LABELS = {
   pending: 'Pending',
   confirmed: 'Confirmed',

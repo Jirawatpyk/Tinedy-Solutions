@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, XCircle, AlertCircle, Play } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { BOOKING_STATUS_CARD_COLORS, type BookingStatus } from '@/constants/booking-status'
 
 interface StatusHistoryItem {
   id: string
@@ -127,23 +128,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
   }
 
   // ใช้ getBookingStatusLabel จาก StatusBadge แทน custom function
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-700 bg-green-50 border-green-200'
-      case 'confirmed':
-        return 'text-blue-700 bg-blue-50 border-blue-200'
-      case 'in_progress':
-        return 'text-purple-700 bg-purple-50 border-purple-200'
-      case 'pending':
-        return 'text-yellow-700 bg-yellow-50 border-yellow-200'
-      case 'cancelled':
-        return 'text-red-700 bg-red-50 border-red-200'
-      default:
-        return 'text-gray-700 bg-gray-50 border-gray-200'
-    }
-  }
+  // ใช้ BOOKING_STATUS_CARD_COLORS จาก constants แทน local getStatusColor
 
   if (loading) {
     return (
@@ -188,7 +173,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
               <div className="flex-1 pb-4">
                 <div className={cn(
                   "inline-block px-3 py-1.5 rounded-md text-sm font-medium border",
-                  getStatusColor(item.new_status)
+                  BOOKING_STATUS_CARD_COLORS[item.new_status as BookingStatus] || 'bg-gray-50 border-gray-200'
                 )}>
                   {item.old_status ? (
                     <>
