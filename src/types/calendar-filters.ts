@@ -5,6 +5,17 @@
  * Supports multi-select filters, date ranges, search, and presets
  */
 
+import {
+  BOOKING_STATUS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
+  type BookingStatus,
+  type PaymentStatus,
+} from '@/constants/booking-status'
+
+// Re-export filter options from single source of truth
+export const BOOKING_STATUSES = BOOKING_STATUS_OPTIONS
+export const PAYMENT_STATUSES = PAYMENT_STATUS_OPTIONS
+
 // Filter preset types
 export type CalendarFilterPreset =
   | 'today'
@@ -92,25 +103,6 @@ export type CalendarFilterAction =
   | { type: 'CLEAR_ALL' }
   | { type: 'RESTORE_FILTERS'; payload: CalendarFilters }
 
-// Booking status constants (for status filter options)
-export const BOOKING_STATUSES = [
-  { value: 'pending', label: 'Pending', color: 'text-yellow-800' },
-  { value: 'confirmed', label: 'Confirmed', color: 'text-blue-800' },
-  { value: 'in_progress', label: 'In Progress', color: 'text-purple-800' },
-  { value: 'completed', label: 'Completed', color: 'text-green-800' },
-  { value: 'cancelled', label: 'Cancelled', color: 'text-red-800' },
-  { value: 'no_show', label: 'No Show', color: 'text-gray-800' },
-] as const
-
-// Payment status constants (for payment filter options)
-export const PAYMENT_STATUSES = [
-  { value: 'unpaid', label: 'Unpaid', color: 'text-orange-800' },
-  { value: 'paid', label: 'Paid', color: 'text-emerald-800' },
-  { value: 'pending_verification', label: 'Verifying', color: 'text-blue-800' },
-] as const
-
-// Helper type for booking status values
-export type BookingStatusValue = typeof BOOKING_STATUSES[number]['value']
-
-// Helper type for payment status values
-export type PaymentStatusValue = typeof PAYMENT_STATUSES[number]['value']
+// Re-export types from single source of truth
+export type BookingStatusValue = BookingStatus
+export type PaymentStatusValue = PaymentStatus

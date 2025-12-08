@@ -74,18 +74,24 @@ export const PAYMENT_STATUS_COLORS = {
   unpaid: 'bg-orange-100 text-orange-800 border-orange-300',
   pending_verification: 'bg-amber-100 text-amber-800 border-amber-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  refund_pending: 'bg-purple-100 text-purple-800 border-purple-300',
+  refunded: 'bg-gray-100 text-gray-800 border-gray-300',
 } as const
 
 export const PAYMENT_STATUS_DOTS = {
   unpaid: 'bg-orange-500',
   pending_verification: 'bg-amber-500',
   paid: 'bg-emerald-500',
+  refund_pending: 'bg-purple-500',
+  refunded: 'bg-gray-500',
 } as const
 
 export const PAYMENT_STATUS_LABELS = {
   unpaid: 'Unpaid',
   pending_verification: 'Verifying',
   paid: 'Paid',
+  refund_pending: 'Refund Pending',
+  refunded: 'Refunded',
 } as const
 
 // ============================================================================
@@ -108,6 +114,8 @@ export const STATUS_COLORS_TIMELINE = {
   unpaid: 'bg-orange-500 hover:bg-orange-600',
   pending_verification: 'bg-amber-500 hover:bg-amber-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
+  refund_pending: 'bg-purple-500 hover:bg-purple-600',
+  refunded: 'bg-gray-500 hover:bg-gray-600',
 } as const
 
 export const STATUS_LABELS = {
@@ -117,3 +125,43 @@ export const STATUS_LABELS = {
 
 export type BookingStatus = keyof typeof BOOKING_STATUS_COLORS
 export type PaymentStatus = keyof typeof PAYMENT_STATUS_COLORS
+
+// ============================================================================
+// FILTER OPTIONS (for calendar filters, dropdowns, etc.)
+// ============================================================================
+
+// Text colors for filter options (extracted from badge colors)
+const BOOKING_STATUS_TEXT_COLORS: Record<BookingStatus, string> = {
+  pending: 'text-yellow-800',
+  confirmed: 'text-blue-800',
+  in_progress: 'text-purple-800',
+  completed: 'text-green-800',
+  cancelled: 'text-red-800',
+  no_show: 'text-gray-800',
+}
+
+const PAYMENT_STATUS_TEXT_COLORS: Record<PaymentStatus, string> = {
+  unpaid: 'text-orange-800',
+  pending_verification: 'text-amber-800',
+  paid: 'text-emerald-800',
+  refund_pending: 'text-purple-800',
+  refunded: 'text-gray-800',
+}
+
+/** Filter options for booking status (used in calendar filters, dropdowns) */
+export const BOOKING_STATUS_OPTIONS = (Object.keys(BOOKING_STATUS_LABELS) as BookingStatus[]).map(
+  (status) => ({
+    value: status,
+    label: BOOKING_STATUS_LABELS[status],
+    color: BOOKING_STATUS_TEXT_COLORS[status],
+  })
+)
+
+/** Filter options for payment status (used in calendar filters, dropdowns) */
+export const PAYMENT_STATUS_OPTIONS = (Object.keys(PAYMENT_STATUS_LABELS) as PaymentStatus[]).map(
+  (status) => ({
+    value: status,
+    label: PAYMENT_STATUS_LABELS[status],
+    color: PAYMENT_STATUS_TEXT_COLORS[status],
+  })
+)
