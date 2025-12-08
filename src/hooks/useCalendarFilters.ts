@@ -201,6 +201,19 @@ function calendarFiltersReducer(
         searchQuery: '',
       }
 
+    // Archived Filter Actions
+    case 'TOGGLE_ARCHIVED':
+      return {
+        ...state,
+        showArchived: !state.showArchived,
+      }
+
+    case 'SET_ARCHIVED':
+      return {
+        ...state,
+        showArchived: action.payload,
+      }
+
     // Preset Actions
     case 'SET_PRESET':
       return {
@@ -240,6 +253,11 @@ function loadFiltersFromStorage(): CalendarFilters {
     // Ensure paymentStatuses field exists (for backward compatibility)
     if (!parsed.paymentStatuses) {
       parsed.paymentStatuses = []
+    }
+
+    // Ensure showArchived field exists (for backward compatibility)
+    if (typeof parsed.showArchived !== 'boolean') {
+      parsed.showArchived = false
     }
 
     return parsed
@@ -346,6 +364,14 @@ export function useCalendarFilters(
     dispatch({ type: 'CLEAR_SEARCH' })
   }, [])
 
+  const toggleArchived = useCallback(() => {
+    dispatch({ type: 'TOGGLE_ARCHIVED' })
+  }, [])
+
+  const setArchived = useCallback((showArchived: boolean) => {
+    dispatch({ type: 'SET_ARCHIVED', payload: showArchived })
+  }, [])
+
   const setPreset = useCallback((preset: CalendarFilterPreset) => {
     dispatch({ type: 'SET_PRESET', payload: preset })
   }, [])
@@ -362,7 +388,8 @@ export function useCalendarFilters(
       filters.teamIds.length > 0 ||
       filters.statuses.length > 0 ||
       filters.paymentStatuses.length > 0 ||
-      filters.searchQuery.trim() !== ''
+      filters.searchQuery.trim() !== '' ||
+      filters.showArchived
     )
   }, [filters])
 
@@ -374,6 +401,7 @@ export function useCalendarFilters(
     if (filters.statuses.length > 0) count++
     if (filters.paymentStatuses.length > 0) count++
     if (filters.searchQuery.trim()) count++
+    if (filters.showArchived) count++
     return count
   }, [filters])
 
@@ -399,6 +427,8 @@ export function useCalendarFilters(
     clearPaymentStatus,
     setSearch,
     clearSearch,
+    toggleArchived,
+    setArchived,
     setPreset,
     clearAll,
 
@@ -423,6 +453,8 @@ export function useCalendarFilters(
     clearPaymentStatus,
     setSearch,
     clearSearch,
+    toggleArchived,
+    setArchived,
     setPreset,
     clearAll,
     hasActiveFilters,

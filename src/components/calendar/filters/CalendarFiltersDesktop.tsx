@@ -12,11 +12,13 @@
 
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard } from 'lucide-react'
+import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard, Archive } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { FilterSearchBar } from './FilterSearchBar'
 import { FilterMultiSelect } from './FilterMultiSelect'
 import { FilterBadge, FilterBadgeList } from './FilterBadge'
@@ -24,6 +26,7 @@ import { FilterPresets } from './FilterPresets'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
+import { useAuth } from '@/contexts/auth-context'
 import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
 
 interface CalendarFiltersDesktopProps {
@@ -38,6 +41,8 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
   onPresetDateChange,
 }) => {
   const { filters, hasActiveFilters, activeFilterCount } = filterControls
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
 
   // Fetch staff list for filter options (only role = 'staff', exclude admin and manager)
   const { data: staffList = [] } = useQuery(staffQueryOptions.listSimple('staff'))
@@ -233,6 +238,31 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
                   showCount
                   showClear
                 />
+
+                {/* Show Archived - Admin Only */}
+                {isAdmin && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-archived"
+                        checked={filters.showArchived}
+                        onCheckedChange={(checked) => filterControls.setArchived(checked === true)}
+                      />
+                      <Label htmlFor="show-archived" className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <Archive className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <span className="text-sm font-medium">Show Archived</span>
+                            <p className="text-xs text-muted-foreground">
+                              Include soft-deleted bookings
+                            </p>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  </>
+                )}
               </div>
             </ScrollArea>
           </PopoverContent>
@@ -319,6 +349,17 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
               variant="warning"
             />
           ))}
+
+          {/* Show Archived Badge - Admin Only */}
+          {isAdmin && filters.showArchived && (
+            <FilterBadge
+              label=""
+              value="Show Archived"
+              onRemove={() => filterControls.setArchived(false)}
+              icon={<Archive className="h-3 w-3" />}
+              variant="destructive"
+            />
+          )}
         </FilterBadgeList>
       )}
     </div>

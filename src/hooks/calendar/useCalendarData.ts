@@ -329,6 +329,8 @@ export function useCalendarData() {
       clearPaymentStatus: filterControls.clearPaymentStatus,
       setSearch: filterControls.setSearch,
       clearSearch: filterControls.clearSearch,
+      toggleArchived: filterControls.toggleArchived,
+      setArchived: filterControls.setArchived,
       setPreset: filterControls.setPreset,
       clearAll: filterControls.clearAll,
       hasActiveFilters: filterControls.hasActiveFilters,

@@ -4,14 +4,14 @@
  * Mobile filter UI with Bottom Sheet layout:
  * - Trigger button showing active filter count
  * - Bottom Sheet drawer with all filters
- * - Sections: Presets, Search, Date Range, Staff, Team, Status
+ * - Sections: Presets, Search, Staff, Team, Status
  * - Apply/Clear actions
  * - Optimized with React Query for data fetching
  */
 
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard } from 'lucide-react'
+import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard, Archive } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -24,13 +24,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { FilterSearchBar } from './FilterSearchBar'
-import { FilterDateRangePicker } from './FilterDateRangePicker'
 import { FilterMultiSelect } from './FilterMultiSelect'
 import { FilterPresets } from './FilterPresets'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
+import { useAuth } from '@/contexts/auth-context'
 import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
 
 interface CalendarFiltersMobileProps {
@@ -46,6 +48,8 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const { filters, hasActiveFilters, activeFilterCount } = filterControls
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
 
   // Fetch staff list for filter options
   const { data: staffList = [] } = useQuery(staffQueryOptions.listSimple('all'))
@@ -158,19 +162,6 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
 
             <Separator />
 
-            {/* Date Range */}
-            <div>
-              <h4 className="font-medium text-sm mb-3">Date Range</h4>
-              <FilterDateRangePicker
-                value={filters.dateRange}
-                onChange={filterControls.setDateRange}
-                placeholder="Select date range"
-                className="w-full"
-              />
-            </div>
-
-            <Separator />
-
             {/* Staff Filter */}
             <FilterMultiSelect
               label="Staff"
@@ -232,6 +223,31 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
               showCount
               showClear
             />
+
+            {/* Show Archived - Admin Only */}
+            {isAdmin && (
+              <>
+                <Separator />
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-archived-mobile"
+                    checked={filters.showArchived}
+                    onCheckedChange={(checked) => filterControls.setArchived(checked === true)}
+                  />
+                  <Label htmlFor="show-archived-mobile" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Archive className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-sm font-medium">Show Archived</span>
+                        <p className="text-xs text-muted-foreground">
+                          Include soft-deleted bookings
+                        </p>
+                      </div>
+                    </div>
+                  </Label>
+                </div>
+              </>
+            )}
           </div>
         </ScrollArea>
 

@@ -32,6 +32,9 @@ export interface CalendarFilters {
   // Search Query
   searchQuery: string       // 'John Doe' or 'Cleaning' or phone number
 
+  // Show Archived (soft-deleted) bookings
+  showArchived: boolean
+
   // Active Preset (mutually exclusive with manual filters)
   preset: CalendarFilterPreset
 }
@@ -44,6 +47,7 @@ export const INITIAL_CALENDAR_FILTERS: CalendarFilters = {
   statuses: [],
   paymentStatuses: [],
   searchQuery: '',
+  showArchived: false,
   preset: null,
 }
 
@@ -76,6 +80,10 @@ export type CalendarFilterAction =
   // Search Actions
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'CLEAR_SEARCH' }
+
+  // Archived Filter Actions
+  | { type: 'TOGGLE_ARCHIVED' }
+  | { type: 'SET_ARCHIVED'; payload: boolean }
 
   // Preset Actions
   | { type: 'SET_PRESET'; payload: CalendarFilterPreset }

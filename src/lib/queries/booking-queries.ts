@@ -86,6 +86,9 @@ export interface BookingFilters {
   statuses?: string[]
   paymentStatuses?: string[]
   searchQuery?: string
+
+  // Show archived (soft-deleted) bookings
+  showArchived?: boolean
 }
 
 /**
@@ -115,9 +118,13 @@ export async function fetchBookingsByDateRange(
     `)
     .gte('booking_date', startDate)
     .lte('booking_date', endDate)
-    .is('deleted_at', null) // Exclude archived bookings
     .order('booking_date')
     .order('start_time')
+
+  // Filter archived bookings (default: exclude archived)
+  if (!filters?.showArchived) {
+    query = query.is('deleted_at', null)
+  }
 
   // Apply filters
   // Priority: New multi-select filters (Sprint 2) > Legacy single-value filters > Legacy viewMode filters
@@ -355,6 +362,7 @@ export const bookingQueryOptions = {
       statuses: filters.statuses?.length ? [...filters.statuses].sort() : undefined,
       paymentStatuses: filters.paymentStatuses?.length ? [...filters.paymentStatuses].sort() : undefined,
       searchQuery: filters.searchQuery?.trim() || undefined,
+      showArchived: filters.showArchived || undefined,
 
       // Legacy single-value filters (สำหรับ Weekly Schedule & Calendar)
       viewMode: filters.viewMode || undefined,
