@@ -12,7 +12,7 @@ export const emailSchema = z
   .min(1, 'Email is required')
   .email('Invalid email format')
 
-// Phone Validator (Thai format: 0X-XXXX-XXXX)
+// Phone Validator (Thai mobile format: 0X-XXXX-XXXX)
 export const phoneSchema = z
   .string()
   .min(1, 'Phone number is required')
@@ -24,6 +24,16 @@ export const phoneOptionalSchema = z
   .regex(/^0\d{9}$/, 'Phone must be 10 digits starting with 0')
   .optional()
   .or(z.literal(''))
+
+// Business Phone Validator (flexible: mobile, landline with extension, international)
+// Supports: 0812345678, 02-123-4567, 021234567, +66812345678, 02-123-4567 ext.123
+export const businessPhoneSchema = z
+  .string()
+  .min(1, 'Phone number is required')
+  .regex(
+    /^(\+?\d{1,3})?[\s.-]?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}(\s?(ext|ต่อ|x)\.?\s?\d{1,5})?$/i,
+    'Invalid phone format (e.g., 0812345678, 02-123-4567, 02-123-4567 ext.123)'
+  )
 
 // Password Validator
 export const passwordSchema = z
