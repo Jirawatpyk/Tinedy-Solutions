@@ -4,6 +4,9 @@
  * Centralized service สำหรับจัดการ payment operations
  * - verifyPayment: ยืนยันการชำระเงิน (pending_verification → paid)
  * - markAsPaid: เปลี่ยนสถานะเป็นจ่ายแล้ว (unpaid → paid)
+ * - requestRefund: ขอคืนเงิน (paid → refund_pending)
+ * - completeRefund: ยืนยันคืนเงินแล้ว (refund_pending → refunded)
+ * - cancelRefund: ยกเลิกการขอคืนเงิน (refund_pending → paid)
  *
  * รองรับทั้ง single และ recurring bookings
  * ส่ง payment confirmation email อัตโนมัติ
@@ -26,6 +29,11 @@ export interface MarkAsPaidOptions {
   paymentMethod?: string // default: 'cash'
   amount?: number
   sendEmail?: boolean // default: true
+}
+
+export interface RefundOptions {
+  bookingId: string
+  recurringGroupId?: string | null
 }
 
 export interface PaymentResult {
@@ -194,6 +202,183 @@ export async function markAsPaid(
     return { success: true, count }
   } catch (error) {
     console.error('Error in markAsPaid:', error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Request Refund
+ *
+ * ใช้เมื่อต้องการขอคืนเงิน
+ * เปลี่ยน payment_status จาก 'paid' → 'refund_pending'
+ *
+ * @param options - RefundOptions
+ * @returns PaymentResult
+ */
+export async function requestRefund(
+  options: RefundOptions
+): Promise<PaymentResult> {
+  const { bookingId, recurringGroupId } = options
+
+  const updateData = {
+    payment_status: 'refund_pending' as const,
+  }
+
+  let count = 1
+
+  try {
+    if (recurringGroupId) {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('recurring_group_id', recurringGroupId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+
+      const { count: updatedCount } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('recurring_group_id', recurringGroupId)
+
+      count = updatedCount || 1
+    } else {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', bookingId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+    }
+
+    return { success: true, count }
+  } catch (error) {
+    console.error('Error in requestRefund:', error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Complete Refund
+ *
+ * ใช้เมื่อคืนเงินสำเร็จแล้ว
+ * เปลี่ยน payment_status จาก 'refund_pending' → 'refunded'
+ *
+ * @param options - RefundOptions
+ * @returns PaymentResult
+ */
+export async function completeRefund(
+  options: RefundOptions
+): Promise<PaymentResult> {
+  const { bookingId, recurringGroupId } = options
+
+  const updateData = {
+    payment_status: 'refunded' as const,
+  }
+
+  let count = 1
+
+  try {
+    if (recurringGroupId) {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('recurring_group_id', recurringGroupId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+
+      const { count: updatedCount } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('recurring_group_id', recurringGroupId)
+
+      count = updatedCount || 1
+    } else {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', bookingId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+    }
+
+    return { success: true, count }
+  } catch (error) {
+    console.error('Error in completeRefund:', error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Cancel Refund
+ *
+ * ใช้เมื่อต้องการยกเลิกการขอคืนเงิน
+ * เปลี่ยน payment_status จาก 'refund_pending' → 'paid'
+ *
+ * @param options - RefundOptions
+ * @returns PaymentResult
+ */
+export async function cancelRefund(
+  options: RefundOptions
+): Promise<PaymentResult> {
+  const { bookingId, recurringGroupId } = options
+
+  const updateData = {
+    payment_status: 'paid' as const,
+  }
+
+  let count = 1
+
+  try {
+    if (recurringGroupId) {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('recurring_group_id', recurringGroupId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+
+      const { count: updatedCount } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('recurring_group_id', recurringGroupId)
+
+      count = updatedCount || 1
+    } else {
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', bookingId)
+
+      if (error) {
+        return { success: false, count: 0, error: error.message }
+      }
+    }
+
+    return { success: true, count }
+  } catch (error) {
+    console.error('Error in cancelRefund:', error)
     return {
       success: false,
       count: 0,

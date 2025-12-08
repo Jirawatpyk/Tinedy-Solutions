@@ -128,4 +128,5 @@ export interface ActionLoading {
   delete: boolean
   markAsPaid: boolean
   verifyPayment: boolean
+  refund: boolean
 }

@@ -90,7 +90,7 @@ export const PAYMENT_STATUS_LABELS = {
   unpaid: 'Unpaid',
   pending_verification: 'Verifying',
   paid: 'Paid',
-  refund_pending: 'Refund Pending',
+  refund_pending: 'Refunding',
   refunded: 'Refunded',
 } as const
 

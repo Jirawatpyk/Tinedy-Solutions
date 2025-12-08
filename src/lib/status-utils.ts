@@ -39,7 +39,8 @@ export function getPaymentStatusVariant(status: string): StatusBadgeVariant {
     unpaid: 'danger',
     pending_verification: 'warning',
     partial: 'warning',
-    refunded: 'purple',
+    refund_pending: 'purple',
+    refunded: 'default',
   }
   return statusMap[status] || 'default'
 }
@@ -72,6 +73,7 @@ export function getPaymentStatusLabel(status: string): string {
     unpaid: 'Unpaid',
     pending_verification: 'Verifying',
     partial: 'Partial',
+    refund_pending: 'Refunding',
     refunded: 'Refunded',
   }
   return labelMap[status] || status
