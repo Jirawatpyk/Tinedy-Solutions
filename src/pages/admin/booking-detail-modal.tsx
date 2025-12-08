@@ -341,11 +341,7 @@ export function BookingDetailModal({
               <div>
                 <Label className="text-muted-foreground">Price</Label>
                 <p className="font-semibold text-tinedy-blue text-lg">
-                  {formatCurrency(
-                    booking.is_recurring && booking.recurring_total
-                      ? Number(booking.total_price) * booking.recurring_total
-                      : Number(booking.total_price)
-                  )}
+                  {formatCurrency(Number(booking.total_price))}
                 </p>
               </div>
               <div>

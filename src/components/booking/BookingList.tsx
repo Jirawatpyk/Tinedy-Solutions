@@ -30,7 +30,7 @@ interface BookingListProps {
   totalPages: number
   itemsPerPage: number
   metadata: PaginationMetadata
-  onToggleSelect: (bookingId: string) => void
+  onToggleSelect: (bookingId: string | string[]) => void
   onBookingClick: (booking: Booking) => void
   onItemsPerPageChange: (value: number) => void
   onFirstPage: () => void
@@ -146,6 +146,11 @@ function BookingListComponent({
                   <RecurringBookingCard
                     key={item.data.groupId}
                     group={item.data}
+                    selectedBookings={selectedBookings}
+                    onToggleSelectGroup={(bookingIds) => {
+                      // Toggle all bookings in group (pass array)
+                      onToggleSelect(bookingIds)
+                    }}
                     onBookingClick={(bookingId) => {
                       // Find booking from allBookings for click handler
                       const booking = allBookings.find(b => b.id === bookingId)
@@ -167,40 +172,36 @@ function BookingListComponent({
                 return (
                   <div
                     key={booking.id}
-                    className={`flex items-start gap-2 sm:gap-3 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
+                    className={`p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
+                    onClick={() => onBookingClick(booking)}
                   >
-                    <Checkbox
-                      checked={selectedBookings.includes(booking.id)}
-                      onCheckedChange={() => onToggleSelect(booking.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="mt-0.5 sm:mt-1 flex-shrink-0"
-                    />
-                    <div
-                      className="flex flex-col sm:flex-row sm:items-center justify-between flex-1 gap-3 sm:gap-4 cursor-pointer min-w-0"
-                      onClick={() => onBookingClick(booking)}
-                    >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-1 gap-3 sm:gap-4">
                       <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                              <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
-                                {booking.customers?.full_name || 'Unknown Customer'}
-                                <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
-                              </p>
-                              {isArchived && (
-                                <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs flex-shrink-0">
-                                  Archived
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                              {booking.customers?.email}
-                            </p>
-                          </div>
+                        {/* Header with Checkbox */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <Checkbox
+                            checked={selectedBookings.includes(booking.id)}
+                            onCheckedChange={() => onToggleSelect(booking.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-shrink-0"
+                          />
+                          <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
+                            {booking.customers?.full_name || 'Unknown Customer'}
+                            <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
+                          </p>
+                          {isArchived && (
+                            <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs flex-shrink-0">
+                              Archived
+                            </Badge>
+                          )}
                           {/* Mobile: Status badge บนขวา */}
-                          <div className="sm:hidden flex-shrink-0">
+                          <div className="sm:hidden flex-shrink-0 ml-auto">
                             {getStatusBadge(booking.status)}
                           </div>
+                        </div>
+                        {/* Customer Email */}
+                        <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {booking.customers?.email}
                         </div>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
@@ -228,17 +229,19 @@ function BookingListComponent({
                           </p>
                         )}
                       </div>
-                      <div className="hidden sm:flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
-                        <div className="flex-1 sm:flex-none">
-                          <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
-                            {formatCurrency(Number(booking.total_price))}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 items-end justify-end">
+                      {/* Right Section: Price, Badges, Actions (Desktop) */}
+                      <div className="hidden sm:flex sm:flex-col items-end gap-3 sm:gap-4 flex-shrink-0">
+                        {/* Price - บนสุด */}
+                        <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
+                          {formatCurrency(Number(booking.total_price))}
+                        </p>
+                        {/* Status + Payment badges */}
+                        <div className="flex flex-wrap gap-2 items-center justify-end">
                           {getStatusBadge(booking.status)}
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
-                        <div className="flex gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
+                        {/* Status dropdown + Delete button - ล่างสุด */}
+                        <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
                             <Button
                               variant="outline"
@@ -263,7 +266,7 @@ function BookingListComponent({
                                   }
                                   disabled={isArchived}
                                 >
-                                  <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+                                  <SelectTrigger className="w-32 h-8 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>

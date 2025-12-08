@@ -30,7 +30,7 @@ export async function fetchBookings(showArchived: boolean = false): Promise<Book
     .from('bookings')
     .select(`
       *,
-      customers (id, full_name, email),
+      customers (id, full_name, email, phone),
       service_packages (name, service_type),
       service_packages_v2:package_v2_id (name, service_type),
       profiles!bookings_staff_id_fkey (full_name),

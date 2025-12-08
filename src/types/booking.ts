@@ -246,8 +246,8 @@ export interface Booking {
   team_member_count?: number | null
   // Relations
   customers: { id: string; full_name: string; email: string; phone?: string | null } | null
-  service_packages: { name: string; service_type: string } | null
-  service_packages_v2?: { name: string; service_type: string } | null
+  service_packages: { name: string; service_type: string; price?: number; frequency?: number } | null
+  service_packages_v2?: { name: string; service_type: string; price?: number; base_price?: number; frequency?: number } | null
   profiles: { full_name: string } | null
   teams: {
     name: string

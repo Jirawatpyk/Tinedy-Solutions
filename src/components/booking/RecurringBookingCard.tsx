@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -25,7 +26,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Link2,
   User,
   Users,
   RotateCcw,
@@ -42,6 +42,8 @@ import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-uti
 
 interface RecurringBookingCardProps {
   group: RecurringGroup
+  selectedBookings?: string[]
+  onToggleSelectGroup?: (bookingIds: string[]) => void
   onBookingClick?: (bookingId: string) => void
   onDeleteGroup?: (groupId: string) => void
   onArchiveGroup?: (groupId: string) => void
@@ -59,6 +61,8 @@ const isFinalStatus = (status: string): boolean => {
 
 export function RecurringBookingCard({
   group,
+  selectedBookings = [],
+  onToggleSelectGroup,
   onBookingClick,
   onDeleteGroup,
   onArchiveGroup,
@@ -69,6 +73,11 @@ export function RecurringBookingCard({
   getStatusLabel
 }: RecurringBookingCardProps) {
   const [expanded, setExpanded] = useState(false)
+
+  // Check if all bookings in group are selected
+  const groupBookingIds = group.bookings.map(b => b.id)
+  const isGroupSelected = groupBookingIds.every(id => selectedBookings.includes(id))
+  const isPartiallySelected = groupBookingIds.some(id => selectedBookings.includes(id)) && !isGroupSelected
 
   const firstBooking = group.bookings[0]
 
@@ -93,7 +102,19 @@ export function RecurringBookingCard({
           <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-tinedy-blue flex-shrink-0" />
+              {onToggleSelectGroup && (
+                <Checkbox
+                  checked={isGroupSelected}
+                  ref={(el) => {
+                    if (el) {
+                      (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = isPartiallySelected
+                    }
+                  }}
+                  onCheckedChange={() => onToggleSelectGroup(groupBookingIds)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-shrink-0"
+                />
+              )}
               <span className="font-semibold text-sm sm:text-base">Recurring Booking Group</span>
               <Badge variant="outline" className="text-[10px] sm:text-xs">
                 {getRecurringPatternLabel(group.pattern)}

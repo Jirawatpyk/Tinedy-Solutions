@@ -3,7 +3,9 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { formatFullAddress, getValidTransitions } from '@/lib/booking-utils'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { formatCurrency } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
+import * as XLSX from 'xlsx'
 
 interface UseBulkActionsProps {
   bookings: Booking[]
@@ -16,7 +18,7 @@ interface UseBulkActionsReturn {
   bulkStatus: string
   setBulkStatus: (status: string) => void
   toggleSelectAll: () => void
-  toggleSelectBooking: (id: string) => void
+  toggleSelectBooking: (id: string | string[]) => void
   handleBulkStatusUpdate: () => Promise<void>
   handleBulkDelete: () => Promise<void>
   handleBulkExport: () => void
@@ -56,11 +58,27 @@ export function useBulkActions({
     }
   }
 
-  const toggleSelectBooking = (bookingId: string) => {
-    if (selectedBookings.includes(bookingId)) {
-      setSelectedBookings(selectedBookings.filter(id => id !== bookingId))
+  const toggleSelectBooking = (bookingId: string | string[]) => {
+    // Handle array of booking IDs (for group selection)
+    if (Array.isArray(bookingId)) {
+      const bookingIds = bookingId
+      const allSelected = bookingIds.every(id => selectedBookings.includes(id))
+
+      if (allSelected) {
+        // Deselect all
+        setSelectedBookings(selectedBookings.filter(id => !bookingIds.includes(id)))
+      } else {
+        // Select all (add missing ones)
+        const newIds = bookingIds.filter(id => !selectedBookings.includes(id))
+        setSelectedBookings([...selectedBookings, ...newIds])
+      }
     } else {
-      setSelectedBookings([...selectedBookings, bookingId])
+      // Handle single booking ID
+      if (selectedBookings.includes(bookingId)) {
+        setSelectedBookings(selectedBookings.filter(id => id !== bookingId))
+      } else {
+        setSelectedBookings([...selectedBookings, bookingId])
+      }
     }
   }
 
@@ -165,30 +183,68 @@ export function useBulkActions({
   const handleBulkExport = () => {
     if (selectedBookings.length === 0) return
 
-    const bookingsToExport = bookings.filter(b => selectedBookings.includes(b.id))
-    const csv = [
-      ['Customer', 'Service', 'Date', 'Time', 'Status', 'Price', 'Address'].join(','),
-      ...bookingsToExport.map(b => [
-        b.customers?.full_name || '',
-        b.service_packages?.name || '',
-        b.booking_date,
-        `${b.start_time}-${b.end_time}`,
-        b.status,
-        b.total_price,
-        formatFullAddress(b)
-      ].join(','))
-    ].join('\n')
+    const bookingsToExport = bookings
+      .filter(b => selectedBookings.includes(b.id))
+      // Sort: by recurring_group_id first, then by recurring_sequence, then by date
+      .sort((a, b) => {
+        // ถ้าอยู่ใน recurring group เดียวกัน - เรียงตาม sequence
+        if (a.recurring_group_id && b.recurring_group_id && a.recurring_group_id === b.recurring_group_id) {
+          return (a.recurring_sequence || 0) - (b.recurring_sequence || 0)
+        }
+        // ถ้าไม่ใช่ recurring group เดียวกัน - เรียงตามวันที่
+        return new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
+      })
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `bookings-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+    // Prepare data for Excel
+    const excelData = bookingsToExport.map(b => {
+      // คำนวณราคารวม recurring group (ถ้าเป็น recurring)
+      const groupTotalPrice = b.is_recurring && b.recurring_total
+        ? Number(b.total_price) * b.recurring_total
+        : Number(b.total_price)
+
+      return {
+        'Booking ID': b.id.slice(0, 8),
+        'Customer': b.customers?.full_name || '',
+        'Email': b.customers?.email || '',
+        'Phone': b.customers?.phone || '',
+        'Service': b.service_packages?.name || b.service_packages_v2?.name || '',
+        'Service Type': b.service_packages?.service_type || b.service_packages_v2?.service_type || '',
+        'Area (sqm)': b.area_sqm || '-',
+        'Frequency': b.frequency ? `${b.frequency} times` : '-',
+        'Recurring': b.is_recurring ? `${b.recurring_sequence || '-'}/${b.recurring_total || '-'}` : 'No',
+        'Date': b.booking_date,
+        'Start Time': b.start_time,
+        'End Time': b.end_time,
+        'Status': b.status,
+        'Payment Status': b.payment_status || 'unpaid',
+        'Price (per booking)': formatCurrency(Number(b.total_price)),
+        'Total Price': formatCurrency(groupTotalPrice),
+        'Staff': b.profiles?.full_name || '',
+        'Team': b.teams?.name || '',
+        'Address': formatFullAddress(b),
+        'Notes': b.notes || '',
+        'Created At': b.created_at ? new Date(b.created_at).toLocaleString('th-TH') : '-',
+      }
+    })
+
+    // Create workbook and worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Bookings')
+
+    // Auto-size columns
+    const colWidths = Object.keys(excelData[0] || {}).map(key => ({
+      wch: Math.max(key.length, 15)
+    }))
+    worksheet['!cols'] = colWidths
+
+    // Generate Excel file
+    const fileName = `bookings-${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
 
     toast({
       title: 'Success',
-      description: `Exported ${selectedBookings.length} bookings to CSV`,
+      description: `Exported ${selectedBookings.length} bookings to Excel`,
     })
   }
 
