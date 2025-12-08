@@ -284,48 +284,33 @@ export function TierEditor({
                   </div>
                 </div>
 
-                {/* Staff & Hours */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`tier-${index}-staff`}>Staff Count</Label>
-                    <Input
-                      id={`tier-${index}-staff`}
-                      type="number"
-                      min="1"
-                      value={tier.required_staff}
-                      onChange={(e) =>
-                        handleUpdateTier(index, 'required_staff', parseInt(e.target.value) || 1)
-                      }
-                      disabled={disabled}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`tier-${index}-hours`}>
-                      Estimated Hours *
-                    </Label>
-                    <Input
-                      id={`tier-${index}-hours`}
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      value={tier.estimated_hours > 0 ? tier.estimated_hours : ''}
-                      onChange={(e) =>
-                        handleUpdateTier(
-                          index,
-                          'estimated_hours',
-                          e.target.value ? parseFloat(e.target.value) : 0
-                        )
-                      }
-                      placeholder="e.g. 2.5"
-                      disabled={disabled}
-                      className={cn(
-                        showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && 'border-red-500'
-                      )}
-                    />
-                    {showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && (
-                      <p className="text-sm text-red-500 mt-1">Estimated hours is required</p>
+                {/* Estimated Hours */}
+                <div>
+                  <Label htmlFor={`tier-${index}-hours`}>
+                    Estimated Hours *
+                  </Label>
+                  <Input
+                    id={`tier-${index}-hours`}
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    value={tier.estimated_hours > 0 ? tier.estimated_hours : ''}
+                    onChange={(e) =>
+                      handleUpdateTier(
+                        index,
+                        'estimated_hours',
+                        e.target.value ? parseFloat(e.target.value) : 0
+                      )
+                    }
+                    placeholder="e.g. 2.5"
+                    disabled={disabled}
+                    className={cn(
+                      showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && 'border-red-500'
                     )}
-                  </div>
+                  />
+                  {showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && (
+                    <p className="text-sm text-red-500 mt-1">Estimated hours is required</p>
+                  )}
                 </div>
 
                 {/* Prices by Frequency */}

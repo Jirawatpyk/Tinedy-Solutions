@@ -32,7 +32,6 @@ import {
   calculatePricing,
   formatPrice,
   formatArea,
-  formatStaffCount,
 } from '@/lib/pricing-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import type {
@@ -140,10 +139,6 @@ const PricingResultDisplay = ({ pricingResult, areaSqm, frequency }: PricingResu
       <div className="flex items-center justify-between text-sm mt-1">
         <span className="text-muted-foreground">Frequency:</span>
         <span className="font-medium">{getFrequencyLabel(frequency)}</span>
-      </div>
-      <div className="flex items-center justify-between text-sm mt-1">
-        <span className="text-muted-foreground">Required Staff:</span>
-        <span className="font-medium">{formatStaffCount(pricingResult.required_staff)} staff</span>
       </div>
     </div>
   )
@@ -718,13 +713,6 @@ export function PackageSelector({
                         <span className="font-medium text-foreground">{value.areaSqm} sqm</span>
                       </div>
                     </div>
-
-                    {value.requiredStaff && (
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5">
-                        <span>Required Staff</span>
-                        <span className="font-medium text-foreground">{value.requiredStaff} staff</span>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               ) : (

@@ -53,7 +53,6 @@ import {
   Package as PackageIcon,
   DollarSign,
   Clock,
-  Users,
   CheckCircle,
   XCircle,
   Calendar,
@@ -668,12 +667,8 @@ export default function AdminPackageDetail() {
                     <div className="sm:hidden space-y-3">
                       {packageData.tiers.map((tier) => (
                         <div key={tier.id} className="border rounded-lg p-3 bg-gray-50/50">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="mb-2">
                             <span className="font-semibold text-sm">{tier.area_min} - {tier.area_max} sqm</span>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Users className="h-3 w-3" />
-                              {tier.required_staff} staff
-                            </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="flex justify-between">
@@ -716,7 +711,6 @@ export default function AdminPackageDetail() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="text-xs sm:text-sm whitespace-nowrap">Area Range (sqm)</TableHead>
-                              <TableHead className="text-xs sm:text-sm whitespace-nowrap">Staff</TableHead>
                               <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1 Time</TableHead>
                               <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2 Times</TableHead>
                               <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4 Times</TableHead>
@@ -729,12 +723,6 @@ export default function AdminPackageDetail() {
                               <TableRow key={tier.id}>
                                 <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
                                   {tier.area_min} - {tier.area_max}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm">
-                                  <div className="flex items-center gap-1">
-                                    <Users className="h-3 w-3" />
-                                    {tier.required_staff}
-                                  </div>
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">
                                   {formatCurrency(tier.price_1_time)}

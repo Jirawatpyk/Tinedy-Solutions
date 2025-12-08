@@ -28,7 +28,6 @@ import {
   MoreVertical,
   DollarSign,
   Clock,
-  Users,
   MapPin,
   Calendar,
   CheckCircle,
@@ -252,20 +251,6 @@ export function PackageCard({
                 </div>
                 <span className="text-sm font-medium">
                   {pkg.tiers[0].area_min} - {pkg.tiers[pkg.tiers.length - 1].area_max} sqm
-                </span>
-              </div>
-            )}
-
-            {/* Staff Range */}
-            {pkg.tiers && pkg.tiers.length > 0 && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Users className="h-4 w-4 mr-1" />
-                  Staff Required
-                </div>
-                <span className="text-sm font-medium">
-                  {Math.min(...pkg.tiers.map((t) => t.required_staff))} -{' '}
-                  {Math.max(...pkg.tiers.map((t) => t.required_staff))} staff
                 </span>
               </div>
             )}
