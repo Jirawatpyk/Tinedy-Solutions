@@ -53,8 +53,11 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
 
   const onSubmit = async (data: GeneralSettingsFormData) => {
     try {
-      // Transform data
-      const transformedData = GeneralSettingsTransformSchema.parse(data)
+      // Transform data - exclude business_logo_url since it's managed separately
+      const transformedData = GeneralSettingsTransformSchema.parse({
+        ...data,
+        business_logo_url: logoUrl, // Include current logo URL to prevent overwriting
+      })
 
       // Update settings
       const { error } = await supabase
