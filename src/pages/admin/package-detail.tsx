@@ -661,55 +661,103 @@ export default function AdminPackageDetail() {
                   </div>
                 </div>
 
-                {/* Tiers Table */}
+                {/* Tiers - Mobile Card View */}
                 {packageData.tiers && packageData.tiers.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Area Range (sqm)</TableHead>
-                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Staff</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1 Time</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2 Times</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4 Times</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">8 Times</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Est. Hours</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {packageData.tiers.map((tier) => (
-                            <TableRow key={tier.id}>
-                              <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
-                                {tier.area_min} - {tier.area_max}
-                              </TableCell>
-                              <TableCell className="text-xs sm:text-sm">
-                                <div className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" />
-                                  {tier.required_staff}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">
-                                {formatCurrency(tier.price_1_time)}
-                              </TableCell>
-                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
-                                {tier.price_2_times ? formatCurrency(tier.price_2_times) : '-'}
-                              </TableCell>
-                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
-                                {tier.price_4_times ? formatCurrency(tier.price_4_times) : '-'}
-                              </TableCell>
-                              <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
-                                {tier.price_8_times ? formatCurrency(tier.price_8_times) : '-'}
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
-                                {tier.estimated_hours ? `${tier.estimated_hours}h` : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                  <>
+                    {/* Mobile: Card View */}
+                    <div className="sm:hidden space-y-3">
+                      {packageData.tiers.map((tier) => (
+                        <div key={tier.id} className="border rounded-lg p-3 bg-gray-50/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-sm">{tier.area_min} - {tier.area_max} sqm</span>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="h-3 w-3" />
+                              {tier.required_staff} staff
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">1 Time:</span>
+                              <span className="font-medium">{formatCurrency(tier.price_1_time)}</span>
+                            </div>
+                            {tier.price_2_times && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">2 Times:</span>
+                                <span className="font-medium">{formatCurrency(tier.price_2_times)}</span>
+                              </div>
+                            )}
+                            {tier.price_4_times && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">4 Times:</span>
+                                <span className="font-medium">{formatCurrency(tier.price_4_times)}</span>
+                              </div>
+                            )}
+                            {tier.price_8_times && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">8 Times:</span>
+                                <span className="font-medium">{formatCurrency(tier.price_8_times)}</span>
+                              </div>
+                            )}
+                          </div>
+                          {tier.estimated_hours && (
+                            <div className="flex items-center gap-1 mt-2 pt-2 border-t text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              Est. {tier.estimated_hours}h
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  </div>
+
+                    {/* Desktop: Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs sm:text-sm whitespace-nowrap">Area Range (sqm)</TableHead>
+                              <TableHead className="text-xs sm:text-sm whitespace-nowrap">Staff</TableHead>
+                              <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1 Time</TableHead>
+                              <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2 Times</TableHead>
+                              <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4 Times</TableHead>
+                              <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">8 Times</TableHead>
+                              <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Est. Hours</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {packageData.tiers.map((tier) => (
+                              <TableRow key={tier.id}>
+                                <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                                  {tier.area_min} - {tier.area_max}
+                                </TableCell>
+                                <TableCell className="text-xs sm:text-sm">
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {tier.required_staff}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">
+                                  {formatCurrency(tier.price_1_time)}
+                                </TableCell>
+                                <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                  {tier.price_2_times ? formatCurrency(tier.price_2_times) : '-'}
+                                </TableCell>
+                                <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                  {tier.price_4_times ? formatCurrency(tier.price_4_times) : '-'}
+                                </TableCell>
+                                <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
+                                  {tier.price_8_times ? formatCurrency(tier.price_8_times) : '-'}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
+                                  {tier.estimated_hours ? `${tier.estimated_hours}h` : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -753,7 +801,40 @@ export default function AdminPackageDetail() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Mobile: Card View */}
+                <div className="sm:hidden space-y-3">
+                  {paginatedBookings.map((booking) => (
+                    <div key={booking.id} className="border rounded-lg p-3 bg-gray-50/50">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm truncate">{booking.customers?.full_name || 'N/A'}</p>
+                          <p className="text-xs text-muted-foreground">{booking.customers?.phone || ''}</p>
+                        </div>
+                        {getStatusBadge(booking.status)}
+                      </div>
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Date:</span>
+                          <span className="font-medium">{formatDate(booking.booking_date)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Time:</span>
+                          <span>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Assigned:</span>
+                          <span>{booking.teams?.name || booking.profiles?.full_name || 'Unassigned'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end mt-2 pt-2 border-t">
+                        <span className="font-semibold text-sm">{formatCurrency(booking.total_price)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: Table View */}
+                <div className="hidden sm:block overflow-x-auto">
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
