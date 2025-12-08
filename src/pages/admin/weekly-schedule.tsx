@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { ChevronLeft, ChevronRight, Download, Calendar, List, LayoutGrid } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/common/StatusBadge'
+import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
@@ -452,16 +454,12 @@ export function AdminWeeklySchedule() {
   }
 
   const getPaymentStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
-      case 'refunded':
-        return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
-      default:
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Unpaid</Badge>
-    }
+    const paymentStatus = status || 'unpaid'
+    return (
+      <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
+        {getPaymentStatusLabel(paymentStatus)}
+      </StatusBadge>
+    )
   }
 
   // getAvailableStatuses and getStatusLabel imported from @/lib/booking-utils

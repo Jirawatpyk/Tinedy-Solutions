@@ -1,4 +1,6 @@
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/common/StatusBadge'
+import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
 // Re-export from centralized utilities for backwards compatibility
 export { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
 
@@ -63,22 +65,12 @@ export function getStatusBadge(status: string): JSX.Element {
  * Get Badge component for payment status
  */
 export function getPaymentStatusBadge(status?: string): JSX.Element {
-  switch (status) {
-    case 'paid':
-      return <Badge className="bg-green-100 text-green-700 border-green-300">Paid</Badge>
-    case 'pending_verification':
-      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Verifying</Badge>
-    case 'partial':
-      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Partial</Badge>
-    case 'refunded':
-      return <Badge className="bg-purple-100 text-purple-700 border-purple-300">Refunded</Badge>
-    default:
-      return (
-        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
-          Unpaid
-        </Badge>
-      )
-  }
+  const paymentStatus = status || 'unpaid'
+  return (
+    <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
+      {getPaymentStatusLabel(paymentStatus)}
+    </StatusBadge>
+  )
 }
 
 // getAvailableStatuses and getStatusLabel are re-exported from @/lib/booking-utils at the top of this file
