@@ -4,26 +4,24 @@
  */
 
 export const STAFF_SKILL_SUGGESTIONS = [
-  // Cleaning Services
   'Cleaning',
-  'Deep Cleaning',
-  'Window Cleaning',
-  'Carpet Cleaning',
-  // Technical Services
-  'Plumbing',
-  'Electrical',
-  'AC Service',
-  'Appliance Repair',
-  // General Services
-  'Maintenance',
-  'Painting',
-  'Moving',
-  'Assembly',
-  // Specialized Services
-  'Pest Control',
-  'Garden',
-  'Laundry',
-  'Disinfection',
+  'Training',
+  // TODO: เพิ่มเพิ่มเติมภายหลัง
+  // 'Deep Cleaning',
+  // 'Window Cleaning',
+  // 'Carpet Cleaning',
+  // 'Plumbing',
+  // 'Electrical',
+  // 'AC Service',
+  // 'Appliance Repair',
+  // 'Maintenance',
+  // 'Painting',
+  // 'Moving',
+  // 'Assembly',
+  // 'Pest Control',
+  // 'Garden',
+  // 'Laundry',
+  // 'Disinfection',
 ] as const
 
 export type StaffSkill = (typeof STAFF_SKILL_SUGGESTIONS)[number]
