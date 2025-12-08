@@ -670,10 +670,10 @@ export default function AdminPackageDetail() {
                           <TableRow>
                             <TableHead className="text-xs sm:text-sm whitespace-nowrap">Area Range (sqm)</TableHead>
                             <TableHead className="text-xs sm:text-sm whitespace-nowrap">Staff</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1x/month</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2x/month</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4x/month</TableHead>
-                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">8x/month</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">1 Time</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">2 Times</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">4 Times</TableHead>
+                            <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">8 Times</TableHead>
                             <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Est. Hours</TableHead>
                           </TableRow>
                         </TableHeader>
