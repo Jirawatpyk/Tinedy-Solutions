@@ -158,13 +158,14 @@ export function RecurringBookingCard({
 
           {/* Right Section: Total Amount, Payment Badge, Delete & Expand Button */}
           <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
-            <div className="flex-1 sm:flex-none">
+            {/* Desktop: ราคาด้านบนขวา */}
+            <div className="hidden sm:block flex-1 sm:flex-none">
               <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
                 <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                   {formatCurrency(totalAmount)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                  <span className="hidden sm:inline">Total </span>({group.totalBookings})
+                  Total ({group.totalBookings})
                 </p>
               </div>
             </div>
@@ -217,8 +218,8 @@ export function RecurringBookingCard({
               })()}
             </div>
 
-            {/* Expand/Collapse Button & Delete Button */}
-            <div className="flex gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
+            {/* Expand/Collapse Button & Delete Button (Desktop only) */}
+            <div className="hidden sm:flex gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" onClick={(e) => {
                 e.stopPropagation()
                 setExpanded(!expanded)
@@ -240,6 +241,58 @@ export function RecurringBookingCard({
                 />
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Mobile: ราคาและ Payment Status ข้างล่าง */}
+        <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t">
+          <div className="flex items-baseline gap-1.5">
+            <p className="font-semibold text-tinedy-dark">
+              {formatCurrency(totalAmount)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              ({group.totalBookings})
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {(() => {
+              const paymentStatus = firstBooking.payment_status || 'unpaid'
+              if (paymentStatus === 'paid') {
+                return (
+                  <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px]">
+                    Paid
+                  </Badge>
+                )
+              } else if (paymentStatus === 'pending_verification') {
+                return (
+                  <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px]">
+                    Verifying
+                  </Badge>
+                )
+              } else if (paymentStatus === 'partial') {
+                return (
+                  <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px]">
+                    Partial
+                  </Badge>
+                )
+              } else {
+                return (
+                  <Badge className="bg-red-50 text-red-700 border-red-300 text-[10px]">
+                    Unpaid
+                  </Badge>
+                )
+              }
+            })()}
+            <Button variant="ghost" size="sm" onClick={(e) => {
+              e.stopPropagation()
+              setExpanded(!expanded)
+            }} className="h-7 w-7 p-0">
+              {expanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
       </CardHeader>

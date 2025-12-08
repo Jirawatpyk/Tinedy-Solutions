@@ -1134,46 +1134,46 @@ export function AdminCustomerDetail() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <CardTitle className="text-lg sm:text-xl">Booking History</CardTitle>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="w-full sm:w-64">
-                <Input
-                  placeholder="Search bookings..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 text-sm"
-                />
+              <Input
+                placeholder="Search bookings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 text-sm w-full sm:w-64"
+              />
+              <div className="flex gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-[180px]">
+                    <SelectValue placeholder="Booking Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Booking Status</SelectItem>
+                    {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-[180px]">
+                    <SelectValue placeholder="Payment Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payment Status</SelectItem>
+                    {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToExcel}
+                  disabled={filteredBookings.length === 0}
+                  className="h-9 px-2 sm:px-3"
+                >
+                  <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Export Excel</span>
+                </Button>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[180px]">
-                  <SelectValue placeholder="Booking Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Booking Status</SelectItem>
-                  {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[180px]">
-                  <SelectValue placeholder="Payment Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payment Status</SelectItem>
-                  {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToExcel}
-                disabled={filteredBookings.length === 0}
-                className="h-9"
-              >
-                <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export Excel</span>
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -1324,15 +1324,15 @@ export function AdminCustomerDetail() {
                             )}
                           </div>
 
-                          {/* 6. ราคา + Status ด้านขวา */}
-                          <div className="flex flex-col items-end gap-2 sm:gap-4 flex-shrink-0">
+                          {/* 6. ราคา + Status ด้านขวา (Desktop only) */}
+                          <div className="hidden sm:flex flex-col items-end gap-2 sm:gap-4 flex-shrink-0">
                             <div>
                               <p className="font-semibold text-tinedy-dark text-base sm:text-lg">
                                 ฿{booking.total_price?.toLocaleString() || 0}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center sm:items-end justify-end">
-                              <Badge variant="outline" className={`${statusInfo.className} text-[10px] sm:text-xs hidden sm:inline-flex`}>
+                              <Badge variant="outline" className={`${statusInfo.className} text-[10px] sm:text-xs`}>
                                 {statusInfo.label}
                               </Badge>
                               <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')} className="text-[10px] sm:text-xs">
@@ -1340,6 +1340,15 @@ export function AdminCustomerDetail() {
                               </StatusBadge>
                             </div>
                           </div>
+                        </div>
+                        {/* Mobile: ราคาอยู่ข้างล่าง เหมือน Group Booking */}
+                        <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t">
+                          <p className="font-semibold text-tinedy-dark">
+                            ฿{booking.total_price?.toLocaleString() || 0}
+                          </p>
+                          <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')} className="text-[10px]">
+                            {getPaymentStatusLabel(booking.payment_status || 'unpaid')}
+                          </StatusBadge>
                         </div>
                       </CardContent>
                     </Card>
@@ -1369,17 +1378,57 @@ export function AdminCustomerDetail() {
                   <span className="hidden sm:inline">Previous</span>
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={`h-8 min-w-[32px] text-xs ${currentPage === page ? 'bg-tinedy-blue' : ''}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const pages: (number | string)[] = []
+                    const showPages = 5 // Max pages to show on mobile
+
+                    if (totalPages <= showPages) {
+                      // Show all pages if total is small
+                      for (let i = 1; i <= totalPages; i++) pages.push(i)
+                    } else {
+                      // Always show first page
+                      pages.push(1)
+
+                      // Calculate range around current page
+                      let start = Math.max(2, currentPage - 1)
+                      let end = Math.min(totalPages - 1, currentPage + 1)
+
+                      // Adjust range to show at least 3 middle pages
+                      if (currentPage <= 3) {
+                        end = Math.min(4, totalPages - 1)
+                      } else if (currentPage >= totalPages - 2) {
+                        start = Math.max(2, totalPages - 3)
+                      }
+
+                      // Add ellipsis before middle pages
+                      if (start > 2) pages.push('...')
+
+                      // Add middle pages
+                      for (let i = start; i <= end; i++) pages.push(i)
+
+                      // Add ellipsis after middle pages
+                      if (end < totalPages - 1) pages.push('...')
+
+                      // Always show last page
+                      pages.push(totalPages)
+                    }
+
+                    return pages.map((page, idx) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground text-xs">...</span>
+                      ) : (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(page as number)}
+                          className={`h-8 min-w-[32px] text-xs ${currentPage === page ? 'bg-tinedy-blue' : ''}`}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    ))
+                  })()}
                 </div>
                 <Button
                   variant="outline"
