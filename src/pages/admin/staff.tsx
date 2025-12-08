@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
@@ -27,6 +26,8 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
+import { TagInput } from '@/components/ui/tag-input'
+import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
@@ -74,7 +75,7 @@ export function AdminStaff() {
       role: 'staff',
       password: '',
       staff_number: '',
-      skills: '',
+      skills: [],
     },
   })
 
@@ -86,7 +87,7 @@ export function AdminStaff() {
       phone: '',
       role: 'staff',
       staff_number: '',
-      skills: '',
+      skills: [],
     },
   })
 
@@ -351,7 +352,7 @@ export function AdminStaff() {
       password: '',
       role: staffMember.role as 'admin' | 'manager' | 'staff',
       staff_number: staffMember.staff_number || '',
-      skills: staffMember.skills ? staffMember.skills.join(', ') : '',
+      skills: staffMember.skills || [],
     })
     setIsDialogOpen(true)
   }
@@ -365,7 +366,7 @@ export function AdminStaff() {
       role: 'staff',
       password: '',
       staff_number: '',
-      skills: '',
+      skills: [],
     })
     updateForm.reset({
       full_name: '',
@@ -373,7 +374,7 @@ export function AdminStaff() {
       password: '',
       role: 'staff',
       staff_number: '',
-      skills: '',
+      skills: [],
     })
   }
 
@@ -600,19 +601,16 @@ export function AdminStaff() {
                   render={({ field, fieldState }) => (
                     <div className="space-y-2">
                       <Label htmlFor="skills">Skills</Label>
-                      <Textarea
-                        id="skills"
-                        {...field}
-                        value={field.value || ''}
-                        placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
-                        rows={3}
+                      <TagInput
+                        tags={field.value || []}
+                        onChange={field.onChange}
+                        suggestions={[...STAFF_SKILL_SUGGESTIONS]}
+                        getTagColor={getSkillColor}
+                        placeholder="Type skill or select from suggestions..."
                       />
                       {fieldState.error && (
                         <p className="text-xs text-destructive">{fieldState.error.message}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Enter skills separated by commas
-                      </p>
                     </div>
                   )}
                 />
@@ -758,19 +756,16 @@ export function AdminStaff() {
                   render={({ field, fieldState }) => (
                     <div className="space-y-2">
                       <Label htmlFor="skills">Skills</Label>
-                      <Textarea
-                        id="skills"
-                        {...field}
-                        value={field.value || ''}
-                        placeholder="Cleaning, Plumbing, Electrical (comma-separated)"
-                        rows={3}
+                      <TagInput
+                        tags={field.value || []}
+                        onChange={field.onChange}
+                        suggestions={[...STAFF_SKILL_SUGGESTIONS]}
+                        getTagColor={getSkillColor}
+                        placeholder="Type skill or select from suggestions..."
                       />
                       {fieldState.error && (
                         <p className="text-xs text-destructive">{fieldState.error.message}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Enter skills separated by commas
-                      </p>
                     </div>
                   )}
                 />

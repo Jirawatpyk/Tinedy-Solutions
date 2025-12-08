@@ -3,40 +3,23 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { X, Plus } from 'lucide-react'
-import { getTagColor } from '@/lib/tag-utils'
 
 interface TagInputProps {
   tags: string[]
   onChange: (tags: string[]) => void
   suggestions?: string[]
+  placeholder?: string
+  /** Optional function to get custom color for tags */
+  getTagColor?: (tag: string) => string
 }
 
-// Pre-defined tag suggestions based on Epic document
-const DEFAULT_SUGGESTIONS = [
-  // Behavior
-  'VIP',
-  'Regular',
-  'First-timer',
-  'Returner',
-  // Type
-  'Corporate',
-  'Individual',
-  'Walk-in',
-  // Marketing
-  'Newsletter',
-  'Promotion',
-  'Birthday-reminder',
-  // Notes
-  'Special-needs',
-  'Payment-issue',
-  'Complaint',
-  // Value
-  'High-value',
-  'Medium-value',
-  'Low-value',
-]
-
-export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: TagInputProps) {
+export function TagInput({
+  tags,
+  onChange,
+  suggestions = [],
+  placeholder = 'Type to add or select from suggestions...',
+  getTagColor,
+}: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
 
@@ -77,7 +60,7 @@ export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: 
             <Badge
               key={tag}
               variant="outline"
-              className={`${getTagColor(tag)} text-xs px-2 py-1`}
+              className={`${getTagColor?.(tag) || 'bg-gray-100'} text-xs px-2 py-1`}
             >
               {tag}
               <button
@@ -108,7 +91,7 @@ export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: 
               // Delay to allow click on suggestion to register
               setTimeout(() => setShowSuggestions(false), 200)
             }}
-            placeholder="Type to add tags or select from suggestions..."
+            placeholder={placeholder}
             className="flex-1"
           />
           <Button
@@ -134,7 +117,7 @@ export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: 
               >
                 <Badge
                   variant="outline"
-                  className={`${getTagColor(suggestion)} text-xs`}
+                  className={`${getTagColor?.(suggestion) || 'bg-gray-100'} text-xs`}
                 >
                   {suggestion}
                 </Badge>
@@ -145,7 +128,7 @@ export function TagInput({ tags, onChange, suggestions = DEFAULT_SUGGESTIONS }: 
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Press Enter or click + to add tags. Click × to remove.
+        Press Enter or click + to add. Click × to remove.
       </p>
     </div>
   )

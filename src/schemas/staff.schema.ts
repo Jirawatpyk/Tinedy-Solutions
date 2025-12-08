@@ -6,7 +6,7 @@ import { z } from 'zod'
  * Architecture:
  * - StaffCreateSchema: สำหรับสร้างพนักงานใหม่ (ผ่าน Edge Function)
  * - StaffUpdateSchema: สำหรับแก้ไขข้อมูลพนักงาน
- * - Skills transformation: แปลงจาก comma-separated string เป็น array
+ * - Skills: รับเป็น array โดยตรงจาก TagInput component
  *
  * Related Tables:
  * - profiles: Main user profile table
@@ -89,36 +89,22 @@ export const StaffCreateSchema = z.object({
     .or(z.literal('')),
 
   skills: z
-    .string()
-    .max(500, 'Skills must not exceed 500 characters')
-    .nullable()
-    .optional()
-    .or(z.literal('')),
+    .array(z.string().trim().min(1))
+    .default([]),
 })
 
 /**
- * Schema พร้อม transformation สำหรับ skills
- * แปลงจาก "skill1, skill2, skill3" เป็น ["skill1", "skill2", "skill3"]
+ * Schema พร้อม transformation สำหรับ null handling
  */
-export const StaffCreateWithSkillsSchema = StaffCreateSchema.transform((data) => {
-  // แปลง skills จาก string เป็น array
-  const skillsArray = data.skills
-    ? data.skills
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-    : []
-
-  return {
-    email: data.email,
-    password: data.password,
-    full_name: data.full_name,
-    phone: data.phone || null,
-    role: data.role,
-    staff_number: data.staff_number || null,
-    skills: skillsArray.length > 0 ? skillsArray : null,
-  }
-})
+export const StaffCreateWithSkillsSchema = StaffCreateSchema.transform((data) => ({
+  email: data.email,
+  password: data.password,
+  full_name: data.full_name,
+  phone: data.phone || null,
+  role: data.role,
+  staff_number: data.staff_number || null,
+  skills: data.skills.length > 0 ? data.skills : null,
+}))
 
 // ============================================================================
 // STAFF UPDATE SCHEMA
@@ -153,33 +139,20 @@ export const StaffUpdateSchema = z.object({
     .or(z.literal('')),
 
   skills: z
-    .string()
-    .max(500, 'Skills must not exceed 500 characters')
-    .nullable()
-    .optional()
-    .or(z.literal('')),
+    .array(z.string().trim().min(1))
+    .default([]),
 })
 
 /**
- * Schema พร้อม transformation สำหรับ skills (Update)
+ * Schema พร้อม transformation สำหรับ null handling (Update)
  */
-export const StaffUpdateWithSkillsSchema = StaffUpdateSchema.transform((data) => {
-  // แปลง skills จาก string เป็น array
-  const skillsArray = data.skills
-    ? data.skills
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-    : []
-
-  return {
-    full_name: data.full_name,
-    phone: data.phone || null,
-    role: data.role,
-    staff_number: data.staff_number || null,
-    skills: skillsArray.length > 0 ? skillsArray : null,
-  }
-})
+export const StaffUpdateWithSkillsSchema = StaffUpdateSchema.transform((data) => ({
+  full_name: data.full_name,
+  phone: data.phone || null,
+  role: data.role,
+  staff_number: data.staff_number || null,
+  skills: data.skills.length > 0 ? data.skills : null,
+}))
 
 // ============================================================================
 // UTILITY SCHEMAS
@@ -204,10 +177,14 @@ export const ChangePasswordSchema = z.object({
 // TYPE EXPORTS
 // ============================================================================
 
-export type StaffCreateFormData = z.infer<typeof StaffCreateSchema>
-export type StaffCreateWithSkills = z.infer<typeof StaffCreateWithSkillsSchema>
-export type StaffUpdateFormData = z.infer<typeof StaffUpdateSchema>
-export type StaffUpdateWithSkills = z.infer<typeof StaffUpdateWithSkillsSchema>
+// Form Data Types (input types for React Hook Form)
+export type StaffCreateFormData = z.input<typeof StaffCreateSchema>
+export type StaffUpdateFormData = z.input<typeof StaffUpdateSchema>
+
+// Transformed Types (output types after Zod transformation)
+export type StaffCreateWithSkills = z.output<typeof StaffCreateWithSkillsSchema>
+export type StaffUpdateWithSkills = z.output<typeof StaffUpdateWithSkillsSchema>
+
 export type UserRole = z.infer<typeof UserRoleEnum>
 export type StaffRole = z.infer<typeof StaffRoleEnum>
 export type ChangePasswordFormData = z.infer<typeof ChangePasswordSchema>

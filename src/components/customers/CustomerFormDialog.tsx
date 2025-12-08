@@ -30,7 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TagInput } from '@/components/customers/tag-input'
+import { TagInput } from '@/components/ui/tag-input'
+import { getTagColor } from '@/lib/tag-utils'
+import { CUSTOMER_TAG_SUGGESTIONS } from '@/constants/customer-tags'
 import { Tag } from 'lucide-react'
 
 export interface CustomerFormDialogProps {
@@ -354,7 +356,12 @@ export function CustomerFormDialog({
               name="tags"
               control={form.control}
               render={({ field }) => (
-                <TagInput tags={field.value || []} onChange={field.onChange} />
+                <TagInput
+                  tags={field.value || []}
+                  onChange={field.onChange}
+                  suggestions={[...CUSTOMER_TAG_SUGGESTIONS]}
+                  getTagColor={getTagColor}
+                />
               )}
             />
           </div>
