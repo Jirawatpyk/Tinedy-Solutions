@@ -974,22 +974,32 @@ export function AdminCustomerDetail() {
                 <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
                 <span className="truncate">New Booking</span>
               </Button>
-              <a href={`tel:${customer.phone}`}>
+              <a href={`tel:${customer.phone}`} className="block">
                 <Button className="w-full justify-start" variant="outline">
                   <PhoneCall className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Call Customer</span>
                 </Button>
               </a>
-              <a href={`mailto:${customer.email}`}>
+              <a href={`mailto:${customer.email}`} className="block">
                 <Button className="w-full justify-start" variant="outline">
                   <Send className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Send Email</span>
                 </Button>
               </a>
               {customer.line_id && (
-                <Button className="w-full justify-start" variant="outline">
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(customer.line_id || '')
+                    toast({
+                      title: 'LINE ID Copied',
+                      description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.`,
+                    })
+                  }}
+                >
                   <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">LINE Message</span>
+                  <span className="truncate">Copy LINE ID</span>
                 </Button>
               )}
               <Button
