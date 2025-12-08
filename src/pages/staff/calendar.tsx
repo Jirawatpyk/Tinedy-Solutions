@@ -157,6 +157,7 @@ export default function StaffCalendar() {
                 onStatusChange={handleStatusChange}
                 getAvailableStatuses={getAvailableStatuses}
                 hideCreateButton
+                hidePaymentStatus
               />
             )}
           </div>

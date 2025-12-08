@@ -91,9 +91,9 @@ export const TodayAppointmentsList = ({
             Today's Appointments
             <Badge variant="secondary" className="text-xs">{filteredBookings.length}</Badge>
           </CardTitle>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+              <SelectTrigger className="h-8 flex-1 sm:flex-none sm:w-[140px] text-xs">
                 <SelectValue placeholder="Booking" />
               </SelectTrigger>
               <SelectContent>
@@ -104,7 +104,7 @@ export const TodayAppointmentsList = ({
               </SelectContent>
             </Select>
             <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-              <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs">
+              <SelectTrigger className="h-8 flex-1 sm:flex-none sm:w-[140px] text-xs">
                 <SelectValue placeholder="Payment" />
               </SelectTrigger>
               <SelectContent>
@@ -207,16 +207,20 @@ export const TodayAppointmentsList = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
-                    <div className="flex-1 sm:flex-none">
+                  {/* Price & Payment Status Section */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    {/* Mobile: Price row with border-top */}
+                    <div className="flex items-center justify-between pt-3 border-t sm:hidden">
                       <p className="font-semibold text-tinedy-dark text-lg">
                         {formatCurrency(Number(booking.total_price))}
                       </p>
-                      <div className="mt-1 sm:hidden">
-                        {getPaymentStatusBadge(booking.payment_status)}
-                      </div>
+                      {getPaymentStatusBadge(booking.payment_status)}
                     </div>
+                    {/* Desktop: Price and badges */}
                     <div className="hidden sm:flex sm:flex-col sm:gap-2 sm:items-end">
+                      <p className="font-semibold text-tinedy-dark text-lg">
+                        {formatCurrency(Number(booking.total_price))}
+                      </p>
                       {getStatusBadge(booking.status)}
                       {getPaymentStatusBadge(booking.payment_status)}
                     </div>

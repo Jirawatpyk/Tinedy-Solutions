@@ -48,6 +48,8 @@ interface MobileCalendarProps {
   getAvailableStatuses: (currentStatus: string) => string[]
   /** Hide create booking button (for Staff Portal) */
   hideCreateButton?: boolean
+  /** Hide payment status badge (for Staff Portal) */
+  hidePaymentStatus?: boolean
 }
 
 type ViewMode = 'week' | 'month'
@@ -65,6 +67,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
   onStatusChange,
   getAvailableStatuses,
   hideCreateButton = false,
+  hidePaymentStatus = false,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }))
@@ -426,6 +429,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                     hasConflict={!!conflicts && conflicts.size > 0}
                     onStatusChange={onStatusChange}
                     availableStatuses={availableStatuses}
+                    hidePaymentStatus={hidePaymentStatus}
                   />
                 )
               })

@@ -30,6 +30,8 @@ interface MobileBookingCardProps {
   hasConflict?: boolean
   onStatusChange?: (bookingId: string, newStatus: string) => Promise<void>
   availableStatuses?: string[]
+  /** Hide payment status badge (for staff view) */
+  hidePaymentStatus?: boolean
 }
 
 const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
@@ -38,6 +40,7 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
   hasConflict = false,
   onStatusChange,
   availableStatuses = [],
+  hidePaymentStatus = false,
 }) => {
   const [isChangingStatus, setIsChangingStatus] = useState(false)
   const isMountedRef = useRef(true)
@@ -174,8 +177,8 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
               </span>
             </div>
 
-            {/* Payment Status */}
-            {booking.payment_status && (
+            {/* Payment Status - Hidden for staff view */}
+            {!hidePaymentStatus && booking.payment_status && (
               <div className="flex items-center gap-2 mt-1.5">
                 {booking.payment_status === 'paid' ? (
                   <Badge className="text-[10px] font-medium bg-emerald-100 text-emerald-800 border-emerald-300">
