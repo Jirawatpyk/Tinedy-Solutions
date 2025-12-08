@@ -46,6 +46,9 @@ export interface UseCalendarActionsReturn {
   // Payment operations
   handleMarkAsPaid: (bookingId: string, method?: string) => Promise<void>
   handleVerifyPayment: (bookingId: string) => Promise<void>
+  handleRequestRefund: (bookingId: string) => Promise<void>
+  handleCompleteRefund: (bookingId: string) => Promise<void>
+  handleCancelRefund: (bookingId: string) => Promise<void>
   isUpdatingPayment: boolean
 
   // Delete operations
@@ -98,7 +101,13 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Use centralized payment actions
-  const { markAsPaid: paymentMarkAsPaid, verifyPayment: paymentVerifyPayment } = usePaymentActions({
+  const {
+    markAsPaid: paymentMarkAsPaid,
+    verifyPayment: paymentVerifyPayment,
+    requestRefund: paymentRequestRefund,
+    completeRefund: paymentCompleteRefund,
+    cancelRefund: paymentCancelRefund,
+  } = usePaymentActions({
     selectedBooking,
     setSelectedBooking: setSelectedBooking as (booking: Booking) => void,
     onSuccess: async () => { await refetchBookings() },
@@ -214,6 +223,45 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
   }, [paymentVerifyPayment])
 
   /**
+   * Request refund for booking
+   *
+   * @param bookingId - ID of booking to request refund
+   */
+  const handleRequestRefund = useCallback(async (bookingId: string) => {
+    await paymentRequestRefund(bookingId)
+    // Update selectedBooking locally
+    if (selectedBooking && selectedBooking.id === bookingId) {
+      setSelectedBooking({ ...selectedBooking, payment_status: 'refund_pending' })
+    }
+  }, [paymentRequestRefund, selectedBooking, setSelectedBooking])
+
+  /**
+   * Complete refund for booking
+   *
+   * @param bookingId - ID of booking to complete refund
+   */
+  const handleCompleteRefund = useCallback(async (bookingId: string) => {
+    await paymentCompleteRefund(bookingId)
+    // Update selectedBooking locally
+    if (selectedBooking && selectedBooking.id === bookingId) {
+      setSelectedBooking({ ...selectedBooking, payment_status: 'refunded' })
+    }
+  }, [paymentCompleteRefund, selectedBooking, setSelectedBooking])
+
+  /**
+   * Cancel refund for booking
+   *
+   * @param bookingId - ID of booking to cancel refund
+   */
+  const handleCancelRefund = useCallback(async (bookingId: string) => {
+    await paymentCancelRefund(bookingId)
+    // Update selectedBooking locally
+    if (selectedBooking && selectedBooking.id === bookingId) {
+      setSelectedBooking({ ...selectedBooking, payment_status: 'paid' })
+    }
+  }, [paymentCancelRefund, selectedBooking, setSelectedBooking])
+
+  /**
    * Hard delete booking
    *
    * @param bookingId - ID of booking to delete
@@ -273,6 +321,9 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     // Payment operations
     handleMarkAsPaid,
     handleVerifyPayment,
+    handleRequestRefund,
+    handleCompleteRefund,
+    handleCancelRefund,
     isUpdatingPayment,
 
     // Delete operations

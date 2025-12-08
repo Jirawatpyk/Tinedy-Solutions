@@ -477,6 +477,9 @@ export function AdminCalendar() {
         onStatusChange={calendar.actions.handleStatusChange}
         onMarkAsPaid={calendar.actions.handleMarkAsPaid}
         onVerifyPayment={calendar.actions.handleVerifyPayment}
+        onRequestRefund={calendar.actions.handleRequestRefund}
+        onCompleteRefund={calendar.actions.handleCompleteRefund}
+        onCancelRefund={calendar.actions.handleCancelRefund}
         getStatusBadge={getStatusBadge}
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
