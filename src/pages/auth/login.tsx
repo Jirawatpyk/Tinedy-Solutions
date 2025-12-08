@@ -181,14 +181,6 @@ export function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Demo credentials:
-              <br />
-              <span className="font-mono text-xs">admin@tinedy.com / admin123</span>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
