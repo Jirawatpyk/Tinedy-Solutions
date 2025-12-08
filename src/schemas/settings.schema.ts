@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { emailSchema, nameSchema, phoneSchema } from './common.schema'
+import { emailSchema, nameSchema, businessPhoneSchema } from './common.schema'
 
 /**
  * System Settings Schemas (Phase 5)
@@ -71,7 +71,7 @@ export const GeneralSettingsSchema = z.object({
 
   business_email: emailSchema,
 
-  business_phone: phoneSchema,
+  business_phone: businessPhoneSchema,
 
   business_address: z
     .string({ message: 'Business address is required' })
