@@ -115,6 +115,7 @@ export async function fetchBookingsByDateRange(
     `)
     .gte('booking_date', startDate)
     .lte('booking_date', endDate)
+    .is('deleted_at', null) // Exclude archived bookings
     .order('booking_date')
     .order('start_time')
 
