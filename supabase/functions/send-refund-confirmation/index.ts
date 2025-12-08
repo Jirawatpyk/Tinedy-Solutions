@@ -497,7 +497,7 @@ function generateRecurringRefundEmail(data: {
             <span style="color: #1f2937;">📅 ${formattedDate}</span>
             <span style="color: #6b7280; font-size: 14px; margin-left: 8px;">🕐 ${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}</span>
           </div>
-          <span style="color: #3b82f6; font-weight: 600;">฿${amount.toLocaleString()}</span>
+          <span style="color: #3b82f6; font-weight: 600; margin-left: 12px;">฿${amount.toLocaleString()}</span>
         </div>
       </div>
     `
