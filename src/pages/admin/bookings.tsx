@@ -1093,123 +1093,127 @@ export function AdminBookings() {
           </div>
         </div>
 
-        {/* Filters skeleton */}
+        {/* Filters skeleton - matches BookingFiltersPanel */}
         <Card>
-          <CardContent className="py-4 space-y-4">
-            {/* Search bar skeleton */}
-            <div className="relative">
-              <Skeleton className="h-10 w-full" />
+          <CardContent className="py-3 px-4 sm:px-6 space-y-3">
+            {/* Quick Filters + More Filters Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Skeleton className="h-4 w-20" /> {/* "Quick filters:" */}
+                <Skeleton className="h-8 w-16" /> {/* Today */}
+                <Skeleton className="h-8 w-20 hidden sm:block" /> {/* This Week */}
+                <Skeleton className="h-8 w-24 hidden sm:block" /> {/* This Month */}
+              </div>
+              <Skeleton className="h-8 w-28" /> {/* More Filters */}
             </div>
 
-            {/* Quick filters skeleton */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-8 w-28" />
-              <Skeleton className="h-8 w-32" />
-            </div>
-
-            {/* Main filters grid skeleton - 4 columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-
-            {/* Additional filters skeleton - 2 columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-
-            {/* Filter actions skeleton */}
-            <div className="flex items-center justify-between pt-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-9 w-32" />
+            {/* Primary Filters: Search + Status + Payment */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
+              {/* Search */}
+              <Skeleton className="h-9 flex-1" />
+              {/* Status + Payment */}
+              <div className="grid grid-cols-2 sm:flex gap-2">
+                <Skeleton className="h-9 sm:w-[150px]" />
+                <Skeleton className="h-9 sm:w-[150px]" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bookings list skeleton */}
+        {/* Bookings list skeleton - matches BookingList */}
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             {/* BulkActionsToolbar skeleton */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-5 w-48" />
-              </div>
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-9 w-32" />
-                <Skeleton className="h-9 w-24" />
-                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-4 w-4 rounded" /> {/* Checkbox */}
+                <Skeleton className="h-6 w-40" /> {/* "All Bookings (X)" */}
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6 pt-0">
             <div className="space-y-4">
               {/* Pagination Controls skeleton - Top */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-10 w-24" />
-                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-12" /> {/* "Show:" */}
+                  <Skeleton className="h-10 w-20" /> {/* Select */}
+                  <Skeleton className="h-4 w-16 hidden sm:block" /> {/* "per page" */}
                 </div>
-                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-52" /> {/* "Showing X to Y of Z bookings" */}
               </div>
 
               {/* Booking items skeleton */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/5 transition-colors"
+                  className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 border rounded-lg"
                 >
                   {/* Checkbox skeleton */}
-                  <Skeleton className="h-5 w-5 mt-1 rounded" />
+                  <Skeleton className="h-4 w-4 mt-0.5 sm:mt-1 rounded flex-shrink-0" />
 
                   {/* Content skeleton */}
-                  <div className="flex-1 space-y-3">
-                    {/* Header row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-4 w-64" />
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between flex-1 gap-3 sm:gap-4 min-w-0">
+                    <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
+                      {/* Customer name + ID + Status (mobile) */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Skeleton className="h-5 w-36" /> {/* Customer name */}
+                            <Skeleton className="h-4 w-16" /> {/* #ID */}
+                          </div>
+                          <Skeleton className="h-4 w-44 mt-1" /> {/* Email */}
+                        </div>
+                        <Skeleton className="h-5 w-20 rounded-full sm:hidden" /> {/* Status badge (mobile) */}
                       </div>
+                      {/* Service badge + name */}
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Skeleton className="h-5 w-16 rounded-full" /> {/* Service type badge */}
+                        <Skeleton className="h-4 w-32" /> {/* Service name */}
+                      </div>
+                      {/* Date + Time */}
+                      <Skeleton className="h-4 w-56" /> {/* Date • Time range */}
+                      {/* Staff/Team (random) */}
+                      {i % 2 === 0 && <Skeleton className="h-4 w-32" />}
+                    </div>
+
+                    {/* Right side - Desktop only */}
+                    <div className="hidden sm:flex sm:flex-col items-end gap-3 sm:gap-4 flex-shrink-0">
+                      {/* Price */}
+                      <Skeleton className="h-6 w-20" />
+                      {/* Status badges */}
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-20 rounded-full" /> {/* Status */}
+                        <Skeleton className="h-5 w-16 rounded-full" /> {/* Payment */}
+                      </div>
+                      {/* Actions */}
+                      <div className="flex gap-1.5 sm:gap-2">
+                        <Skeleton className="h-8 w-28" /> {/* Status dropdown */}
+                        <Skeleton className="h-8 w-8" /> {/* Delete button */}
+                      </div>
+                    </div>
+
+                    {/* Mobile: Price + Payment + Actions */}
+                    <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t">
+                      <Skeleton className="h-5 w-16" /> {/* Price */}
                       <div className="flex items-center gap-2">
-                        <Skeleton className="h-6 w-24 rounded-full" />
-                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-5 w-14 rounded-full" /> {/* Payment badge */}
+                        <Skeleton className="h-7 w-20" /> {/* Status dropdown */}
+                        <Skeleton className="h-7 w-7" /> {/* Delete */}
                       </div>
-                    </div>
-
-                    {/* Details row */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-4 w-28" />
-                    </div>
-
-                    {/* Action buttons row */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <Skeleton className="h-9 w-28" />
-                      <Skeleton className="h-9 w-9" />
-                      <Skeleton className="h-9 w-9" />
                     </div>
                   </div>
                 </div>
               ))}
 
               {/* Pagination Controls skeleton - Bottom */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
-                <Skeleton className="h-4 w-48" />
-                <div className="flex items-center gap-1">
-                  <Skeleton className="h-9 w-9" />
-                  <Skeleton className="h-9 w-9" />
-                  <Skeleton className="h-9 w-9" />
-                  <Skeleton className="h-9 w-9" />
-                  <Skeleton className="h-9 w-9" />
-                  <Skeleton className="h-9 w-9" />
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
+                <Skeleton className="h-4 w-28" /> {/* "Page X of Y" */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 w-14" /> {/* First */}
+                  <Skeleton className="h-9 w-24" /> {/* Previous */}
+                  <Skeleton className="h-9 w-16" /> {/* Next */}
+                  <Skeleton className="h-9 w-12" /> {/* Last */}
                 </div>
               </div>
             </div>

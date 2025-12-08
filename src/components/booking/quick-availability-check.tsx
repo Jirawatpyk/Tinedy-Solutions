@@ -250,9 +250,9 @@ export function QuickAvailabilityCheck() {
                 </div>
               </>
             ) : (
-              /* Date/Time for Non-Recurring - 3 columns */
-              <div className="grid grid-cols-3 gap-4">
-                {/* Date */}
+              /* Date/Time for Non-Recurring - Date แยกบรรทัด, Time 2 columns */
+              <>
+                {/* Date - บรรทัดเดียว */}
                 <div className="space-y-2">
                   <Label htmlFor="date">Date *</Label>
                   <Input
@@ -262,28 +262,29 @@ export function QuickAvailabilityCheck() {
                     onChange={(e) => setDate(e.target.value)}
                   />
                 </div>
-                {/* Start Time */}
-                <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time *</Label>
-                  <Input
-                    id="start-time"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
+                {/* Time - 2 columns */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time">Start Time *</Label>
+                    <Input
+                      id="start-time"
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">End Time</Label>
+                    <Input
+                      id="end-time"
+                      type="time"
+                      value={endTime}
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                    />
+                  </div>
                 </div>
-                {/* End Time */}
-                <div className="space-y-2">
-                  <Label htmlFor="end-time">End Time</Label>
-                  <Input
-                    id="end-time"
-                    type="time"
-                    value={endTime}
-                    readOnly
-                    className="bg-muted cursor-not-allowed"
-                  />
-                </div>
-              </div>
+              </>
             )}
 
             {/* Assignment Type */}
