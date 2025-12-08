@@ -29,13 +29,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  exportRevenueBookings,
-  exportRevenueByServiceType,
-  exportPeakHours,
-  exportTopServicePackages,
-  exportCustomers,
-  exportStaffPerformance,
-  exportTeamPerformance,
+  exportRevenueAllToExcel,
+  exportCustomersToExcel,
+  exportStaffToExcel,
+  exportTeamsToExcel,
 } from '@/lib/export'
 import {
   calculateRevenueMetrics,
@@ -100,32 +97,20 @@ export function AdminReports() {
       let success = false
 
       switch (exportType) {
-        // Revenue & Bookings exports
-        case 'revenue-summary':
-          success = exportRevenueBookings(bookings, dateRange, 'summary', role)
-          break
-        case 'bookings-list':
-          success = exportRevenueBookings(bookings, dateRange, 'detailed', role)
-          break
-        case 'revenue-by-service':
-          success = exportRevenueByServiceType(bookings, dateRange, role)
-          break
-        case 'peak-hours':
-          success = exportPeakHours(bookings, dateRange)
-          break
-        case 'top-packages':
-          success = exportTopServicePackages(bookings, dateRange, 10)
+        // Revenue & Bookings - Export to Excel (all sheets in one file)
+        case 'revenue-all-excel':
+          success = exportRevenueAllToExcel(bookings, dateRange, role)
           break
 
         // Customers exports
-        case 'customers-all': {
+        case 'customers-excel': {
           const topCustomersData = getTopCustomers(customersWithBookings, 10)
-          success = exportCustomers(customers, topCustomersData, 'all')
+          success = exportCustomersToExcel(customers, topCustomersData)
           break
         }
 
         // Staff exports
-        case 'staff-performance': {
+        case 'staff-excel': {
           // Use filtered staff data based on selected date range
           const { start, end } = getDateRangePreset(dateRange)
           const filteredStaff = staffWithBookings.map((staffMember) => ({
@@ -135,12 +120,12 @@ export function AdminReports() {
             ),
           }))
           const staffPerformanceData = getStaffPerformance(filteredStaff)
-          success = exportStaffPerformance(staffPerformanceData, role)
+          success = exportStaffToExcel(staffPerformanceData, role)
           break
         }
 
         // Teams exports
-        case 'teams-performance': {
+        case 'teams-excel': {
           // Use filtered teams data based on selected date range
           const { start, end } = getDateRangePreset(dateRange)
           const filteredTeams = teamsWithBookings.map((team) => ({
@@ -149,7 +134,7 @@ export function AdminReports() {
               isWithinInterval(new Date(booking.booking_date), { start, end })
             ),
           }))
-          success = exportTeamPerformance(filteredTeams, role)
+          success = exportTeamsToExcel(filteredTeams, role)
           break
         }
 
@@ -161,7 +146,7 @@ export function AdminReports() {
       if (success) {
         toast({
           title: 'Export successful',
-          description: 'Data exported to CSV successfully',
+          description: 'Data exported to Excel successfully',
         })
       } else {
         toast({
@@ -428,43 +413,28 @@ export function AdminReports() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="h-8 sm:h-9 gap-1 sm:gap-2">
                 <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">Export</span>
+                <span>Export Excel</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               {activeTab === 'revenue' && (
-                <>
-                  <DropdownMenuItem onClick={() => handleExport('revenue-summary')}>
-                    Revenue Summary
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('bookings-list')}>
-                    Bookings List
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('revenue-by-service')}>
-                    Revenue by Service Type
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('peak-hours')}>
-                    Peak Hours Data
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('top-packages')}>
-                    Top Service Packages
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem onClick={() => handleExport('revenue-all-excel')}>
+                  Export Revenue Report
+                </DropdownMenuItem>
               )}
               {activeTab === 'customers' && (
-                <DropdownMenuItem onClick={() => handleExport('customers-all')}>
-                  Export All Customer Data
+                <DropdownMenuItem onClick={() => handleExport('customers-excel')}>
+                  Export Customer Report
                 </DropdownMenuItem>
               )}
               {activeTab === 'staff' && (
-                <DropdownMenuItem onClick={() => handleExport('staff-performance')}>
-                  Export Staff Performance
+                <DropdownMenuItem onClick={() => handleExport('staff-excel')}>
+                  Export Staff Report
                 </DropdownMenuItem>
               )}
               {activeTab === 'teams' && (
-                <DropdownMenuItem onClick={() => handleExport('teams-performance')}>
-                  Export Team Performance
+                <DropdownMenuItem onClick={() => handleExport('teams-excel')}>
+                  Export Team Report
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -474,23 +444,23 @@ export function AdminReports() {
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
-          <TabsTrigger value="revenue" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Revenue & Bookings</span>
-            <span className="sm:hidden">Revenue</span>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto sm:h-9">
+          <TabsTrigger value="revenue" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden lg:inline">Revenue & Bookings</span>
+            <span className="lg:hidden truncate">Revenue</span>
           </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Customers
+          <TabsTrigger value="customers" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="truncate">Customers</span>
           </TabsTrigger>
-          <TabsTrigger value="staff" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Staff
+          <TabsTrigger value="staff" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
+            <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="truncate">Staff</span>
           </TabsTrigger>
-          <TabsTrigger value="teams" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <BriefcaseBusiness className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Teams
+          <TabsTrigger value="teams" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
+            <BriefcaseBusiness className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="truncate">Teams</span>
           </TabsTrigger>
         </TabsList>
 

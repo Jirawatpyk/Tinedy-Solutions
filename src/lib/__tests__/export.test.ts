@@ -1,15 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
-  convertToCSV,
-  downloadCSV,
-  exportRevenueBookings,
-  exportRevenueByServiceType,
-  exportPeakHours,
-  exportTopServicePackages,
-  exportCustomers,
-  exportStaffPerformance,
-  exportTeamPerformance,
+  exportRevenueAllToExcel,
+  exportCustomersToExcel,
+  exportStaffToExcel,
+  exportTeamsToExcel,
 } from '../export'
+
+// Mock xlsx library
+vi.mock('xlsx', () => ({
+  utils: {
+    book_new: vi.fn(() => ({ SheetNames: [], Sheets: {} })),
+    json_to_sheet: vi.fn(() => ({})),
+    book_append_sheet: vi.fn(),
+  },
+  writeFile: vi.fn(),
+}))
 
 // Mock data interfaces
 interface BookingForExport {
@@ -115,34 +120,10 @@ const createMockTeam = (overrides: Partial<TeamForExport> = {}): TeamForExport =
   ...overrides,
 })
 
-describe('export', () => {
+describe('Excel Export Functions', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-10-26T12:00:00Z'))
-
-    // Mock Blob globally for all tests
-    global.Blob = class MockBlob {
-      parts: BlobPart[]
-      options?: BlobPropertyBag
-      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
-        this.parts = parts
-        this.options = options
-      }
-    } as unknown as typeof Blob
-
-    // Mock DOM APIs globally
-    const clickSpy = vi.fn()
-    const mockLink = {
-      download: '',
-      setAttribute: vi.fn(),
-      click: clickSpy,
-      style: { visibility: '' },
-    }
-
-    vi.spyOn(document, 'createElement').mockReturnValue(mockLink as unknown as HTMLElement)
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
-    vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as unknown as Node)
-    vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node)
   })
 
   afterEach(() => {
@@ -150,107 +131,8 @@ describe('export', () => {
     vi.clearAllMocks()
   })
 
-  describe('convertToCSV', () => {
-    it('should convert array of objects to CSV format', () => {
-      // Arrange
-      const data = [
-        { name: 'John', age: 30, city: 'Bangkok' },
-        { name: 'Jane', age: 25, city: 'Chiang Mai' },
-      ]
-      const headers = ['name', 'age', 'city']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('name,age,city\nJohn,30,Bangkok\nJane,25,Chiang Mai')
-    })
-
-    it('should handle empty data array', () => {
-      // Arrange
-      const data: Record<string, unknown>[] = []
-      const headers = ['name', 'age']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('')
-    })
-
-    it('should handle null and undefined values', () => {
-      // Arrange
-      const data = [
-        { name: 'John', age: null, city: undefined },
-      ]
-      const headers = ['name', 'age', 'city']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('name,age,city\nJohn,,')
-    })
-
-    it('should escape strings with commas', () => {
-      // Arrange
-      const data = [
-        { name: 'John Doe, Jr.', age: 30 },
-      ]
-      const headers = ['name', 'age']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('name,age\n"John Doe, Jr.",30')
-    })
-
-    it('should escape strings with quotes', () => {
-      // Arrange
-      const data = [
-        { message: 'He said "Hello"' },
-      ]
-      const headers = ['message']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('message\n"He said ""Hello"""')
-    })
-
-    it('should escape strings with newlines', () => {
-      // Arrange
-      const data = [
-        { description: 'Line 1\nLine 2' },
-      ]
-      const headers = ['description']
-
-      // Act
-      const csv = convertToCSV(data, headers)
-
-      // Assert
-      expect(csv).toBe('description\n"Line 1\nLine 2"')
-    })
-  })
-
-  describe('downloadCSV', () => {
-    it('should create and download CSV file', () => {
-      // Arrange
-      const csvContent = 'name,age\nJohn,30'
-      const filename = 'test.csv'
-
-      // Act
-      downloadCSV(csvContent, filename)
-
-      // Assert - Function runs without errors (mocks are set up globally)
-      expect(true).toBe(true)
-    })
-  })
-
-  describe('exportRevenueBookings', () => {
-    it('should export summary revenue data for completed bookings', () => {
+  describe('exportRevenueAllToExcel', () => {
+    it('should export revenue data to Excel with multiple sheets', () => {
       // Arrange
       const bookings = [
         createMockBooking({ booking_date: '2025-10-26T10:00:00Z', status: 'completed', total_price: 1000 }),
@@ -259,10 +141,23 @@ describe('export', () => {
       ]
 
       // Act
-      exportRevenueBookings(bookings, 'today', 'summary')
+      const result = exportRevenueAllToExcel(bookings, 'thisMonth', 'admin')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should return false when no bookings in date range', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2024-01-01T10:00:00Z' }), // Out of range
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(false)
     })
 
     it('should handle empty bookings array', () => {
@@ -270,204 +165,70 @@ describe('export', () => {
       const bookings: BookingForExport[] = []
 
       // Act
-      const result = exportRevenueBookings(bookings, 'today', 'summary')
+      const result = exportRevenueAllToExcel(bookings, 'thisMonth', 'admin')
 
-      // Assert - function returns false when no bookings found
+      // Assert
       expect(result).toBe(false)
     })
   })
 
-  describe('exportRevenueByServiceType', () => {
-    it('should group revenue by service type', () => {
-      // Arrange
-      const bookings = [
-        createMockBooking({
-          booking_date: '2025-10-26T10:00:00Z',
-          status: 'completed',
-          total_price: 1000,
-          service_packages: { name: 'Basic', service_type: 'Cleaning' },
-        }),
-        createMockBooking({
-          booking_date: '2025-10-26T14:00:00Z',
-          status: 'completed',
-          total_price: 2000,
-          service_packages: { name: 'Advanced', service_type: 'Cleaning' },
-        }),
-        createMockBooking({
-          booking_date: '2025-10-26T16:00:00Z',
-          status: 'completed',
-          total_price: 3000,
-          service_packages: { name: 'Training', service_type: 'Training' },
-        }),
-      ]
-
-      // Act
-      exportRevenueByServiceType(bookings, 'today')
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-
-    it('should handle no completed bookings', () => {
-      // Arrange
-      const bookings = [
-        createMockBooking({ booking_date: '2025-10-26T10:00:00Z', status: 'pending' }),
-      ]
-
-      // Act
-      const result = exportRevenueByServiceType(bookings, 'today')
-
-      // Assert - function returns false when no completed bookings found
-      expect(result).toBe(false)
-    })
-  })
-
-  describe('exportPeakHours', () => {
-    it('should group bookings by day and hour', () => {
-      // Arrange
-      const bookings = [
-        createMockBooking({ booking_date: '2025-10-26T10:00:00Z', start_time: '10:00' }),
-        createMockBooking({ booking_date: '2025-10-26T10:30:00Z', start_time: '10:30' }),
-        createMockBooking({ booking_date: '2025-10-26T14:00:00Z', start_time: '14:00' }),
-      ]
-
-      // Act
-      exportPeakHours(bookings, 'today')
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-
-    it('should handle bookings without start_time', () => {
-      // Arrange
-      const bookings = [
-        createMockBooking({ booking_date: '2025-10-26T10:00:00Z', start_time: undefined }),
-      ]
-
-      // Act
-      exportPeakHours(bookings, 'today')
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-  })
-
-  describe('exportTopServicePackages', () => {
-    it('should sort packages by booking count', () => {
-      // Arrange
-      const bookings = [
-        createMockBooking({
-          booking_date: '2025-10-26T10:00:00Z',
-          service_packages: { name: 'Basic', service_type: 'Cleaning' },
-        }),
-        createMockBooking({
-          booking_date: '2025-10-26T11:00:00Z',
-          service_packages: { name: 'Basic', service_type: 'Cleaning' },
-        }),
-        createMockBooking({
-          booking_date: '2025-10-26T12:00:00Z',
-          service_packages: { name: 'Premium', service_type: 'Cleaning' },
-        }),
-      ]
-
-      // Act
-      exportTopServicePackages(bookings, 'today', 10)
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-
-    it('should respect limit parameter', () => {
-      // Arrange
-      const bookings = Array.from({ length: 20 }, (_, i) =>
-        createMockBooking({
-          booking_date: '2025-10-26T10:00:00Z',
-          service_packages: { name: `Package ${i}`, service_type: 'Cleaning' },
-        })
-      )
-
-      // Act
-      exportTopServicePackages(bookings, 'today', 5)
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-  })
-
-  describe('exportCustomers', () => {
-    it('should export all customers', () => {
+  describe('exportCustomersToExcel', () => {
+    it('should export customers data to Excel', () => {
       // Arrange
       const customers = [
         createMockCustomer({ id: '1', full_name: 'John Doe' }),
         createMockCustomer({ id: '2', full_name: 'Jane Smith' }),
       ]
-      const topCustomers: TopCustomerForExport[] = []
-
-      // Act
-      exportCustomers(customers, topCustomers, 'all-customers')
-
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
-    })
-
-    it('should export top customers', () => {
-      // Arrange
-      const customers: CustomerForExport[] = []
       const topCustomers = [
         createMockTopCustomer({ name: 'John Doe', totalRevenue: 50000 }),
-        createMockTopCustomer({ name: 'Jane Smith', totalRevenue: 40000 }),
       ]
 
       // Act
-      exportCustomers(customers, topCustomers, 'top-customers')
+      const result = exportCustomersToExcel(customers, topCustomers)
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
 
-    it('should export both all and top customers', () => {
+    it('should return false when no customers', () => {
       // Arrange
-      const customers = [createMockCustomer()]
-      const topCustomers = [createMockTopCustomer()]
+      const customers: CustomerForExport[] = []
+      const topCustomers: TopCustomerForExport[] = []
 
       // Act
-      exportCustomers(customers, topCustomers, 'all')
+      const result = exportCustomersToExcel(customers, topCustomers)
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(false)
     })
 
     it('should handle customers without phone', () => {
       // Arrange
-      const customers = [
-        createMockCustomer({ phone: undefined }),
-      ]
+      const customers = [createMockCustomer({ phone: undefined })]
       const topCustomers: TopCustomerForExport[] = []
 
       // Act
-      exportCustomers(customers, topCustomers, 'all-customers')
+      const result = exportCustomersToExcel(customers, topCustomers)
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
 
     it('should handle top customers without last booking', () => {
       // Arrange
-      const customers: CustomerForExport[] = []
-      const topCustomers = [
-        createMockTopCustomer({ lastBooking: undefined }),
-      ]
+      const customers = [createMockCustomer()]
+      const topCustomers = [createMockTopCustomer({ lastBooking: undefined })]
 
       // Act
-      exportCustomers(customers, topCustomers, 'top-customers')
+      const result = exportCustomersToExcel(customers, topCustomers)
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
   })
 
-  describe('exportStaffPerformance', () => {
-    it('should export staff performance data', () => {
+  describe('exportStaffToExcel', () => {
+    it('should export staff performance data to Excel', () => {
       // Arrange
       const staffPerformance = [
         createMockStaffPerformance({ name: 'Jane Smith', revenue: 100000 }),
@@ -475,32 +236,37 @@ describe('export', () => {
       ]
 
       // Act
-      exportStaffPerformance(staffPerformance)
+      const result = exportStaffToExcel(staffPerformance, 'admin')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
 
-    it('should format percentages and decimals correctly', () => {
+    it('should return false when no staff data', () => {
       // Arrange
-      const staffPerformance = [
-        createMockStaffPerformance({
-          completionRate: 87.5678,
-          avgJobValue: 1234.5678,
-          utilizationRate: 92.3456,
-        }),
-      ]
+      const staffPerformance: StaffPerformanceForExport[] = []
 
       // Act
-      exportStaffPerformance(staffPerformance)
+      const result = exportStaffToExcel(staffPerformance, 'admin')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(false)
+    })
+
+    it('should export without revenue for non-admin roles', () => {
+      // Arrange
+      const staffPerformance = [createMockStaffPerformance()]
+
+      // Act
+      const result = exportStaffToExcel(staffPerformance, 'staff')
+
+      // Assert
+      expect(result).toBe(true)
     })
   })
 
-  describe('exportTeamPerformance', () => {
-    it('should export team performance data', () => {
+  describe('exportTeamsToExcel', () => {
+    it('should export team performance data to Excel', () => {
       // Arrange
       const teams = [
         createMockTeam({ name: 'Team Alpha' }),
@@ -508,10 +274,38 @@ describe('export', () => {
       ]
 
       // Act
-      exportTeamPerformance(teams)
+      const result = exportTeamsToExcel(teams, 'admin')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should return false when no teams data', () => {
+      // Arrange
+      const teams: TeamForExport[] = []
+
+      // Act
+      const result = exportTeamsToExcel(teams, 'admin')
+
+      // Assert
+      expect(result).toBe(false)
+    })
+
+    it('should handle teams with no bookings', () => {
+      // Arrange
+      const teams = [
+        createMockTeam({
+          name: 'Team Empty',
+          bookings: [],
+          team_members: [{}, {}],
+        }),
+      ]
+
+      // Act
+      const result = exportTeamsToExcel(teams, 'admin')
+
+      // Assert
+      expect(result).toBe(true)
     })
 
     it('should calculate team metrics correctly', () => {
@@ -530,27 +324,21 @@ describe('export', () => {
       ]
 
       // Act
-      exportTeamPerformance(teams)
+      const result = exportTeamsToExcel(teams, 'admin')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
 
-    it('should handle teams with no bookings', () => {
+    it('should export without revenue for non-admin roles', () => {
       // Arrange
-      const teams = [
-        createMockTeam({
-          name: 'Team Empty',
-          bookings: [],
-          team_members: [{}, {}],
-        }),
-      ]
+      const teams = [createMockTeam()]
 
       // Act
-      exportTeamPerformance(teams)
+      const result = exportTeamsToExcel(teams, 'manager')
 
-      // Assert - Function runs without errors
-      expect(true).toBe(true)
+      // Assert
+      expect(result).toBe(true)
     })
   })
 })
