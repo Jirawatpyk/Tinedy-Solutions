@@ -227,13 +227,13 @@ function BookingListComponent({
                           </p>
                         )}
                       </div>
-                      <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
+                      <div className="hidden sm:flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
                         <div className="flex-1 sm:flex-none">
                           <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                             {formatCurrency(Number(booking.total_price))}
                           </p>
                         </div>
-                        <div className="hidden sm:flex flex-wrap gap-2 items-end justify-end">
+                        <div className="flex flex-wrap gap-2 items-end justify-end">
                           {getStatusBadge(booking.status)}
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
@@ -281,6 +281,63 @@ function BookingListComponent({
                                 onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
                                 cancelText="Archive"
                                 className="h-8 w-8"
+                              />
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Mobile: ราคาและ Payment Status ข้างล่าง เหมือน Recurring Group */}
+                      <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-tinedy-dark">
+                            {formatCurrency(Number(booking.total_price))}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getPaymentStatusBadge(booking.payment_status)}
+                          {isArchived && onRestoreBooking ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onRestoreBooking(booking.id)
+                              }}
+                              className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Restore
+                            </Button>
+                          ) : (
+                            <>
+                              {!['completed', 'cancelled', 'no_show'].includes(booking.status) && (
+                                <Select
+                                  value={booking.status}
+                                  onValueChange={(value) =>
+                                    onStatusChange(booking.id, booking.status, value)
+                                  }
+                                  disabled={isArchived}
+                                >
+                                  <SelectTrigger className="w-24 h-7 text-[10px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getAvailableStatuses(booking.status).map((status) => (
+                                      <SelectItem key={status} value={status}>
+                                        {getStatusLabel(status)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              <PermissionAwareDeleteButton
+                                resource="bookings"
+                                itemName={`Booking #${booking.id.slice(0, 8)}`}
+                                onDelete={() => onDeleteBooking(booking.id)}
+                                onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
+                                cancelText="Archive"
+                                className="h-7 w-7"
                               />
                             </>
                           )}

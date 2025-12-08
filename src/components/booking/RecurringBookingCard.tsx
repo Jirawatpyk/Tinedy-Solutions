@@ -37,6 +37,8 @@ import { formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { RecurringGroup } from '@/types/recurring-booking'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { StatusBadge } from '@/components/common/StatusBadge'
+import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
 
 interface RecurringBookingCardProps {
   group: RecurringGroup
@@ -175,46 +177,26 @@ export function RecurringBookingCard({
                 // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
                 const paymentStatus = firstBooking.payment_status || 'unpaid'
 
-                if (paymentStatus === 'paid') {
-                  return (
-                    <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
-                      Paid
-                    </Badge>
-                  )
-                } else if (paymentStatus === 'pending_verification') {
-                  return (
-                    <>
-                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
-                        Verifying
-                      </Badge>
-                      {onVerifyPayment && firstBooking.payment_slip_url && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onVerifyPayment(firstBooking.id)
-                          }}
-                          className="h-7 text-xs border-green-500 text-green-700 hover:bg-green-50"
-                        >
-                          Verify
-                        </Button>
-                      )}
-                    </>
-                  )
-                } else if (paymentStatus === 'partial') {
-                  return (
-                    <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
-                      Partial
-                    </Badge>
-                  )
-                } else {
-                  return (
-                    <Badge className="bg-red-50 text-red-700 border-red-300 text-xs">
-                      Unpaid
-                    </Badge>
-                  )
-                }
+                return (
+                  <>
+                    <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
+                      {getPaymentStatusLabel(paymentStatus)}
+                    </StatusBadge>
+                    {paymentStatus === 'pending_verification' && onVerifyPayment && firstBooking.payment_slip_url && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onVerifyPayment(firstBooking.id)
+                        }}
+                        className="h-7 text-xs border-green-500 text-green-700 hover:bg-green-50"
+                      >
+                        Verify
+                      </Button>
+                    )}
+                  </>
+                )
               })()}
             </div>
 
@@ -257,31 +239,11 @@ export function RecurringBookingCard({
           <div className="flex items-center gap-2">
             {(() => {
               const paymentStatus = firstBooking.payment_status || 'unpaid'
-              if (paymentStatus === 'paid') {
-                return (
-                  <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px]">
-                    Paid
-                  </Badge>
-                )
-              } else if (paymentStatus === 'pending_verification') {
-                return (
-                  <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px]">
-                    Verifying
-                  </Badge>
-                )
-              } else if (paymentStatus === 'partial') {
-                return (
-                  <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px]">
-                    Partial
-                  </Badge>
-                )
-              } else {
-                return (
-                  <Badge className="bg-red-50 text-red-700 border-red-300 text-[10px]">
-                    Unpaid
-                  </Badge>
-                )
-              }
+              return (
+                <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
+                  {getPaymentStatusLabel(paymentStatus)}
+                </StatusBadge>
+              )
             })()}
             <Button variant="ghost" size="sm" onClick={(e) => {
               e.stopPropagation()

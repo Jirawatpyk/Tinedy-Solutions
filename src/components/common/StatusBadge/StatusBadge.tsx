@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 const statusBadgeVariants = cva(
-  '',
+  'text-xs',
   {
     variants: {
       variant: {
