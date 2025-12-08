@@ -15,6 +15,7 @@
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
+import { buildTeamFilterCondition } from '@/lib/team-revenue-utils'
 import { fetchStaffTeamMembership, type TeamMembership } from './staff-bookings-queries'
 
 // Re-export team membership function for reuse
@@ -148,15 +149,7 @@ function isServicePackageV1(
   return pkg !== null && pkg !== undefined && 'price' in pkg && typeof pkg.price === 'number'
 }
 
-/**
- * Build filter condition for staff + teams bookings
- */
-function buildFilterCondition(userId: string, teamIds: string[]): string | null {
-  if (teamIds.length > 0) {
-    return `staff_id.eq.${userId},team_id.in.(${teamIds.join(',')})`
-  }
-  return null
-}
+// Note: buildFilterCondition replaced by buildTeamFilterCondition from team-revenue-utils
 
 /**
  * Transform booking data to calendar event
@@ -247,7 +240,7 @@ export async function fetchStaffCalendarEvents(
     const startDateStr = formatDate(startDate)
     const endDateStr = formatDate(endDate)
 
-    const filterCondition = buildFilterCondition(userId, teamIds)
+    const filterCondition = buildTeamFilterCondition(userId, teamIds)
 
     let query = supabase
       .from('bookings')

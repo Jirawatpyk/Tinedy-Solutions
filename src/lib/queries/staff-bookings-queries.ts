@@ -14,6 +14,7 @@
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
+import { calculateBookingRevenue, buildTeamFilterCondition } from '@/lib/team-revenue-utils'
 
 // ============================================================================
 // TYPES
@@ -128,15 +129,7 @@ function formatDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/**
- * Build filter condition for staff + teams bookings
- */
-function buildFilterCondition(userId: string, teamIds: string[]): string | null {
-  if (teamIds.length > 0) {
-    return `staff_id.eq.${userId},team_id.in.(${teamIds.join(',')})`
-  }
-  return null
-}
+// Note: buildFilterCondition replaced by buildTeamFilterCondition from team-revenue-utils
 
 /**
  * Merge V1 and V2 package data
@@ -220,7 +213,7 @@ export async function fetchStaffBookingsToday(
   today.setHours(0, 0, 0, 0)
   const todayStr = formatDate(today)
 
-  const filterCondition = buildFilterCondition(userId, teamIds)
+  const filterCondition = buildTeamFilterCondition(userId, teamIds)
 
   let query = supabase
     .from('bookings')
@@ -280,7 +273,7 @@ export async function fetchStaffBookingsUpcoming(
   const tomorrowStr = formatDate(tomorrow)
   const nextWeekStr = formatDate(nextWeek)
 
-  const filterCondition = buildFilterCondition(userId, teamIds)
+  const filterCondition = buildTeamFilterCondition(userId, teamIds)
 
   let query = supabase
     .from('bookings')
@@ -340,7 +333,7 @@ export async function fetchStaffBookingsCompleted(
   const thirtyDaysAgoStr = formatDate(thirtyDaysAgo)
   const yesterdayStr = formatDate(new Date(today.getTime() - 24 * 60 * 60 * 1000))
 
-  const filterCondition = buildFilterCondition(userId, teamIds)
+  const filterCondition = buildTeamFilterCondition(userId, teamIds)
 
   let query = supabase
     .from('bookings')
@@ -426,7 +419,7 @@ export async function fetchStaffStats(
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     const sixMonthsAgoStr = formatDate(sixMonthsAgo)
 
-    const filterCondition = buildFilterCondition(userId, teamIds)
+    const filterCondition = buildTeamFilterCondition(userId, teamIds)
 
     // Run all queries in parallel
     const [
@@ -552,19 +545,10 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return 0
 
-        // Calculate earnings: divide by team_member_count for team bookings
-        // Use stored team_member_count (captured at booking creation time)
+        // Calculate earnings using shared calculateBookingRevenue function
+        // Same logic as use-staff-profile.ts for consistency
         return bookings.reduce((sum, booking) => {
-          const price = booking.total_price || 0
-          if (booking.team_id) {
-            // Team booking: divide by stored team_member_count
-            // Fallback to 1 for old bookings without team_member_count
-            const memberCount = booking.team_member_count || 1
-            return sum + (price / memberCount)
-          } else {
-            // Individual booking: full amount
-            return sum + price
-          }
+          return sum + calculateBookingRevenue(booking, new Map())
         }, 0)
       })(),
 
@@ -586,10 +570,11 @@ export async function fetchStaffStats(
       })(),
 
       // Monthly breakdown (6 months) for performance chart - revenue divided by team_member_count
+      // Revenue only counts completed + paid bookings (same as Earnings)
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('booking_date, status, total_price, team_id, staff_id, team_member_count')
+          .select('booking_date, status, payment_status, total_price, team_id, staff_id, team_member_count')
           .gte('booking_date', sixMonthsAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null)
@@ -606,6 +591,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return []
 
         // Group by month with revenue divided by team_member_count
+        // Revenue only counts completed + paid bookings (same logic as Earnings)
         const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
         bookings.forEach((booking) => {
           const month = booking.booking_date.slice(0, 7) // YYYY-MM
@@ -614,17 +600,10 @@ export async function fetchStaffStats(
           }
           const data = monthlyMap.get(month)!
           data.jobs += 1
-          if (booking.status === 'completed') {
-            const price = booking.total_price || 0
-            if (booking.team_id) {
-              // Team booking: divide by stored team_member_count
-              // Fallback to 1 for old bookings without team_member_count
-              const memberCount = booking.team_member_count || 1
-              data.revenue += price / memberCount
-            } else {
-              // Individual booking: full amount
-              data.revenue += price
-            }
+          // Revenue: only count if completed AND paid (same as Earnings)
+          // Use shared calculateBookingRevenue function for consistency
+          if (booking.status === 'completed' && booking.payment_status === 'paid') {
+            data.revenue += calculateBookingRevenue(booking, new Map())
           }
         })
 
