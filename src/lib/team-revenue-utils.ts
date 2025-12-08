@@ -1,5 +1,62 @@
 import { supabase } from './supabase'
 
+// ============================================================================
+// TEAM MEMBERSHIP UTILITIES
+// ============================================================================
+
+/**
+ * Get all team IDs where user is a member or team lead
+ * Used by use-staff-profile.ts and use-staff-bookings.ts
+ *
+ * @param userId - User ID to check team membership
+ * @returns Array of team IDs (deduplicated)
+ */
+export async function getMyTeamIds(userId: string): Promise<string[]> {
+  try {
+    // Get teams where user is a member
+    const { data: memberTeams } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('staff_id', userId)
+      .eq('is_active', true)
+
+    // Get teams where user is the lead
+    const { data: leadTeams } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('team_lead_id', userId)
+      .eq('is_active', true)
+
+    const memberTeamIds = memberTeams?.map(m => m.team_id) || []
+    const leadTeamIds = leadTeams?.map(t => t.id) || []
+
+    // Combine and deduplicate
+    return [...new Set([...memberTeamIds, ...leadTeamIds])]
+  } catch (error) {
+    console.error('Error in getMyTeamIds:', error)
+    return []
+  }
+}
+
+/**
+ * Build Supabase OR filter condition for team bookings
+ * Returns: "staff_id.eq.{userId},team_id.in.({teamIds})"
+ *
+ * @param userId - User ID
+ * @param teamIds - Array of team IDs
+ * @returns Filter condition string or null if no teams
+ */
+export function buildTeamFilterCondition(userId: string, teamIds: string[]): string | null {
+  if (teamIds.length === 0) {
+    return null
+  }
+  return `staff_id.eq.${userId},team_id.in.(${teamIds.join(',')})`
+}
+
+// ============================================================================
+// TEAM MEMBER COUNTS
+// ============================================================================
+
 /**
  * Cache team member counts for efficient revenue calculation
  * @param teamIds - Array of unique team IDs

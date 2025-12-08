@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import {
+  calculateBookingRevenue,
+  getTeamMemberCounts,
+  getUniqueTeamIds,
+  getMyTeamIds,
+  buildTeamFilterCondition
+} from '@/lib/team-revenue-utils'
 
 export interface StaffProfile {
   id: string
@@ -69,20 +76,34 @@ export function useStaffProfile() {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
       const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0]
 
-      // Total jobs
-      const { count: totalJobs } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
-        .gte('booking_date', sixMonthsAgoStr)
+      // Get teams where user is a member or lead (shared function)
+      const myTeamIds = await getMyTeamIds(user.id)
+      const filterCondition = buildTeamFilterCondition(user.id, myTeamIds)
 
-      // Completed jobs
-      const { count: completedJobs } = await supabase
+      // Total jobs - include team bookings
+      let totalJobsQuery = supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('staff_id', user.id)
+        .gte('booking_date', sixMonthsAgoStr)
+      if (filterCondition) {
+        totalJobsQuery = totalJobsQuery.or(filterCondition)
+      } else {
+        totalJobsQuery = totalJobsQuery.eq('staff_id', user.id)
+      }
+      const { count: totalJobs } = await totalJobsQuery
+
+      // Completed jobs - include team bookings
+      let completedJobsQuery = supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
         .gte('booking_date', sixMonthsAgoStr)
+      if (filterCondition) {
+        completedJobsQuery = completedJobsQuery.or(filterCondition)
+      } else {
+        completedJobsQuery = completedJobsQuery.eq('staff_id', user.id)
+      }
+      const { count: completedJobs } = await completedJobsQuery
 
       const completionRate = totalJobs ? ((completedJobs || 0) / totalJobs) * 100 : 0
 
@@ -98,41 +119,81 @@ export function useStaffProfile() {
           : 0
 
       // Total revenue (from completed bookings) - Support V1 + V2
-      const { data: revenueData } = await supabase
+      // Include team_id, staff_id, team_member_count for proper revenue calculation
+      let revenueQuery = supabase
         .from('bookings')
         .select(`
           total_price,
+          team_id,
+          staff_id,
+          team_member_count,
           service_packages (price),
           service_packages_v2:package_v2_id (name)
         `)
-        .eq('staff_id', user.id)
         .eq('status', 'completed')
         .gte('booking_date', sixMonthsAgoStr)
+      if (filterCondition) {
+        revenueQuery = revenueQuery.or(filterCondition)
+      } else {
+        revenueQuery = revenueQuery.eq('staff_id', user.id)
+      }
+      const { data: revenueData } = await revenueQuery
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalRevenue = (revenueData as any[] | null)?.reduce((sum, booking) => {
-        // Use total_price for both V1 and V2 bookings
-        return sum + (booking.total_price || 0)
-      }, 0) || 0
+      // Get team member counts for old bookings without stored count
+      const bookingsForRevenue = (revenueData || []) as Array<{
+        total_price: number
+        team_id: string | null
+        staff_id: string | null
+        team_member_count?: number | null
+      }>
+      const teamIdsNeedingCounts = getUniqueTeamIds(bookingsForRevenue)
+      const teamMemberCounts = await getTeamMemberCounts(teamIdsNeedingCounts)
+
+      // Calculate revenue using proper team division
+      const totalRevenue = bookingsForRevenue.reduce((sum, booking) => {
+        return sum + calculateBookingRevenue(booking, teamMemberCounts)
+      }, 0)
 
       // Monthly breakdown - Support V1 + V2
-      const { data: monthlyBookings } = await supabase
+      // Include team_id, staff_id, team_member_count for proper revenue calculation
+      let monthlyQuery = supabase
         .from('bookings')
         .select(`
           booking_date,
           status,
           total_price,
+          team_id,
+          staff_id,
+          team_member_count,
           service_packages (price),
           service_packages_v2:package_v2_id (name)
         `)
-        .eq('staff_id', user.id)
         .gte('booking_date', sixMonthsAgoStr)
         .order('booking_date', { ascending: true })
+      if (filterCondition) {
+        monthlyQuery = monthlyQuery.or(filterCondition)
+      } else {
+        monthlyQuery = monthlyQuery.eq('staff_id', user.id)
+      }
+      const { data: monthlyBookings } = await monthlyQuery
 
-      // Group by month - Use total_price for both V1 and V2
+      // Get team member counts for monthly bookings
+      const monthlyBookingsTyped = (monthlyBookings || []) as Array<{
+        booking_date: string
+        status: string
+        total_price: number
+        team_id: string | null
+        staff_id: string | null
+        team_member_count?: number | null
+      }>
+      const monthlyTeamIds = getUniqueTeamIds(
+        monthlyBookingsTyped.filter(b => b.status === 'completed')
+      )
+      const monthlyTeamMemberCounts = await getTeamMemberCounts(monthlyTeamIds)
+
+      // Group by month - Use calculateBookingRevenue for proper team division
       const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(monthlyBookings as any[] | null)?.forEach((booking) => {
+      monthlyBookingsTyped.forEach((booking) => {
         const month = new Date(booking.booking_date).toISOString().slice(0, 7) // YYYY-MM
         if (!monthlyMap.has(month)) {
           monthlyMap.set(month, { jobs: 0, revenue: 0 })
@@ -140,8 +201,8 @@ export function useStaffProfile() {
         const data = monthlyMap.get(month)!
         data.jobs += 1
         if (booking.status === 'completed') {
-          // Use total_price for both V1 and V2 bookings
-          data.revenue += booking.total_price || 0
+          // Use calculateBookingRevenue for proper team division
+          data.revenue += calculateBookingRevenue(booking, monthlyTeamMemberCounts)
         }
       })
 

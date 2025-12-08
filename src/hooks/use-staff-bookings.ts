@@ -3,6 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
+import {
+  calculateBookingRevenue,
+  getTeamMemberCounts,
+  getUniqueTeamIds,
+  getMyTeamIds,
+  buildTeamFilterCondition
+} from '@/lib/team-revenue-utils'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
 // Types for realtime payload
@@ -49,33 +56,13 @@ export function useStaffBookings() {
     if (!user) return
 
     try {
-      // Get teams where user is a member
-      const { data: memberTeams } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('staff_id', user.id)
-        .eq('is_active', true)
-
-      // Get teams where user is the lead
-      const { data: leadTeams } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('team_lead_id', user.id)
-        .eq('is_active', true)
-
-      const memberTeamIds = memberTeams?.map(m => m.team_id) || []
-      const leadTeamIds = leadTeams?.map(t => t.id) || []
-
-      // Combine and deduplicate
-      const allTeamIds = [...new Set([...memberTeamIds, ...leadTeamIds])]
+      // Use shared function from team-revenue-utils
+      const allTeamIds = await getMyTeamIds(user.id)
       setMyTeamIds(allTeamIds)
       setTeamsLoaded(true)
 
       logger.debug('Team Membership', {
         userId: user.id,
-        isLead: leadTeamIds.length > 0,
-        memberOfTeams: memberTeamIds.length,
-        leadOfTeams: leadTeamIds.length,
         totalTeams: allTeamIds.length,
         teamIds: allTeamIds
       }, { context: 'StaffBookings' })
@@ -112,10 +99,8 @@ export function useStaffBookings() {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const startOfMonthStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
 
-      // Build filter condition
-      const filterCondition = myTeamIds.length > 0
-        ? `staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`
-        : null
+      // Build filter condition (shared function)
+      const filterCondition = buildTeamFilterCondition(user.id, myTeamIds)
 
       // Run all queries in parallel
       const [
@@ -203,11 +188,11 @@ export function useStaffBookings() {
           }
         })(),
 
-        // Earnings
+        // Earnings - include team_id, staff_id, team_member_count for proper revenue calculation
         (async () => {
           let query = supabase
             .from('bookings')
-            .select('service_packages (price), service_packages_v2:package_v2_id (name), total_price')
+            .select('service_packages (price), service_packages_v2:package_v2_id (name), total_price, team_id, staff_id, team_member_count')
             .eq('status', 'completed')
             .gte('booking_date', startOfMonthStr)
           if (filterCondition) {
@@ -226,11 +211,19 @@ export function useStaffBookings() {
         ? reviewsResult.reduce((sum: number, r: ReviewData) => sum + r.rating, 0) / reviewsResult.length
         : 0
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalEarnings = (earningsResult as any[])?.reduce((sum, booking) => {
-        // Use total_price for both V1 and V2 bookings
-        return sum + (booking.total_price || 0)
-      }, 0) || 0
+      // Calculate earnings using proper team division
+      const earningsBookings = (earningsResult || []) as Array<{
+        total_price: number
+        team_id: string | null
+        staff_id: string | null
+        team_member_count?: number | null
+      }>
+      const earningsTeamIds = getUniqueTeamIds(earningsBookings)
+      const earningsTeamMemberCounts = await getTeamMemberCounts(earningsTeamIds)
+
+      const totalEarnings = earningsBookings.reduce((sum, booking) => {
+        return sum + calculateBookingRevenue(booking, earningsTeamMemberCounts)
+      }, 0)
 
       setStats({
         jobsToday: jobsTodayResult || 0,
@@ -271,10 +264,8 @@ export function useStaffBookings() {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`
 
-      // Build filter condition for team bookings
-      const filterCondition = myTeamIds.length > 0
-        ? `staff_id.eq.${user.id},team_id.in.(${myTeamIds.join(',')})`
-        : null
+      // Build filter condition for team bookings (shared function)
+      const filterCondition = buildTeamFilterCondition(user.id, myTeamIds)
 
       // ✅ Fetch all bookings in parallel using Promise.all
       const [todayResult, upcomingResult, completedResult] = await Promise.all([
