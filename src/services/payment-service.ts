@@ -34,6 +34,7 @@ export interface MarkAsPaidOptions {
 export interface RefundOptions {
   bookingId: string
   recurringGroupId?: string | null
+  sendEmail?: boolean // default: true for completeRefund
 }
 
 export interface PaymentResult {
@@ -57,6 +58,22 @@ async function sendPaymentConfirmationEmail(bookingId: string): Promise<void> {
   } catch (error) {
     console.warn('Failed to send payment confirmation email:', error)
     // Don't throw - payment is still successful
+  }
+}
+
+/**
+ * ส่ง refund confirmation email
+ * ไม่ throw error - refund ยังถือว่าสำเร็จแม้ส่ง email ไม่ได้
+ */
+async function sendRefundConfirmationEmail(bookingId: string): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-refund-confirmation', {
+      body: { bookingId },
+    })
+    console.log('Refund confirmation email sent for booking:', bookingId)
+  } catch (error) {
+    console.warn('Failed to send refund confirmation email:', error)
+    // Don't throw - refund is still successful
   }
 }
 
@@ -274,6 +291,7 @@ export async function requestRefund(
  *
  * ใช้เมื่อคืนเงินสำเร็จแล้ว
  * เปลี่ยน payment_status จาก 'refund_pending' → 'refunded'
+ * ส่ง refund confirmation email อัตโนมัติ
  *
  * @param options - RefundOptions
  * @returns PaymentResult
@@ -281,7 +299,7 @@ export async function requestRefund(
 export async function completeRefund(
   options: RefundOptions
 ): Promise<PaymentResult> {
-  const { bookingId, recurringGroupId } = options
+  const { bookingId, recurringGroupId, sendEmail = true } = options
 
   const updateData = {
     payment_status: 'refunded' as const,
@@ -315,6 +333,11 @@ export async function completeRefund(
       if (error) {
         return { success: false, count: 0, error: error.message }
       }
+    }
+
+    // Send refund confirmation email
+    if (sendEmail) {
+      await sendRefundConfirmationEmail(bookingId)
     }
 
     return { success: true, count }
