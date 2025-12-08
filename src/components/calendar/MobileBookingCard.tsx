@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Booking } from '@/types/booking'
-import { STATUS_LABELS, STATUS_COLORS } from '@/constants/booking-status'
+import { STATUS_LABELS, STATUS_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { formatTime } from '@/lib/booking-utils'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -177,26 +177,12 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
               </span>
             </div>
 
-            {/* Payment Status - Hidden for staff view */}
-            {!hidePaymentStatus && booking.payment_status && (
+            {/* Payment Status - Hidden for staff view, using centralized constants */}
+            {!hidePaymentStatus && booking.payment_status && PAYMENT_STATUS_COLORS[booking.payment_status as PaymentStatus] && (
               <div className="flex items-center gap-2 mt-1.5">
-                {booking.payment_status === 'paid' ? (
-                  <Badge className="text-[10px] font-medium bg-emerald-100 text-emerald-800 border-emerald-300">
-                    Paid
-                  </Badge>
-                ) : booking.payment_status === 'pending_verification' ? (
-                  <Badge className="text-[10px] font-medium bg-yellow-100 text-yellow-800 border-yellow-300">
-                    Verifying
-                  </Badge>
-                ) : booking.payment_status === 'unpaid' ? (
-                  <Badge className="text-[10px] font-medium bg-orange-100 text-orange-800 border-orange-300">
-                    Unpaid
-                  </Badge>
-                ) : booking.payment_status === 'partial' ? (
-                  <Badge className="text-[10px] font-medium bg-amber-100 text-amber-800 border-amber-300">
-                    Partial
-                  </Badge>
-                ) : null}
+                <Badge className={`text-[10px] font-medium ${PAYMENT_STATUS_COLORS[booking.payment_status as PaymentStatus]}`}>
+                  {PAYMENT_STATUS_LABELS[booking.payment_status as PaymentStatus]}
+                </Badge>
               </div>
             )}
 

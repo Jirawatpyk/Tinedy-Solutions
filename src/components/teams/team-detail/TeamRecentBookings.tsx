@@ -97,7 +97,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
     }
   }, [teamId, currentPage, statusFilter])
 
-  const modal = useBookingDetailModal({ refresh: loadRecentBookings })
+  const modal = useBookingDetailModal({ refresh: loadRecentBookings, bookings })
 
   useEffect(() => {
     loadRecentBookings()

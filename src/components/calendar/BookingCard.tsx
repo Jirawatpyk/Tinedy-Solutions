@@ -12,7 +12,7 @@ import React from 'react'
 import { Clock, User, Briefcase, Users, AlertTriangle, Calendar, DollarSign, CreditCard } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS } from '@/constants/booking-status'
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { StatusBadgeEditor } from './StatusBadgeEditor'
 import { Badge } from '@/components/ui/badge'
 
@@ -162,31 +162,16 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
             </span>
           </div>
 
-          {/* Payment Status Badge */}
-          {booking.payment_status && (
-            <>
+          {/* Payment Status Badge - using centralized constants */}
+          {booking.payment_status && PAYMENT_STATUS_COLORS[booking.payment_status as PaymentStatus] && (
+            <Badge className={`text-[10px] font-medium ${PAYMENT_STATUS_COLORS[booking.payment_status as PaymentStatus]} px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0`}>
               {booking.payment_status === 'paid' ? (
-                <Badge className="text-[10px] font-medium bg-emerald-100 text-emerald-800 border-emerald-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
-                  <CreditCard className="h-2.5 w-2.5" />
-                  Paid
-                </Badge>
-              ) : booking.payment_status === 'pending_verification' ? (
-                <Badge className="text-[10px] font-medium bg-yellow-100 text-yellow-800 border-yellow-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
-                  <DollarSign className="h-2.5 w-2.5" />
-                  Verifying
-                </Badge>
-              ) : booking.payment_status === 'unpaid' ? (
-                <Badge className="text-[10px] font-medium bg-orange-100 text-orange-800 border-orange-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
-                  <DollarSign className="h-2.5 w-2.5" />
-                  Unpaid
-                </Badge>
-              ) : booking.payment_status === 'partial' ? (
-                <Badge className="text-[10px] font-medium bg-amber-100 text-amber-800 border-amber-300 px-1.5 py-0.5 flex items-center gap-1 flex-shrink-0">
-                  <DollarSign className="h-2.5 w-2.5" />
-                  Partial
-                </Badge>
-              ) : null}
-            </>
+                <CreditCard className="h-2.5 w-2.5" />
+              ) : (
+                <DollarSign className="h-2.5 w-2.5" />
+              )}
+              {PAYMENT_STATUS_LABELS[booking.payment_status as PaymentStatus]}
+            </Badge>
           )}
         </div>
 

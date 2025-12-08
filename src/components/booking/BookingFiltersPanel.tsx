@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Search, X, Calendar, SlidersHorizontal } from 'lucide-react'
 import { AdvancedFiltersModal } from './AdvancedFiltersModal'
+import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/constants/booking-status'
 import type { BookingFilterState } from '@/hooks/useBookingFilters'
 
 interface BookingFiltersPanelProps {
@@ -166,12 +167,11 @@ const BookingFiltersPanelComponent = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no_show">No Show</SelectItem>
+                  {BOOKING_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -182,9 +182,11 @@ const BookingFiltersPanelComponent = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Payment</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="pending_verification">Verifying</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
+                  {PAYMENT_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

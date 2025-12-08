@@ -23,7 +23,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 }: StaffRecentBookingsProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const modal = useBookingDetailModal({ refresh: onRefresh })
+  const modal = useBookingDetailModal({ refresh: onRefresh, bookings })
 
   // Filter bookings by booking status only
   const filteredBookings = bookings.filter(b => {
