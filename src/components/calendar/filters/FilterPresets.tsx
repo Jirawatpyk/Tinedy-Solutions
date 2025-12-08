@@ -52,7 +52,7 @@ const PRESET_CONFIGS: PresetConfig[] = [
     value: 'upcoming',
     label: 'Upcoming',
     icon: <Clock className="h-4 w-4" />,
-    description: 'Future bookings',
+    description: 'Next 30 days',
   },
   {
     value: 'pending',
