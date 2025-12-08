@@ -43,6 +43,9 @@ interface BookingDetailModalProps {
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   onMarkAsPaid: (bookingId: string, method: string) => void
   onVerifyPayment?: (bookingId: string) => void
+  onRequestRefund?: (bookingId: string) => void
+  onCompleteRefund?: (bookingId: string) => void
+  onCancelRefund?: (bookingId: string) => void
   getStatusBadge: (status: string) => React.ReactNode
   getPaymentStatusBadge: (status?: string) => React.ReactNode
   getAvailableStatuses: (currentStatus: string) => string[]
@@ -51,9 +54,10 @@ interface BookingDetailModalProps {
   isUpdatingPayment?: boolean
   isDeleting?: boolean
   actionLoading?: {
-    statusChange: boolean
-    delete: boolean
-    markAsPaid: boolean
+    statusChange?: boolean
+    delete?: boolean
+    markAsPaid?: boolean
+    refund?: boolean
   }
 }
 
@@ -67,6 +71,9 @@ export function BookingDetailModal({
   onStatusChange,
   onMarkAsPaid,
   onVerifyPayment,
+  onRequestRefund,
+  onCompleteRefund,
+  onCancelRefund,
   getStatusBadge,
   getPaymentStatusBadge,
   getAvailableStatuses,
@@ -554,7 +561,7 @@ export function BookingDetailModal({
             </div>
 
             {/* Payment Actions */}
-            {booking.payment_status !== 'paid' && (
+            {booking.payment_status !== 'refunded' && (
               <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                 {/* Verify button - for pending_verification status with slip */}
                 {booking.payment_status === 'pending_verification' && booking.payment_slip_url && onVerifyPayment && (
@@ -582,12 +589,49 @@ export function BookingDetailModal({
                     </SelectContent>
                   </Select>
                 )}
+                {/* Request Refund - for paid status */}
+                {booking.payment_status === 'paid' && onRequestRefund && (
+                  <Button
+                    onClick={() => onRequestRefund(booking.id)}
+                    disabled={actionLoading?.refund}
+                    size="sm"
+                    variant="outline"
+                    className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                  >
+                    {actionLoading?.refund ? "Processing..." : "Request Refund"}
+                  </Button>
+                )}
+                {/* Refund Actions - for refund_pending status */}
+                {booking.payment_status === 'refund_pending' && (
+                  <>
+                    {onCompleteRefund && (
+                      <Button
+                        onClick={() => onCompleteRefund(booking.id)}
+                        disabled={actionLoading?.refund}
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        {actionLoading?.refund ? "Processing..." : "Complete Refund"}
+                      </Button>
+                    )}
+                    {onCancelRefund && (
+                      <Button
+                        onClick={() => onCancelRefund(booking.id)}
+                        disabled={actionLoading?.refund}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Cancel Refund
+                      </Button>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </CollapsibleSection>
 
           {/* Payment Link - Show only if unpaid */}
-          {booking.payment_status !== 'paid' && (
+          {booking.payment_status === 'unpaid' && (
             <CollapsibleSection
               title={
                 <h3 className="font-semibold text-lg flex items-center gap-2">

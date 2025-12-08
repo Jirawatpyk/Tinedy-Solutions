@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
@@ -15,6 +15,10 @@ export interface UseBookingDetailModalProps {
    * Callback to refresh data after actions
    */
   refresh: () => void
+  /**
+   * Bookings array for syncing selectedBooking with realtime updates
+   */
+  bookings?: Booking[]
 }
 
 export interface UseBookingDetailModalReturn {
@@ -32,6 +36,9 @@ export interface UseBookingDetailModalReturn {
     onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
     onMarkAsPaid: (bookingId: string, method: string) => void
     onVerifyPayment?: (bookingId: string) => void
+    onRequestRefund?: (bookingId: string) => void
+    onCompleteRefund?: (bookingId: string) => void
+    onCancelRefund?: (bookingId: string) => void
     getStatusBadge: (status: string) => React.ReactNode
     getPaymentStatusBadge: (status?: string) => React.ReactNode
     getAvailableStatuses: (currentStatus: string) => string[]
@@ -49,7 +56,8 @@ export interface UseBookingDetailModalReturn {
  * @returns Modal state, handlers, and props
  */
 export function useBookingDetailModal({
-  refresh
+  refresh,
+  bookings = [],
 }: UseBookingDetailModalProps): UseBookingDetailModalReturn {
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
@@ -57,8 +65,24 @@ export function useBookingDetailModal({
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
+  // Sync selectedBooking with bookings array when data updates (realtime)
+  useEffect(() => {
+    if (selectedBooking && bookings.length > 0) {
+      const updatedBooking = bookings.find((b) => b.id === selectedBooking.id)
+      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(selectedBooking)) {
+        setSelectedBooking(updatedBooking)
+      }
+    }
+  }, [bookings, selectedBooking])
+
   // Use centralized payment actions
-  const { markAsPaid: handleMarkAsPaid, verifyPayment: handleVerifyPayment } = usePaymentActions({
+  const {
+    markAsPaid: handleMarkAsPaid,
+    verifyPayment: handleVerifyPayment,
+    requestRefund: handleRequestRefund,
+    completeRefund: handleCompleteRefund,
+    cancelRefund: handleCancelRefund,
+  } = usePaymentActions({
     selectedBooking,
     setSelectedBooking,
     onSuccess: refresh,
@@ -180,6 +204,9 @@ export function useBookingDetailModal({
       onStatusChange: handleStatusChange,
       onMarkAsPaid: handleMarkAsPaid,
       onVerifyPayment: handleVerifyPayment,
+      onRequestRefund: handleRequestRefund,
+      onCompleteRefund: handleCompleteRefund,
+      onCancelRefund: handleCancelRefund,
       getStatusBadge,
       getPaymentStatusBadge,
       getAvailableStatuses: getAvailableStatusesCallback,
