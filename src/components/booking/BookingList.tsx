@@ -96,7 +96,7 @@ function BookingListComponent({
     <div className="space-y-4">
       {/* Pagination Controls - Top */}
       {metadata.totalItems > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
+        <div className="flex flex-row items-center justify-between gap-4 mb-4 pb-4 border-b">
           <div className="flex items-center gap-2">
             <Label htmlFor="itemsPerPage" className="text-xs sm:text-sm text-muted-foreground">
               Show:
@@ -197,6 +197,7 @@ function BookingListComponent({
                               {booking.customers?.email}
                             </p>
                           </div>
+                          {/* Mobile: Status badge บนขวา */}
                           <div className="sm:hidden flex-shrink-0">
                             {getStatusBadge(booking.status)}
                           </div>
@@ -310,36 +311,14 @@ function BookingListComponent({
                               Restore
                             </Button>
                           ) : (
-                            <>
-                              {!['completed', 'cancelled', 'no_show'].includes(booking.status) && (
-                                <Select
-                                  value={booking.status}
-                                  onValueChange={(value) =>
-                                    onStatusChange(booking.id, booking.status, value)
-                                  }
-                                  disabled={isArchived}
-                                >
-                                  <SelectTrigger className="w-24 h-7 text-[10px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {getAvailableStatuses(booking.status).map((status) => (
-                                      <SelectItem key={status} value={status}>
-                                        {getStatusLabel(status)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                              <PermissionAwareDeleteButton
-                                resource="bookings"
-                                itemName={`Booking #${booking.id.slice(0, 8)}`}
-                                onDelete={() => onDeleteBooking(booking.id)}
-                                onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
-                                cancelText="Archive"
-                                className="h-7 w-7"
-                              />
-                            </>
+                            <PermissionAwareDeleteButton
+                              resource="bookings"
+                              itemName={`Booking #${booking.id.slice(0, 8)}`}
+                              onDelete={() => onDeleteBooking(booking.id)}
+                              onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
+                              cancelText="Archive"
+                              className="h-7 w-7"
+                            />
                           )}
                         </div>
                       </div>

@@ -98,6 +98,17 @@ export function RecurringBookingCard({
               <Badge variant="outline" className="text-[10px] sm:text-xs">
                 {getRecurringPatternLabel(group.pattern)}
               </Badge>
+              {/* Mobile: Expand button บนขวา */}
+              <Button variant="ghost" size="sm" onClick={(e) => {
+                e.stopPropagation()
+                setExpanded(!expanded)
+              }} className="sm:hidden h-6 w-6 p-0 ml-auto">
+                {expanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
             </div>
 
             {/* ข้อมูลลูกค้าและ package */}
@@ -227,7 +238,7 @@ export function RecurringBookingCard({
         </div>
 
         {/* Mobile: ราคาและ Payment Status ข้างล่าง */}
-        <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t">
+        <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-baseline gap-1.5">
             <p className="font-semibold text-tinedy-dark">
               {formatCurrency(totalAmount)}
@@ -245,16 +256,16 @@ export function RecurringBookingCard({
                 </StatusBadge>
               )
             })()}
-            <Button variant="ghost" size="sm" onClick={(e) => {
-              e.stopPropagation()
-              setExpanded(!expanded)
-            }} className="h-7 w-7 p-0">
-              {expanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
+            {(onDeleteGroup || onArchiveGroup) && (
+              <PermissionAwareDeleteButton
+                resource="bookings"
+                itemName={`Recurring Group (${group.totalBookings} bookings)`}
+                onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
+                onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
+                cancelText="Archive Group"
+                className="h-7 w-7"
+              />
+            )}
           </div>
         </div>
       </CardHeader>
