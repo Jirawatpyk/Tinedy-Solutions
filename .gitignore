@@ -33,3 +33,4 @@ coverage
 *.sln
 *.sw?
 nul
+supabase/.temp/

@@ -511,10 +511,12 @@ function generateRecurringPaymentConfirmationEmail(data: {
     })
 
     return `
-      <div style="display: flex; justify-content: space-between; padding: 12px; background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'}; border-radius: 4px; margin-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-weight: 600; color: #3b82f6; min-width: 40px;">#${index + 1}</span>
+      <div style="padding: 12px; background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'}; border-radius: 4px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="font-weight: 600; color: #3b82f6; min-width: 32px;">#${index + 1}</span>
           <span style="color: #1f2937;">📅 ${formattedDate}</span>
+        </div>
+        <div style="margin-left: 40px;">
           <span style="color: #6b7280; font-size: 14px;">🕐 ${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}</span>
         </div>
       </div>
