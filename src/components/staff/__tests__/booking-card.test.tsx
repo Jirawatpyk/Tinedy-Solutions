@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingCard } from '../booking-card'
 import { createMockAuthenticatedContext } from '@/test/mocks/auth-context'
-import type { StaffBooking } from '@/hooks/use-staff-bookings'
+import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
 // Mock AuthContext
 const mockAuthContext = createMockAuthenticatedContext()

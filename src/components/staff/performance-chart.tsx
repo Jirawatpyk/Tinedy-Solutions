@@ -1,9 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { type PerformanceStats } from '@/hooks/use-staff-profile'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { BarChart3 } from 'lucide-react'
+
+/**
+ * Performance stats type for the chart
+ * Matches the shape passed from dashboard.tsx
+ */
+interface PerformanceStats {
+  totalJobs: number
+  completedJobs: number
+  completionRate: number
+  averageRating: number
+  totalRevenue: number
+  monthlyData: {
+    month: string
+    jobs: number
+    revenue: number
+  }[]
+}
 
 interface PerformanceChartProps {
   stats: PerformanceStats

@@ -1,14 +1,21 @@
+/**
+ * useStaffProfile Hook
+ *
+ * Hook for Staff Profile page - manages profile data and actions.
+ *
+ * Features:
+ * - Load staff profile from auth context
+ * - Update profile (full_name, phone)
+ * - Upload avatar
+ * - Change password
+ *
+ * Note: Performance statistics moved to useStaffDashboard (My Bookings > Stats tab)
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import {
-  calculateBookingRevenue,
-  getTeamMemberCounts,
-  getUniqueTeamIds,
-  getMyTeamIds,
-  buildTeamFilterCondition
-} from '@/lib/team-revenue-utils'
 
 export interface StaffProfile {
   id: string
@@ -22,24 +29,9 @@ export interface StaffProfile {
   created_at: string
 }
 
-export interface PerformanceStats {
-  totalJobs: number
-  completedJobs: number
-  completionRate: number
-  averageRating: number
-  totalRevenue: number
-  monthlyData: {
-    month: string
-    jobs: number
-    revenue: number
-  }[]
-}
-
 export function useStaffProfile() {
   const { user, profile } = useAuth()
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null)
-  const [performanceStats, setPerformanceStats] = useState<PerformanceStats | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadProfile = useCallback(async () => {
@@ -64,178 +56,10 @@ export function useStaffProfile() {
     }
   }, [profile])
 
-  const loadPerformanceStats = useCallback(async () => {
-    if (!user) return
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Get last 6 months of data
-      const sixMonthsAgo = new Date()
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0]
-
-      // Get teams where user is a member or lead (shared function)
-      const myTeamIds = await getMyTeamIds(user.id)
-      const filterCondition = buildTeamFilterCondition(user.id, myTeamIds)
-
-      // Total jobs - include team bookings
-      let totalJobsQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .gte('booking_date', sixMonthsAgoStr)
-      if (filterCondition) {
-        totalJobsQuery = totalJobsQuery.or(filterCondition)
-      } else {
-        totalJobsQuery = totalJobsQuery.eq('staff_id', user.id)
-      }
-      const { count: totalJobs } = await totalJobsQuery
-
-      // Completed jobs - include team bookings
-      let completedJobsQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('booking_date', sixMonthsAgoStr)
-      if (filterCondition) {
-        completedJobsQuery = completedJobsQuery.or(filterCondition)
-      } else {
-        completedJobsQuery = completedJobsQuery.eq('staff_id', user.id)
-      }
-      const { count: completedJobs } = await completedJobsQuery
-
-      const completionRate = totalJobs ? ((completedJobs || 0) / totalJobs) * 100 : 0
-
-      // Average rating
-      const { data: reviews } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('staff_id', user.id)
-
-      const averageRating =
-        reviews && reviews.length > 0
-          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-          : 0
-
-      // Total revenue (from completed bookings) - Support V1 + V2
-      // Include team_id, staff_id, team_member_count for proper revenue calculation
-      let revenueQuery = supabase
-        .from('bookings')
-        .select(`
-          total_price,
-          team_id,
-          staff_id,
-          team_member_count,
-          service_packages (price),
-          service_packages_v2:package_v2_id (name)
-        `)
-        .eq('status', 'completed')
-        .gte('booking_date', sixMonthsAgoStr)
-      if (filterCondition) {
-        revenueQuery = revenueQuery.or(filterCondition)
-      } else {
-        revenueQuery = revenueQuery.eq('staff_id', user.id)
-      }
-      const { data: revenueData } = await revenueQuery
-
-      // Get team member counts for old bookings without stored count
-      const bookingsForRevenue = (revenueData || []) as Array<{
-        total_price: number
-        team_id: string | null
-        staff_id: string | null
-        team_member_count?: number | null
-      }>
-      const teamIdsNeedingCounts = getUniqueTeamIds(bookingsForRevenue)
-      const teamMemberCounts = await getTeamMemberCounts(teamIdsNeedingCounts)
-
-      // Calculate revenue using proper team division
-      const totalRevenue = bookingsForRevenue.reduce((sum, booking) => {
-        return sum + calculateBookingRevenue(booking, teamMemberCounts)
-      }, 0)
-
-      // Monthly breakdown - Support V1 + V2
-      // Include team_id, staff_id, team_member_count for proper revenue calculation
-      let monthlyQuery = supabase
-        .from('bookings')
-        .select(`
-          booking_date,
-          status,
-          total_price,
-          team_id,
-          staff_id,
-          team_member_count,
-          service_packages (price),
-          service_packages_v2:package_v2_id (name)
-        `)
-        .gte('booking_date', sixMonthsAgoStr)
-        .order('booking_date', { ascending: true })
-      if (filterCondition) {
-        monthlyQuery = monthlyQuery.or(filterCondition)
-      } else {
-        monthlyQuery = monthlyQuery.eq('staff_id', user.id)
-      }
-      const { data: monthlyBookings } = await monthlyQuery
-
-      // Get team member counts for monthly bookings
-      const monthlyBookingsTyped = (monthlyBookings || []) as Array<{
-        booking_date: string
-        status: string
-        total_price: number
-        team_id: string | null
-        staff_id: string | null
-        team_member_count?: number | null
-      }>
-      const monthlyTeamIds = getUniqueTeamIds(
-        monthlyBookingsTyped.filter(b => b.status === 'completed')
-      )
-      const monthlyTeamMemberCounts = await getTeamMemberCounts(monthlyTeamIds)
-
-      // Group by month - Use calculateBookingRevenue for proper team division
-      const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
-      monthlyBookingsTyped.forEach((booking) => {
-        const month = new Date(booking.booking_date).toISOString().slice(0, 7) // YYYY-MM
-        if (!monthlyMap.has(month)) {
-          monthlyMap.set(month, { jobs: 0, revenue: 0 })
-        }
-        const data = monthlyMap.get(month)!
-        data.jobs += 1
-        if (booking.status === 'completed') {
-          // Use calculateBookingRevenue for proper team division
-          data.revenue += calculateBookingRevenue(booking, monthlyTeamMemberCounts)
-        }
-      })
-
-      const monthlyData = Array.from(monthlyMap.entries())
-        .map(([month, data]) => ({
-          month,
-          jobs: data.jobs,
-          revenue: data.revenue,
-        }))
-        .sort((a, b) => a.month.localeCompare(b.month))
-
-      setPerformanceStats({
-        totalJobs: totalJobs || 0,
-        completedJobs: completedJobs || 0,
-        completionRate: Math.round(completionRate),
-        averageRating: Math.round(averageRating * 10) / 10,
-        totalRevenue,
-        monthlyData,
-      })
-    } catch (err) {
-      console.error('Error loading performance stats:', err)
-      const errorMsg = mapErrorToUserMessage(err, 'profile')
-      setError(errorMsg.description)
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
-
   useEffect(() => {
     if (!user || !profile) return
     loadProfile()
-    loadPerformanceStats()
-  }, [user, profile, loadProfile, loadPerformanceStats])
+  }, [user, profile, loadProfile])
 
   async function updateProfile(updates: {
     full_name?: string
@@ -332,15 +156,10 @@ export function useStaffProfile() {
 
   return {
     staffProfile,
-    performanceStats,
-    loading,
     error,
     updateProfile,
     uploadAvatar,
     changePassword,
-    refresh: () => {
-      loadProfile()
-      loadPerformanceStats()
-    },
+    refresh: loadProfile,
   }
 }
