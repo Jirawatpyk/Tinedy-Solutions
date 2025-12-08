@@ -85,7 +85,13 @@ import {
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
-import { markAsPaid as markAsPaidService, verifyPayment as verifyPaymentService } from '@/services/payment-service'
+import {
+  markAsPaid as markAsPaidService,
+  verifyPayment as verifyPaymentService,
+  requestRefund as requestRefundService,
+  completeRefund as completeRefundService,
+  cancelRefund as cancelRefundService,
+} from '@/services/payment-service'
 
 interface CustomerStats {
   total_bookings: number
@@ -179,6 +185,7 @@ export function AdminCustomerDetail() {
     customerId: id || '',
     showArchived: false,
     enabled: !!id,
+    enableRealtime: true,
   })
 
   // Cast bookings to CustomerBooking[] type (compatible with Booking type from hook)
@@ -1712,6 +1719,85 @@ export function AdminCustomerDetail() {
                 description: result.count > 1
                   ? `${result.count} bookings verified successfully`
                   : 'Payment verified successfully',
+              })
+
+              refetchBookings()
+            } catch (error) {
+              const errorMsg = mapErrorToUserMessage(error, 'booking')
+              toast({
+                title: errorMsg.title,
+                description: errorMsg.description,
+                variant: 'destructive',
+              })
+            }
+          }}
+          onRequestRefund={async (bookingId) => {
+            try {
+              const booking = bookings.find(b => b.id === bookingId)
+              const result = await requestRefundService({
+                bookingId,
+                recurringGroupId: booking?.recurring_group_id || undefined,
+              })
+
+              if (!result.success) throw new Error(result.error)
+
+              toast({
+                title: 'Refund Requested',
+                description: result.count > 1
+                  ? `${result.count} bookings marked for refund`
+                  : 'Booking marked for refund',
+              })
+
+              refetchBookings()
+            } catch (error) {
+              const errorMsg = mapErrorToUserMessage(error, 'booking')
+              toast({
+                title: errorMsg.title,
+                description: errorMsg.description,
+                variant: 'destructive',
+              })
+            }
+          }}
+          onCompleteRefund={async (bookingId) => {
+            try {
+              const booking = bookings.find(b => b.id === bookingId)
+              const result = await completeRefundService({
+                bookingId,
+                recurringGroupId: booking?.recurring_group_id || undefined,
+              })
+
+              if (!result.success) throw new Error(result.error)
+
+              toast({
+                title: 'Refund Completed',
+                description: result.count > 1
+                  ? `${result.count} bookings refunded`
+                  : 'Booking refunded successfully',
+              })
+
+              refetchBookings()
+            } catch (error) {
+              const errorMsg = mapErrorToUserMessage(error, 'booking')
+              toast({
+                title: errorMsg.title,
+                description: errorMsg.description,
+                variant: 'destructive',
+              })
+            }
+          }}
+          onCancelRefund={async (bookingId) => {
+            try {
+              const booking = bookings.find(b => b.id === bookingId)
+              const result = await cancelRefundService({
+                bookingId,
+                recurringGroupId: booking?.recurring_group_id || undefined,
+              })
+
+              if (!result.success) throw new Error(result.error)
+
+              toast({
+                title: 'Refund Cancelled',
+                description: 'Booking restored to paid status',
               })
 
               refetchBookings()
