@@ -24,6 +24,7 @@ export function useDashboardActions(
     delete: false,
     markAsPaid: false,
     verifyPayment: false,
+    refund: false,
   })
 
   // Delete confirmation dialog state
@@ -40,7 +41,13 @@ export function useDashboardActions(
   }, [onBookingUpdate])
 
   // Use centralized payment actions
-  const { markAsPaid: paymentMarkAsPaid, verifyPayment: paymentVerifyPayment } = usePaymentActions({
+  const {
+    markAsPaid: paymentMarkAsPaid,
+    verifyPayment: paymentVerifyPayment,
+    requestRefund: paymentRequestRefund,
+    completeRefund: paymentCompleteRefund,
+    cancelRefund: paymentCancelRefund,
+  } = usePaymentActions({
     selectedBooking,
     setSelectedBooking: handleBookingUpdate,
     onSuccess: refresh,
@@ -163,12 +170,51 @@ export function useDashboardActions(
     [paymentVerifyPayment]
   )
 
+  const requestRefund = useCallback(
+    async (bookingId: string) => {
+      setActionLoading((prev) => ({ ...prev, refund: true }))
+      try {
+        await paymentRequestRefund(bookingId)
+      } finally {
+        setActionLoading((prev) => ({ ...prev, refund: false }))
+      }
+    },
+    [paymentRequestRefund]
+  )
+
+  const completeRefund = useCallback(
+    async (bookingId: string) => {
+      setActionLoading((prev) => ({ ...prev, refund: true }))
+      try {
+        await paymentCompleteRefund(bookingId)
+      } finally {
+        setActionLoading((prev) => ({ ...prev, refund: false }))
+      }
+    },
+    [paymentCompleteRefund]
+  )
+
+  const cancelRefund = useCallback(
+    async (bookingId: string) => {
+      setActionLoading((prev) => ({ ...prev, refund: true }))
+      try {
+        await paymentCancelRefund(bookingId)
+      } finally {
+        setActionLoading((prev) => ({ ...prev, refund: false }))
+      }
+    },
+    [paymentCancelRefund]
+  )
+
   return {
     handleStatusChange,
     deleteBooking,
     archiveBooking,
     markAsPaid,
     verifyPayment,
+    requestRefund,
+    completeRefund,
+    cancelRefund,
     actionLoading,
     // Delete confirmation dialog
     deleteConfirm,

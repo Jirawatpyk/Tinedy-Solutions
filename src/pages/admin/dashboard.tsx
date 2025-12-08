@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
@@ -37,6 +37,18 @@ export function AdminDashboard() {
   const { packages: servicePackages } = useServicePackages()
   const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
   const { teamsList: teams } = useTeamsList({ enableRealtime: true })
+
+  // Sync selectedBooking with todayBookings when data updates (realtime)
+  useEffect(() => {
+    if (modal.selectedBooking && dashboardData.todayBookings.length > 0) {
+      const updatedBooking = dashboardData.todayBookings.find(
+        (b) => b.id === modal.selectedBooking?.id
+      )
+      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(modal.selectedBooking)) {
+        modal.updateSelectedBooking(updatedBooking)
+      }
+    }
+  }, [dashboardData.todayBookings, modal.selectedBooking, modal.updateSelectedBooking])
 
   // Edit Modal State
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
@@ -216,11 +228,18 @@ export function AdminDashboard() {
         onStatusChange={actions.handleStatusChange}
         onMarkAsPaid={actions.markAsPaid}
         onVerifyPayment={actions.verifyPayment}
+        onRequestRefund={actions.requestRefund}
+        onCompleteRefund={actions.completeRefund}
+        onCancelRefund={actions.cancelRefund}
         getStatusBadge={getStatusBadge}
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
-        actionLoading={actions.actionLoading}
+        actionLoading={{
+          statusChange: actions.actionLoading.statusChange,
+          delete: actions.actionLoading.delete,
+          markAsPaid: actions.actionLoading.markAsPaid,
+        }}
       />
 
       {/* Edit Booking Modal */}

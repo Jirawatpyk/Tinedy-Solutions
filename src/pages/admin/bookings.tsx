@@ -342,8 +342,14 @@ export function AdminBookings() {
     onSuccess: refresh,
   })
 
-  // Use centralized payment actions for verifyPayment
-  const { verifyPayment: handleVerifyPayment } = usePaymentActions({
+  // Use centralized payment actions for verifyPayment and refund
+  const {
+    verifyPayment: handleVerifyPayment,
+    requestRefund: handleRequestRefund,
+    completeRefund: handleCompleteRefund,
+    cancelRefund: handleCancelRefund,
+    isLoading: paymentActionsLoading,
+  } = usePaymentActions({
     selectedBooking,
     setSelectedBooking,
     onSuccess: refresh,
@@ -1421,10 +1427,18 @@ export function AdminBookings() {
         onStatusChange={handleStatusChange}
         onMarkAsPaid={markAsPaid}
         onVerifyPayment={handleVerifyPayment}
+        onRequestRefund={handleRequestRefund}
+        onCompleteRefund={handleCompleteRefund}
+        onCancelRefund={handleCancelRefund}
         getStatusBadge={getStatusBadge}
         getPaymentStatusBadge={getPaymentStatusBadge}
         getAvailableStatuses={getAvailableStatuses}
         getStatusLabel={getStatusLabel}
+        actionLoading={{
+          statusChange: false,
+          delete: false,
+          markAsPaid: paymentActionsLoading.markAsPaid,
+        }}
       />
 
       {/* Edit Booking Modal */}
