@@ -50,6 +50,8 @@ interface RecurringBookingCardProps {
   onRestoreBooking?: (bookingId: string) => void
   onStatusChange?: (bookingId: string, currentStatus: string, newStatus: string) => void
   onVerifyPayment?: (bookingId: string) => void
+  /** Verify payment for entire recurring group */
+  onVerifyRecurringGroup?: (recurringGroupId: string) => void
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
 }
@@ -69,6 +71,7 @@ export function RecurringBookingCard({
   onRestoreBooking,
   onStatusChange,
   onVerifyPayment,
+  onVerifyRecurringGroup,
   getAvailableStatuses,
   getStatusLabel
 }: RecurringBookingCardProps) {
@@ -214,13 +217,19 @@ export function RecurringBookingCard({
                     <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
                       {getPaymentStatusLabel(paymentStatus)}
                     </StatusBadge>
-                    {paymentStatus === 'pending_verification' && onVerifyPayment && firstBooking.payment_slip_url && (
+                    {paymentStatus === 'pending_verification' && (onVerifyRecurringGroup || onVerifyPayment) && firstBooking.payment_slip_url && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onVerifyPayment(firstBooking.id)
+                          // Use onVerifyRecurringGroup to verify ALL bookings in group
+                          // Fallback to onVerifyPayment for single booking (backward compatibility)
+                          if (onVerifyRecurringGroup && group.groupId) {
+                            onVerifyRecurringGroup(group.groupId)
+                          } else if (onVerifyPayment) {
+                            onVerifyPayment(firstBooking.id)
+                          }
                         }}
                         className="h-7 text-xs border-green-500 text-green-700 hover:bg-green-50"
                       >

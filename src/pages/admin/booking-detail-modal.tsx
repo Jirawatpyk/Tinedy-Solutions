@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown } from 'lucide-react'
+import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown, FileText } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -442,6 +442,20 @@ export function BookingDetailModal({
                   )}
                 </div>
               )}
+            </CollapsibleSection>
+          )}
+
+          {/* Notes Section */}
+          {booking.notes && (
+            <CollapsibleSection
+              title={
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-tinedy-blue" />
+                  Notes
+                </h3>
+              }
+            >
+              <p className="text-sm whitespace-pre-wrap">{booking.notes}</p>
             </CollapsibleSection>
           )}
 

@@ -57,8 +57,9 @@ export function CollapsibleSection({
       <div
         className={cn(
           // Mobile: Collapsible with animation
-          'md:block overflow-hidden transition-all duration-200',
-          isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+          // Use overflow-visible when open to show focus rings, overflow-hidden when closed for animation
+          'md:block transition-all duration-200',
+          isOpen ? 'max-h-[2000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'
         )}
       >
         {children}

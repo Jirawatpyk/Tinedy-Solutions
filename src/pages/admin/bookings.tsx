@@ -355,6 +355,37 @@ export function AdminBookings() {
     onSuccess: refresh,
   })
 
+  // Handler for verifying entire recurring group payment
+  const handleVerifyRecurringGroup = useCallback(async (recurringGroupId: string) => {
+    try {
+      const { verifyPayment } = await import('@/services/payment-service')
+      const result = await verifyPayment({
+        bookingId: '', // Not used when recurringGroupId is provided
+        recurringGroupId,
+      })
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      toast({
+        title: 'Success',
+        description: result.count > 1
+          ? `${result.count} bookings verified successfully`
+          : 'Payment verified successfully',
+      })
+
+      refresh()
+    } catch (error) {
+      console.error('Error verifying recurring group:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to verify payment',
+        variant: 'destructive',
+      })
+    }
+  }, [toast, refresh])
+
   useEffect(() => {
     // OPTIMIZE: Run all queries in parallel for better performance
     // Bookings โหลดผ่าน useBookings hook อัตโนมัติแล้ว
@@ -1560,6 +1591,7 @@ export function AdminBookings() {
             onArchiveBooking={archiveBooking}
             onRestoreBooking={restoreBooking}
             onVerifyPayment={handleVerifyPayment}
+            onVerifyRecurringGroup={handleVerifyRecurringGroup}
             showArchived={showArchived}
             onStatusChange={handleStatusChange}
             formatTime={formatTime}

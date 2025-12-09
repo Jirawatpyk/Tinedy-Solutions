@@ -43,6 +43,8 @@ interface BookingListProps {
   onArchiveBooking?: (bookingId: string) => void
   onRestoreBooking?: (bookingId: string) => void
   onVerifyPayment?: (bookingId: string) => void
+  /** Verify payment for entire recurring group */
+  onVerifyRecurringGroup?: (recurringGroupId: string) => void
   showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
@@ -84,6 +86,7 @@ function BookingListComponent({
   onArchiveBooking,
   onRestoreBooking,
   onVerifyPayment,
+  onVerifyRecurringGroup,
   showArchived: _showArchived,
   onStatusChange,
   formatTime,
@@ -161,6 +164,7 @@ function BookingListComponent({
                     onRestoreBooking={onRestoreBooking}
                     onStatusChange={onStatusChange}
                     onVerifyPayment={onVerifyPayment}
+                    onVerifyRecurringGroup={onVerifyRecurringGroup}
                     getAvailableStatuses={getAvailableStatuses}
                     getStatusLabel={getStatusLabel}
                   />
