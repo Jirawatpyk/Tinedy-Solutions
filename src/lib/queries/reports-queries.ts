@@ -202,7 +202,8 @@ export async function fetchReportsStaff(): Promise<{
   staff: Staff[]
   staffWithBookings: StaffWithBookings[]
 }> {
-  // Fetch staff, staff bookings, team members, and team bookings in parallel
+  // Fetch staff, staff bookings, team members (with joined_at + left_at), and team bookings in parallel
+  // Note: Include left_at to preserve revenue history for staff who left teams
   const [staffResult, staffBookingsResult, teamMembersResult, teamBookingsResult] = await Promise.all([
     supabase
       .from('profiles')
@@ -214,7 +215,7 @@ export async function fetchReportsStaff(): Promise<{
       .not('staff_id', 'is', null),
     supabase
       .from('team_members')
-      .select('team_id, staff_id'),
+      .select('team_id, staff_id, joined_at, left_at'),
     supabase
       .from('bookings')
       .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, team_member_count, created_at')
@@ -241,20 +242,32 @@ export async function fetchReportsStaff(): Promise<{
 
   const staff = staffData || []
 
-  // Create map of staff -> teams they belong to
-  const staffToTeamsMap = new Map<string, string[]>()
+  // Create map of staff -> teams they belong to (with joined_at + left_at dates)
+  // Includes both active and former members to preserve revenue history
+  const staffToTeamsMap = new Map<string, Array<{ team_id: string; joined_at: string; left_at: string | null }>>()
   teamMembersData?.forEach((tm) => {
     if (!staffToTeamsMap.has(tm.staff_id)) {
       staffToTeamsMap.set(tm.staff_id, [])
     }
-    staffToTeamsMap.get(tm.staff_id)?.push(tm.team_id)
+    const tmTyped = tm as { team_id: string; staff_id: string; joined_at?: string | null; left_at?: string | null }
+    staffToTeamsMap.get(tm.staff_id)?.push({
+      team_id: tm.team_id,
+      // Use joined_at if available, fallback to very old date
+      joined_at: tmTyped.joined_at || '2020-01-01T00:00:00Z',
+      // left_at = null means still active member
+      left_at: tmTyped.left_at || null
+    })
   })
 
-  // Count team members for each team
+  // Count ACTIVE team members for each team (exclude left members)
   const teamMemberCounts = new Map<string, number>()
   teamMembersData?.forEach((tm) => {
-    const count = teamMemberCounts.get(tm.team_id) || 0
-    teamMemberCounts.set(tm.team_id, count + 1)
+    const tmTyped = tm as { team_id: string; left_at?: string | null }
+    // Only count active members (left_at IS NULL)
+    if (!tmTyped.left_at) {
+      const count = teamMemberCounts.get(tm.team_id) || 0
+      teamMemberCounts.set(tm.team_id, count + 1)
+    }
   })
 
   // Group team bookings by team_id
@@ -284,12 +297,28 @@ export async function fetchReportsStaff(): Promise<{
   })
 
   // Add team bookings for each staff member (with divided revenue)
+  // Filter by membership period: booking created between joined_at and left_at
+  // This preserves revenue for staff who have left the team
   staffData?.forEach((staffMember) => {
-    const teams = staffToTeamsMap.get(staffMember.id) || []
-    teams.forEach((teamId) => {
+    const teamMemberships = staffToTeamsMap.get(staffMember.id) || []
+    teamMemberships.forEach(({ team_id: teamId, joined_at, left_at }) => {
       const teamBookings = teamBookingsMap.get(teamId) || []
+      const staffJoinedAt = new Date(joined_at)
+      const staffLeftAt = left_at ? new Date(left_at) : null
 
       teamBookings.forEach((booking) => {
+        const bookingCreatedAt = new Date(booking.created_at)
+
+        // Only include bookings created AFTER this staff joined the team
+        if (bookingCreatedAt < staffJoinedAt) {
+          return // Skip - booking was created before staff joined
+        }
+
+        // Only include bookings created BEFORE staff left (if they left)
+        if (staffLeftAt && bookingCreatedAt > staffLeftAt) {
+          return // Skip - booking was created after staff left
+        }
+
         if (!staffBookingsMap.has(staffMember.id)) {
           staffBookingsMap.set(staffMember.id, [])
         }

@@ -189,11 +189,12 @@ export function useStaffAvailabilityCheck({
       const results = await Promise.all(
         allStaff.map(async (staff) => {
           // Check booking conflicts (both individual staff bookings AND team bookings)
-          // First, get all teams this staff is a member of
+          // First, get all ACTIVE teams this staff is a member of (left_at IS NULL)
           const { data: staffTeams } = await supabase
             .from('team_members')
             .select('team_id')
             .eq('staff_id', staff.id)
+            .is('left_at', null)
 
           const teamIds = (staffTeams || []).map(tm => tm.team_id)
 
@@ -432,14 +433,15 @@ export function useStaffAvailabilityCheck({
 
       setServiceType(serviceTypeValue)
 
-      // 2. Get all active teams with their members
+      // 2. Get all active teams with their ACTIVE members (left_at IS NULL)
       const { data: teams } = await supabase
         .from('teams')
         .select(`
           id,
           name,
-          team_members (
+          team_members!inner (
             staff_id,
+            left_at,
             profiles (
               id,
               full_name,
@@ -448,6 +450,7 @@ export function useStaffAvailabilityCheck({
           )
         `)
         .eq('is_active', true)
+        .is('team_members.left_at', null)
         .order('name')
 
       if (!teams) return
@@ -497,11 +500,12 @@ export function useStaffAvailabilityCheck({
               const staff = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles
 
               // Check booking conflicts (both individual staff bookings AND team bookings)
-              // First, get all teams this staff is a member of
+              // First, get all ACTIVE teams this staff is a member of (left_at IS NULL)
               const { data: staffTeams } = await supabase
                 .from('team_members')
                 .select('team_id')
                 .eq('staff_id', staff.id)
+                .is('left_at', null)
 
               const teamIds = (staffTeams || []).map(tm => tm.team_id)
 

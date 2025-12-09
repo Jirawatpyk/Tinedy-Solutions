@@ -44,6 +44,7 @@ interface BookingRawFromDB {
   created_at: string
   staff_id: string | null
   team_id: string | null
+  team_member_count: number | null
   address: string
   city: string
   state: string
@@ -51,6 +52,12 @@ interface BookingRawFromDB {
   service_packages: { name: string; price?: number; service_type?: string }[] | { name: string; price?: number; service_type?: string } | null
   service_packages_v2: { name: string; service_type?: string }[] | { name: string; service_type?: string } | null
   customers: { id: string; full_name: string; email: string; phone: string | null }[] | { id: string; full_name: string; email: string; phone: string | null } | null
+}
+
+interface TeamMembershipPeriod {
+  team_id: string
+  joined_at: string | null
+  left_at: string | null
 }
 
 export function useStaffPerformance(staffId: string | undefined) {
@@ -104,13 +111,22 @@ export function useStaffPerformance(staffId: string | undefined) {
     if (!staffId) return
 
     try {
-      // Get teams that this staff is a member of
+      // Get ALL team memberships (active + former) with joined_at and left_at dates
+      // This preserves revenue history even after staff leaves the team
       const { data: teamMemberships } = await supabase
         .from('team_members')
-        .select('team_id')
+        .select('team_id, joined_at, left_at')
         .eq('staff_id', staffId)
 
-      const teamIds = teamMemberships?.map(tm => tm.team_id) || []
+      // Note: We include ALL team memberships (active + former) to preserve revenue history
+      // The filtering by membership period happens later in filteredData
+
+      // Store ALL membership periods (staff can have multiple periods for same team after re-join)
+      const allMembershipPeriods = (teamMemberships as TeamMembershipPeriod[] || []).map(tm => ({
+        teamId: tm.team_id,
+        joinedAt: tm.joined_at || '2020-01-01T00:00:00Z',
+        leftAt: tm.left_at || null
+      }))
 
       // Fetch bookings: staff's direct bookings OR team bookings without staff assigned
       let query = supabase
@@ -128,6 +144,7 @@ export function useStaffPerformance(staffId: string | undefined) {
           created_at,
           staff_id,
           team_id,
+          team_member_count,
           address,
           city,
           state,
@@ -139,9 +156,12 @@ export function useStaffPerformance(staffId: string | undefined) {
         .is('deleted_at', null)
         .order('booking_date', { ascending: false })
 
-      // Build OR condition: staff_id = id OR (team_id IN teamIds AND staff_id IS NULL)
-      if (teamIds.length > 0) {
-        query = query.or(`staff_id.eq.${staffId},and(team_id.in.(${teamIds.join(',')}),staff_id.is.null)`)
+      // Build OR condition: staff_id = id OR (team_id IN active teamIds AND staff_id IS NULL)
+      // Note: We only fetch bookings for ACTIVE teams, but will include historical data in filtering
+      // To include former team's bookings, we need to include all team IDs (unique)
+      const allTeamIds = [...new Set(allMembershipPeriods.map(p => p.teamId))]
+      if (allTeamIds.length > 0) {
+        query = query.or(`staff_id.eq.${staffId},and(team_id.in.(${allTeamIds.join(',')}),staff_id.is.null)`)
       } else {
         query = query.eq('staff_id', staffId)
       }
@@ -177,9 +197,55 @@ export function useStaffPerformance(staffId: string | undefined) {
         } as unknown as Booking
       })
 
-      setBookings(transformedData)
-      await calculateStats(transformedData)
-      await calculateMonthlyData(transformedData)
+      // Filter team bookings by membership period (joined_at to left_at)
+      // This preserves historical revenue even after staff leaves the team
+      // IMPORTANT: Staff can have MULTIPLE membership periods for same team (after re-join)
+      const filteredData = transformedData.filter(booking => {
+        // Direct staff assignment - always show
+        if (booking.staff_id === staffId) {
+          return true
+        }
+
+        // Team booking - check if staff was a member when booking was created
+        if (booking.team_id) {
+          // Get ALL membership periods for this team (may have multiple after re-join)
+          const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+
+          if (periodsForTeam.length === 0) {
+            // Staff is not in this team - shouldn't happen but exclude
+            return false
+          }
+
+          // Use booking.created_at, fallback to booking_date if not available
+          const bookingCreatedAt = new Date(booking.created_at || booking.booking_date)
+
+          // Check if booking falls within ANY of the membership periods
+          const isWithinAnyPeriod = periodsForTeam.some(period => {
+            const staffJoinedAt = new Date(period.joinedAt)
+            const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+
+            // Booking must be created AFTER staff joined
+            if (bookingCreatedAt < staffJoinedAt) {
+              return false
+            }
+
+            // Booking must be created BEFORE staff left (if they left)
+            if (staffLeftAt && bookingCreatedAt > staffLeftAt) {
+              return false
+            }
+
+            return true
+          })
+
+          return isWithinAnyPeriod
+        }
+
+        return true
+      })
+
+      setBookings(filteredData)
+      await calculateStats(filteredData)
+      await calculateMonthlyData(filteredData)
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast({

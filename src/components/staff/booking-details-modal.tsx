@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
   Clock,
@@ -51,6 +50,8 @@ interface TeamMember {
   is_active: boolean
   staff_id: string
   full_name: string
+  joined_at: string | null
+  left_at: string | null
 }
 
 interface BookingDetailsModalProps {
@@ -87,10 +88,10 @@ export function BookingDetailsModal({
     }
   }, [booking])
 
-  // Reset notes field when modal opens or booking changes
+  // Initialize notes with current booking notes when modal opens
   useEffect(() => {
     if (open && booking) {
-      setNotes('')
+      setNotes(booking.notes || '')
     }
   }, [open, booking])
 
@@ -121,7 +122,8 @@ export function BookingDetailsModal({
     fetchReview()
   }, [open, booking])
 
-  // Fetch team members using SECURITY DEFINER function (bypasses RLS)
+  // Fetch team members who were active at booking creation time
+  // This shows the correct team composition when the booking was made
   useEffect(() => {
     const fetchTeamMembers = async () => {
       if (!open || !booking?.team_id) {
@@ -130,21 +132,44 @@ export function BookingDetailsModal({
       }
 
       try {
-        // Use RPC function to get all team members (bypasses RLS restrictions)
+        // Use RPC function to get ALL team members (including former) with their join/leave dates
+        // This is separate from get_team_members_by_team_id which only returns active members
         const { data, error } = await supabase
-          .rpc('get_team_members_by_team_id', { p_team_id: booking.team_id })
+          .rpc('get_all_team_members_with_dates', { p_team_id: booking.team_id })
 
         if (error) throw error
 
-        // Data is already in flat structure from function
-        const members: TeamMember[] = (data || []).map((m: { id: string; is_active: boolean; staff_id: string; full_name: string }) => ({
-          id: m.id,
-          is_active: m.is_active,
-          staff_id: m.staff_id,
-          full_name: m.full_name || 'Unknown',
-        }))
+        // Filter members who were active at booking creation time
+        const bookingCreatedAt = new Date(booking.created_at)
 
-        setTeamMembers(members)
+        const membersAtBookingTime: TeamMember[] = (data || [])
+          .filter((m: { joined_at: string | null; left_at: string | null }) => {
+            // Member had joined before or at booking creation
+            const joinedAt = m.joined_at ? new Date(m.joined_at) : null
+            if (joinedAt && joinedAt > bookingCreatedAt) {
+              return false // Joined after booking was created
+            }
+
+            // Member hadn't left yet at booking creation
+            // Use < (not <=) because if staff left at exactly the same time as booking creation,
+            // they were still a member at that moment
+            const leftAt = m.left_at ? new Date(m.left_at) : null
+            if (leftAt && leftAt < bookingCreatedAt) {
+              return false // Already left before booking was created
+            }
+
+            return true
+          })
+          .map((m: { id: string; is_active: boolean; staff_id: string; full_name: string; joined_at: string | null; left_at: string | null }) => ({
+            id: m.id,
+            is_active: m.is_active,
+            staff_id: m.staff_id,
+            full_name: m.full_name || 'Unknown',
+            joined_at: m.joined_at,
+            left_at: m.left_at,
+          }))
+
+        setTeamMembers(membersAtBookingTime)
       } catch (error) {
         console.error('[BookingDetails] Error fetching team members:', error)
         setTeamMembers([])
@@ -152,12 +177,12 @@ export function BookingDetailsModal({
     }
 
     fetchTeamMembers()
-  }, [open, booking?.team_id])
+  }, [open, booking?.team_id, booking?.created_at])
 
   if (!currentBooking) return null
 
   const handleSaveNotes = async () => {
-    if (!onAddNotes || !notes.trim()) return
+    if (!onAddNotes) return
 
     try {
       setIsSaving(true)
@@ -166,7 +191,8 @@ export function BookingDetailsModal({
         title: 'Saved Successfully',
         description: 'Notes saved successfully',
       })
-      setNotes('')
+      // Update currentBooking to reflect the saved notes
+      setCurrentBooking(prev => prev ? { ...prev, notes: notes.trim() || null } : prev)
     } catch {
       toast({
         title: 'Error',
@@ -449,25 +475,6 @@ export function BookingDetailsModal({
             </>
           )}
 
-          {/* Existing Notes */}
-          {currentBooking.notes && (
-            <>
-              <Separator />
-              <CollapsibleSection
-                title={
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <StickyNote className="h-4 w-4" />
-                    Current Notes
-                  </h3>
-                }
-                className="space-y-3"
-              >
-                <div className="ml-6 p-3 bg-muted rounded-md">
-                  <p className="text-sm whitespace-pre-wrap">{currentBooking.notes}</p>
-                </div>
-              </CollapsibleSection>
-            </>
-          )}
 
           {/* Service Rating - Read Only */}
           {review && (currentBooking.staff_id || currentBooking.team_id) && currentBooking.status === 'completed' && (
@@ -513,24 +520,35 @@ export function BookingDetailsModal({
           <Separator />
           <BookingTimeline bookingId={currentBooking.id} />
 
-          {/* Add/Update Notes */}
+          {/* Notes Section - Editable */}
           {onAddNotes && currentBooking.status !== 'cancelled' && (
             <>
               <Separator />
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="flex items-center gap-2">
-                  <StickyNote className="h-4 w-4" />
-                  {currentBooking.notes ? 'Update Notes' : 'Add Notes'}
-                </Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Add notes about this booking..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
+              <CollapsibleSection
+                title={
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </h3>
+                }
+                className="space-y-3"
+              >
+                    <div className="ml-6 space-y-2">
+                  <Textarea
+                    id="notes"
+                    placeholder="Add notes about this booking..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                  {notes !== (currentBooking.notes || '') && (
+                    <p className="text-xs text-muted-foreground">
+                      * You have unsaved changes
+                    </p>
+                  )}
+                </div>
+              </CollapsibleSection>
             </>
           )}
 
@@ -539,7 +557,7 @@ export function BookingDetailsModal({
             <Button onClick={onClose} variant="outline" className="flex-1">
               Close
             </Button>
-            {notes.trim() && onAddNotes && (
+            {notes !== (currentBooking.notes || '') && onAddNotes && (
               <Button
                 onClick={handleSaveNotes}
                 disabled={isSaving}

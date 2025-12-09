@@ -28,6 +28,7 @@ export async function fetchTeamsWithDetails(
   showArchived: boolean = false
 ): Promise<TeamWithDetails[]> {
   // Fetch teams with member count and team lead
+  // Note: team_members includes left_at for soft delete filtering
   let query = supabase
     .from('teams')
     .select(`
@@ -48,6 +49,7 @@ export async function fetchTeamsWithDetails(
       team_members (
         id,
         is_active,
+        left_at,
         profiles (
           id,
           full_name,
@@ -81,6 +83,7 @@ export async function fetchTeamsWithDetails(
     team_members: Array<{
       id: string
       is_active: boolean
+      left_at: string | null
       profiles: TeamMember[] | TeamMember
     }> | null
   }
@@ -88,6 +91,9 @@ export async function fetchTeamsWithDetails(
   const formattedTeams: TeamWithDetails[] = (teamsData || []).map((team: TeamData) => {
     // Handle team_lead as array or single object
     const teamLead = Array.isArray(team.team_lead) ? team.team_lead[0] : team.team_lead
+
+    // Filter out members who have left (soft deleted) - only show active members
+    const activeMembers = team.team_members?.filter((tm) => tm.left_at === null) || []
 
     return {
       id: team.id,
@@ -97,9 +103,9 @@ export async function fetchTeamsWithDetails(
       deleted_at: team.deleted_at,
       team_lead_id: team.team_lead_id,
       team_lead: teamLead,
-      member_count: team.team_members?.length || 0,
-      members: team.team_members
-        ?.map((tm) => {
+      member_count: activeMembers.length,
+      members: activeMembers
+        .map((tm) => {
           // Handle profiles as array or single object
           const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
           return {
@@ -108,7 +114,7 @@ export async function fetchTeamsWithDetails(
             membership_id: tm.id,
           }
         })
-        .filter(Boolean) || [],
+        .filter(Boolean),
       average_rating: undefined,
     }
   })
@@ -180,6 +186,7 @@ export async function fetchTeamsList(): Promise<TeamListItem[]> {
  * @returns Promise<TeamWithDetails>
  */
 export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
+  // Note: team_members includes left_at for soft delete filtering
   const { data: team, error } = await supabase
     .from('teams')
     .select(`
@@ -200,6 +207,7 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
       team_members (
         id,
         is_active,
+        left_at,
         profiles (
           id,
           full_name,
@@ -226,6 +234,7 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
     team_members: Array<{
       id: string
       is_active: boolean
+      left_at: string | null
       profiles: TeamMember[] | TeamMember
     }> | null
   }
@@ -237,6 +246,9 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
     ? teamData.team_lead[0]
     : teamData.team_lead
 
+  // Filter out members who have left (soft deleted) - only show active members
+  const activeMembers = teamData.team_members?.filter((tm) => tm.left_at === null) || []
+
   const formattedTeam: TeamWithDetails = {
     id: teamData.id,
     name: teamData.name,
@@ -245,9 +257,9 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
     deleted_at: teamData.deleted_at,
     team_lead_id: teamData.team_lead_id,
     team_lead: teamLead,
-    member_count: teamData.team_members?.length || 0,
-    members: teamData.team_members
-      ?.map((tm) => {
+    member_count: activeMembers.length,
+    members: activeMembers
+      .map((tm) => {
         const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
         return {
           ...profile,
@@ -255,7 +267,7 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
           membership_id: tm.id,
         }
       })
-      .filter(Boolean) || [],
+      .filter(Boolean),
   }
 
   // Fetch ratings for this team

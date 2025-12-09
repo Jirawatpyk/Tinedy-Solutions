@@ -56,12 +56,14 @@ export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersList
       // Check if member being removed is the team lead
       const isTeamLead = team.team_lead_id === staffId
 
-      // Delete from team_members
+      // Soft delete: Set left_at timestamp instead of deleting
+      // This preserves historical revenue data for the staff member
       const { error } = await supabase
         .from('team_members')
-        .delete()
+        .update({ left_at: new Date().toISOString() })
         .eq('team_id', team.id)
         .eq('staff_id', staffId)
+        .is('left_at', null) // Only update active memberships
 
       if (error) throw error
 

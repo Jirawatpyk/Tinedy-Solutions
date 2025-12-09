@@ -126,6 +126,7 @@ export function AdminTeamDetail() {
           team_members (
             id,
             is_active,
+            left_at,
             profiles (
               id,
               full_name,
@@ -162,14 +163,17 @@ export function AdminTeamDetail() {
         created_at: teamData.created_at,
         team_lead_id: teamData.team_lead_id,
         team_lead: teamLead,
-        members: teamData.team_members?.map((tm: { profiles: unknown; is_active: boolean; id: string }) => {
-          const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
-          return {
-            ...profile,
-            is_active: tm.is_active,
-            membership_id: tm.id,
-          }
-        }).filter(Boolean) || [],
+        // Filter out members who have left (soft deleted) - only show active members
+        members: teamData.team_members
+          ?.filter((tm: { left_at: string | null }) => tm.left_at === null)
+          .map((tm: { profiles: unknown; is_active: boolean; id: string }) => {
+            const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles
+            return {
+              ...profile,
+              is_active: tm.is_active,
+              membership_id: tm.id,
+            }
+          }).filter(Boolean) || [],
       }
 
       setTeam(formattedTeam)
@@ -315,11 +319,34 @@ export function AdminTeamDetail() {
 
   const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
     try {
+      // Check if staff is currently an ACTIVE member (to prevent duplicates)
+      const { data: activeMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', data.team_id)
+        .eq('staff_id', data.staff_id)
+        .is('left_at', null)
+        .maybeSingle()
+
+      if (activeMember) {
+        // Already an active member - don't add again
+        toast({
+          title: 'Already a Member',
+          description: 'This staff member is already in the team.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Always create a NEW record for re-join
+      // This preserves membership history: each join/leave period is a separate record
+      // Old records with left_at will be used for historical revenue calculation
       const { error } = await supabase
         .from('team_members')
         .insert({
           team_id: data.team_id,
           staff_id: data.staff_id,
+          joined_at: new Date().toISOString(),
         })
 
       if (error) throw error
@@ -334,6 +361,18 @@ export function AdminTeamDetail() {
       loadTeamDetail()
     } catch (error) {
       console.error('Error adding member:', error)
+
+      // Check if this is a unique constraint violation (duplicate active member)
+      const errorObj = error as { code?: string; message?: string }
+      if (errorObj?.code === '23505' || errorObj?.message?.includes('unique')) {
+        toast({
+          title: 'Already a Member',
+          description: 'This staff member is already in the team.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       const errorMsg = mapErrorToUserMessage(error, 'team')
       toast({
         title: errorMsg.title,

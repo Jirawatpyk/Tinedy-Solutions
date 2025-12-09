@@ -222,6 +222,7 @@ export function AdminTeams() {
           .insert({
             team_id: newTeam.id,
             staff_id: transformedData.team_lead_id,
+            joined_at: new Date().toISOString(),
           })
 
         if (memberError) {
@@ -282,6 +283,7 @@ export function AdminTeams() {
             .insert({
               team_id: editingTeam.id,
               staff_id: transformedData.team_lead_id,
+              joined_at: new Date().toISOString(),
             })
 
           if (memberError) {
@@ -394,11 +396,34 @@ export function AdminTeams() {
 
   const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
     try {
+      // Check if staff is currently an ACTIVE member (to prevent duplicates)
+      const { data: activeMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', data.team_id)
+        .eq('staff_id', data.staff_id)
+        .is('left_at', null)
+        .maybeSingle()
+
+      if (activeMember) {
+        // Already an active member - don't add again
+        toast({
+          title: 'Already a Member',
+          description: 'This staff member is already in the team.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Always create a NEW record for re-join
+      // This preserves membership history: each join/leave period is a separate record
+      // Old records with left_at will be used for historical revenue calculation
       const { error } = await supabase
         .from('team_members')
         .insert({
           team_id: data.team_id,
           staff_id: data.staff_id,
+          joined_at: new Date().toISOString(),
         })
 
       if (error) throw error
@@ -413,6 +438,18 @@ export function AdminTeams() {
       refresh()
     } catch (error) {
       console.error('Error adding member:', error)
+
+      // Check if this is a unique constraint violation (duplicate active member)
+      const errorObj = error as { code?: string; message?: string }
+      if (errorObj?.code === '23505' || errorObj?.message?.includes('unique')) {
+        toast({
+          title: 'Already a Member',
+          description: 'This staff member is already in the team.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       const errorMessage = getTeamMemberError('add')
       toast({
         title: errorMessage.title,
@@ -438,12 +475,14 @@ export function AdminTeams() {
       const team = teams.find(t => t.id === pendingRemove.teamId)
       const isTeamLead = team?.team_lead_id === pendingRemove.staffId
 
-      // Delete from team_members
+      // Soft delete: Set left_at timestamp instead of deleting
+      // This preserves historical revenue data for the staff member
       const { error } = await supabase
         .from('team_members')
-        .delete()
+        .update({ left_at: new Date().toISOString() })
         .eq('team_id', pendingRemove.teamId)
         .eq('staff_id', pendingRemove.staffId)
+        .is('left_at', null)
 
       if (error) throw error
 
