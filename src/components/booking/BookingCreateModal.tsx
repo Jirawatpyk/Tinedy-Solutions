@@ -886,27 +886,27 @@ export function BookingCreateModal({
               </div>
             )}
 
-            {/* Date/Time Fields - 3 columns when not recurring, 2 columns when recurring */}
-            <div className={`sm:col-span-2 grid gap-3 ${packageSelection?.frequency && packageSelection.frequency > 1 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-              {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring (frequency = 1) */}
-              {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
-                <div className="space-y-2">
-                  <Label htmlFor="booking_date">Booking Date *</Label>
-                  <Input
-                    id="booking_date"
-                    type="date"
-                    {...form.register('booking_date')}
-                    required
-                    aria-invalid={!!form.formState.errors.booking_date}
-                  />
-                  {form.formState.errors.booking_date && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.booking_date.message}
-                    </p>
-                  )}
-                </div>
-              )}
+            {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring (frequency = 1) - แยกแถวเดียวบน mobile */}
+            {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="booking_date">Booking Date *</Label>
+                <Input
+                  id="booking_date"
+                  type="date"
+                  {...form.register('booking_date')}
+                  required
+                  aria-invalid={!!form.formState.errors.booking_date}
+                />
+                {form.formState.errors.booking_date && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.booking_date.message}
+                  </p>
+                )}
+              </div>
+            )}
 
+            {/* Time Fields - 2 columns */}
+            <div className="sm:col-span-2 grid grid-cols-2 gap-3">
               {/* Start Time */}
               <div className="space-y-2">
                 <Label htmlFor="start_time">Start Time *</Label>
