@@ -39,11 +39,13 @@ export async function getTeamMemberCounts(teamIds: string[]): Promise<Map<string
   }
 
   try {
-    // Query all team member counts in one query
+    // Query all ACTIVE team member counts in one query
+    // Note: Only count members with left_at IS NULL (active members)
     const { data: teamMembers, error } = await supabase
       .from('team_members')
       .select('team_id')
       .in('team_id', teamIds)
+      .is('left_at', null)
 
     if (error) {
       console.error('Error fetching team members:', error)

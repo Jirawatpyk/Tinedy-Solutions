@@ -210,18 +210,27 @@ export type Database = {
           id: string
           team_id: string
           staff_id: string
+          is_active: boolean
+          joined_at: string
+          left_at: string | null
           created_at: string
         }
         Insert: {
           id?: string
           team_id: string
           staff_id: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           team_id?: string
           staff_id?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
           created_at?: string
         }
       }

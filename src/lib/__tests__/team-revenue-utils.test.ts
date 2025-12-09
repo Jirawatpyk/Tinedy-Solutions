@@ -191,7 +191,8 @@ describe('team-revenue-utils - Critical Tests', () => {
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
@@ -211,7 +212,8 @@ describe('team-revenue-utils - Critical Tests', () => {
     it('should handle teams with no members by falling back to count=1', async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
@@ -225,7 +227,8 @@ describe('team-revenue-utils - Critical Tests', () => {
     it('should handle database errors gracefully', async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB Error' } }),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB Error' } }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
@@ -247,7 +250,8 @@ describe('team-revenue-utils - Critical Tests', () => {
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
@@ -259,6 +263,170 @@ describe('team-revenue-utils - Critical Tests', () => {
       expect(counts.get('team-C')).toBe(1)
     })
   })
+
+  // ============================================================================
+  // SOFT DELETE TESTS - Tests for left_at filtering and membership period
+  // ============================================================================
+
+  describe('Soft Delete: getTeamMemberCounts with left_at filter', () => {
+    it('should only count active members (left_at IS NULL)', async () => {
+      // Note: The actual query filters by left_at IS NULL
+      // We mock the response to represent what the query returns after filtering
+      const activeMembersData = [
+        { team_id: 'team-123' }, // Active member
+        { team_id: 'team-123' }, // Active member
+        // Members with left_at are NOT returned by the query
+      ]
+
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: activeMembersData, error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
+
+      const counts = await getTeamMemberCounts(['team-123'])
+
+      // Verify the query was called with correct parameters
+      expect(supabase.from).toHaveBeenCalledWith('team_members')
+      expect(mockQuery.select).toHaveBeenCalledWith('team_id')
+      expect(mockQuery.in).toHaveBeenCalledWith('team_id', ['team-123'])
+      expect(mockQuery.is).toHaveBeenCalledWith('left_at', null)
+
+      // Only 2 active members counted
+      expect(counts.get('team-123')).toBe(2)
+    })
+
+    it('should return count = 1 fallback when all members have left', async () => {
+      // All members have left_at set, so query returns empty
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
+
+      const counts = await getTeamMemberCounts(['team-empty'])
+
+      // Fallback to 1 to prevent division by zero
+      expect(counts.get('team-empty')).toBe(1)
+    })
+
+    it('should count multiple teams with different active member counts', async () => {
+      const activeMembersData = [
+        { team_id: 'team-A' }, // Team A: 3 active
+        { team_id: 'team-A' },
+        { team_id: 'team-A' },
+        { team_id: 'team-B' }, // Team B: 1 active
+        // Team C: 0 active (all left)
+      ]
+
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: activeMembersData, error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
+
+      const counts = await getTeamMemberCounts(['team-A', 'team-B', 'team-C'])
+
+      expect(counts.get('team-A')).toBe(3)
+      expect(counts.get('team-B')).toBe(1)
+      expect(counts.get('team-C')).toBe(1) // Fallback for team with no active members
+    })
+  })
+
+  describe('Soft Delete: calculateBookingRevenue with stored team_member_count', () => {
+    it('should use stored team_member_count when available', () => {
+      const booking = {
+        total_price: 6000,
+        staff_id: null,
+        team_id: 'team-123',
+        team_member_count: 3, // Stored count at booking time
+      }
+
+      // Current team member count is different (2 members now)
+      const teamMemberCounts = new Map([['team-123', 2]])
+
+      const revenue = calculateBookingRevenue(booking, teamMemberCounts)
+
+      // Should use stored count (3), not current count (2)
+      // 6000 / 3 = 2000
+      expect(revenue).toBe(2000)
+    })
+
+    it('should fallback to current team count when team_member_count is null', () => {
+      const booking = {
+        total_price: 4000,
+        staff_id: null,
+        team_id: 'team-456',
+        team_member_count: null, // No stored count (old booking)
+      }
+
+      const teamMemberCounts = new Map([['team-456', 2]])
+
+      const revenue = calculateBookingRevenue(booking, teamMemberCounts)
+
+      // Use current count (2) as fallback
+      // 4000 / 2 = 2000
+      expect(revenue).toBe(2000)
+    })
+
+    it('should handle historical booking with different member count', () => {
+      // Scenario: Booking created when team had 4 members
+      // Now team has 2 members (2 left)
+      const booking = {
+        total_price: 8000,
+        staff_id: null,
+        team_id: 'team-789',
+        team_member_count: 4, // 4 members when booking was created
+      }
+
+      const teamMemberCounts = new Map([['team-789', 2]]) // Only 2 active now
+
+      const revenue = calculateBookingRevenue(booking, teamMemberCounts)
+
+      // Should use stored count (4) for fair historical distribution
+      // 8000 / 4 = 2000
+      expect(revenue).toBe(2000)
+    })
+  })
+
+  describe('Soft Delete: getUniqueTeamIds with team_member_count filter', () => {
+    it('should exclude bookings that already have team_member_count stored', () => {
+      const bookings = [
+        { team_id: 'team-123', staff_id: null, team_member_count: 3 }, // Has count - skip
+        { team_id: 'team-456', staff_id: null, team_member_count: null }, // No count - include
+        { team_id: 'team-789', staff_id: null }, // No count field - include
+      ]
+
+      const teamIds = getUniqueTeamIds(bookings)
+
+      // Only team-456 and team-789 need member counts
+      expect(teamIds).toContain('team-456')
+      expect(teamIds).toContain('team-789')
+      expect(teamIds).not.toContain('team-123')
+      expect(teamIds).toHaveLength(2)
+    })
+
+    it('should return empty when all bookings have stored team_member_count', () => {
+      const bookings = [
+        { team_id: 'team-123', staff_id: null, team_member_count: 3 },
+        { team_id: 'team-456', staff_id: null, team_member_count: 2 },
+      ]
+
+      const teamIds = getUniqueTeamIds(bookings)
+
+      expect(teamIds).toEqual([])
+    })
+  })
+
+  // ============================================================================
+  // INTEGRATION TESTS
+  // ============================================================================
 
   describe('Integration: Revenue Calculation Flow', () => {
     it('should calculate total revenue correctly for mixed bookings', async () => {
@@ -284,7 +452,8 @@ describe('team-revenue-utils - Critical Tests', () => {
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
+        in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: teamMembersData, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
