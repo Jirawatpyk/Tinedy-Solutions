@@ -16,10 +16,13 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
 import { buildTeamFilterCondition } from '@/lib/team-revenue-utils'
-import { fetchStaffTeamMembership, type TeamMembership } from './staff-bookings-queries'
+import { fetchStaffTeamMembership, generateMembershipHash, type TeamMembership } from './staff-bookings-queries'
 
 // Re-export team membership function for reuse
-export { fetchStaffTeamMembership, type TeamMembership }
+export { fetchStaffTeamMembership, generateMembershipHash, type TeamMembership }
+
+// Type for membership period array (same as staff-bookings-queries)
+type MembershipPeriodArray = Array<{ teamId: string; joinedAt: string; leftAt: string | null }>
 
 // ============================================================================
 // TYPES
@@ -49,6 +52,7 @@ export interface CalendarEvent {
   team_name: string | null
   area_sqm: number | null
   frequency: 1 | 2 | 4 | 8 | null
+  created_at: string // Added for BookingDetailsModal team member filtering
   // Team details for BookingDetailsModal
   teams: {
     id: string
@@ -76,6 +80,7 @@ interface BookingData {
   team_id: string | null
   area_sqm: number | null
   frequency: 1 | 2 | 4 | 8 | null
+  created_at: string // Added for membership period filtering
   customers: Array<{
     full_name: string
     phone: string
@@ -152,6 +157,47 @@ function isServicePackageV1(
 // Note: buildFilterCondition replaced by buildTeamFilterCondition from team-revenue-utils
 
 /**
+ * Filter calendar events by membership periods
+ * Staff should only see team bookings created during their membership period(s)
+ * Same logic as filterBookingsByMembershipPeriods in staff-bookings-queries.ts
+ */
+function filterEventsByMembershipPeriods(
+  bookings: BookingData[],
+  userId: string,
+  allMembershipPeriods: MembershipPeriodArray
+): BookingData[] {
+  return bookings.filter(booking => {
+    // Direct staff assignment - always show
+    if (booking.staff_id === userId) {
+      return true
+    }
+
+    // Team booking - check if staff was a member when booking was created
+    if (booking.team_id) {
+      const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+
+      if (periodsForTeam.length === 0) {
+        return false
+      }
+
+      const bookingCreatedAt = new Date(booking.created_at)
+
+      return periodsForTeam.some(period => {
+        const staffJoinedAt = new Date(period.joinedAt)
+        const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+
+        if (bookingCreatedAt < staffJoinedAt) return false
+        if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
+
+        return true
+      })
+    }
+
+    return true
+  })
+}
+
+/**
  * Transform booking data to calendar event
  */
 function transformToCalendarEvent(booking: BookingData): CalendarEvent {
@@ -204,6 +250,7 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
     team_name: team?.name || null,
     area_sqm: booking.area_sqm || null,
     frequency: booking.frequency || null,
+    created_at: booking.created_at, // Pass to BookingDetailsModal for team member filtering
     // Include full teams data for BookingDetailsModal
     // Handle team_lead as array or single object
     teams: team ? {
@@ -222,10 +269,14 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
 /**
  * Fetch Staff Calendar Events
  * Date Range: 6 months back → 6 months ahead (12 months total)
+ * @param userId - Staff user ID
+ * @param teamIds - Array of team IDs staff belongs to
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
  */
 export async function fetchStaffCalendarEvents(
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  allMembershipPeriods: MembershipPeriodArray = []
 ): Promise<CalendarEvent[]> {
   const startTime = Date.now()
 
@@ -259,6 +310,7 @@ export async function fetchStaffCalendarEvents(
         team_id,
         area_sqm,
         frequency,
+        created_at,
         customers (full_name, phone, avatar_url),
         service_packages (name, duration_minutes, price),
         service_packages_v2:package_v2_id (name),
@@ -291,8 +343,15 @@ export async function fetchStaffCalendarEvents(
       throw new Error(`Failed to fetch calendar events: ${error.message}`)
     }
 
+    // Filter by membership periods first (same logic as staff-bookings-queries)
+    const filteredBookings = filterEventsByMembershipPeriods(
+      data as BookingData[] || [],
+      userId,
+      allMembershipPeriods
+    )
+
     // Transform to calendar events
-    const calendarEvents = (data as BookingData[] || []).map(transformToCalendarEvent)
+    const calendarEvents = filteredBookings.map(transformToCalendarEvent)
 
     // Performance logging
     const queryTime = Date.now() - startTime
@@ -335,11 +394,14 @@ export const staffCalendarQueryOptions = {
     enabled: !!userId,
   }),
 
-  events: (userId: string, teamIds: string[]) => ({
-    queryKey: queryKeys.staffCalendar.events(userId, teamIds),
-    queryFn: () => fetchStaffCalendarEvents(userId, teamIds),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 5 * 60 * 1000, // Background refetch every 5 minutes
-    enabled: !!userId,
-  }),
+  events: (userId: string, teamIds: string[], allMembershipPeriods: MembershipPeriodArray = []) => {
+    const membershipHash = generateMembershipHash(allMembershipPeriods)
+    return {
+      queryKey: queryKeys.staffCalendar.events(userId, teamIds, membershipHash),
+      queryFn: () => fetchStaffCalendarEvents(userId, teamIds, allMembershipPeriods),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchInterval: 5 * 60 * 1000, // Background refetch every 5 minutes
+      enabled: !!userId,
+    }
+  },
 }

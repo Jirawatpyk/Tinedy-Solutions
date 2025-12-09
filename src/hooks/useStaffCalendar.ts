@@ -20,6 +20,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
 import {
   staffCalendarQueryOptions,
+  generateMembershipHash,
   type CalendarEvent,
   type TeamMembership,
 } from '@/lib/queries/staff-calendar-queries'
@@ -83,11 +84,16 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
   })
 
   const teamIds = useMemo(() => teamMembershipQuery.data?.teamIds || [], [teamMembershipQuery.data?.teamIds])
+  const allMembershipPeriods = useMemo(
+    () => teamMembershipQuery.data?.allMembershipPeriods || [],
+    [teamMembershipQuery.data?.allMembershipPeriods]
+  )
   const teamsLoaded = teamMembershipQuery.isSuccess
 
   // Step 2: Fetch calendar events (enabled only after teams loaded)
+  // Pass allMembershipPeriods to filter team bookings by membership period
   const eventsQuery = useQuery({
-    ...staffCalendarQueryOptions.events(userId, teamIds),
+    ...staffCalendarQueryOptions.events(userId, teamIds, allMembershipPeriods),
     enabled: !!userId && teamsLoaded,
   })
 
@@ -98,6 +104,12 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
 
   // Combined error state
   const error = teamMembershipQuery.error || eventsQuery.error || null
+
+  // Generate membershipHash for query key matching
+  const membershipHash = useMemo(
+    () => generateMembershipHash(allMembershipPeriods),
+    [allMembershipPeriods]
+  )
 
   // Real-time subscriptions
   useEffect(() => {
@@ -117,8 +129,10 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
         (payload) => {
           logger.debug('Calendar real-time update received', { event: payload.eventType }, { context: 'StaffCalendar' })
 
-          // Invalidate calendar events query to refetch
-          queryClient.invalidateQueries({ queryKey: queryKeys.staffCalendar.events(userId, teamIds) })
+          // Invalidate calendar events query to refetch (with membershipHash for exact key match)
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.staffCalendar.events(userId, teamIds, membershipHash)
+          })
         }
       )
       .subscribe()
@@ -127,7 +141,7 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
       logger.debug('Cleaning up calendar real-time subscription', {}, { context: 'StaffCalendar' })
       supabase.removeChannel(channel)
     }
-  }, [userId, teamsLoaded, teamIds, queryClient])
+  }, [userId, teamsLoaded, teamIds, membershipHash, queryClient])
 
   // Refetch all queries
   const refresh = () => {
