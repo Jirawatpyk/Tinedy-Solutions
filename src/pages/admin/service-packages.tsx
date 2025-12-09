@@ -282,6 +282,23 @@ export function AdminServicePackages() {
    */
   const deletePackageV2 = async (id: string) => {
     try {
+      // Check if package has bookings first (prevent deleting tiers if can't delete package)
+      const { count: bookingCount, error: countError } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('package_id_v2', id)
+
+      if (countError) throw countError
+
+      if (bookingCount && bookingCount > 0) {
+        toast({
+          title: 'Cannot Delete',
+          description: `This package has ${bookingCount} booking(s). Cannot delete packages with existing bookings.`,
+          variant: 'destructive',
+        })
+        return
+      }
+
       // Delete tiers first (ignore error - Fixed pricing packages don't have tiers)
       await supabase
         .from('package_pricing_tiers')
