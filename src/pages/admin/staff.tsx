@@ -38,23 +38,25 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   StaffCreateSchema,
-  StaffUpdateSchema,
   StaffCreateWithSkillsSchema,
-  StaffUpdateWithSkillsSchema,
   type StaffCreateFormData,
-  type StaffUpdateFormData,
 } from '@/schemas'
+import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import type { StaffWithRating } from '@/types/staff'
 
 export function AdminStaff() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const { staff, loading,refresh, error: staffError} = useStaffWithRatings({
+  const { staff, loading, refresh, error: staffError } = useStaffWithRatings({
     enableRealtime: true,
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<(typeof staff)[0] | null>(null)
+
+  // Edit dialog state - uses reusable StaffEditDialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [staffForEdit, setStaffForEdit] = useState<StaffForEdit | null>(null)
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -74,18 +76,6 @@ export function AdminStaff() {
       phone: '',
       role: 'staff',
       password: '',
-      staff_number: '',
-      skills: [],
-    },
-  })
-
-  // React Hook Form - Update Form (uses base schema, transforms on submit)
-  const updateForm = useForm<StaffUpdateFormData>({
-    resolver: zodResolver(StaffUpdateSchema),
-    defaultValues: {
-      full_name: '',
-      phone: '',
-      role: 'staff',
       staff_number: '',
       skills: [],
     },
@@ -127,160 +117,72 @@ export function AdminStaff() {
     }
   }, [staffError, toast])
 
-  const onSubmit = async (data: StaffCreateFormData | StaffUpdateFormData) => {
+  const onCreateSubmit = async (data: StaffCreateFormData) => {
     try {
-      if (editingStaff) {
-        // Update existing staff - transform form data to WithSkills type
-        const updateData = StaffUpdateWithSkillsSchema.parse(data)
+      // Create new staff - transform form data to WithSkills type
+      const createData = StaffCreateWithSkillsSchema.parse(data)
 
-        // Manager ไม่สามารถแก้ไข role ได้ - ส่งเฉพาะ fields ที่อนุญาต
-        const updatePayload = profile?.role === 'admin'
-          ? {
-              full_name: updateData.full_name,
-              phone: updateData.phone,
-              role: updateData.role, // Admin เท่านั้นที่สามารถเปลี่ยน role
-              staff_number: updateData.staff_number,
-              skills: updateData.skills && updateData.skills.length > 0 ? updateData.skills : null,
-            }
-          : {
-              full_name: updateData.full_name,
-              phone: updateData.phone,
-              // Manager ไม่ส่ง role field เพื่อป้องกัน RLS policy error
-              staff_number: updateData.staff_number,
-              skills: updateData.skills && updateData.skills.length > 0 ? updateData.skills : null,
-            }
-
-        const { error } = await supabase
-          .from('profiles')
-          .update(updatePayload)
-          .eq('id', editingStaff.id)
-
-        if (error) {
-          // Log error for debugging
-          console.error('[Update Staff] Database error:', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-          })
-
-          // Check for duplicate staff_number error (PostgreSQL unique constraint violation)
-          if (error.code === '23505') {
-            // Check if it's staff_number or email duplicate
-            if (error.message.toLowerCase().includes('staff_number') ||
-                error.details?.toLowerCase().includes('staff_number')) {
-              throw new Error('This staff number is already in use. Please use a different staff number.')
-            }
-            if (error.message.toLowerCase().includes('email') ||
-                error.details?.toLowerCase().includes('email')) {
-              throw new Error('This email is already registered. Please use a different email.')
-            }
-            // Generic duplicate error
-            throw new Error('Duplicate value detected. Please check your input.')
-          }
-          throw error
-        }
-
-        // Update password if provided
-        const formData = data as StaffUpdateFormData
-        if (formData.password && formData.password.trim()) {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session?.access_token) {
-            throw new Error('Authentication required')
-          }
-
-          const passwordResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-staff-password`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                user_id: editingStaff.id,
-                new_password: formData.password,
-              }),
-            }
-          )
-
-          const passwordResult = await passwordResponse.json()
-
-          if (!passwordResult.success) {
-            throw new Error(passwordResult.error || 'Failed to update password')
-          }
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Staff member updated successfully',
-        })
-      } else {
-        // Create new staff - transform form data to WithSkills type
-        const createData = StaffCreateWithSkillsSchema.parse(data)
-
-        // Get auth token for Edge Function
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) {
-          throw new Error('Authentication required')
-        }
-
-        // Call Edge Function directly with fetch to get proper error responses
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              email: createData.email,
-              password: createData.password,
-              full_name: createData.full_name,
-              phone: createData.phone || null,
-              role: createData.role,
-              staff_number: createData.staff_number || null,
-              skills: createData.skills && createData.skills.length > 0 ? createData.skills : null,
-            }),
-          }
-        )
-
-        const responseData = await response.json()
-
-        if (!response.ok || !responseData?.success) {
-          const errorMsg = responseData?.error || 'Failed to create staff member'
-
-          // Log error for debugging
-          console.error('[Create Staff] Edge Function error:', {
-            errorMsg,
-            responseData,
-            response: { ok: response.ok, status: response.status }
-          })
-
-          // Check for duplicate email error (flexible matching)
-          const errorLower = errorMsg.toLowerCase()
-          if ((errorLower.includes('already') && errorLower.includes('registered')) ||
-              (errorLower.includes('already') && errorLower.includes('email')) ||
-              (errorLower.includes('user') && errorLower.includes('already')) ||
-              errorLower.includes('already exists')) {
-            throw new Error('This email is already registered. Please use a different email.')
-          }
-
-          // Check for duplicate staff_number error
-          if (errorMsg.toLowerCase().includes('duplicate') &&
-              errorMsg.toLowerCase().includes('staff_number')) {
-            throw new Error('This staff number is already in use. Please use a different staff number.')
-          }
-
-          throw new Error(errorMsg)
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Staff member created successfully',
-        })
+      // Get auth token for Edge Function
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Authentication required')
       }
+
+      // Call Edge Function directly with fetch to get proper error responses
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            email: createData.email,
+            password: createData.password,
+            full_name: createData.full_name,
+            phone: createData.phone || null,
+            role: createData.role,
+            staff_number: createData.staff_number || null,
+            skills: createData.skills && createData.skills.length > 0 ? createData.skills : null,
+          }),
+        }
+      )
+
+      const responseData = await response.json()
+
+      if (!response.ok || !responseData?.success) {
+        const errorMsg = responseData?.error || 'Failed to create staff member'
+
+        // Log error for debugging
+        console.error('[Create Staff] Edge Function error:', {
+          errorMsg,
+          responseData,
+          response: { ok: response.ok, status: response.status }
+        })
+
+        // Check for duplicate email error (flexible matching)
+        const errorLower = errorMsg.toLowerCase()
+        if ((errorLower.includes('already') && errorLower.includes('registered')) ||
+            (errorLower.includes('already') && errorLower.includes('email')) ||
+            (errorLower.includes('user') && errorLower.includes('already')) ||
+            errorLower.includes('already exists')) {
+          throw new Error('This email is already registered. Please use a different email.')
+        }
+
+        // Check for duplicate staff_number error
+        if (errorMsg.toLowerCase().includes('duplicate') &&
+            errorMsg.toLowerCase().includes('staff_number')) {
+          throw new Error('This staff number is already in use. Please use a different staff number.')
+        }
+
+        throw new Error(errorMsg)
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Staff member created successfully',
+      })
 
       setIsDialogOpen(false)
       resetForm()
@@ -344,35 +246,25 @@ export function AdminStaff() {
     }
   }
 
-  const openEditDialog = (staffMember: typeof staff[0]) => {
-    setEditingStaff(staffMember)
-    updateForm.reset({
+  const openEditDialog = (staffMember: StaffWithRating) => {
+    setStaffForEdit({
+      id: staffMember.id,
       full_name: staffMember.full_name,
-      phone: staffMember.phone || '',
-      password: '',
+      phone: staffMember.phone,
       role: staffMember.role as 'admin' | 'manager' | 'staff',
-      staff_number: staffMember.staff_number || '',
-      skills: staffMember.skills || [],
+      staff_number: staffMember.staff_number,
+      skills: staffMember.skills,
     })
-    setIsDialogOpen(true)
+    setIsEditDialogOpen(true)
   }
 
   const resetForm = () => {
-    setEditingStaff(null)
     createForm.reset({
       email: '',
       full_name: '',
       phone: '',
       role: 'staff',
       password: '',
-      staff_number: '',
-      skills: [],
-    })
-    updateForm.reset({
-      full_name: '',
-      phone: '',
-      password: '',
-      role: 'staff',
       staff_number: '',
       skills: [],
     })
@@ -474,19 +366,11 @@ export function AdminStaff() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>
-                {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingStaff
-                  ? 'Update staff member information'
-                  : 'Create a new staff account'}
-              </DialogDescription>
+              <DialogTitle>Add New Staff Member</DialogTitle>
+              <DialogDescription>Create a new staff account</DialogDescription>
             </DialogHeader>
 
-            {!editingStaff ? (
-              // CREATE FORM
-              <form onSubmit={createForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="flex flex-col flex-1 min-h-0">
                 <div className="overflow-y-auto flex-1 pr-4 pl-1">
                   <div className="space-y-4">
                 {/* Email & Password - 2 Columns */}
@@ -659,184 +543,7 @@ export function AdminStaff() {
                     Create
                   </Button>
                 </DialogFooter>
-              </form>
-            ) : (
-              // UPDATE FORM
-              <form onSubmit={updateForm.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-                <div className="overflow-y-auto flex-1 pr-4 pl-1">
-                  <div className="space-y-4">
-                {/* Full Name & Phone - 2 Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Controller
-                    name="full_name"
-                    control={updateForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name">Full Name *</Label>
-                        <Input
-                          id="full_name"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    name="phone"
-                    control={updateForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )}
-                  />
-                </div>
-
-                <Controller
-                  name="password"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="password">New Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        {...field}
-                        value={field.value || ''}
-                        placeholder="Leave blank to keep current password"
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Optional: Only fill if you want to change password (min 6 characters)
-                      </p>
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="staff_number"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="staff_number">Staff Number</Label>
-                      <Input
-                        id="staff_number"
-                        {...field}
-                        value={field.value || ''}
-                        placeholder="STF0001"
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Format: STF#### (e.g. STF0001)
-                      </p>
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="skills"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="skills">Skills</Label>
-                      <TagInput
-                        tags={field.value || []}
-                        onChange={field.onChange}
-                        suggestions={[...STAFF_SKILL_SUGGESTIONS]}
-                        getTagColor={getSkillColor}
-                        placeholder="Type skill or select from suggestions..."
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="role"
-                  control={updateForm.control}
-                  render={({ field, fieldState }) => {
-                    const isAdmin = profile?.role === 'admin'
-
-                    if (!isAdmin) {
-                      // Manager view: Read-only
-                      return (
-                        <div className="space-y-2">
-                          <Label htmlFor="role">Role</Label>
-                          <Input
-                            id="role"
-                            value={field.value.charAt(0).toUpperCase() + field.value.slice(1)}
-                            disabled
-                            className="bg-muted cursor-not-allowed"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Role cannot be changed. Contact admin if role change is needed.
-                          </p>
-                        </div>
-                      )
-                    }
-
-                    // Admin view: Editable
-                    return (
-                      <div className="space-y-2">
-                        <Label htmlFor="role">Role *</Label>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="staff">Staff</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )
-                  }}
-                />
-                  </div>
-                </div>
-                <DialogFooter className="mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-tinedy-blue"
-                  >
-                    Update
-                  </Button>
-                </DialogFooter>
-              </form>
-            )}
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -979,6 +686,11 @@ export function AdminStaff() {
                           itemName={member.full_name}
                           onDelete={() => deleteStaff(member.id)}
                           className="h-8 w-8 sm:h-10 sm:w-10"
+                          warningMessage={
+                            (member.booking_count || 0) > 0 || (member.team_count || 0) > 0
+                              ? `This staff has ${member.booking_count || 0} booking(s)${(member.team_count || 0) > 0 ? ` and is a member of ${member.team_count} team(s)` : ''}.`
+                              : undefined
+                          }
                         />
                       )}
                     </div>
@@ -1049,6 +761,14 @@ export function AdminStaff() {
           )}
         </>
       )}
+
+      {/* Edit Dialog - reusable component */}
+      <StaffEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        staff={staffForEdit}
+        onSuccess={refresh}
+      />
     </div>
   )
 }

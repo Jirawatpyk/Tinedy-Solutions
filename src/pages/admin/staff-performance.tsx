@@ -9,16 +9,92 @@ import { StaffStatsCards } from '@/components/staff/performance/StaffStatsCards'
 import { StaffPerformanceCharts } from '@/components/staff/performance/StaffPerformanceCharts'
 import { StaffRecentBookings } from '@/components/staff/performance/StaffRecentBookings'
 import { ErrorBoundary, SectionErrorBoundary } from '@/components/ErrorBoundary'
+import { supabase } from '@/lib/supabase'
+import { useToast } from '@/hooks/use-toast'
+import { getDeleteErrorMessage } from '@/lib/error-messages'
+import { useEffect, useState } from 'react'
+import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
 
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
 
   // Use custom hook for data fetching and stats calculation
   const { staff, bookings, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
+
+  // Edit dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [staffForEdit, setStaffForEdit] = useState<StaffForEdit | null>(null)
+
+  // Fetch additional counts for delete warning
+  const [staffCounts, setStaffCounts] = useState<{ booking_count: number; team_count: number }>({
+    booking_count: 0,
+    team_count: 0,
+  })
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!id) return
+
+      // Fetch booking count
+      const { count: bookingCount } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('staff_id', id)
+        .is('deleted_at', null)
+
+      // Fetch team membership count
+      const { count: teamCount } = await supabase
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('staff_id', id)
+        .is('left_at', null)
+
+      setStaffCounts({
+        booking_count: bookingCount || 0,
+        team_count: teamCount || 0,
+      })
+    }
+
+    fetchCounts()
+  }, [id])
+
+  // Delete staff function
+  const deleteStaff = async () => {
+    if (!id) return
+
+    try {
+      // Call Edge Function to delete user from auth.users (will cascade to profiles)
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: id },
+      })
+
+      if (error) throw error
+      if (!data?.success) {
+        throw new Error(data?.error || data?.details || 'Failed to delete user')
+      }
+
+      toast({
+        title: 'Success',
+        description: data.message || 'Staff member deleted successfully',
+      })
+
+      // Navigate back to staff list
+      navigate(`${basePath}/staff`)
+    } catch (error) {
+      console.error('[Delete Staff] Error:', error)
+      const errorMessage = getDeleteErrorMessage('staff')
+      toast({
+        title: errorMessage.title,
+        description: errorMessage.description,
+        variant: 'destructive',
+      })
+    }
+  }
 
   if (loading) {
     return (
@@ -80,7 +156,28 @@ export function AdminStaffPerformance() {
     <ErrorBoundary onReset={() => window.location.reload()}>
       <div className="space-y-6">
         <SectionErrorBoundary sectionName="Staff Header">
-          <StaffPerformanceHeader staff={staff} basePath={basePath} />
+          <StaffPerformanceHeader
+            staff={{
+              ...staff,
+              booking_count: staffCounts.booking_count,
+              team_count: staffCounts.team_count,
+            }}
+            basePath={basePath}
+            onEdit={() => {
+              if (staff) {
+                setStaffForEdit({
+                  id: staff.id,
+                  full_name: staff.full_name,
+                  phone: staff.phone,
+                  role: staff.role as 'admin' | 'manager' | 'staff',
+                  staff_number: undefined, // Will be fetched in dialog
+                  skills: undefined, // Will be fetched in dialog
+                })
+                setIsEditDialogOpen(true)
+              }
+            }}
+            onDelete={deleteStaff}
+          />
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Performance Stats">
@@ -95,6 +192,14 @@ export function AdminStaffPerformance() {
           <StaffRecentBookings bookings={bookings} onRefresh={refresh} />
         </SectionErrorBoundary>
       </div>
+
+      {/* Edit Dialog */}
+      <StaffEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        staff={staffForEdit}
+        onSuccess={refresh}
+      />
     </ErrorBoundary>
   )
 }

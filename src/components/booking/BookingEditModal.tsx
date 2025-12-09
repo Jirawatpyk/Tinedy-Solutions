@@ -5,6 +5,7 @@ import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { formatTime } from '@/lib/booking-utils'
 import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -95,7 +96,8 @@ export function BookingEditModal({
     clearConflicts,
   } = useConflictDetection()
 
-  const [conflictOverride, setConflictOverride] = useState(false)
+  const [showConflictDialog, setShowConflictDialog] = useState(false)
+  const [pendingUpdateData, setPendingUpdateData] = useState<Record<string, unknown> | null>(null)
   const [bookingDuration, setBookingDuration] = useState<number | null>(null)
 
   // Track if form has been initialized for current booking to prevent re-reset
@@ -291,29 +293,39 @@ export function BookingEditModal({
         updateData.frequency = null
       }
 
-      // Check for conflicts (unless user has already confirmed override)
-      if (!conflictOverride) {
-        const detectedConflicts = await checkConflicts({
-          staffId: updateData.staff_id,
-          teamId: updateData.team_id,
-          bookingDate: updateData.booking_date || '',
-          startTime: updateData.start_time || '',
-          endTime: endTime,
-          excludeBookingId: bookingId // Exclude current booking from conflict check
-        })
+      // Check for conflicts
+      const detectedConflicts = await checkConflicts({
+        staffId: updateData.staff_id,
+        teamId: updateData.team_id,
+        bookingDate: updateData.booking_date || '',
+        startTime: updateData.start_time || '',
+        endTime: endTime,
+        excludeBookingId: bookingId // Exclude current booking from conflict check
+      })
 
-        if (detectedConflicts.length > 0) {
-          // Conflicts detected - show error toast
-          toast({
-            title: 'Scheduling Conflict',
-            description: 'This booking conflicts with existing bookings. Please choose a different time or staff member.',
-            variant: 'destructive',
-          })
-          return // Stop submission
-        }
+      // If conflicts detected, show confirmation dialog
+      if (detectedConflicts.length > 0) {
+        setPendingUpdateData({ ...updateData, bookingId })
+        setShowConflictDialog(true)
+        return // Stop submission until user confirms
       }
 
-      // No conflicts or user confirmed override - proceed with update
+      // No conflicts - proceed with update
+      await performUpdate(updateData, bookingId)
+    } catch (error) {
+      logger.error('Error in BookingEditModal submission', { error })
+      const errorMsg = mapErrorToUserMessage(error, 'booking')
+      toast({
+        title: errorMsg.title,
+        description: errorMsg.description,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Perform the actual database update
+  const performUpdate = async (updateData: Record<string, unknown>, bookingId: string, isOverride = false) => {
+    try {
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
@@ -327,11 +339,9 @@ export function BookingEditModal({
 
       toast({
         title: 'Success',
-        description: conflictOverride ? 'Booking updated successfully (conflict overridden)' : 'Booking updated successfully',
+        description: isOverride ? 'Booking updated successfully (conflict overridden)' : 'Booking updated successfully',
       })
-      onClose()
-      setConflictOverride(false)
-      clearConflicts()
+      handleClose()
       onSuccess()
     } catch (error) {
       logger.error('Error in BookingEditModal submission', { error })
@@ -344,10 +354,19 @@ export function BookingEditModal({
     }
   }
 
+  // Handle conflict override confirmation
+  const handleConflictConfirm = async () => {
+    if (!pendingUpdateData) return
+    const { bookingId, ...updateData } = pendingUpdateData
+    await performUpdate(updateData, bookingId as string, true)
+    setShowConflictDialog(false)
+  }
+
   const handleClose = () => {
     onClose()
     clearConflicts()
-    setConflictOverride(false)
+    setPendingUpdateData(null)
+    setShowConflictDialog(false)
   }
 
   return (
@@ -726,6 +745,18 @@ export function BookingEditModal({
           </div>
         </form>
       </DialogContent>
+
+      {/* Conflict Confirmation Dialog */}
+      <ConfirmDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        title="Scheduling Conflict"
+        description="This booking conflicts with existing bookings. Are you sure you want to proceed anyway?"
+        variant="default"
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={handleConflictConfirm}
+      />
     </Dialog>
   )
 }

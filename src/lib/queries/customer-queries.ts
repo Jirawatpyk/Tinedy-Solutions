@@ -15,15 +15,25 @@ import { queryKeys } from '@/lib/query-keys'
 import type { CustomerRecord } from '@/types/customer'
 
 /**
- * Fetch Customers List
+ * Customer with booking count for delete warning
+ */
+export interface CustomerWithBookingCount extends CustomerRecord {
+  booking_count: number
+}
+
+/**
+ * Fetch Customers List with booking count
  *
  * @param showArchived - Include archived (soft-deleted) customers
- * @returns Promise<CustomerRecord[]>
+ * @returns Promise<CustomerWithBookingCount[]>
  */
-export async function fetchCustomers(showArchived: boolean = false): Promise<CustomerRecord[]> {
+export async function fetchCustomers(showArchived: boolean = false): Promise<CustomerWithBookingCount[]> {
   let query = supabase
     .from('customers')
-    .select('*')
+    .select(`
+      *,
+      bookings:bookings(count)
+    `)
 
   // Filter by archived status
   if (!showArchived) {
@@ -34,7 +44,12 @@ export async function fetchCustomers(showArchived: boolean = false): Promise<Cus
 
   if (error) throw new Error(`Failed to fetch customers: ${error.message}`)
 
-  return data || []
+  // Transform to add booking_count
+  return (data || []).map(customer => ({
+    ...customer,
+    booking_count: customer.bookings?.[0]?.count || 0,
+    bookings: undefined, // Remove raw bookings data
+  })) as CustomerWithBookingCount[]
 }
 
 /**

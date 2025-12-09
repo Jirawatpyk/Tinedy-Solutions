@@ -30,7 +30,6 @@ import {
   Building,
   CreditCard,
   Edit,
-  Trash2,
   PhoneCall,
   Send,
   Plus,
@@ -72,16 +71,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
@@ -199,8 +189,7 @@ export function AdminCustomerDetail() {
   // Dialog states
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false)
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isBookingDetailModalOpen, setIsBookingDetailModalOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
 
@@ -871,10 +860,19 @@ export function AdminCustomerDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <PermissionAwareDeleteButton
+            resource="customers"
+            itemName={customer.full_name}
+            onDelete={deleteCustomer}
+            variant="default"
+            size="sm"
+            buttonVariant="outline"
+            warningMessage={
+              stats?.total_bookings && stats.total_bookings > 0
+                ? `This customer has ${stats.total_bookings} booking(s) that will also be deleted.`
+                : undefined
+            }
+          />
         </div>
       </div>
 
@@ -1591,27 +1589,6 @@ export function AdminCustomerDetail() {
         customer={customer}
       />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {customer.full_name} and all associated data.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={deleteCustomer}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Customer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Booking Detail Modal */}
       {selectedBookingId && (

@@ -555,6 +555,11 @@ export function AdminCustomers() {
                             onCancel={() => archiveCustomer(customer.id)}
                             cancelText="Archive"
                             className="h-7 w-7 sm:h-8 sm:w-8"
+                            warningMessage={
+                              customer.booking_count > 0
+                                ? `This customer has ${customer.booking_count} booking(s) that will also be deleted.`
+                                : undefined
+                            }
                           />
                         </>
                       )}

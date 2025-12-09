@@ -886,78 +886,189 @@ export function BookingCreateModal({
               </div>
             )}
 
-            {/* Booking Date - แสดงเฉพาะเมื่อไม่ recurring (frequency = 1) - แยกแถวเดียวบน mobile */}
-            {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="booking_date">Booking Date *</Label>
-                <Input
-                  id="booking_date"
-                  type="date"
-                  {...form.register('booking_date')}
-                  required
-                  aria-invalid={!!form.formState.errors.booking_date}
-                />
-                {form.formState.errors.booking_date && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.booking_date.message}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Date & Time Fields - Desktop: 3 columns in one row, Mobile: Date on row 1, Start/End on row 2 */}
+            <div className="sm:col-span-2 space-y-3">
+              {/* Row 1: Booking Date - แสดงเฉพาะเมื่อไม่ recurring (frequency = 1) */}
+              {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="booking_date">Booking Date *</Label>
+                    <Input
+                      id="booking_date"
+                      type="date"
+                      {...form.register('booking_date')}
+                      required
+                      aria-invalid={!!form.formState.errors.booking_date}
+                    />
+                    {form.formState.errors.booking_date && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.booking_date.message}
+                      </p>
+                    )}
+                  </div>
 
-            {/* Time Fields - 2 columns */}
-            <div className="sm:col-span-2 grid grid-cols-2 gap-3">
-              {/* Start Time */}
-              <div className="space-y-2">
-                <Label htmlFor="start_time">Start Time *</Label>
-                <Input
-                  id="start_time"
-                  type="time"
-                  {...form.register('start_time', {
-                    onChange: (e) => {
-                      const newStartTime = e.target.value
+                  {/* Desktop only: Start Time & End Time in same row with Booking Date */}
+                  <div className="space-y-2 hidden sm:block">
+                    <Label htmlFor="start_time_desktop">Start Time *</Label>
+                    <Input
+                      id="start_time_desktop"
+                      type="time"
+                      {...form.register('start_time', {
+                        onChange: (e) => {
+                          const newStartTime = e.target.value
 
-                      // Auto-calculate End Time when Start Time changes
-                      if (newStartTime && packageSelection?.estimatedHours) {
-                        const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
-                        const endTime = calculateEndTime(newStartTime, durationMinutes)
-                        logger.debug('Auto-recalculated end time on start time change', {
-                          newStartTime,
-                          endTime,
-                          estimatedHours: packageSelection.estimatedHours
-                        }, { context: 'BookingCreateModal' })
-                        form.setValue('end_time', endTime)
-                      }
-                    }
-                  })}
-                  required
-                  aria-invalid={!!form.formState.errors.start_time}
-                />
-                {form.formState.errors.start_time && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.start_time.message}
-                  </p>
-                )}
-              </div>
+                          // Auto-calculate End Time when Start Time changes
+                          if (newStartTime && packageSelection?.estimatedHours) {
+                            const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                            const endTime = calculateEndTime(newStartTime, durationMinutes)
+                            logger.debug('Auto-recalculated end time on start time change', {
+                              newStartTime,
+                              endTime,
+                              estimatedHours: packageSelection.estimatedHours
+                            }, { context: 'BookingCreateModal' })
+                            form.setValue('end_time', endTime)
+                          }
+                        }
+                      })}
+                      required
+                      aria-invalid={!!form.formState.errors.start_time}
+                    />
+                    {form.formState.errors.start_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.start_time.message}
+                      </p>
+                    )}
+                  </div>
 
-              {/* End Time */}
-              <div className="space-y-2">
-                <Label htmlFor="end_time">End Time</Label>
-                <Input
-                  id="end_time"
-                  type="time"
-                  {...form.register('end_time')}
-                  placeholder="Auto-calculated from package"
-                  disabled={true}
-                  className="bg-muted"
-                  aria-invalid={!!form.formState.errors.end_time}
-                />
-                {form.formState.errors.end_time && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.end_time.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2 hidden sm:block">
+                    <Label htmlFor="end_time_desktop">End Time</Label>
+                    <Input
+                      id="end_time_desktop"
+                      type="time"
+                      {...form.register('end_time')}
+                      placeholder="Auto-calculated from package"
+                      disabled={true}
+                      className="bg-muted"
+                      aria-invalid={!!form.formState.errors.end_time}
+                    />
+                    {form.formState.errors.end_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.end_time.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 2 (Mobile only): Start Time & End Time side by side */}
+              {(!packageSelection?.frequency || packageSelection.frequency === 1) && (
+                <div className="grid grid-cols-2 gap-3 sm:hidden">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time_mobile">Start Time *</Label>
+                    <Input
+                      id="start_time_mobile"
+                      type="time"
+                      {...form.register('start_time', {
+                        onChange: (e) => {
+                          const newStartTime = e.target.value
+
+                          // Auto-calculate End Time when Start Time changes
+                          if (newStartTime && packageSelection?.estimatedHours) {
+                            const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                            const endTime = calculateEndTime(newStartTime, durationMinutes)
+                            logger.debug('Auto-recalculated end time on start time change', {
+                              newStartTime,
+                              endTime,
+                              estimatedHours: packageSelection.estimatedHours
+                            }, { context: 'BookingCreateModal' })
+                            form.setValue('end_time', endTime)
+                          }
+                        }
+                      })}
+                      required
+                      aria-invalid={!!form.formState.errors.start_time}
+                    />
+                    {form.formState.errors.start_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.start_time.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time_mobile">End Time</Label>
+                    <Input
+                      id="end_time_mobile"
+                      type="time"
+                      {...form.register('end_time')}
+                      placeholder="Auto-calculated"
+                      disabled={true}
+                      className="bg-muted"
+                      aria-invalid={!!form.formState.errors.end_time}
+                    />
+                    {form.formState.errors.end_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.end_time.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Recurring mode: Only Start Time & End Time (no Booking Date) */}
+              {packageSelection?.frequency && packageSelection.frequency > 1 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time">Start Time *</Label>
+                    <Input
+                      id="start_time"
+                      type="time"
+                      {...form.register('start_time', {
+                        onChange: (e) => {
+                          const newStartTime = e.target.value
+
+                          // Auto-calculate End Time when Start Time changes
+                          if (newStartTime && packageSelection?.estimatedHours) {
+                            const durationMinutes = Math.round(packageSelection.estimatedHours * 60)
+                            const endTime = calculateEndTime(newStartTime, durationMinutes)
+                            logger.debug('Auto-recalculated end time on start time change', {
+                              newStartTime,
+                              endTime,
+                              estimatedHours: packageSelection.estimatedHours
+                            }, { context: 'BookingCreateModal' })
+                            form.setValue('end_time', endTime)
+                          }
+                        }
+                      })}
+                      required
+                      aria-invalid={!!form.formState.errors.start_time}
+                    />
+                    {form.formState.errors.start_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.start_time.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">End Time</Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      {...form.register('end_time')}
+                      placeholder="Auto-calculated from package"
+                      disabled={true}
+                      className="bg-muted"
+                      aria-invalid={!!form.formState.errors.end_time}
+                    />
+                    {form.formState.errors.end_time && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.end_time.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Price Display - For fixed pricing only */}
@@ -1177,7 +1288,7 @@ export function BookingCreateModal({
               </div>
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2 sm:col-span-2 pb-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"

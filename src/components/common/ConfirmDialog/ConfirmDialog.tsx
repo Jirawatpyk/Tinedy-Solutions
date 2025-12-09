@@ -18,6 +18,7 @@ const confirmButtonVariants = cva(
       variant: {
         default: 'bg-tinedy-blue text-white hover:bg-tinedy-blue/90',
         danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90', // Alias for danger
         warning: 'bg-yellow-600 text-white hover:bg-yellow-600/90',
       },
     },
@@ -104,9 +105,12 @@ export interface ConfirmDialogProps extends VariantProps<typeof confirmButtonVar
 
   /**
    * Visual variant for the confirm button
+   * - 'default': Blue button for general actions
+   * - 'danger' or 'destructive': Red button for delete actions
+   * - 'warning': Yellow button for caution actions
    * @default "default"
    */
-  variant?: 'default' | 'danger' | 'warning'
+  variant?: 'default' | 'danger' | 'warning' | 'destructive'
 
   /**
    * Callback when confirm button is clicked
@@ -124,6 +128,22 @@ export interface ConfirmDialogProps extends VariantProps<typeof confirmButtonVar
    * Disables buttons and shows spinner on confirm button
    */
   isLoading?: boolean
+
+  /**
+   * Warning message to display below description
+   */
+  warningMessage?: string
+
+  /**
+   * Disable the confirm button
+   */
+  disableConfirm?: boolean
+
+  // Backward compatibility aliases
+  /** @deprecated Use confirmLabel instead */
+  confirmText?: string
+  /** @deprecated Use cancelLabel instead */
+  cancelText?: string
 }
 
 export const ConfirmDialog = ({
@@ -131,13 +151,22 @@ export const ConfirmDialog = ({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   variant = 'default',
   onConfirm,
   onCancel,
   isLoading = false,
+  warningMessage,
+  disableConfirm = false,
+  // Backward compatibility
+  confirmText,
+  cancelText,
 }: ConfirmDialogProps) => {
+  // Use new prop names, fallback to deprecated ones
+  const finalConfirmLabel = confirmLabel ?? confirmText ?? 'Confirm'
+  const finalCancelLabel = cancelLabel ?? cancelText ?? 'Cancel'
+
   const handleConfirm = async () => {
     await onConfirm()
   }
@@ -151,29 +180,39 @@ export const ConfirmDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription asChild>
+            <div>
+              <span>{description}</span>
+              {warningMessage && (
+                <p className="mt-2 text-red-600 font-semibold">
+                  {warningMessage}
+                </p>
+              )}
+            </div>
+          </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex-row gap-2 sm:gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
+            className="flex-1 sm:flex-none"
           >
-            {cancelLabel}
+            {finalCancelLabel}
           </Button>
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={isLoading}
-            className={cn(confirmButtonVariants({ variant }))}
+            disabled={isLoading || disableConfirm}
+            className={cn('flex-1 sm:flex-none', confirmButtonVariants({ variant }))}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {confirmLabel}
+            {finalConfirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

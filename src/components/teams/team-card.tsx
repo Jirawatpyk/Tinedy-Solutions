@@ -28,6 +28,7 @@ interface Team {
   members?: TeamMember[]
   average_rating?: number
   deleted_at?: string | null
+  booking_count?: number
 }
 
 interface TeamCardProps {
@@ -141,6 +142,11 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                   onCancel={onCancel ? () => onCancel(team.id) : undefined}
                   cancelText="Archive"
                   className="h-8 w-8 sm:h-10 sm:w-10"
+                  warningMessage={
+                    (team.member_count || 0) > 0 || (team.booking_count || 0) > 0
+                      ? `This team has ${team.member_count || 0} member(s)${(team.booking_count || 0) > 0 ? ` and ${team.booking_count} booking(s)` : ''} that will be affected.`
+                      : undefined
+                  }
                 />
               </>
             )}

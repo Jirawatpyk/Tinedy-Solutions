@@ -141,6 +141,7 @@ export interface TeamWithDetails {
   member_count?: number
   members?: TeamMember[]
   average_rating?: number
+  booking_count?: number
 }
 
 /**

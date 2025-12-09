@@ -59,6 +59,11 @@ interface PermissionAwareDeleteButtonProps {
    * Custom text for cancel action (default: "Cancel")
    */
   cancelText?: string
+
+  /**
+   * Custom warning message (e.g., "This customer has 5 bookings that will be deleted")
+   */
+  warningMessage?: string
 }
 
 export function PermissionAwareDeleteButton({
@@ -71,6 +76,7 @@ export function PermissionAwareDeleteButton({
   buttonVariant = 'ghost',
   className = '',
   cancelText = 'Cancel',
+  warningMessage,
 }: PermissionAwareDeleteButtonProps) {
   const { canDelete, canSoftDelete } = usePermissions()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -160,7 +166,9 @@ export function PermissionAwareDeleteButton({
         }
         description={
           showDeleteButton
-            ? 'This action cannot be undone. This will permanently delete the item from the system.'
+            ? warningMessage
+              ? `${warningMessage}\n\nThis action cannot be undone.`
+              : 'This action cannot be undone. This will permanently delete the item from the system.'
             : 'This will cancel/archive the item. Admins can restore it later if needed.'
         }
         confirmText={showDeleteButton ? 'Delete' : cancelText}

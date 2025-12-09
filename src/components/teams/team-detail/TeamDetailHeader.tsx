@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Edit, Crown, Calendar } from 'lucide-react'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { useToast } from '@/hooks/use-toast'
 import { formatDate } from '@/lib/utils'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
@@ -25,12 +25,16 @@ interface Team {
   created_at: string
   team_lead_id: string | null
   team_lead?: TeamMember | null
+  members?: TeamMember[]
+  member_count?: number
+  booking_count?: number
 }
 
 interface TeamDetailHeaderProps {
   team: Team
   onUpdate: () => void
   onEdit: () => void
+  onArchive?: () => void
   basePath: string
 }
 
@@ -42,7 +46,7 @@ const getInitials = (name: string) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-export function TeamDetailHeader({ team, onEdit, basePath }: TeamDetailHeaderProps) {
+export function TeamDetailHeader({ team, onEdit, onArchive, basePath }: TeamDetailHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -146,11 +150,21 @@ export function TeamDetailHeader({ team, onEdit, basePath }: TeamDetailHeaderPro
               <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
               <span className="hidden sm:inline">Edit</span>
             </Button>
-            <DeleteButton
+            <PermissionAwareDeleteButton
+              resource="teams"
               itemName={team.name}
               onDelete={handleDelete}
+              onCancel={onArchive}
+              cancelText="Archive"
+              variant="default"
               size="sm"
+              buttonVariant="outline"
               className="h-8 sm:h-9"
+              warningMessage={
+                (team.member_count || team.members?.length || 0) > 0 || (team.booking_count || 0) > 0
+                  ? `This team has ${team.member_count || team.members?.length || 0} member(s)${(team.booking_count || 0) > 0 ? ` and ${team.booking_count} booking(s)` : ''} that will be affected.`
+                  : undefined
+              }
             />
           </div>
         </div>

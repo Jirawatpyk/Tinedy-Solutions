@@ -15,8 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
-import { customerQueryOptions } from '@/lib/queries/customer-queries'
-import type { CustomerRecord } from '@/types/customer'
+import { customerQueryOptions, type CustomerWithBookingCount } from '@/lib/queries/customer-queries'
 
 interface UseCustomersOptions {
   /** แสดง customers ที่ archived (soft-deleted) ด้วยหรือไม่ */
@@ -26,8 +25,8 @@ interface UseCustomersOptions {
 }
 
 interface UseCustomersReturn {
-  /** รายการ customers ทั้งหมด */
-  customers: CustomerRecord[]
+  /** รายการ customers ทั้งหมด (with booking_count) */
+  customers: CustomerWithBookingCount[]
   /** กำลังโหลดหรือไม่ */
   loading: boolean
   /** Error message (ถ้ามี) */

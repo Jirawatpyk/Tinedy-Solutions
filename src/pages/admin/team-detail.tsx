@@ -30,7 +30,7 @@ import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
 import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
 import { TeamRecentBookings } from '@/components/teams/team-detail/TeamRecentBookings'
 import { TeamPerformanceCharts } from '@/components/teams/team-detail/TeamPerformanceCharts'
-import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { mapErrorToUserMessage, getArchiveErrorMessage } from '@/lib/error-messages'
 import {
   TeamUpdateSchema,
   TeamUpdateTransformSchema,
@@ -58,6 +58,8 @@ interface Team {
   team_lead_id: string | null
   team_lead?: TeamMember | null
   members?: TeamMember[]
+  member_count?: number
+  booking_count?: number
 }
 
 interface TeamStats {
@@ -317,6 +319,35 @@ export function AdminTeamDetail() {
     }
   }
 
+  const archiveTeam = async () => {
+    if (!team) return
+
+    try {
+      const { error } = await supabase
+        .rpc('soft_delete_record', {
+          table_name: 'teams',
+          record_id: team.id
+        })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Team archived successfully',
+      })
+
+      navigate(`${basePath}/teams`)
+    } catch (error) {
+      console.error('Error archiving team:', error)
+      const errorMessage = getArchiveErrorMessage()
+      toast({
+        title: errorMessage.title,
+        description: errorMessage.description,
+        variant: 'destructive',
+      })
+    }
+  }
+
   const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
     try {
       // Check if staff is currently an ACTIVE member (to prevent duplicates)
@@ -469,9 +500,14 @@ export function AdminTeamDetail() {
 
       {/* Team Header */}
       <TeamDetailHeader
-        team={team}
+        team={{
+          ...team,
+          member_count: team.members?.length || 0,
+          booking_count: stats?.totalBookings || 0,
+        }}
         onUpdate={loadTeamDetail}
         onEdit={openEditDialog}
+        onArchive={archiveTeam}
         basePath={basePath}
       />
 

@@ -17,7 +17,7 @@ import type { StaffWithRating, StaffListItem } from '@/types/staff'
 /**
  * Fetch Staff List with Ratings
  *
- * ดึง staff ทั้งหมด (admin, manager, staff) พร้อม average rating
+ * ดึง staff ทั้งหมด (admin, manager, staff) พร้อม average rating, booking count, team count
  * ใช้สำหรับหน้า Staff management
  *
  * @returns Promise<StaffWithRating[]>
@@ -46,6 +46,20 @@ export async function fetchStaffWithRatings(): Promise<StaffWithRating[]> {
     .select('rating, bookings!inner(staff_id)')
     .in('bookings.staff_id', staffIds)
 
+  // Fetch booking counts for all staff
+  const { data: bookingsData } = await supabase
+    .from('bookings')
+    .select('staff_id')
+    .in('staff_id', staffIds)
+    .is('deleted_at', null)
+
+  // Fetch team membership counts for all staff
+  const { data: teamMembersData } = await supabase
+    .from('team_members')
+    .select('staff_id')
+    .in('staff_id', staffIds)
+    .is('left_at', null) // Only active memberships
+
   // Group ratings by staff_id
   const staffRatings: Record<string, number[]> = {}
 
@@ -60,14 +74,42 @@ export async function fetchStaffWithRatings(): Promise<StaffWithRating[]> {
     }
   })
 
-  // Calculate average rating for each staff
+  // Count bookings per staff
+  const staffBookingCounts: Record<string, number> = {}
+  bookingsData?.forEach((booking: { staff_id: string }) => {
+    if (booking.staff_id) {
+      staffBookingCounts[booking.staff_id] = (staffBookingCounts[booking.staff_id] || 0) + 1
+    }
+  })
+
+  // Count teams per staff
+  const staffTeamCounts: Record<string, number> = {}
+  teamMembersData?.forEach((member: { staff_id: string }) => {
+    if (member.staff_id) {
+      staffTeamCounts[member.staff_id] = (staffTeamCounts[member.staff_id] || 0) + 1
+    }
+  })
+
+  // Calculate average rating for each staff and add counts
   const staffWithRatings: StaffWithRating[] = staffData.map((staff) => {
     const ratings = staffRatings[staff.id]
+    const bookingCount = staffBookingCounts[staff.id] || 0
+    const teamCount = staffTeamCounts[staff.id] || 0
+
     if (ratings && ratings.length > 0) {
       const average = ratings.reduce((a, b) => a + b, 0) / ratings.length
-      return { ...staff, average_rating: average } as StaffWithRating
+      return {
+        ...staff,
+        average_rating: average,
+        booking_count: bookingCount,
+        team_count: teamCount,
+      } as StaffWithRating
     }
-    return staff as StaffWithRating
+    return {
+      ...staff,
+      booking_count: bookingCount,
+      team_count: teamCount,
+    } as StaffWithRating
   })
 
   return staffWithRatings

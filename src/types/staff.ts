@@ -170,6 +170,10 @@ export interface StaffScheduleEntry {
  */
 export interface StaffWithRating extends StaffRecord {
   average_rating?: number
+  /** Number of bookings assigned to this staff */
+  booking_count?: number
+  /** Number of teams this staff is a member of */
+  team_count?: number
 }
 
 /**

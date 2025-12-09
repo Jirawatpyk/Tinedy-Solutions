@@ -119,9 +119,29 @@ export async function fetchTeamsWithDetails(
     }
   })
 
-  // Fetch ratings for all teams
+  // Fetch booking counts and ratings for all teams
   const teamIds = formattedTeams.map((t) => t.id)
   if (teamIds.length > 0) {
+    // Fetch booking counts per team
+    const { data: bookingsData } = await supabase
+      .from('bookings')
+      .select('team_id')
+      .in('team_id', teamIds)
+      .is('deleted_at', null)
+
+    // Count bookings per team
+    const teamBookingCounts: Record<string, number> = {}
+    bookingsData?.forEach((booking: { team_id: string }) => {
+      if (booking.team_id) {
+        teamBookingCounts[booking.team_id] = (teamBookingCounts[booking.team_id] || 0) + 1
+      }
+    })
+
+    // Add booking_count to teams
+    formattedTeams.forEach((team) => {
+      team.booking_count = teamBookingCounts[team.id] || 0
+    })
+
     const { data: ratingsData } = await supabase
       .from('reviews')
       .select('rating, bookings!inner(team_id)')

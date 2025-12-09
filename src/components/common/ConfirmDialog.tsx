@@ -32,8 +32,8 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmText = 'ลบ',
-  cancelText = 'ยกเลิก',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   variant = 'destructive',
   warningMessage,
   disableConfirm = false,
@@ -55,19 +55,24 @@ export function ConfirmDialog({
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={(e) => e.stopPropagation()}>{cancelText}</AlertDialogCancel>
+        <AlertDialogFooter className="flex-row gap-2 sm:gap-2">
+          <AlertDialogCancel
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 sm:flex-none mt-0"
+          >
+            {cancelText}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.stopPropagation()
               onConfirm()
             }}
             disabled={disableConfirm || isLoading}
-            className={
+            className={`flex-1 sm:flex-none ${
               variant === 'destructive'
                 ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
                 : ''
-            }
+            }`}
           >
             {isLoading ? 'Deleting...' : confirmText}
           </AlertDialogAction>
