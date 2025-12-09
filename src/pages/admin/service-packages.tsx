@@ -47,7 +47,38 @@ export function AdminServicePackages() {
   const error = queryError?.message || null
   const refresh = async () => {
     await refetch()
+    // Also refetch booking counts
+    refetchBookingCounts()
   }
+
+  // Query to get booking counts per package (both V1 and V2)
+  const { data: bookingCounts = {}, refetch: refetchBookingCounts } = useQuery({
+    queryKey: ['package-booking-counts'],
+    queryFn: async () => {
+      // Fetch bookings with both V1 (service_package_id) and V2 (package_v2_id) package references
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('service_package_id, package_v2_id')
+        .is('deleted_at', null) // Exclude soft-deleted bookings
+
+      if (error) throw error
+
+      // Count bookings per package
+      const counts: Record<string, number> = {}
+      data.forEach(booking => {
+        // Count V1 packages (service_package_id)
+        if (booking.service_package_id) {
+          counts[booking.service_package_id] = (counts[booking.service_package_id] || 0) + 1
+        }
+        // Count V2 packages (package_v2_id)
+        if (booking.package_v2_id) {
+          counts[booking.package_v2_id] = (counts[booking.package_v2_id] || 0) + 1
+        }
+      })
+      return counts
+    },
+    staleTime: 30000, // Cache for 30 seconds
+  })
 
   // Separate V1 and V2 packages (keep as UnifiedServicePackage for type safety)
   const packagesV1Unified = useMemo(() => {
@@ -286,7 +317,7 @@ export function AdminServicePackages() {
       const { count: bookingCount, error: countError } = await supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('package_id_v2', id)
+        .eq('package_v2_id', id)
 
       if (countError) throw countError
 
@@ -783,6 +814,7 @@ export function AdminServicePackages() {
                   onDelete={deletePackageV2}
                   onToggleActive={toggleActiveV2}
                   showActions={can('update', 'service_packages') || canDelete('service_packages')}
+                  bookingCount={bookingCounts[pkg.id] || 0}
                 />
               )
             })}
@@ -816,6 +848,7 @@ export function AdminServicePackages() {
                   onDelete={(id) => handleUnifiedDelete(id, pkg._source)}
                   onToggleActive={handleUnifiedToggle}
                   showActions={can('update', 'service_packages') || canDelete('service_packages')}
+                  bookingCount={bookingCounts[pkg.id] || 0}
                 />
               )
             })}

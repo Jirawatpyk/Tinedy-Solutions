@@ -49,6 +49,8 @@ interface PackageCardProps {
   onToggleActive?: (pkg: ServicePackageV2WithTiers) => void
   /** Show actions */
   showActions?: boolean
+  /** Number of bookings using this package */
+  bookingCount?: number
 }
 
 /**
@@ -105,6 +107,7 @@ export function PackageCard({
   onDelete,
   onToggleActive,
   showActions = true,
+  bookingCount = 0,
 }: PackageCardProps) {
   const navigate = useNavigate()
   const isTiered = pkg.pricing_model === PricingModel.Tiered
@@ -178,6 +181,8 @@ export function PackageCard({
                     variant="default"
                     size="sm"
                     className="w-full justify-start text-red-600"
+                    warningMessage={bookingCount > 0 ? `Warning: This package has ${bookingCount} booking(s). You cannot delete packages with existing bookings.` : undefined}
+                    disableConfirm={bookingCount > 0}
                   />
                 </DropdownMenuItem>
               </DropdownMenuContent>

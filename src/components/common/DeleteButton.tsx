@@ -9,6 +9,10 @@ interface DeleteButtonProps {
   variant?: 'default' | 'icon'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   className?: string
+  /** Warning message to show in dialog */
+  warningMessage?: string
+  /** Disable the delete confirm button */
+  disableConfirm?: boolean
 }
 
 export const DeleteButton = forwardRef<HTMLButtonElement, DeleteButtonProps>(({
@@ -17,11 +21,14 @@ export const DeleteButton = forwardRef<HTMLButtonElement, DeleteButtonProps>(({
   variant = 'icon',
   size = 'icon',
   className = '',
+  warningMessage,
+  disableConfirm = false,
 }, ref) => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleConfirmDelete = async () => {
+    if (disableConfirm) return // Don't proceed if disabled
     setIsDeleting(true)
     try {
       await onDelete()
@@ -65,6 +72,9 @@ export const DeleteButton = forwardRef<HTMLButtonElement, DeleteButtonProps>(({
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+        warningMessage={warningMessage}
+        disableConfirm={disableConfirm}
+        isLoading={isDeleting}
       />
     </>
   )
