@@ -334,7 +334,11 @@ export function BookingDetailModal({
               {booking.frequency && (
                 <div>
                   <Label className="text-muted-foreground">Frequency</Label>
-                  <p className="font-medium">{getFrequencyLabel(booking.frequency)}</p>
+                  <p className="font-medium">
+                    {booking.is_recurring && booking.recurring_sequence && booking.recurring_total
+                      ? `${booking.recurring_sequence}/${booking.recurring_total} (${getFrequencyLabel(booking.frequency)})`
+                      : getFrequencyLabel(booking.frequency)}
+                  </p>
                 </div>
               )}
 
