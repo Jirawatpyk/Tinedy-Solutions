@@ -82,9 +82,24 @@ export interface StaffBooking {
   } | null
 }
 
+export interface TeamMembershipDetail {
+  teamId: string
+  joinedAt: string // ISO date string
+  isLead: boolean
+}
+
+export interface TeamMembershipPeriod {
+  joinedAt: string
+  leftAt: string | null // null = still active
+}
+
 export interface TeamMembership {
   userId: string
   teamIds: string[]
+  /** Map of teamId to joined date - used to filter team bookings (active only) */
+  teamJoinedDates: Map<string, string>
+  /** Array of ALL membership periods (supports multiple periods per team after re-join) */
+  allMembershipPeriods: Array<{ teamId: string; joinedAt: string; leftAt: string | null }>
   isLead: boolean
   memberOfTeams: number
   leadOfTeams: number
@@ -142,6 +157,67 @@ function mergePackageData(bookings: RawBooking[]): StaffBooking[] {
   })) as StaffBooking[]
 }
 
+/** Type for membership period array */
+type MembershipPeriodArray = Array<{ teamId: string; joinedAt: string; leftAt: string | null }>
+
+/**
+ * Filter team bookings by membership periods
+ * Staff should only see team bookings created during their membership period(s)
+ * This prevents new team members from seeing/earning from old bookings
+ * IMPORTANT: Supports multiple periods per team (after re-join)
+ *
+ * @param bookings - Array of bookings to filter
+ * @param userId - Current user ID
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
+ * @returns Filtered bookings
+ */
+function filterBookingsByMembershipPeriods(
+  bookings: StaffBooking[],
+  userId: string,
+  allMembershipPeriods: MembershipPeriodArray
+): StaffBooking[] {
+  return bookings.filter(booking => {
+    // Direct staff assignment - always show
+    if (booking.staff_id === userId) {
+      return true
+    }
+
+    // Team booking - check if staff was a member when booking was created
+    if (booking.team_id) {
+      // Get ALL membership periods for this team (may have multiple after re-join)
+      const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+
+      if (periodsForTeam.length === 0) {
+        // Staff is not in this team - shouldn't happen but exclude just in case
+        return false
+      }
+
+      // Use booking.created_at for filtering
+      const bookingCreatedAt = new Date(booking.created_at)
+
+      // Check if booking falls within ANY of the membership periods
+      return periodsForTeam.some(period => {
+        const staffJoinedAt = new Date(period.joinedAt)
+        const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+
+        // Booking must be created AFTER staff joined
+        if (bookingCreatedAt < staffJoinedAt) {
+          return false
+        }
+
+        // Booking must be created BEFORE staff left (if they left)
+        if (staffLeftAt && bookingCreatedAt > staffLeftAt) {
+          return false
+        }
+
+        return true
+      })
+    }
+
+    return true
+  })
+}
+
 // ============================================================================
 // QUERY FUNCTIONS
 // ============================================================================
@@ -149,43 +225,98 @@ function mergePackageData(bookings: RawBooking[]): StaffBooking[] {
 /**
  * Fetch Staff Team Membership
  * Check which teams the staff is a member or lead of
+ *
+ * Important: For revenue calculation, we include BOTH active and former members
+ * - Active members (left_at IS NULL): See current team bookings
+ * - Former members (left_at IS NOT NULL): Still see historical bookings for revenue
  */
 export async function fetchStaffTeamMembership(userId: string): Promise<TeamMembership> {
   try {
-    // Get teams where user is a member
+    // Get ALL team memberships (active + former) with joined_at and left_at dates
+    // This preserves revenue history even after staff leaves the team
+    // IMPORTANT: Do NOT filter by is_active - we need former memberships for historical booking visibility
     const { data: memberTeams, error: memberError } = await supabase
       .from('team_members')
-      .select('team_id')
+      .select('team_id, joined_at, left_at')
       .eq('staff_id', userId)
-      .eq('is_active', true)
 
     if (memberError) throw memberError
 
-    // Get teams where user is the lead
+    // Get teams where user is the lead (leads see all team bookings regardless of joined date)
     const { data: leadTeams, error: leadError } = await supabase
       .from('teams')
-      .select('id')
+      .select('id, created_at')
       .eq('team_lead_id', userId)
       .eq('is_active', true)
 
     if (leadError) throw leadError
 
-    const memberTeamIds = memberTeams?.map(m => m.team_id) || []
+    // Build data structures for filtering
+    // teamJoinedDates: For active teams only (dashboard/current bookings)
+    // allMembershipPeriods: Array of ALL periods (supports multiple periods per team after re-join)
+    const teamJoinedDates = new Map<string, string>()
+    const allMembershipPeriods: Array<{ teamId: string; joinedAt: string; leftAt: string | null }> = []
+
+    // Track both active and ALL team IDs for different purposes:
+    // - activeMemberTeamIds: Only for display/counts (teams staff is currently in)
+    // - allMemberTeamIds: For querying bookings (includes former teams for historical visibility)
+    const activeMemberTeamIds: string[] = []
+    const allMemberTeamIds: string[] = []
+
+    memberTeams?.forEach((m: { team_id: string; joined_at: string | null; left_at?: string | null }) => {
+      const joinedAt = m.joined_at || '2020-01-01T00:00:00Z'
+      const leftAt = m.left_at || null
+
+      // Store ALL membership periods (staff can have multiple periods for same team after re-join)
+      allMembershipPeriods.push({ teamId: m.team_id, joinedAt, leftAt })
+
+      // Add ALL teams to allMemberTeamIds (for booking queries - includes former teams)
+      if (!allMemberTeamIds.includes(m.team_id)) {
+        allMemberTeamIds.push(m.team_id)
+      }
+
+      // Only add to active teams if not left (left_at IS NULL)
+      if (!leftAt) {
+        teamJoinedDates.set(m.team_id, joinedAt)
+        activeMemberTeamIds.push(m.team_id)
+      }
+    })
+
     const leadTeamIds = leadTeams?.map(t => t.id) || []
 
-    // Combine and deduplicate
-    const allTeamIds = [...new Set([...memberTeamIds, ...leadTeamIds])]
+    leadTeams?.forEach(t => {
+      // Leads can see all bookings - use very old date
+      // Only set if not already set as member (prioritize member joined_at if both)
+      if (!teamJoinedDates.has(t.id)) {
+        teamJoinedDates.set(t.id, '2020-01-01T00:00:00Z')
+      }
+      // Also add to membership periods for consistency (only if not already exists for this team)
+      const hasLeadPeriod = allMembershipPeriods.some(p => p.teamId === t.id)
+      if (!hasLeadPeriod) {
+        allMembershipPeriods.push({ teamId: t.id, joinedAt: '2020-01-01T00:00:00Z', leftAt: null })
+      }
+    })
+
+    // Combine ALL member teams (including former) + lead teams for booking queries
+    // This ensures staff can see historical bookings from teams they've left
+    const allTeamIds = [...new Set([...allMemberTeamIds, ...leadTeamIds])]
 
     const membership: TeamMembership = {
       userId,
       teamIds: allTeamIds,
+      teamJoinedDates,
+      allMembershipPeriods,
       isLead: leadTeamIds.length > 0,
-      memberOfTeams: memberTeamIds.length,
+      memberOfTeams: activeMemberTeamIds.length,
       leadOfTeams: leadTeamIds.length,
       totalTeams: allTeamIds.length,
     }
 
-    logger.debug('Team Membership', membership, { context: 'StaffBookings' })
+    logger.debug('Team Membership', {
+      ...membership,
+      teamJoinedDates: Object.fromEntries(teamJoinedDates),
+      allMembershipPeriods,
+    }, { context: 'StaffBookings' })
 
     return membership
   } catch (err) {
@@ -194,6 +325,8 @@ export async function fetchStaffTeamMembership(userId: string): Promise<TeamMemb
     return {
       userId,
       teamIds: [],
+      teamJoinedDates: new Map(),
+      allMembershipPeriods: [],
       isLead: false,
       memberOfTeams: 0,
       leadOfTeams: 0,
@@ -204,10 +337,14 @@ export async function fetchStaffTeamMembership(userId: string): Promise<TeamMemb
 
 /**
  * Fetch Staff Bookings for Today
+ * @param userId - Staff user ID
+ * @param teamIds - Array of team IDs staff belongs to
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
  */
 export async function fetchStaffBookingsToday(
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  allMembershipPeriods: MembershipPeriodArray = []
 ): Promise<StaffBooking[]> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -251,17 +388,25 @@ export async function fetchStaffBookingsToday(
     throw new Error(`Failed to fetch today's bookings: ${error.message}`)
   }
 
-  logger.debug('Today Bookings', { count: data?.length || 0 }, { context: 'StaffBookings' })
+  // Filter team bookings by membership periods (staff only sees bookings created during their membership)
+  const mergedData = mergePackageData(data || [])
+  const filteredData = filterBookingsByMembershipPeriods(mergedData, userId, allMembershipPeriods)
 
-  return mergePackageData(data || [])
+  logger.debug('Today Bookings', { total: data?.length || 0, afterFilter: filteredData.length }, { context: 'StaffBookings' })
+
+  return filteredData
 }
 
 /**
  * Fetch Staff Upcoming Bookings (next 7 days)
+ * @param userId - Staff user ID
+ * @param teamIds - Array of team IDs staff belongs to
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
  */
 export async function fetchStaffBookingsUpcoming(
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  allMembershipPeriods: MembershipPeriodArray = []
 ): Promise<StaffBooking[]> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -313,17 +458,25 @@ export async function fetchStaffBookingsUpcoming(
     throw new Error(`Failed to fetch upcoming bookings: ${error.message}`)
   }
 
-  logger.debug('Upcoming Bookings', { count: data?.length || 0 }, { context: 'StaffBookings' })
+  // Filter team bookings by membership periods (staff only sees bookings created during their membership)
+  const mergedData = mergePackageData(data || [])
+  const filteredData = filterBookingsByMembershipPeriods(mergedData, userId, allMembershipPeriods)
 
-  return mergePackageData(data || [])
+  logger.debug('Upcoming Bookings', { total: data?.length || 0, afterFilter: filteredData.length }, { context: 'StaffBookings' })
+
+  return filteredData
 }
 
 /**
  * Fetch Staff Completed Bookings (last 30 days)
+ * @param userId - Staff user ID
+ * @param teamIds - Array of team IDs staff belongs to
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
  */
 export async function fetchStaffBookingsCompleted(
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  allMembershipPeriods: MembershipPeriodArray = []
 ): Promise<StaffBooking[]> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -373,9 +526,13 @@ export async function fetchStaffBookingsCompleted(
     throw new Error(`Failed to fetch completed bookings: ${error.message}`)
   }
 
-  logger.debug('Completed Bookings', { count: data?.length || 0 }, { context: 'StaffBookings' })
+  // Filter team bookings by membership periods (staff only sees bookings created during their membership)
+  const mergedData = mergePackageData(data || [])
+  const filteredData = filterBookingsByMembershipPeriods(mergedData, userId, allMembershipPeriods)
 
-  return mergePackageData(data || [])
+  logger.debug('Completed Bookings', { total: data?.length || 0, afterFilter: filteredData.length }, { context: 'StaffBookings' })
+
+  return filteredData
 }
 
 /**
@@ -385,10 +542,14 @@ export async function fetchStaffBookingsCompleted(
  * - Completion rate (30 days)
  * - Average rating
  * - Total earnings (current month)
+ * @param userId - Staff user ID
+ * @param teamIds - Array of team IDs staff belongs to
+ * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
  */
 export async function fetchStaffStats(
   userId: string,
-  teamIds: string[]
+  teamIds: string[],
+  allMembershipPeriods: MembershipPeriodArray = []
 ): Promise<StaffStats> {
   try {
     const today = new Date()
@@ -525,10 +686,11 @@ export async function fetchStaffStats(
       })(),
 
       // Total earnings (current month) - divided by team_member_count stored at booking creation
+      // Only count bookings created after staff joined the team
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('total_price, team_id, staff_id, team_member_count')
+          .select('total_price, team_id, staff_id, team_member_count, created_at')
           .eq('status', 'completed')
           .eq('payment_status', 'paid')
           .gte('booking_date', startOfMonthStr)
@@ -545,9 +707,34 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return 0
 
+        // Filter team bookings by membership periods before calculating earnings
+        // Staff only earns from bookings created during their membership period(s)
+        const filteredBookings = bookings.filter(booking => {
+          // Direct staff assignment - always count
+          if (booking.staff_id === userId) return true
+
+          // Team booking - check if staff was a member when booking was created
+          if (booking.team_id) {
+            // Get ALL membership periods for this team (may have multiple after re-join)
+            const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+            if (periodsForTeam.length === 0) return false
+
+            const bookingCreatedAt = new Date(booking.created_at)
+            // Check if booking falls within ANY of the membership periods
+            return periodsForTeam.some(period => {
+              const staffJoinedAt = new Date(period.joinedAt)
+              const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+              if (bookingCreatedAt < staffJoinedAt) return false
+              if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
+              return true
+            })
+          }
+          return true
+        })
+
         // Calculate earnings using shared calculateBookingRevenue function
         // Same logic as use-staff-profile.ts for consistency
-        return bookings.reduce((sum, booking) => {
+        return filteredBookings.reduce((sum, booking) => {
           return sum + calculateBookingRevenue(booking, new Map())
         }, 0)
       })(),
@@ -571,10 +758,11 @@ export async function fetchStaffStats(
 
       // Monthly breakdown (6 months) for performance chart - revenue divided by team_member_count
       // Revenue only counts completed + paid bookings (same as Earnings)
+      // Only count bookings created after staff joined the team
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('booking_date, status, payment_status, total_price, team_id, staff_id, team_member_count')
+          .select('booking_date, status, payment_status, total_price, team_id, staff_id, team_member_count, created_at')
           .gte('booking_date', sixMonthsAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null)
@@ -590,10 +778,34 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return []
 
+        // Filter team bookings by membership periods before calculating
+        const filteredBookings = bookings.filter(booking => {
+          // Direct staff assignment - always count
+          if (booking.staff_id === userId) return true
+
+          // Team booking - check if staff was a member when booking was created
+          if (booking.team_id) {
+            // Get ALL membership periods for this team (may have multiple after re-join)
+            const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+            if (periodsForTeam.length === 0) return false
+
+            const bookingCreatedAt = new Date(booking.created_at)
+            // Check if booking falls within ANY of the membership periods
+            return periodsForTeam.some(period => {
+              const staffJoinedAt = new Date(period.joinedAt)
+              const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+              if (bookingCreatedAt < staffJoinedAt) return false
+              if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
+              return true
+            })
+          }
+          return true
+        })
+
         // Group by month with revenue divided by team_member_count
         // Revenue only counts completed + paid bookings (same logic as Earnings)
         const monthlyMap = new Map<string, { jobs: number; revenue: number }>()
-        bookings.forEach((booking) => {
+        filteredBookings.forEach((booking) => {
           const month = booking.booking_date.slice(0, 7) // YYYY-MM
           if (!monthlyMap.has(month)) {
             monthlyMap.set(month, { jobs: 0, revenue: 0 })
@@ -653,6 +865,19 @@ export async function fetchStaffStats(
 // QUERY OPTIONS
 // ============================================================================
 
+/**
+ * Generate a simple hash from membership periods for use in query keys
+ * This ensures queries refetch when membership periods change
+ */
+export function generateMembershipHash(periods: MembershipPeriodArray): string {
+  if (!periods || periods.length === 0) return 'empty'
+  // Create a simple hash from team IDs, join dates, and left dates
+  return periods
+    .map(p => `${p.teamId}:${p.joinedAt}:${p.leftAt || 'null'}`)
+    .sort()
+    .join('|')
+}
+
 export const staffBookingsQueryOptions = {
   teamMembership: (userId: string) => ({
     queryKey: queryKeys.staffBookings.teamMembership(userId),
@@ -661,40 +886,52 @@ export const staffBookingsQueryOptions = {
     enabled: !!userId,
   }),
 
-  today: (userId: string, teamIds: string[]) => ({
-    queryKey: queryKeys.staffBookings.today(userId, teamIds),
-    queryFn: () => fetchStaffBookingsToday(userId, teamIds),
-    staleTime: 1 * 60 * 1000, // 1 minute (today's bookings change frequently)
-    refetchOnMount: 'always' as const, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 3 * 60 * 1000, // Background refetch every 3 minutes
-    enabled: !!userId,
-  }),
+  today: (userId: string, teamIds: string[], allMembershipPeriods: MembershipPeriodArray = []) => {
+    const membershipHash = generateMembershipHash(allMembershipPeriods)
+    return {
+      queryKey: queryKeys.staffBookings.today(userId, teamIds, membershipHash),
+      queryFn: () => fetchStaffBookingsToday(userId, teamIds, allMembershipPeriods),
+      staleTime: 1 * 60 * 1000, // 1 minute (today's bookings change frequently)
+      refetchOnMount: 'always' as const, // Always refetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchInterval: 3 * 60 * 1000, // Background refetch every 3 minutes
+      enabled: !!userId,
+    }
+  },
 
-  upcoming: (userId: string, teamIds: string[]) => ({
-    queryKey: queryKeys.staffBookings.upcoming(userId, teamIds),
-    queryFn: () => fetchStaffBookingsUpcoming(userId, teamIds),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: 'always' as const, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    enabled: !!userId,
-  }),
+  upcoming: (userId: string, teamIds: string[], allMembershipPeriods: MembershipPeriodArray = []) => {
+    const membershipHash = generateMembershipHash(allMembershipPeriods)
+    return {
+      queryKey: queryKeys.staffBookings.upcoming(userId, teamIds, membershipHash),
+      queryFn: () => fetchStaffBookingsUpcoming(userId, teamIds, allMembershipPeriods),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: 'always' as const, // Always refetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      enabled: !!userId,
+    }
+  },
 
-  completed: (userId: string, teamIds: string[]) => ({
-    queryKey: queryKeys.staffBookings.completed(userId, teamIds),
-    queryFn: () => fetchStaffBookingsCompleted(userId, teamIds),
-    staleTime: 10 * 60 * 1000, // 10 minutes (completed bookings rarely change)
-    refetchOnMount: 'always' as const, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    enabled: !!userId,
-  }),
+  completed: (userId: string, teamIds: string[], allMembershipPeriods: MembershipPeriodArray = []) => {
+    const membershipHash = generateMembershipHash(allMembershipPeriods)
+    return {
+      queryKey: queryKeys.staffBookings.completed(userId, teamIds, membershipHash),
+      queryFn: () => fetchStaffBookingsCompleted(userId, teamIds, allMembershipPeriods),
+      staleTime: 10 * 60 * 1000, // 10 minutes (completed bookings rarely change)
+      refetchOnMount: 'always' as const, // Always refetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      enabled: !!userId,
+    }
+  },
 
-  stats: (userId: string, teamIds: string[]) => ({
-    queryKey: queryKeys.staffBookings.stats(userId, teamIds),
-    queryFn: () => fetchStaffStats(userId, teamIds),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: 'always' as const, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    enabled: !!userId,
-  }),
+  stats: (userId: string, teamIds: string[], allMembershipPeriods: MembershipPeriodArray = []) => {
+    const membershipHash = generateMembershipHash(allMembershipPeriods)
+    return {
+      queryKey: queryKeys.staffBookings.stats(userId, teamIds, membershipHash),
+      queryFn: () => fetchStaffStats(userId, teamIds, allMembershipPeriods),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: 'always' as const, // Always refetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      enabled: !!userId,
+    }
+  },
 }

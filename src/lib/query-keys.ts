@@ -103,14 +103,16 @@ export const queryKeys = {
     all: ['staff-bookings'] as const,
     teamMembership: (userId: string) =>
       [...queryKeys.staffBookings.all, 'teams', userId] as const,
-    today: (userId: string, teamIds: string[]) =>
-      [...queryKeys.staffBookings.all, 'today', userId, teamIds] as const,
-    upcoming: (userId: string, teamIds: string[]) =>
-      [...queryKeys.staffBookings.all, 'upcoming', userId, teamIds] as const,
-    completed: (userId: string, teamIds: string[]) =>
-      [...queryKeys.staffBookings.all, 'completed', userId, teamIds] as const,
-    stats: (userId: string, teamIds: string[]) =>
-      [...queryKeys.staffBookings.all, 'stats', userId, teamIds] as const,
+    // Include membershipHash to ensure query refetches when membership periods change
+    // This prevents stale closure issue where queryFn uses old allMembershipPeriods
+    today: (userId: string, teamIds: string[], membershipHash?: string) =>
+      [...queryKeys.staffBookings.all, 'today', userId, teamIds, membershipHash] as const,
+    upcoming: (userId: string, teamIds: string[], membershipHash?: string) =>
+      [...queryKeys.staffBookings.all, 'upcoming', userId, teamIds, membershipHash] as const,
+    completed: (userId: string, teamIds: string[], membershipHash?: string) =>
+      [...queryKeys.staffBookings.all, 'completed', userId, teamIds, membershipHash] as const,
+    stats: (userId: string, teamIds: string[], membershipHash?: string) =>
+      [...queryKeys.staffBookings.all, 'stats', userId, teamIds, membershipHash] as const,
   },
 
   // ================================
@@ -120,7 +122,8 @@ export const queryKeys = {
     all: ['staff-calendar'] as const,
     teamMembership: (userId: string) =>
       [...queryKeys.staffCalendar.all, 'teams', userId] as const,
-    events: (userId: string, teamIds: string[]) =>
-      [...queryKeys.staffCalendar.all, 'events', userId, teamIds] as const,
+    // Include membershipHash to ensure query refetches when membership periods change
+    events: (userId: string, teamIds: string[], membershipHash?: string) =>
+      [...queryKeys.staffCalendar.all, 'events', userId, teamIds, membershipHash] as const,
   },
 }

@@ -100,27 +100,31 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
   })
 
   const teamIds = useMemo(() => teamMembershipQuery.data?.teamIds || [], [teamMembershipQuery.data?.teamIds])
+  // Get ALL membership periods for filtering team bookings (supports re-join with multiple periods)
+  const allMembershipPeriods = useMemo(() => teamMembershipQuery.data?.allMembershipPeriods || [], [teamMembershipQuery.data?.allMembershipPeriods])
   const teamsLoaded = teamMembershipQuery.isSuccess
 
   // Step 2: Fetch bookings (enabled only after teams loaded)
+  // Pass allMembershipPeriods to filter bookings - staff only sees bookings from their membership periods
   const todayQuery = useQuery({
-    ...staffBookingsQueryOptions.today(userId, teamIds),
+    ...staffBookingsQueryOptions.today(userId, teamIds, allMembershipPeriods),
     enabled: !!userId && teamsLoaded,
   })
 
   const upcomingQuery = useQuery({
-    ...staffBookingsQueryOptions.upcoming(userId, teamIds),
+    ...staffBookingsQueryOptions.upcoming(userId, teamIds, allMembershipPeriods),
     enabled: !!userId && teamsLoaded,
   })
 
   const completedQuery = useQuery({
-    ...staffBookingsQueryOptions.completed(userId, teamIds),
+    ...staffBookingsQueryOptions.completed(userId, teamIds, allMembershipPeriods),
     enabled: !!userId && teamsLoaded,
   })
 
   // Step 3: Fetch statistics (enabled only after teams loaded)
+  // Pass allMembershipPeriods to filter earnings - staff only earns from bookings in their membership periods
   const statsQuery = useQuery({
-    ...staffBookingsQueryOptions.stats(userId, teamIds),
+    ...staffBookingsQueryOptions.stats(userId, teamIds, allMembershipPeriods),
     enabled: !!userId && teamsLoaded,
   })
 
@@ -141,10 +145,12 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     null
 
   // Real-time subscriptions
+  // Note: We fetch latest membership data inside callback to avoid race condition
+  // when membership changes cause re-subscription and potentially miss events
   useEffect(() => {
     if (!userId || !teamsLoaded) return
 
-    logger.debug('Setting up real-time subscription', { userId, teamIds }, { context: 'StaffDashboard' })
+    logger.debug('Setting up real-time subscription', { userId }, { context: 'StaffDashboard' })
 
     const channel = supabase
       .channel('staff-bookings')
@@ -158,35 +164,78 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
         },
         (payload) => {
           // Filter relevant bookings in callback
-          const booking = payload.new as { staff_id?: string; team_id?: string } | null
-          const oldBooking = payload.old as { staff_id?: string; team_id?: string } | null
+          const booking = payload.new as { staff_id?: string; team_id?: string; created_at?: string } | null
+          const oldBooking = payload.old as { staff_id?: string; team_id?: string; created_at?: string } | null
 
           // For DELETE events, check old booking data
           const relevantBooking = booking || oldBooking
 
           // Check if this booking is relevant to this staff
           const isMyBooking = relevantBooking?.staff_id === userId
-          const isMyTeamBooking = relevantBooking?.team_id && teamIds.includes(relevantBooking.team_id)
 
-          if (!isMyBooking && !isMyTeamBooking) {
-            // Not relevant to this staff, skip
-            return
+          // Get LATEST membership data from cache to avoid race condition
+          // This ensures we use current membership data even if it changed since subscription started
+          const latestMembership = queryClient.getQueryData(
+            queryKeys.staffBookings.teamMembership(userId)
+          ) as TeamMembership | undefined
+
+          const currentTeamIds = latestMembership?.teamIds || []
+          const currentPeriods = latestMembership?.allMembershipPeriods || []
+
+          // For team bookings, also check if staff was a member when booking was created
+          let isMyTeamBooking = false
+          if (relevantBooking?.team_id && currentTeamIds.includes(relevantBooking.team_id)) {
+            // Get membership periods for this team
+            const periodsForTeam = currentPeriods.filter(p => p.teamId === relevantBooking.team_id)
+
+            if (periodsForTeam.length > 0 && relevantBooking.created_at) {
+              const bookingCreatedAt = new Date(relevantBooking.created_at)
+
+              // Check if booking was created during ANY of the membership periods
+              isMyTeamBooking = periodsForTeam.some(period => {
+                const staffJoinedAt = new Date(period.joinedAt)
+                const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+
+                // Booking must be created AFTER staff joined
+                if (bookingCreatedAt < staffJoinedAt) return false
+
+                // Booking must be created BEFORE staff left (if they left)
+                if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
+
+                return true
+              })
+            }
           }
 
+          if (!isMyBooking && !isMyTeamBooking) {
+            // Not relevant to this staff (either not their booking or outside membership period)
+            return
+          }
           logger.debug('Real-time update received', { event: payload.eventType }, { context: 'StaffDashboard' })
 
           // Use moderate delay for UPDATE events to avoid conflict with mutations
-          // Reduced from 1000ms to 300ms to improve UX while maintaining safety
           const delay = payload.eventType === 'UPDATE' ? 300 : 100
 
-          logger.debug(`Scheduling invalidation with ${delay}ms delay`, { eventType: payload.eventType }, { context: 'StaffDashboard' })
+          setTimeout(async () => {
+            // IMPORTANT: Invalidate teamMembership FIRST to ensure fresh membership data
+            // Then wait a bit for React Query to refetch before invalidating bookings
+            // This prevents stale closure issue where queryFn uses old allMembershipPeriods
+            await queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
 
-          setTimeout(() => {
-            // Invalidate all bookings queries to refetch
-            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
-            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.upcoming(userId, teamIds) })
-            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
-            queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+            // Wait for membership refetch to complete before invalidating bookings
+            await queryClient.refetchQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
+
+            // Now invalidate ALL staff bookings queries using partial key match
+            // This ensures all queries with any membershipHash are invalidated
+            // The useQuery hooks will automatically refetch with current allMembershipPeriods
+            queryClient.invalidateQueries({
+              queryKey: ['staff-bookings'],
+              predicate: (query) => {
+                const key = query.queryKey as string[]
+                // Match queries for this user
+                return key.includes(userId)
+              }
+            })
           }, delay)
         }
       )
@@ -196,7 +245,21 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       logger.debug('Cleaning up real-time subscription', {}, { context: 'StaffDashboard' })
       supabase.removeChannel(channel)
     }
-  }, [userId, teamsLoaded, teamIds, queryClient])
+  }, [userId, teamsLoaded, queryClient]) // Removed teamIds and allMembershipPeriods to avoid re-subscription
+
+  // Helper to get current queryKey for today bookings (includes membershipHash)
+  const getTodayQueryKey = () => staffBookingsQueryOptions.today(userId, teamIds, allMembershipPeriods).queryKey
+
+  // Helper to invalidate all staff bookings queries for this user
+  const invalidateStaffBookings = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['staff-bookings'],
+      predicate: (query) => {
+        const key = query.queryKey as string[]
+        return key.includes(userId)
+      }
+    })
+  }
 
   // Mutation: Start Progress
   const startProgressMutation = useMutation({
@@ -216,29 +279,30 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       logger.debug('Booking status updated to in_progress', { bookingId }, { context: 'StaffDashboard' })
     },
     onMutate: async (bookingId) => {
+      const todayKey = getTodayQueryKey()
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
+      await queryClient.cancelQueries({ queryKey: todayKey })
 
       // Snapshot previous value
-      const previousBookings = queryClient.getQueryData(queryKeys.staffBookings.today(userId, teamIds))
+      const previousBookings = queryClient.getQueryData(todayKey)
 
       // Optimistically update cache
       queryClient.setQueryData(
-        queryKeys.staffBookings.today(userId, teamIds),
+        todayKey,
         (old: StaffBooking[] | undefined) =>
           old?.map((b) => (b.id === bookingId ? { ...b, status: 'in_progress' as const } : b))
       )
 
       logger.debug('Optimistically updated booking status', { bookingId }, { context: 'StaffDashboard' })
 
-      return { previousBookings }
+      return { previousBookings, todayKey }
     },
     onError: (error, bookingId, context) => {
       logger.error('Mutation error', { error, bookingId }, { context: 'StaffDashboard' })
       // Rollback on error
-      if (context?.previousBookings) {
+      if (context?.previousBookings && context?.todayKey) {
         queryClient.setQueryData(
-          queryKeys.staffBookings.today(userId, teamIds),
+          context.todayKey,
           context.previousBookings
         )
         logger.debug('Rolled back booking status update', { bookingId }, { context: 'StaffDashboard' })
@@ -247,9 +311,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     onSettled: async () => {
       // Increased delay to ensure DB update is committed before refetch
       await new Promise(resolve => setTimeout(resolve, 300))
-      // Always refetch after mutation
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+      // Invalidate all staff bookings queries
+      invalidateStaffBookings()
     },
   })
 
@@ -266,29 +329,30 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       logger.debug('Booking status updated to completed', { bookingId }, { context: 'StaffDashboard' })
     },
     onMutate: async (bookingId) => {
+      const todayKey = getTodayQueryKey()
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
+      await queryClient.cancelQueries({ queryKey: todayKey })
 
       // Snapshot previous value
-      const previousBookings = queryClient.getQueryData(queryKeys.staffBookings.today(userId, teamIds))
+      const previousBookings = queryClient.getQueryData(todayKey)
 
       // Optimistically update cache
       queryClient.setQueryData(
-        queryKeys.staffBookings.today(userId, teamIds),
+        todayKey,
         (old: StaffBooking[] | undefined) =>
           old?.map((b) => (b.id === bookingId ? { ...b, status: 'completed' as const } : b))
       )
 
       logger.debug('Optimistically updated booking status to completed', { bookingId }, { context: 'StaffDashboard' })
 
-      return { previousBookings }
+      return { previousBookings, todayKey }
     },
     onError: (error, bookingId, context) => {
       logger.error('Mutation error', { error, bookingId }, { context: 'StaffDashboard' })
       // Rollback on error
-      if (context?.previousBookings) {
+      if (context?.previousBookings && context?.todayKey) {
         queryClient.setQueryData(
-          queryKeys.staffBookings.today(userId, teamIds),
+          context.todayKey,
           context.previousBookings
         )
         logger.debug('Rolled back booking status update', { bookingId }, { context: 'StaffDashboard' })
@@ -297,10 +361,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     onSettled: async () => {
       // Small delay to ensure DB update is committed before refetch
       await new Promise(resolve => setTimeout(resolve, 100))
-      // Always refetch after mutation
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.stats(userId, teamIds) })
+      // Invalidate all staff bookings queries
+      invalidateStaffBookings()
     },
   })
 
@@ -317,10 +379,8 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       logger.debug('Booking notes updated', { bookingId }, { context: 'StaffDashboard' })
     },
     onSuccess: () => {
-      // Invalidate queries to refetch
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.today(userId, teamIds) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.upcoming(userId, teamIds) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.completed(userId, teamIds) })
+      // Invalidate all staff bookings queries
+      invalidateStaffBookings()
     },
   })
 
