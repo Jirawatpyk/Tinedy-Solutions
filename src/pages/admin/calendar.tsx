@@ -354,9 +354,9 @@ export function AdminCalendar() {
         />
 
         <CalendarErrorBoundary>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-220px)]">
             {/* Calendar */}
-            <Card className="lg:col-span-2 flex flex-col h-fit">
+            <Card className="lg:col-span-2 flex flex-col lg:h-full">
               <CardHeader className="flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-display text-2xl">

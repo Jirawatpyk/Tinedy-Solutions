@@ -371,8 +371,8 @@ export default function StaffCalendar() {
             </Card>
 
             {/* Booking List Sidebar */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
+            <Card className="lg:col-span-1 lg:max-h-[calc(100vh-200px)] flex flex-col overflow-hidden">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle>
                   {selectedDate ? format(selectedDate, 'd MMMM yyyy', { locale: enUS }) : 'Select Date'}
                 </CardTitle>
@@ -382,7 +382,7 @@ export default function StaffCalendar() {
                   </p>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 min-h-0 overflow-y-auto">
                 {!selectedDate ? (
                   <div className="text-center py-12">
                     <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
@@ -396,7 +396,7 @@ export default function StaffCalendar() {
                     <p className="text-muted-foreground">No tasks on this day</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 sm:space-y-3 max-h-[50vh] sm:max-h-[600px] overflow-y-auto">
+                  <div className="space-y-2 sm:space-y-3">
                     {selectedDateEvents.map((event) => (
                       <div
                         key={event.booking_id}

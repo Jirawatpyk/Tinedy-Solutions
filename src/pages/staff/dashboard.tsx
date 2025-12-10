@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useStaffDashboard } from '@/hooks/useStaffDashboard'
 import { useNotifications } from '@/hooks/use-notifications'
+import { useDebounce } from '@/hooks/use-debounce'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { StatsCard } from '@/components/staff/stats-card'
 import { SimplifiedBookingCard } from '@/components/staff/simplified-booking-card'
@@ -11,6 +12,7 @@ import { EmptyState } from '@/components/staff/empty-state'
 import { FloatingActionButton } from '@/components/staff/floating-action-button'
 import { PerformanceChart } from '@/components/staff/performance-chart'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -21,8 +23,19 @@ import {
   AlertCircle,
   Award,
   Star,
+  Search,
+  X,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+
+// Empty state when search returns no results
+const SearchEmptyState = () => (
+  <div className="text-center py-12 text-muted-foreground">
+    <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+    <p className="text-lg font-medium">No results found</p>
+    <p className="text-sm">Try adjusting your search terms</p>
+  </div>
+)
 
 export default function StaffDashboard() {
   const {
@@ -53,7 +66,39 @@ export default function StaffDashboard() {
   const [todayLimit, setTodayLimit] = useState(6)
   const [upcomingLimit, setUpcomingLimit] = useState(6)
   const [completedLimit, setCompletedLimit] = useState(6)
+  const [searchInput, setSearchInput] = useState('')
+  const searchQuery = useDebounce(searchInput, 300) // Debounce 300ms for performance
   const { toast } = useToast()
+
+  // Filter bookings based on debounced search query
+  const filterBookings = (bookings: StaffBooking[]): StaffBooking[] => {
+    if (!searchQuery.trim()) return bookings
+
+    const query = searchQuery.toLowerCase().trim()
+    return bookings.filter((booking) => {
+      const bookingId = booking.id?.toLowerCase() || ''
+      const customerName = booking.customers?.full_name?.toLowerCase() || ''
+      const packageName = booking.service_packages?.name?.toLowerCase() ||
+                         booking.service_packages_v2?.name?.toLowerCase() || ''
+      const address = booking.address?.toLowerCase() || ''
+      const city = booking.city?.toLowerCase() || ''
+      const status = booking.status?.toLowerCase() || ''
+
+      return (
+        bookingId.includes(query) ||
+        customerName.includes(query) ||
+        packageName.includes(query) ||
+        address.includes(query) ||
+        city.includes(query) ||
+        status.includes(query)
+      )
+    })
+  }
+
+  // Filtered bookings
+  const filteredTodayBookings = useMemo(() => filterBookings(todayBookings), [todayBookings, searchQuery])
+  const filteredUpcomingBookings = useMemo(() => filterBookings(upcomingBookings), [upcomingBookings, searchQuery])
+  const filteredCompletedBookings = useMemo(() => filterBookings(completedBookings), [completedBookings, searchQuery])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -138,12 +183,12 @@ export default function StaffDashboard() {
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
               </div>
-            ) : todayBookings.length === 0 ? (
-              <EmptyState type="today" />
+            ) : filteredTodayBookings.length === 0 ? (
+              searchInput ? <SearchEmptyState /> : <EmptyState type="today" />
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                  {todayBookings.slice(0, todayLimit).map((booking, index) => (
+                  {filteredTodayBookings.slice(0, todayLimit).map((booking, index) => (
                     <div
                       key={booking.id}
                       className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500"
@@ -161,7 +206,7 @@ export default function StaffDashboard() {
                     </div>
                   ))}
                 </div>
-                {todayBookings.length > todayLimit && (
+                {filteredTodayBookings.length > todayLimit && (
                   <div className="flex justify-center mt-6">
                     <Button
                       onClick={() => setTodayLimit(prev => prev + 6)}
@@ -169,7 +214,7 @@ export default function StaffDashboard() {
                       size="lg"
                       className="min-h-[44px]"
                     >
-                      Load More ({todayBookings.length - todayLimit} remaining)
+                      Load More ({filteredTodayBookings.length - todayLimit} remaining)
                     </Button>
                   </div>
                 )}
@@ -187,12 +232,12 @@ export default function StaffDashboard() {
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
               </div>
-            ) : upcomingBookings.length === 0 ? (
-              <EmptyState type="upcoming" />
+            ) : filteredUpcomingBookings.length === 0 ? (
+              searchInput ? <SearchEmptyState /> : <EmptyState type="upcoming" />
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                  {upcomingBookings.slice(0, upcomingLimit).map((booking, index) => (
+                  {filteredUpcomingBookings.slice(0, upcomingLimit).map((booking, index) => (
                     <div
                       key={booking.id}
                       className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500"
@@ -210,7 +255,7 @@ export default function StaffDashboard() {
                     </div>
                   ))}
                 </div>
-                {upcomingBookings.length > upcomingLimit && (
+                {filteredUpcomingBookings.length > upcomingLimit && (
                   <div className="flex justify-center mt-6">
                     <Button
                       onClick={() => setUpcomingLimit(prev => prev + 6)}
@@ -218,7 +263,7 @@ export default function StaffDashboard() {
                       size="lg"
                       className="min-h-[44px]"
                     >
-                      Load More ({upcomingBookings.length - upcomingLimit} remaining)
+                      Load More ({filteredUpcomingBookings.length - upcomingLimit} remaining)
                     </Button>
                   </div>
                 )}
@@ -236,12 +281,12 @@ export default function StaffDashboard() {
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
               </div>
-            ) : completedBookings.length === 0 ? (
-              <EmptyState type="past" />
+            ) : filteredCompletedBookings.length === 0 ? (
+              searchInput ? <SearchEmptyState /> : <EmptyState type="past" />
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                  {completedBookings.slice(0, completedLimit).map((booking, index) => (
+                  {filteredCompletedBookings.slice(0, completedLimit).map((booking, index) => (
                     <div
                       key={booking.id}
                       className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500"
@@ -259,7 +304,7 @@ export default function StaffDashboard() {
                     </div>
                   ))}
                 </div>
-                {completedBookings.length > completedLimit && (
+                {filteredCompletedBookings.length > completedLimit && (
                   <div className="flex justify-center mt-6">
                     <Button
                       onClick={() => setCompletedLimit(prev => prev + 6)}
@@ -267,7 +312,7 @@ export default function StaffDashboard() {
                       size="lg"
                       className="min-h-[44px]"
                     >
-                      Load More ({completedBookings.length - completedLimit} remaining)
+                      Load More ({filteredCompletedBookings.length - completedLimit} remaining)
                     </Button>
                   </div>
                 )}
@@ -365,14 +410,34 @@ export default function StaffDashboard() {
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-gray-50/50 to-primary/5">
       {/* Modern Header */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-20 shadow-sm">
-        <div className="px-3 sm:px-6 lg:px-8 py-2 tablet-landscape:py-3 sm:py-6">
-          <div className="flex items-center justify-between gap-2">
+        <div className="px-3 sm:px-6 lg:px-8 py-2 tablet-landscape:py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <h1 className="text-lg tablet-landscape:text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
               My Bookings
             </h1>
-            <p className="text-[10px] tablet-landscape:text-xs sm:text-sm text-muted-foreground font-medium">
-              Manage your tasks efficiently
-            </p>
+            {/* Search Input */}
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search bookings..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9 pr-8 h-9 text-sm"
+                aria-label="Search bookings by ID, customer, package, address, or status"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -381,9 +446,9 @@ export default function StaffDashboard() {
       <BookingTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        todayCount={todayBookings.length}
-        upcomingCount={upcomingBookings.length}
-        pastCount={completedBookings.length}
+        todayCount={filteredTodayBookings.length}
+        upcomingCount={filteredUpcomingBookings.length}
+        pastCount={filteredCompletedBookings.length}
       />
 
       {/* Main Content */}

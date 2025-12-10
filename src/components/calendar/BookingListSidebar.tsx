@@ -167,7 +167,7 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
   const hasBookings = bookings.length > 0
 
   return (
-    <Card className="lg:col-span-1 flex flex-col h-full max-h-[calc(100vh-200px)]">
+    <Card className="lg:col-span-1 flex flex-col lg:h-full overflow-hidden">
       <CardHeader className="py-3 px-4 flex-shrink-0 border-b">
         {/* Compact Header - Single Line */}
         <div className="flex items-center justify-between gap-2">
