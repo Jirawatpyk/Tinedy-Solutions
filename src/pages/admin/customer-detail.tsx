@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
+import { useOptimisticPayment } from '@/hooks/optimistic'
 import { mapErrorToUserMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
@@ -76,13 +77,6 @@ import { PermissionAwareDeleteButton } from '@/components/common/PermissionAware
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
-import {
-  markAsPaid as markAsPaidService,
-  verifyPayment as verifyPaymentService,
-  requestRefund as requestRefundService,
-  completeRefund as completeRefundService,
-  cancelRefund as cancelRefundService,
-} from '@/services/payment-service'
 
 interface CustomerStats {
   total_bookings: number
@@ -218,6 +212,14 @@ export function AdminCustomerDetail() {
     setSelectedBooking,
     onSuccess: refetchBookings,
   })
+
+  // Initialize optimistic payment hook
+  const payment = useOptimisticPayment({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refetchBookings,
+  })
+
   const [editFormData, setEditFormData] = useState<{
     booking_date?: string
     start_time?: string
@@ -1226,32 +1228,12 @@ export function AdminCustomerDetail() {
                         setIsBookingDetailModalOpen(true)
                       }}
                       onStatusChange={handleStatusChange}
-                      onVerifyPayment={async (bookingId) => {
-                        try {
-                          const booking = bookings.find(b => b.id === bookingId)
-                          const result = await verifyPaymentService({
-                            bookingId,
-                            recurringGroupId: booking?.recurring_group_id || undefined,
-                          })
-
-                          if (!result.success) throw new Error(result.error)
-
-                          toast({
-                            title: 'Success',
-                            description: result.count > 1
-                              ? `${result.count} bookings verified successfully`
-                              : 'Payment verified successfully',
-                          })
-
-                          refetchBookings()
-                        } catch (error) {
-                          const errorMsg = mapErrorToUserMessage(error, 'booking')
-                          toast({
-                            title: errorMsg.title,
-                            description: errorMsg.description,
-                            variant: 'destructive',
-                          })
-                        }
+                      onVerifyPayment={(bookingId) => {
+                        const booking = bookings.find(b => b.id === bookingId)
+                        payment.verifyPayment.mutate({
+                          bookingId,
+                          recurringGroupId: booking?.recurring_group_id || undefined,
+                        })
                       }}
                       getAvailableStatuses={getAvailableStatuses}
                       getStatusLabel={getStatusLabel}
@@ -1612,140 +1594,42 @@ export function AdminCustomerDetail() {
             }
           }}
           onStatusChange={handleStatusChange}
-          onMarkAsPaid={async (bookingId, method) => {
-            try {
-              const booking = bookings.find(b => b.id === bookingId)
-              const result = await markAsPaidService({
-                bookingId,
-                recurringGroupId: booking?.recurring_group_id || undefined,
-                paymentMethod: method,
-                amount: booking?.total_price || 0,
-              })
-
-              if (!result.success) throw new Error(result.error)
-
-              toast({
-                title: 'Success',
-                description: result.count > 1
-                  ? `${result.count} bookings marked as paid`
-                  : 'Payment marked as paid',
-              })
-
-              refetchBookings()
-            } catch (error) {
-              const errorMsg = mapErrorToUserMessage(error, 'booking')
-              toast({
-                title: errorMsg.title,
-                description: errorMsg.description,
-                variant: 'destructive',
-              })
-            }
+          onMarkAsPaid={(bookingId, method) => {
+            const booking = bookings.find(b => b.id === bookingId)
+            payment.markAsPaid.mutate({
+              bookingId,
+              recurringGroupId: booking?.recurring_group_id || undefined,
+              paymentMethod: method,
+              amount: booking?.total_price || 0,
+            })
           }}
-          onVerifyPayment={async (bookingId) => {
-            try {
-              const booking = bookings.find(b => b.id === bookingId)
-              const result = await verifyPaymentService({
-                bookingId,
-                recurringGroupId: booking?.recurring_group_id || undefined,
-              })
-
-              if (!result.success) throw new Error(result.error)
-
-              toast({
-                title: 'Success',
-                description: result.count > 1
-                  ? `${result.count} bookings verified successfully`
-                  : 'Payment verified successfully',
-              })
-
-              refetchBookings()
-            } catch (error) {
-              const errorMsg = mapErrorToUserMessage(error, 'booking')
-              toast({
-                title: errorMsg.title,
-                description: errorMsg.description,
-                variant: 'destructive',
-              })
-            }
+          onVerifyPayment={(bookingId) => {
+            const booking = bookings.find(b => b.id === bookingId)
+            payment.verifyPayment.mutate({
+              bookingId,
+              recurringGroupId: booking?.recurring_group_id || undefined,
+            })
           }}
-          onRequestRefund={async (bookingId) => {
-            try {
-              const booking = bookings.find(b => b.id === bookingId)
-              const result = await requestRefundService({
-                bookingId,
-                recurringGroupId: booking?.recurring_group_id || undefined,
-              })
-
-              if (!result.success) throw new Error(result.error)
-
-              toast({
-                title: 'Refund Requested',
-                description: result.count > 1
-                  ? `${result.count} bookings marked for refund`
-                  : 'Booking marked for refund',
-              })
-
-              refetchBookings()
-            } catch (error) {
-              const errorMsg = mapErrorToUserMessage(error, 'booking')
-              toast({
-                title: errorMsg.title,
-                description: errorMsg.description,
-                variant: 'destructive',
-              })
-            }
+          onRequestRefund={(bookingId) => {
+            const booking = bookings.find(b => b.id === bookingId)
+            payment.requestRefund.mutate({
+              bookingId,
+              recurringGroupId: booking?.recurring_group_id || undefined,
+            })
           }}
-          onCompleteRefund={async (bookingId) => {
-            try {
-              const booking = bookings.find(b => b.id === bookingId)
-              const result = await completeRefundService({
-                bookingId,
-                recurringGroupId: booking?.recurring_group_id || undefined,
-              })
-
-              if (!result.success) throw new Error(result.error)
-
-              toast({
-                title: 'Refund Completed',
-                description: result.count > 1
-                  ? `${result.count} bookings refunded`
-                  : 'Booking refunded successfully',
-              })
-
-              refetchBookings()
-            } catch (error) {
-              const errorMsg = mapErrorToUserMessage(error, 'booking')
-              toast({
-                title: errorMsg.title,
-                description: errorMsg.description,
-                variant: 'destructive',
-              })
-            }
+          onCompleteRefund={(bookingId) => {
+            const booking = bookings.find(b => b.id === bookingId)
+            payment.completeRefund.mutate({
+              bookingId,
+              recurringGroupId: booking?.recurring_group_id || undefined,
+            })
           }}
-          onCancelRefund={async (bookingId) => {
-            try {
-              const booking = bookings.find(b => b.id === bookingId)
-              const result = await cancelRefundService({
-                bookingId,
-                recurringGroupId: booking?.recurring_group_id || undefined,
-              })
-
-              if (!result.success) throw new Error(result.error)
-
-              toast({
-                title: 'Refund Cancelled',
-                description: 'Booking restored to paid status',
-              })
-
-              refetchBookings()
-            } catch (error) {
-              const errorMsg = mapErrorToUserMessage(error, 'booking')
-              toast({
-                title: errorMsg.title,
-                description: errorMsg.description,
-                variant: 'destructive',
-              })
-            }
+          onCancelRefund={(bookingId) => {
+            const booking = bookings.find(b => b.id === bookingId)
+            payment.cancelRefund.mutate({
+              bookingId,
+              recurringGroupId: booking?.recurring_group_id || undefined,
+            })
           }}
           getStatusBadge={getStatusBadge}
           getPaymentStatusBadge={(status) => {

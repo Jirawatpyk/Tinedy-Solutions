@@ -30,7 +30,8 @@ import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { TeamCard } from '@/components/teams/team-card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage, getTeamMemberError } from '@/lib/error-messages'
+import { mapErrorToUserMessage, getLoadErrorMessage, getTeamMemberError } from '@/lib/error-messages'
+import { useOptimisticDelete } from '@/hooks/optimistic'
 import {
   TeamCreateSchema,
   TeamUpdateSchema,
@@ -71,6 +72,12 @@ export function AdminTeams() {
   const { teams, loading, refresh, error: teamsError } = useTeamsWithDetails({
     showArchived,
     enableRealtime: true,
+  })
+
+  // Initialize optimistic delete hook
+  const deleteOps = useOptimisticDelete({
+    table: 'teams',
+    onSuccess: refresh,
   })
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -316,82 +323,15 @@ export function AdminTeams() {
   }
 
   const handleDeleteTeam = async (teamId: string) => {
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Team deleted successfully',
-      })
-
-      refresh()
-    } catch (error) {
-      console.error('Error deleting team:', error)
-      const errorMessage = getDeleteErrorMessage('team')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.permanentDelete.mutate({ id: teamId })
   }
 
   const archiveTeam = async (teamId: string) => {
-    try {
-      const { error } = await supabase
-        .rpc('soft_delete_record', {
-          table_name: 'teams',
-          record_id: teamId
-        })
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Team archived successfully',
-      })
-
-      refresh()
-    } catch (error) {
-      console.error('Error archiving team:', error)
-      const errorMessage = getArchiveErrorMessage()
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.softDelete.mutate({ id: teamId })
   }
 
   const restoreTeam = async (teamId: string) => {
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ deleted_at: null })
-        .eq('id', teamId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Team restored successfully',
-      })
-
-      refresh()
-    } catch (error) {
-      console.error('Error restoring team:', error)
-      const errorMessage = getRestoreErrorMessage()
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.restore.mutate({ id: teamId })
   }
 
   const onSubmitAddMember = async (data: AddTeamMemberFormData) => {

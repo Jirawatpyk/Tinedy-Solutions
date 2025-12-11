@@ -394,14 +394,33 @@ export function AdminBookings() {
   }, [])
 
   // Sync selectedBooking with bookings array when realtime updates occur
+  // Optimized to prevent flickering by comparing only important fields
+  const lastSyncedBooking = useRef<Booking | null>(null)
+
   useEffect(() => {
-    if (selectedBooking) {
-      const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
-      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(selectedBooking)) {
-        setSelectedBooking(updatedBooking)
-      }
+    // Only sync if booking is selected and detail modal is open
+    if (!selectedBooking || !isDetailOpen) {
+      lastSyncedBooking.current = null
+      return
     }
-  }, [bookings, selectedBooking])
+
+    const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
+    if (!updatedBooking) return
+
+    // Compare only important fields that might change via realtime
+    const prev = lastSyncedBooking.current
+    const hasImportantChanges = !prev ||
+      updatedBooking.status !== prev.status ||
+      updatedBooking.payment_status !== prev.payment_status ||
+      updatedBooking.payment_method !== prev.payment_method ||
+      updatedBooking.payment_date !== prev.payment_date ||
+      (updatedBooking as { payment_slip_url?: string }).payment_slip_url !== (prev as { payment_slip_url?: string }).payment_slip_url
+
+    if (hasImportantChanges) {
+      lastSyncedBooking.current = updatedBooking
+      setSelectedBooking(updatedBooking)
+    }
+  }, [bookings, selectedBooking?.id, isDetailOpen])
 
   // Handle bookings error
   useEffect(() => {
@@ -896,7 +915,7 @@ export function AdminBookings() {
     try {
       const { error } = await supabase
         .from('bookings')
-        .update({ deleted_at: null })
+        .update({ deleted_at: null, deleted_by: null })
         .eq('id', bookingId)
 
       if (error) throw error
@@ -911,6 +930,58 @@ export function AdminBookings() {
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to restore booking',
+        variant: 'destructive',
+      })
+    }
+  }, [toast, refresh])
+
+  // Restore entire recurring group
+  const restoreRecurringGroup = useCallback(async (groupId: string) => {
+    try {
+      logger.debug('Restoring recurring group', { groupId }, { context: 'AdminBookings' })
+
+      // Get all archived bookings in this group
+      const { data: groupBookings, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('recurring_group_id', groupId)
+        .not('deleted_at', 'is', null) // Only archived bookings
+
+      if (fetchError) throw fetchError
+
+      if (!groupBookings || groupBookings.length === 0) {
+        toast({
+          title: 'Info',
+          description: 'No archived bookings found in this group to restore',
+        })
+        return
+      }
+
+      // Restore all bookings in the group
+      let restoredCount = 0
+      for (const booking of groupBookings) {
+        const { error } = await supabase
+          .from('bookings')
+          .update({ deleted_at: null, deleted_by: null })
+          .eq('id', booking.id)
+
+        if (!error) {
+          restoredCount++
+        } else {
+          logger.error('Error restoring booking in group', { error, bookingId: booking.id }, { context: 'AdminBookings' })
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: `Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully`,
+      })
+      refresh()
+    } catch (error) {
+      logger.error('Restore recurring group error', { error }, { context: 'AdminBookings' })
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to restore recurring group',
         variant: 'destructive',
       })
     }
@@ -1598,6 +1669,7 @@ export function AdminBookings() {
             onArchiveRecurringGroup={archiveRecurringGroup}
             onArchiveBooking={archiveBooking}
             onRestoreBooking={restoreBooking}
+            onRestoreRecurringGroup={restoreRecurringGroup}
             onVerifyPayment={handleVerifyPayment}
             onVerifyRecurringGroup={handleVerifyRecurringGroup}
             showArchived={showArchived}

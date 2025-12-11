@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
@@ -38,16 +38,37 @@ export function AdminDashboard() {
   const { teamsList: teams } = useTeamsList({ enableRealtime: true })
 
   // Sync selectedBooking with todayBookings when data updates (realtime)
+  // Optimized to prevent flickering by comparing only important fields
+  const lastSyncedBooking = useRef<Booking | null>(null)
+
   useEffect(() => {
-    if (modal.selectedBooking && dashboardData.todayBookings.length > 0) {
-      const updatedBooking = dashboardData.todayBookings.find(
-        (b) => b.id === modal.selectedBooking?.id
-      )
-      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(modal.selectedBooking)) {
-        modal.updateSelectedBooking(updatedBooking)
-      }
+    // Only sync if modal is open and booking is selected
+    if (!modal.selectedBooking || !modal.isDetailOpen) {
+      lastSyncedBooking.current = null
+      return
     }
-  }, [dashboardData.todayBookings, modal.selectedBooking, modal.updateSelectedBooking])
+
+    if (dashboardData.todayBookings.length === 0) return
+
+    const updatedBooking = dashboardData.todayBookings.find(
+      (b) => b.id === modal.selectedBooking?.id
+    )
+
+    if (!updatedBooking) return
+
+    // Compare only important fields that might change via realtime
+    const prev = lastSyncedBooking.current
+    const hasImportantChanges = !prev ||
+      updatedBooking.status !== prev.status ||
+      updatedBooking.payment_status !== prev.payment_status ||
+      updatedBooking.payment_method !== prev.payment_method ||
+      updatedBooking.payment_date !== prev.payment_date
+
+    if (hasImportantChanges) {
+      lastSyncedBooking.current = updatedBooking
+      modal.updateSelectedBooking(updatedBooking)
+    }
+  }, [dashboardData.todayBookings, modal.selectedBooking?.id, modal.isDetailOpen, modal.updateSelectedBooking])
 
   // Edit Modal State
   const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)

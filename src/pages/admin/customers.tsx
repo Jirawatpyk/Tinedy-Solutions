@@ -2,15 +2,13 @@ import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCustomers } from '@/hooks/useCustomers'
-import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { StatCard } from '@/components/common/StatCard/StatCard'
-import { getLoadErrorMessage, getDeleteErrorMessage, getArchiveErrorMessage, getRestoreErrorMessage } from '@/lib/error-messages'
-import { logger } from '@/lib/logger'
+import { getLoadErrorMessage } from '@/lib/error-messages'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
@@ -21,6 +19,7 @@ import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { useOptimisticDelete } from '@/hooks/optimistic'
 import {
   Select,
   SelectContent,
@@ -56,6 +55,12 @@ export function AdminCustomers() {
   const ITEMS_PER_LOAD = 12
 
   const { toast } = useToast()
+
+  // Initialize optimistic delete hook
+  const deleteOps = useOptimisticDelete({
+    table: 'customers',
+    onSuccess: refresh,
+  })
 
   // Filter customers using useMemo for better performance
   const filteredCustomers = useMemo(() => {
@@ -100,79 +105,15 @@ export function AdminCustomers() {
   }, [customersError, toast])
 
   const deleteCustomer = async (customerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', customerId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Customer deleted successfully',
-      })
-      refresh()
-    } catch (error) {
-      logger.error('Delete customer error', { error, customerId }, { context: 'AdminCustomers' })
-      const errorMessage = getDeleteErrorMessage('customer')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.permanentDelete.mutate({ id: customerId })
   }
 
   const archiveCustomer = async (customerId: string) => {
-    try {
-      const { error } = await supabase
-        .rpc('soft_delete_record', {
-          table_name: 'customers',
-          record_id: customerId
-        })
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Customer archived successfully',
-      })
-      refresh()
-    } catch (error) {
-      logger.error('Archive customer error', { error, customerId }, { context: 'AdminCustomers' })
-      const errorMessage = getArchiveErrorMessage()
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.softDelete.mutate({ id: customerId })
   }
 
   const restoreCustomer = async (customerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .update({ deleted_at: null })
-        .eq('id', customerId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Customer restored successfully',
-      })
-      refresh()
-    } catch (error) {
-      logger.error('Error restoring customer', { error, customerId }, { context: 'AdminCustomers' })
-      const errorMessage = getRestoreErrorMessage()
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.restore.mutate({ id: customerId })
   }
 
   const openEditDialog = (customer: CustomerRecord) => {
