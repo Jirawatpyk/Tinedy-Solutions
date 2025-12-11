@@ -88,6 +88,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           is_recurring,
           recurring_sequence,
           recurring_total,
+          recurring_group_id,
           parent_booking_id,
           customers (id, full_name, email, phone),
           service_packages (name, service_type),
