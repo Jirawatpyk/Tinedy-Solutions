@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -101,6 +101,7 @@ export default function AdminPackageDetail() {
 
   // Main data
   const [packageData, setPackageData] = useState<ServicePackageV2WithTiers | null>(null)
+  const [packageSource, setPackageSource] = useState<'v1' | 'v2'>('v2')
   const [stats, setStats] = useState<PackageStats>({
     total_bookings: 0,
     completed_bookings: 0,
@@ -117,9 +118,13 @@ export default function AdminPackageDetail() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const [bookingsPage, setBookingsPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const BOOKINGS_PER_PAGE = 10
+
+  // Ref for cleanup on unmount
+  const isMountedRef = useRef(true)
 
   // Reset to page 1 when status filter changes
   useEffect(() => {
@@ -127,8 +132,14 @@ export default function AdminPackageDetail() {
   }, [statusFilter])
 
   useEffect(() => {
+    isMountedRef.current = true
+
     if (packageId) {
       fetchPackageDetails()
+    }
+
+    return () => {
+      isMountedRef.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packageId])
@@ -141,6 +152,7 @@ export default function AdminPackageDetail() {
       setError(null)
 
       // Fetch package data (try V2 first, then V1)
+      // Use maybeSingle() to return null instead of error when not found
       const { data: v2Package, error: v2Error } = await supabase
         .from('service_packages_v2')
         .select(`
@@ -148,9 +160,9 @@ export default function AdminPackageDetail() {
           tiers:package_pricing_tiers(*)
         `)
         .eq('id', packageId)
-        .single()
+        .maybeSingle()
 
-      if (v2Error && v2Error.code !== 'PGRST116') {
+      if (v2Error) {
         throw v2Error
       }
 
@@ -166,6 +178,7 @@ export default function AdminPackageDetail() {
           min_price: tiers.length > 0 ? Math.min(...tiers.map((t: PackagePricingTier) => t.price_1_time)) : v2Package.base_price,
           max_price: tiers.length > 0 ? Math.max(...tiers.map((t: PackagePricingTier) => t.price_1_time)) : v2Package.base_price,
         }
+        setPackageSource('v2')
       } else {
         // Try V1 package
         const { data: v1Package, error: v1Error } = await supabase
@@ -196,7 +209,11 @@ export default function AdminPackageDetail() {
           min_price: Number(v1Package.price),
           max_price: Number(v1Package.price),
         }
+        setPackageSource('v1')
       }
+
+      // Only update state if component is still mounted
+      if (!isMountedRef.current) return
 
       setPackageData(pkgData)
 
@@ -207,9 +224,11 @@ export default function AdminPackageDetail() {
       ])
     } catch (err) {
       console.error('Error fetching package details:', err)
+      if (!isMountedRef.current) return
       const errorMsg = mapErrorToUserMessage(err, 'general')
       setError(errorMsg.description)
     } finally {
+      if (!isMountedRef.current) return
       setLoading(false)
     }
   }
@@ -251,6 +270,11 @@ export default function AdminPackageDetail() {
       })
     } catch (err) {
       console.error('Error fetching package stats:', err)
+      toast({
+        title: 'Warning',
+        description: 'Could not load package statistics',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -278,15 +302,23 @@ export default function AdminPackageDetail() {
       setBookings((data as unknown as BookingWithRelations[]) || [])
     } catch (err) {
       console.error('Error fetching package bookings:', err)
+      toast({
+        title: 'Warning',
+        description: 'Could not load bookings history',
+        variant: 'destructive',
+      })
     }
   }
 
   const handleToggleActive = async () => {
-    if (!packageData) return
+    if (!packageData || toggling) return
 
     try {
+      setToggling(true)
+      // Use correct table based on package source
+      const tableName = packageSource === 'v1' ? 'service_packages' : 'service_packages_v2'
       const { error } = await supabase
-        .from('service_packages_v2')
+        .from(tableName)
         .update({ is_active: !packageData.is_active })
         .eq('id', packageData.id)
 
@@ -314,6 +346,8 @@ export default function AdminPackageDetail() {
         description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      setToggling(false)
     }
   }
 
@@ -335,7 +369,7 @@ export default function AdminPackageDetail() {
       }
 
       // Delete tiers first if V2 tiered
-      if (packageData.pricing_model === PricingModel.Tiered && packageData.tiers && packageData.tiers.length > 0) {
+      if (packageSource === 'v2' && packageData.pricing_model === PricingModel.Tiered && packageData.tiers && packageData.tiers.length > 0) {
         const { error: tiersError } = await supabase
           .from('package_pricing_tiers')
           .delete()
@@ -344,9 +378,10 @@ export default function AdminPackageDetail() {
         if (tiersError) throw tiersError
       }
 
-      // Delete package
+      // Delete package from correct table
+      const tableName = packageSource === 'v1' ? 'service_packages' : 'service_packages_v2'
       const { error } = await supabase
-        .from('service_packages_v2')
+        .from(tableName)
         .delete()
         .eq('id', packageData.id)
 
@@ -444,6 +479,7 @@ export default function AdminPackageDetail() {
             size="icon"
             onClick={() => navigate(-1)}
             className="h-8 w-8 sm:h-10 sm:w-10"
+            aria-label="Go back to packages list"
           >
             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
@@ -462,6 +498,7 @@ export default function AdminPackageDetail() {
               variant="outline"
               size="sm"
               onClick={handleToggleActive}
+              disabled={toggling}
               className="h-8 sm:h-9"
             >
               {packageData.is_active ? (
@@ -870,7 +907,7 @@ export default function AdminPackageDetail() {
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4">
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       Showing {(bookingsPage - 1) * BOOKINGS_PER_PAGE + 1} to{' '}
-                      {Math.min(bookingsPage * BOOKINGS_PER_PAGE, bookings.length)} of {bookings.length}
+                      {Math.min(bookingsPage * BOOKINGS_PER_PAGE, filteredBookings.length)} of {filteredBookings.length}
                     </p>
                     <div className="flex gap-2">
                       <Button

@@ -24,7 +24,6 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
 import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
 import { BookingList } from '@/components/booking/BookingList'
-import { BookingStatusConfirmDialog } from '@/components/booking/BookingStatusConfirmDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
 import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
@@ -1522,11 +1521,12 @@ export function AdminBookings() {
       />
 
       {/* Status Change Confirmation Dialog */}
-      <BookingStatusConfirmDialog
-        isOpen={showStatusConfirmDialog}
-        onClose={cancelStatusChange}
+      <ConfirmDialog
+        open={showStatusConfirmDialog}
+        onOpenChange={(open) => !open && cancelStatusChange()}
+        title="Confirm Status Change"
+        description={pendingStatusChange ? getStatusTransitionMessage(pendingStatusChange.currentStatus, pendingStatusChange.newStatus) : ''}
         onConfirm={confirmStatusChange}
-        message={pendingStatusChange ? getStatusTransitionMessage(pendingStatusChange.currentStatus, pendingStatusChange.newStatus) : ''}
       />
 
       {/* Conflict Warning Dialog */}
