@@ -264,6 +264,20 @@ serve(async (req) => {
   }
 })
 
+/**
+ * Generate single refund confirmation email
+ *
+ * Email Color Palette:
+ * - Primary: #4F46E5 (Indigo-600) - Headers, buttons, accents
+ * - Success: #10b981 (Green-500) - Refund success
+ * - Text: #333, #1f2937, #4b5563, #6b7280, #9ca3af
+ * - Background: #f5f5f5, #ffffff, #f8f9fa, #f9fafb
+ * - Border: #e5e7eb
+ *
+ * Business Info Section:
+ * - business-name: text-align: center (centered business name)
+ * - contact-item: justify-content: flex-start (left-aligned phone/address)
+ */
 function generateSingleRefundEmail(data: {
   customerName: string
   serviceName: string
@@ -463,6 +477,10 @@ function generateSingleRefundEmail(data: {
   `.trim()
 }
 
+/**
+ * Generate recurring refund confirmation email
+ * Uses same color palette as single refund email
+ */
 function generateRecurringRefundEmail(data: {
   customerName: string
   serviceName: string
