@@ -343,6 +343,8 @@ export const bookingQueryOptions = {
     queryKey: queryKeys.bookings.list(showArchived),
     queryFn: () => fetchBookings(showArchived),
     staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: true, // Refetch when user returns to Bookings page
+    refetchOnMount: 'always' as const, // Always refetch when component mounts
   }),
 
   /**
