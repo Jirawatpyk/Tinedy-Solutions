@@ -360,7 +360,8 @@ export const exportTeamsToExcel = (
       'Completion Rate (%)': completionRate.toFixed(1),
     }
 
-    if (role === 'admin') {
+    // Admin and Manager can see revenue
+    if (role === 'admin' || role === 'manager') {
       baseData['Revenue (฿)'] = revenue.toFixed(2)
     }
 
