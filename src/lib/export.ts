@@ -8,6 +8,7 @@ interface BookingForExport {
   start_time?: string
   total_price: number
   status: string
+  payment_status?: string
   created_at: string
   service_packages?: {
     name: string
@@ -112,9 +113,10 @@ export const exportRevenueAllToExcel = (
   const workbook = XLSX.utils.book_new()
 
   // ========== Sheet 1: Revenue Summary ==========
-  // Show all bookings (including future bookings) - not just completed
-  if (filteredBookings.length > 0) {
-    const summaryData = filteredBookings.map(b => {
+  // Show only paid bookings (consistent with analytics revenue calculation)
+  const paidBookings = filteredBookings.filter(b => b.payment_status === 'paid')
+  if (paidBookings.length > 0) {
+    const summaryData = paidBookings.map(b => {
       const baseData: Record<string, string | number> = {
         'Date': format(new Date(b.booking_date), 'dd/MM/yyyy'),
         'Time': b.start_time || 'N/A',

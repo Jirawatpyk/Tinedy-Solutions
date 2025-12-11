@@ -24,28 +24,7 @@ import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { getFrequencyLabel } from '@/types/service-package-v2'
-
-// Status transition messages
-const getStatusTransitionMessage = (currentStatus: string, newStatus: string): string => {
-  const messages: Record<string, Record<string, string>> = {
-    pending: {
-      confirmed: 'Confirm this booking?',
-      cancelled: 'Cancel this booking? This action cannot be undone.',
-    },
-    confirmed: {
-      in_progress: 'Mark this booking as in progress?',
-      cancelled: 'Cancel this booking? This action cannot be undone.',
-      no_show: 'Mark this booking as no-show? This action cannot be undone.',
-    },
-    in_progress: {
-      completed: 'Mark this booking as completed?',
-      cancelled: 'Cancel this booking? This action cannot be undone.',
-    },
-  }
-  return messages[currentStatus]?.[newStatus] || `Change status from "${currentStatus}" to "${newStatus}"?`
-}
 
 interface Review {
   id: string
@@ -107,9 +86,6 @@ export function BookingDetailModal({
   const [hoverRating, setHoverRating] = useState(0)
   const [savingReview, setSavingReview] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  // Status change confirmation
-  const [showStatusConfirm, setShowStatusConfirm] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const { toast } = useToast()
 
   const resetReview = useCallback(() => {
@@ -253,25 +229,6 @@ export function BookingDetailModal({
       })
     })
   }, [booking, toast])
-
-  // Status change handlers
-  const handleStatusChangeRequest = (newStatus: string) => {
-    if (!booking || newStatus === booking.status) return
-    setPendingStatus(newStatus)
-    setShowStatusConfirm(true)
-  }
-
-  const confirmStatusChange = () => {
-    if (!booking || !pendingStatus) return
-    onStatusChange(booking.id, booking.status, pendingStatus)
-    setShowStatusConfirm(false)
-    setPendingStatus(null)
-  }
-
-  const cancelStatusChange = () => {
-    setShowStatusConfirm(false)
-    setPendingStatus(null)
-  }
 
   const handleSendReminder = async () => {
     if (!booking || !booking.customers) return
@@ -753,7 +710,9 @@ export function BookingDetailModal({
               </Button>
               <Select
                 value={booking.status}
-                onValueChange={handleStatusChangeRequest}
+                onValueChange={(value) => {
+                  onStatusChange(booking.id, booking.status, value)
+                }}
                 disabled={actionLoading?.statusChange}
               >
                 <SelectTrigger>
@@ -788,20 +747,6 @@ export function BookingDetailModal({
         </div>
       </DialogContent>
     </Dialog>
-
-      {/* Status Change Confirmation Dialog */}
-      {booking && pendingStatus && (
-        <ConfirmDialog
-          open={showStatusConfirm}
-          onOpenChange={(open) => !open && cancelStatusChange()}
-          title="Confirm Status Change"
-          description={getStatusTransitionMessage(booking.status, pendingStatus)}
-          confirmText="Confirm"
-          cancelText="Cancel"
-          onConfirm={confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(pendingStatus) ? 'destructive' : 'default'}
-        />
-      )}
-    </>
+  </>
   )
 }
