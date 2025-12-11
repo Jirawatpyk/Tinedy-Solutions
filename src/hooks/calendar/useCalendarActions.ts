@@ -110,7 +110,6 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
   const { softDelete } = useSoftDelete('bookings')
 
   // Loading states
-  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Use useBookingStatusManager for status management
@@ -132,13 +131,14 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     onSuccess: refetchBookings,
   })
 
-  // Use centralized payment actions
+  // Use centralized payment actions (now with optimistic updates!)
   const {
     markAsPaid: paymentMarkAsPaid,
     verifyPayment: paymentVerifyPayment,
     requestRefund: paymentRequestRefund,
     completeRefund: paymentCompleteRefund,
     cancelRefund: paymentCancelRefund,
+    isLoading: paymentLoading,
   } = usePaymentActions({
     selectedBooking,
     setSelectedBooking,
@@ -192,6 +192,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
 
   /**
    * Mark booking as paid
+   * ✨ Now with optimistic updates - UI updates instantly!
    *
    * @param bookingId - ID of booking to update
    * @param method - Payment method (default: 'cash')
@@ -200,66 +201,48 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     bookingId: string,
     method: string = 'cash'
   ) => {
-    setIsUpdatingPayment(true)
-    try {
-      await paymentMarkAsPaid(bookingId, method)
-    } finally {
-      setIsUpdatingPayment(false)
-    }
+    await paymentMarkAsPaid(bookingId, method)
   }, [paymentMarkAsPaid])
 
   /**
    * Verify payment (admin verification)
+   * ✨ Now with optimistic updates - UI updates instantly!
    *
    * @param bookingId - ID of booking to verify
    */
   const handleVerifyPayment = useCallback(async (bookingId: string) => {
-    setIsUpdatingPayment(true)
-    try {
-      await paymentVerifyPayment(bookingId)
-    } finally {
-      setIsUpdatingPayment(false)
-    }
+    await paymentVerifyPayment(bookingId)
   }, [paymentVerifyPayment])
 
   /**
    * Request refund for booking
+   * ✨ Now with optimistic updates - UI updates instantly!
    *
    * @param bookingId - ID of booking to request refund
    */
   const handleRequestRefund = useCallback(async (bookingId: string) => {
     await paymentRequestRefund(bookingId)
-    // Update selectedBooking locally
-    if (selectedBooking && selectedBooking.id === bookingId) {
-      setSelectedBooking({ ...selectedBooking, payment_status: 'refund_pending' })
-    }
-  }, [paymentRequestRefund, selectedBooking, setSelectedBooking])
+  }, [paymentRequestRefund])
 
   /**
    * Complete refund for booking
+   * ✨ Now with optimistic updates - UI updates instantly!
    *
    * @param bookingId - ID of booking to complete refund
    */
   const handleCompleteRefund = useCallback(async (bookingId: string) => {
     await paymentCompleteRefund(bookingId)
-    // Update selectedBooking locally
-    if (selectedBooking && selectedBooking.id === bookingId) {
-      setSelectedBooking({ ...selectedBooking, payment_status: 'refunded' })
-    }
-  }, [paymentCompleteRefund, selectedBooking, setSelectedBooking])
+  }, [paymentCompleteRefund])
 
   /**
    * Cancel refund for booking
+   * ✨ Now with optimistic updates - UI updates instantly!
    *
    * @param bookingId - ID of booking to cancel refund
    */
   const handleCancelRefund = useCallback(async (bookingId: string) => {
     await paymentCancelRefund(bookingId)
-    // Update selectedBooking locally
-    if (selectedBooking && selectedBooking.id === bookingId) {
-      setSelectedBooking({ ...selectedBooking, payment_status: 'paid' })
-    }
-  }, [paymentCancelRefund, selectedBooking, setSelectedBooking])
+  }, [paymentCancelRefund])
 
   /**
    * Hard delete booking
@@ -324,7 +307,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     handleRequestRefund,
     handleCompleteRefund,
     handleCancelRefund,
-    isUpdatingPayment,
+    isUpdatingPayment: paymentLoading.markAsPaid || paymentLoading.verifyPayment || paymentLoading.refund,
 
     // Delete operations
     handleDelete,

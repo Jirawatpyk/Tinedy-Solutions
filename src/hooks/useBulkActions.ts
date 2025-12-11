@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
 import { formatFullAddress, getValidTransitions } from '@/lib/booking-utils'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { formatCurrency } from '@/lib/utils'
+import { usePermissions } from '@/hooks/use-permissions'
 import type { Booking } from '@/types/booking'
 import * as XLSX from 'xlsx'
 
@@ -44,7 +47,9 @@ export function useBulkActions({
   filteredBookings,
   onSuccess,
 }: UseBulkActionsProps): UseBulkActionsReturn {
+  const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { canDelete } = usePermissions()
   const [selectedBookings, setSelectedBookings] = useState<string[]>([])
   const [bulkStatus, setBulkStatus] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -149,26 +154,69 @@ export function useBulkActions({
   }
 
   // Actually perform the deletion (called after confirmation)
-  const confirmBulkDelete = async () => {
+  // Uses optimistic updates for instant UI feedback on bulk deletes
+  // Supports both hard delete (Admin) and soft delete (Manager)
+  const confirmBulkDelete = useCallback(async () => {
     if (selectedBookings.length === 0) return
 
     setIsDeleting(true)
+    const count = selectedBookings.length
+    const queryKey = queryKeys.bookings.all
+    const hasDeletePermission = canDelete('bookings')
+
+    // STEP 1: Save previous cache data (for rollback on error)
+    const previousData = queryClient.getQueryData<Booking[]>(queryKey)
+
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .in('id', selectedBookings)
+      // STEP 2: Optimistic update - remove bookings from cache immediately
+      queryClient.setQueryData<Booking[]>(queryKey, (oldData) => {
+        if (!oldData) return oldData
+        return oldData.filter((booking) => !selectedBookings.includes(booking.id))
+      })
 
-      if (error) throw error
+      // STEP 3: Delete based on permission
+      if (hasDeletePermission) {
+        // Admin: Permanent delete (hard delete)
+        const { error } = await supabase
+          .from('bookings')
+          .delete()
+          .in('id', selectedBookings)
 
+        if (error) throw error
+      } else {
+        // Manager: Soft delete (archive) using RPC
+        const deletePromises = selectedBookings.map(id =>
+          supabase.rpc('soft_delete_record', {
+            table_name: 'bookings',
+            record_id: id,
+          })
+        )
+
+        const results = await Promise.all(deletePromises)
+        const errors = results.filter(r => r.error)
+        if (errors.length > 0) {
+          throw new Error(`Failed to archive ${errors.length} booking${errors.length > 1 ? 's' : ''}`)
+        }
+      }
+
+      // STEP 4: Show single success toast
       toast({
         title: 'Success',
-        description: `Deleted ${selectedBookings.length} bookings`,
+        description: hasDeletePermission
+          ? `Permanently deleted ${count} booking${count > 1 ? 's' : ''}`
+          : `Archived ${count} booking${count > 1 ? 's' : ''}`,
       })
+
+      // STEP 5: Clean up and trigger refetch
       setSelectedBookings([])
       setShowDeleteConfirm(false)
       onSuccess()
     } catch (error) {
+      // STEP 6: Rollback - restore previous cache data
+      if (previousData) {
+        queryClient.setQueryData(queryKey, previousData)
+      }
+
       const errorMsg = mapErrorToUserMessage(error, 'booking')
       toast({
         title: errorMsg.title,
@@ -178,7 +226,7 @@ export function useBulkActions({
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [selectedBookings, queryClient, toast, onSuccess, canDelete])
 
   const handleBulkExport = () => {
     if (selectedBookings.length === 0) return

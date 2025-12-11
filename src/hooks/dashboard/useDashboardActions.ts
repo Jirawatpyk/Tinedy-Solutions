@@ -61,12 +61,13 @@ export function useDashboardActions(
     onSuccess: refresh,
   })
 
-  // Use centralized payment actions for verify and refund
+  // Use centralized payment actions for verify and refund (with loading states)
   const {
     verifyPayment: paymentVerifyPayment,
     requestRefund: paymentRequestRefund,
     completeRefund: paymentCompleteRefund,
     cancelRefund: paymentCancelRefund,
+    isLoading: paymentLoading,
   } = usePaymentActions({
     selectedBooking,
     setSelectedBooking: handleBookingUpdate,
@@ -118,7 +119,8 @@ export function useDashboardActions(
     setDeleteConfirm({ show: false, bookingId: null })
   }, [])
 
-  // Wrap payment actions with loading state
+  // markAsPaid uses useBookingStatusManager (not usePaymentActions)
+  // Keep manual loading state since statusMarkAsPaid doesn't provide loading state
   const markAsPaid = useCallback(
     async (bookingId: string, method: string = 'cash') => {
       setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
@@ -141,50 +143,32 @@ export function useDashboardActions(
     [softDelete, refresh]
   )
 
+  // Payment operations now use loading states from usePaymentActions
+  // No need to wrap with setActionLoading - just delegate directly
   const verifyPayment = useCallback(
     async (bookingId: string) => {
-      setActionLoading((prev) => ({ ...prev, verifyPayment: true }))
-      try {
-        await paymentVerifyPayment(bookingId)
-      } finally {
-        setActionLoading((prev) => ({ ...prev, verifyPayment: false }))
-      }
+      await paymentVerifyPayment(bookingId)
     },
     [paymentVerifyPayment]
   )
 
   const requestRefund = useCallback(
     async (bookingId: string) => {
-      setActionLoading((prev) => ({ ...prev, refund: true }))
-      try {
-        await paymentRequestRefund(bookingId)
-      } finally {
-        setActionLoading((prev) => ({ ...prev, refund: false }))
-      }
+      await paymentRequestRefund(bookingId)
     },
     [paymentRequestRefund]
   )
 
   const completeRefund = useCallback(
     async (bookingId: string) => {
-      setActionLoading((prev) => ({ ...prev, refund: true }))
-      try {
-        await paymentCompleteRefund(bookingId)
-      } finally {
-        setActionLoading((prev) => ({ ...prev, refund: false }))
-      }
+      await paymentCompleteRefund(bookingId)
     },
     [paymentCompleteRefund]
   )
 
   const cancelRefund = useCallback(
     async (bookingId: string) => {
-      setActionLoading((prev) => ({ ...prev, refund: true }))
-      try {
-        await paymentCancelRefund(bookingId)
-      } finally {
-        setActionLoading((prev) => ({ ...prev, refund: false }))
-      }
+      await paymentCancelRefund(bookingId)
     },
     [paymentCancelRefund]
   )
@@ -198,7 +182,12 @@ export function useDashboardActions(
     requestRefund,
     completeRefund,
     cancelRefund,
-    actionLoading,
+    // Aggregate loading states: manual + payment operations
+    actionLoading: {
+      ...actionLoading,
+      verifyPayment: paymentLoading.verifyPayment,
+      refund: paymentLoading.refund,
+    },
     // Delete confirmation dialog
     deleteConfirm,
     confirmDeleteBooking,
