@@ -408,7 +408,16 @@ export function BookingDetailsModal({
                     <div>
                       <p className="text-sm text-muted-foreground">Frequency</p>
                       <p className="font-medium">
-                        {getFrequencyLabel(currentBooking.frequency)}
+                        {(() => {
+                          const freq = currentBooking.frequency!
+                          const seq = currentBooking.recurring_sequence
+                          const total = currentBooking.recurring_total
+                          // Show sequence only if valid: total > 1, seq > 0, seq <= total
+                          const hasValidRecurring = seq && total && total > 1 && seq > 0 && seq <= total
+                          return hasValidRecurring
+                            ? `${seq}/${total} (${getFrequencyLabel(freq)})`
+                            : getFrequencyLabel(freq)
+                        })()}
                       </p>
                     </div>
                   )}

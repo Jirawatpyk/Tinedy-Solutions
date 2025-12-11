@@ -120,6 +120,8 @@ export function bookingToCalendarEvent(booking: Booking): CalendarEvent {
     team_name: booking.teams?.name || null,
     area_sqm: null,
     frequency: null,
+    recurring_sequence: booking.recurring_sequence || null,
+    recurring_total: booking.recurring_total || null,
     created_at: booking.created_at || new Date().toISOString(), // Pass through for team member filtering
     // Map teams data for BookingDetailsModal
     teams: booking.teams ? {
@@ -218,6 +220,8 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
     created_at: event.created_at, // Use actual booking created_at for team member filtering
     area_sqm: event.area_sqm,
     frequency: event.frequency,
+    recurring_sequence: event.recurring_sequence,
+    recurring_total: event.recurring_total,
     customers: {
       id: '',
       full_name: event.customer_name,

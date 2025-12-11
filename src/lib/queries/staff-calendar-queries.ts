@@ -52,6 +52,8 @@ export interface CalendarEvent {
   team_name: string | null
   area_sqm: number | null
   frequency: 1 | 2 | 4 | 8 | null
+  recurring_sequence: number | null
+  recurring_total: number | null
   created_at: string // Added for BookingDetailsModal team member filtering
   // Team details for BookingDetailsModal
   teams: {
@@ -80,6 +82,8 @@ interface BookingData {
   team_id: string | null
   area_sqm: number | null
   frequency: 1 | 2 | 4 | 8 | null
+  recurring_sequence: number | null
+  recurring_total: number | null
   created_at: string // Added for membership period filtering
   customers: Array<{
     full_name: string
@@ -250,6 +254,8 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
     team_name: team?.name || null,
     area_sqm: booking.area_sqm || null,
     frequency: booking.frequency || null,
+    recurring_sequence: booking.recurring_sequence || null,
+    recurring_total: booking.recurring_total || null,
     created_at: booking.created_at, // Pass to BookingDetailsModal for team member filtering
     // Include full teams data for BookingDetailsModal
     // Handle team_lead as array or single object
@@ -310,6 +316,8 @@ export async function fetchStaffCalendarEvents(
         team_id,
         area_sqm,
         frequency,
+        recurring_sequence,
+        recurring_total,
         created_at,
         customers (full_name, phone, avatar_url),
         service_packages (name, duration_minutes, price),

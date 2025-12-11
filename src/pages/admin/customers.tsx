@@ -241,8 +241,8 @@ export function AdminCustomers() {
         <Card>
           <CardContent className="py-3 px-4 sm:px-6">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Skeleton className="h-9 flex-1" />
-              <Skeleton className="h-9 w-full sm:w-48" />
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 w-full sm:w-48" />
             </div>
           </CardContent>
         </Card>
@@ -364,12 +364,12 @@ export function AdminCustomers() {
                 placeholder="Search customers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 text-sm"
+                className="pl-10 h-8 text-xs"
               />
             </div>
             <div className="w-full sm:w-48">
               <Select value={relationshipFilter} onValueChange={setRelationshipFilter}>
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Filter by level" />
                 </SelectTrigger>
                 <SelectContent>
