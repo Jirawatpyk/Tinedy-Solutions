@@ -161,21 +161,31 @@ function mergePackageData(bookings: RawBooking[]): StaffBooking[] {
 type MembershipPeriodArray = Array<{ teamId: string; joinedAt: string; leftAt: string | null }>
 
 /**
+ * Minimal booking type for membership period filtering
+ * Only contains fields required by filterBookingsByMembershipPeriods()
+ */
+interface FilterableBooking {
+  staff_id: string | null
+  team_id: string | null
+  created_at: string
+}
+
+/**
  * Filter team bookings by membership periods
  * Staff should only see team bookings created during their membership period(s)
  * This prevents new team members from seeing/earning from old bookings
  * IMPORTANT: Supports multiple periods per team (after re-join)
  *
- * @param bookings - Array of bookings to filter
+ * @param bookings - Array of bookings to filter (must have staff_id, team_id, created_at)
  * @param userId - Current user ID
  * @param allMembershipPeriods - Array of ALL membership periods (supports re-join)
- * @returns Filtered bookings
+ * @returns Filtered bookings (same type as input)
  */
-function filterBookingsByMembershipPeriods(
-  bookings: StaffBooking[],
+function filterBookingsByMembershipPeriods<T extends FilterableBooking>(
+  bookings: T[],
   userId: string,
   allMembershipPeriods: MembershipPeriodArray
-): StaffBooking[] {
+): T[] {
   return bookings.filter(booking => {
     // Direct staff assignment - always show
     if (booking.staff_id === userId) {
@@ -609,7 +619,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return 0
         // Filter by membership periods
         const filtered = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -633,7 +643,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return 0
         // Filter by membership periods
         const filtered = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -657,7 +667,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return 0
         // Filter by membership periods
         const filtered = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -682,7 +692,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return 0
         // Filter by membership periods
         const filtered = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -737,7 +747,7 @@ export async function fetchStaffStats(
 
         // Filter by membership periods using shared helper
         const filteredBookings = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -745,7 +755,7 @@ export async function fetchStaffStats(
         // Calculate earnings using shared calculateBookingRevenue function
         // Same logic as use-staff-profile.ts for consistency
         return filteredBookings.reduce((sum, booking) => {
-          return sum + calculateBookingRevenue(booking as unknown as Parameters<typeof calculateBookingRevenue>[0], new Map())
+          return sum + calculateBookingRevenue(booking, new Map())
         }, 0)
       })(),
 
@@ -766,7 +776,7 @@ export async function fetchStaffStats(
         if (!bookings || bookings.length === 0) return 0
         // Filter by membership periods
         const filtered = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
@@ -797,7 +807,7 @@ export async function fetchStaffStats(
 
         // Filter by membership periods using shared helper
         const filteredBookings = filterBookingsByMembershipPeriods(
-          bookings as unknown as StaffBooking[],
+          bookings,
           userId,
           allMembershipPeriods
         )
