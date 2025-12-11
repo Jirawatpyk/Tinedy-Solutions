@@ -46,6 +46,7 @@ interface TeamForExport {
   bookings: Array<{
     status: string
     total_price: number
+    payment_status?: string
   }>
   team_members: unknown[]
 }
@@ -297,7 +298,10 @@ export const exportStaffToExcel = (
 
   const workbook = XLSX.utils.book_new()
 
-  const staffData = staffPerformance.map((s, index) => {
+  // Sort by revenue descending (same ranking as web display)
+  const sortedStaff = [...staffPerformance].sort((a, b) => b.revenue - a.revenue)
+
+  const staffData = sortedStaff.map((s, index) => {
     const baseData: Record<string, string | number> = {
       'Rank': index + 1,
       'Staff Name': s.name,
@@ -307,7 +311,8 @@ export const exportStaffToExcel = (
       'Utilization Rate (%)': s.utilizationRate.toFixed(1),
     }
 
-    if (role === 'admin') {
+    // Admin and Manager can see revenue
+    if (role === 'admin' || role === 'manager') {
       baseData['Revenue (฿)'] = s.revenue.toFixed(2)
       baseData['Avg Job Value (฿)'] = s.avgJobValue.toFixed(2)
     }
@@ -338,31 +343,39 @@ export const exportTeamsToExcel = (
 
   const workbook = XLSX.utils.book_new()
 
-  const teamData = teamsData.map((team, index) => {
+  // Calculate team performance with correct revenue (paid bookings only - same as analytics.ts)
+  const teamsWithPerformance = teamsData.map((team) => {
     const totalJobs = team.bookings.length
     const completed = team.bookings.filter((b) => b.status === 'completed').length
     const inProgress = team.bookings.filter((b) => b.status === 'in_progress').length
     const pending = team.bookings.filter((b) => b.status === 'pending').length
-    const revenue = team.bookings
-      .filter((b) => b.status === 'completed')
-      .reduce((sum: number, b) => sum + Number(b.total_price), 0)
+    // Revenue from paid bookings only (consistent with web display)
+    const paidBookings = team.bookings.filter((b) => b.payment_status === 'paid')
+    const revenue = paidBookings.reduce((sum: number, b) => sum + Number(b.total_price), 0)
     const memberCount = team.team_members.length
     const completionRate = totalJobs > 0 ? (completed / totalJobs) * 100 : 0
 
+    return { team, totalJobs, completed, inProgress, pending, revenue, memberCount, completionRate }
+  })
+
+  // Sort by revenue descending (same ranking as web display)
+  teamsWithPerformance.sort((a, b) => b.revenue - a.revenue)
+
+  const teamData = teamsWithPerformance.map((data, index) => {
     const baseData: Record<string, string | number> = {
       'Rank': index + 1,
-      'Team Name': team.name,
-      'Members': memberCount,
-      'Total Jobs': totalJobs,
-      'Completed': completed,
-      'In Progress': inProgress,
-      'Pending': pending,
-      'Completion Rate (%)': completionRate.toFixed(1),
+      'Team Name': data.team.name,
+      'Members': data.memberCount,
+      'Total Jobs': data.totalJobs,
+      'Completed': data.completed,
+      'In Progress': data.inProgress,
+      'Pending': data.pending,
+      'Completion Rate (%)': data.completionRate.toFixed(1),
     }
 
     // Admin and Manager can see revenue
     if (role === 'admin' || role === 'manager') {
-      baseData['Revenue (฿)'] = revenue.toFixed(2)
+      baseData['Revenue (฿)'] = data.revenue.toFixed(2)
     }
 
     return baseData
