@@ -378,6 +378,7 @@ export const bookingQueryOptions = {
       queryKey: queryKeys.bookings.byDateRange(startDate, endDate, normalizedFilters),
       queryFn: () => fetchBookingsByDateRange(startDate, endDate, filters), // Use original filters for query
       staleTime: 30 * 1000, // 30 seconds - shorter for calendar realtime updates
+      refetchOnWindowFocus: true, // Refetch when user returns to page
       refetchOnMount: 'always' as const, // Always refetch when component mounts
       placeholderData: keepPreviousData, // Keep previous data while refetching (prevents UI flash)
     }
@@ -390,6 +391,8 @@ export const bookingQueryOptions = {
     queryKey: queryKeys.bookings.byCustomer(customerId, showArchived),
     queryFn: () => fetchBookingsByCustomer(customerId, showArchived),
     staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: true, // Refetch when user returns to page
+    refetchOnMount: 'always' as const, // Always refetch when component mounts
   }),
 
   /**
@@ -399,5 +402,7 @@ export const bookingQueryOptions = {
     queryKey: queryKeys.bookings.detail(id),
     queryFn: () => fetchBookingDetail(id),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true, // Refetch when user returns to page
+    refetchOnMount: 'always' as const, // Always refetch when component mounts
   }),
 }
