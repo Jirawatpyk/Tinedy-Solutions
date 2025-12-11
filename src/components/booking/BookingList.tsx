@@ -42,6 +42,7 @@ interface BookingListProps {
   onArchiveRecurringGroup?: (groupId: string) => void
   onArchiveBooking?: (bookingId: string) => void
   onRestoreBooking?: (bookingId: string) => void
+  onRestoreRecurringGroup?: (groupId: string) => void
   onVerifyPayment?: (bookingId: string) => void
   /** Verify payment for entire recurring group */
   onVerifyRecurringGroup?: (recurringGroupId: string) => void
@@ -85,6 +86,7 @@ function BookingListComponent({
   onArchiveRecurringGroup,
   onArchiveBooking,
   onRestoreBooking,
+  onRestoreRecurringGroup,
   onVerifyPayment,
   onVerifyRecurringGroup,
   showArchived: _showArchived,
@@ -162,6 +164,7 @@ function BookingListComponent({
                     onDeleteGroup={onDeleteRecurringGroup}
                     onArchiveGroup={onArchiveRecurringGroup}
                     onRestoreBooking={onRestoreBooking}
+                    onRestoreRecurringGroup={onRestoreRecurringGroup}
                     onStatusChange={onStatusChange}
                     onVerifyPayment={onVerifyPayment}
                     onVerifyRecurringGroup={onVerifyRecurringGroup}

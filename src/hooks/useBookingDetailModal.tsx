@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
@@ -68,14 +68,35 @@ export function useBookingDetailModal({
   const [isOpen, setIsOpen] = useState(false)
 
   // Sync selectedBooking with bookings array when data updates (realtime)
+  // Optimized to prevent flickering by comparing only important fields
+  const lastSyncedBooking = useRef<Booking | null>(null)
+
   useEffect(() => {
-    if (selectedBooking && bookings.length > 0) {
-      const updatedBooking = bookings.find((b) => b.id === selectedBooking.id)
-      if (updatedBooking && JSON.stringify(updatedBooking) !== JSON.stringify(selectedBooking)) {
-        setSelectedBooking(updatedBooking)
-      }
+    // Only sync if modal is open and booking is selected
+    if (!selectedBooking || !isOpen) {
+      lastSyncedBooking.current = null
+      return
     }
-  }, [bookings, selectedBooking])
+
+    if (bookings.length === 0) return
+
+    const updatedBooking = bookings.find((b) => b.id === selectedBooking.id)
+    if (!updatedBooking) return
+
+    // Compare only important fields that might change via realtime
+    const prev = lastSyncedBooking.current
+    const hasImportantChanges = !prev ||
+      updatedBooking.status !== prev.status ||
+      updatedBooking.payment_status !== prev.payment_status ||
+      updatedBooking.payment_method !== prev.payment_method ||
+      updatedBooking.payment_date !== prev.payment_date ||
+      (updatedBooking as { payment_slip_url?: string }).payment_slip_url !== (prev as { payment_slip_url?: string }).payment_slip_url
+
+    if (hasImportantChanges) {
+      lastSyncedBooking.current = updatedBooking
+      setSelectedBooking(updatedBooking)
+    }
+  }, [bookings, selectedBooking?.id, isOpen])
 
   // Use useBookingStatusManager for status management
   const {

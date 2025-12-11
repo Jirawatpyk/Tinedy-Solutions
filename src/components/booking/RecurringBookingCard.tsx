@@ -48,6 +48,7 @@ interface RecurringBookingCardProps {
   onDeleteGroup?: (groupId: string) => void
   onArchiveGroup?: (groupId: string) => void
   onRestoreBooking?: (bookingId: string) => void
+  onRestoreRecurringGroup?: (groupId: string) => void
   onStatusChange?: (bookingId: string, currentStatus: string, newStatus: string) => void
   onVerifyPayment?: (bookingId: string) => void
   /** Verify payment for entire recurring group */
@@ -69,6 +70,7 @@ export function RecurringBookingCard({
   onDeleteGroup,
   onArchiveGroup,
   onRestoreBooking,
+  onRestoreRecurringGroup,
   onStatusChange,
   onVerifyPayment,
   onVerifyRecurringGroup,
@@ -84,6 +86,9 @@ export function RecurringBookingCard({
 
   const firstBooking = group.bookings[0]
 
+  // Check if ALL bookings in group are archived
+  const allBookingsArchived = group.bookings.every(b => !!b.deleted_at)
+
   // ดึงชื่อลูกค้าและ package
   const customerName = firstBooking.customers?.full_name || 'N/A'
   const packageName = firstBooking.service_packages?.name ||
@@ -96,7 +101,10 @@ export function RecurringBookingCard({
   }, 0)
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={cn(
+      "hover:shadow-md transition-shadow",
+      allBookingsArchived && "bg-gray-50 opacity-60 border-dashed"
+    )}>
       <CardHeader
         className="p-3 sm:p-4 cursor-pointer hover:bg-accent/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
@@ -241,7 +249,7 @@ export function RecurringBookingCard({
               })()}
             </div>
 
-            {/* Expand/Collapse Button & Delete Button (Desktop only) */}
+            {/* Expand/Collapse Button & Delete/Restore Button (Desktop only) */}
             <div className="hidden sm:flex gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" onClick={(e) => {
                 e.stopPropagation()
@@ -253,15 +261,31 @@ export function RecurringBookingCard({
                   <ChevronDown className="h-4 w-4" />
                 )}
               </Button>
-              {(onDeleteGroup || onArchiveGroup) && (
-                <PermissionAwareDeleteButton
-                  resource="bookings"
-                  itemName={`Recurring Group (${group.totalBookings} bookings)`}
-                  onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
-                  onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
-                  cancelText="Archive Group"
-                  className="h-8 w-8"
-                />
+              {allBookingsArchived && onRestoreRecurringGroup ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRestoreRecurringGroup(group.groupId)
+                  }}
+                  className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
+                  title="Restore all bookings in group"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Restore</span>
+                </Button>
+              ) : (
+                (onDeleteGroup || onArchiveGroup) && (
+                  <PermissionAwareDeleteButton
+                    resource="bookings"
+                    itemName={`Recurring Group (${group.totalBookings} bookings)`}
+                    onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
+                    onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
+                    cancelText="Archive Group"
+                    className="h-8 w-8"
+                  />
+                )
               )}
             </div>
           </div>
@@ -286,15 +310,31 @@ export function RecurringBookingCard({
                 </StatusBadge>
               )
             })()}
-            {(onDeleteGroup || onArchiveGroup) && (
-              <PermissionAwareDeleteButton
-                resource="bookings"
-                itemName={`Recurring Group (${group.totalBookings} bookings)`}
-                onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
-                onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
-                cancelText="Archive Group"
-                className="h-7 w-7"
-              />
+            {allBookingsArchived && onRestoreRecurringGroup ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRestoreRecurringGroup(group.groupId)
+                }}
+                className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
+                title="Restore all bookings in group"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Restore
+              </Button>
+            ) : (
+              (onDeleteGroup || onArchiveGroup) && (
+                <PermissionAwareDeleteButton
+                  resource="bookings"
+                  itemName={`Recurring Group (${group.totalBookings} bookings)`}
+                  onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
+                  onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
+                  cancelText="Archive Group"
+                  className="h-7 w-7"
+                />
+              )
             )}
           </div>
         </div>

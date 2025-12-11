@@ -60,7 +60,7 @@ export function useBookingStatusManager<T extends BookingBase>({
   // Use centralized payment actions
   const { markAsPaid } = usePaymentActions({
     selectedBooking: selectedBooking as Booking | null,
-    setSelectedBooking: setSelectedBooking as unknown as (booking: Booking) => void,
+    setSelectedBooking: setSelectedBooking as unknown as (booking: Booking | null) => void,
     onSuccess,
   })
 
