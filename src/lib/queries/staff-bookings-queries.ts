@@ -593,11 +593,11 @@ export async function fetchStaffStats(
       totalTasks6MonthsResult,
       monthlyDataResult,
     ] = await Promise.all([
-      // Jobs today
+      // Jobs today - filter by membership periods
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id, staff_id, team_id, created_at')
           .eq('booking_date', todayStr)
           .is('deleted_at', null) // Exclude archived bookings
         if (filterCondition) {
@@ -605,15 +605,22 @@ export async function fetchStaffStats(
         } else {
           query = query.eq('staff_id', userId)
         }
-        const r = await query
-        return r.count || 0
+        const { data: bookings } = await query
+        if (!bookings || bookings.length === 0) return 0
+        // Filter by membership periods
+        const filtered = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
+        return filtered.length
       })(),
 
-      // Jobs this week
+      // Jobs this week - filter by membership periods
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id, staff_id, team_id, created_at')
           .gte('booking_date', startOfWeekStr)
           .lte('booking_date', endOfWeekStr)
           .is('deleted_at', null) // Exclude archived bookings
@@ -622,15 +629,22 @@ export async function fetchStaffStats(
         } else {
           query = query.eq('staff_id', userId)
         }
-        const r = await query
-        return r.count || 0
+        const { data: bookings } = await query
+        if (!bookings || bookings.length === 0) return 0
+        // Filter by membership periods
+        const filtered = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
+        return filtered.length
       })(),
 
-      // Total jobs (30 days)
+      // Total jobs (30 days) - filter by membership periods
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id, staff_id, team_id, created_at')
           .gte('booking_date', thirtyDaysAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null) // Exclude archived bookings
@@ -639,15 +653,22 @@ export async function fetchStaffStats(
         } else {
           query = query.eq('staff_id', userId)
         }
-        const r = await query
-        return r.count || 0
+        const { data: bookings } = await query
+        if (!bookings || bookings.length === 0) return 0
+        // Filter by membership periods
+        const filtered = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
+        return filtered.length
       })(),
 
-      // Completed jobs (30 days)
+      // Completed jobs (30 days) - filter by membership periods
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id, staff_id, team_id, created_at, status')
           .eq('status', 'completed')
           .gte('booking_date', thirtyDaysAgoStr)
           .lte('booking_date', todayStr)
@@ -657,8 +678,15 @@ export async function fetchStaffStats(
         } else {
           query = query.eq('staff_id', userId)
         }
-        const r = await query
-        return r.count || 0
+        const { data: bookings } = await query
+        if (!bookings || bookings.length === 0) return 0
+        // Filter by membership periods
+        const filtered = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
+        return filtered.length
       })(),
 
       // Average rating from reviews (staff + team reviews)
@@ -739,11 +767,11 @@ export async function fetchStaffStats(
         }, 0)
       })(),
 
-      // Total tasks (6 months)
+      // Total tasks (6 months) - filter by membership periods
       (async () => {
         let query = supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id, staff_id, team_id, created_at')
           .gte('booking_date', sixMonthsAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null)
@@ -752,8 +780,15 @@ export async function fetchStaffStats(
         } else {
           query = query.eq('staff_id', userId)
         }
-        const r = await query
-        return r.count || 0
+        const { data: bookings } = await query
+        if (!bookings || bookings.length === 0) return 0
+        // Filter by membership periods
+        const filtered = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
+        return filtered.length
       })(),
 
       // Monthly breakdown (6 months) for performance chart - revenue divided by team_member_count
