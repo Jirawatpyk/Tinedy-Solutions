@@ -374,7 +374,7 @@ export async function fetchReportsTeams(): Promise<{
         name,
         is_active,
         created_at,
-        team_members (id)
+        team_members (id, left_at)
       `)
       .order('name'),
     supabase
@@ -412,14 +412,21 @@ export async function fetchReportsTeams(): Promise<{
   })
 
   // Merge teams with their bookings
-  const teamsWithBookings: TeamWithBookings[] = (teamsWithMembersData || []).map((team) => ({
-    id: team.id,
-    name: team.name,
-    is_active: team.is_active,
-    created_at: team.created_at,
-    team_members: team.team_members || [],
-    bookings: teamBookingsMap.get(team.id) || [],
-  }))
+  // Filter active members only (left_at IS NULL)
+  const teamsWithBookings: TeamWithBookings[] = (teamsWithMembersData || []).map((team) => {
+    // Filter only active members (left_at is null = still in team)
+    const activeMembers = (team.team_members || []).filter(
+      (member: { id: string; left_at?: string | null }) => !member.left_at
+    )
+    return {
+      id: team.id,
+      name: team.name,
+      is_active: team.is_active,
+      created_at: team.created_at,
+      team_members: activeMembers,
+      bookings: teamBookingsMap.get(team.id) || [],
+    }
+  })
 
   return {
     teams,
