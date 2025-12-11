@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useModalState } from '@/hooks/use-modal-state'
 
 interface CollapsibleSectionProps {
   title: React.ReactNode
@@ -26,14 +26,14 @@ export function CollapsibleSection({
   defaultOpen = true,
   className,
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const { isOpen, toggle } = useModalState(defaultOpen)
 
   return (
     <div className={cn('space-y-3 border-b pb-4', className)}>
       {/* Mobile: Clickable header with chevron */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className="w-full flex items-center justify-between md:cursor-default md:pointer-events-none"
         aria-expanded={isOpen}
       >

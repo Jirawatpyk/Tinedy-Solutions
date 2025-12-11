@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarCheck } from 'lucide-react'
+import { useModalState } from '@/hooks/use-modal-state'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,8 +32,8 @@ import type { BookingFrequency } from '@/types/service-package-v2'
 export function QuickAvailabilityCheck() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [isOpen, setIsOpen] = useState(false)
-  const [showResults, setShowResults] = useState(false)
+  const dialog = useModalState()
+  const resultsModal = useModalState()
 
   // Form state
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -50,8 +51,8 @@ export function QuickAvailabilityCheck() {
   const { packages } = useServicePackages()
   const selectedService = packages.find((s: UnifiedServicePackage) => s.id === servicePackageId)
 
-  // Reset form to initial values
-  const resetForm = () => {
+  // Reset form fields only (without closing modal - prevents circular dependency)
+  const resetFormFields = useCallback(() => {
     setDate(format(new Date(), 'yyyy-MM-dd'))
     setStartTime('09:00')
     setEndTime('11:00')
@@ -61,8 +62,14 @@ export function QuickAvailabilityCheck() {
     setFrequency(1)
     setRecurringDates([])
     setRecurringPattern(Pattern.AutoMonthly)
-    setShowResults(false)
-  }
+  }, [])
+
+  // Reset form and close results modal
+  const resetForm = useCallback(() => {
+    resetFormFields()
+    resultsModal.close()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetFormFields])
 
   // Auto-calculate end time when service or start time changes
   useEffect(() => {
@@ -100,13 +107,15 @@ export function QuickAvailabilityCheck() {
     }
   }, [selectedService, startTime, areaSqm, frequency])
 
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
-    if (!open) {
-      // Reset form when closing
-      resetForm()
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      dialog.open()
+    } else {
+      dialog.close()
+      // Reset form fields only when closing dialog (not the results modal)
+      resetFormFields()
     }
-  }
+  }, [dialog, resetFormFields])
 
   const handleCheckAvailability = () => {
     // Validate inputs
@@ -131,8 +140,8 @@ export function QuickAvailabilityCheck() {
       }
     }
 
-    setShowResults(true)
-    setIsOpen(false)
+    resultsModal.open()
+    dialog.close()
   }
 
   return (
@@ -141,7 +150,7 @@ export function QuickAvailabilityCheck() {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setIsOpen(true)}
+        onClick={dialog.open}
         className="gap-2"
       >
         <CalendarCheck className="h-4 w-4" />
@@ -149,7 +158,7 @@ export function QuickAvailabilityCheck() {
       </Button>
 
       {/* Step 1: Input Dialog */}
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog open={dialog.isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
@@ -306,7 +315,7 @@ export function QuickAvailabilityCheck() {
           </div>
 
           <div className="flex justify-end gap-2 flex-shrink-0 border-t pt-4">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+            <Button variant="outline" onClick={dialog.close}>
               Cancel
             </Button>
             <Button
@@ -327,10 +336,10 @@ export function QuickAvailabilityCheck() {
       </Dialog>
 
       {/* Step 2: Results Modal (reuse existing StaffAvailabilityModal) */}
-      {showResults && servicePackageId && (
+      {resultsModal.isOpen && servicePackageId && (
         <StaffAvailabilityModal
-          isOpen={showResults}
-          onClose={() => setShowResults(false)}
+          isOpen={resultsModal.isOpen}
+          onClose={resultsModal.close}
           assignmentType={assignmentType}
           onSelectStaff={(staffId) => {
             // Navigate to bookings page and trigger create modal with prefilled data

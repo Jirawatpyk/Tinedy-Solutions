@@ -9,9 +9,10 @@
  * - Popover presentation
  */
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Calendar as CalendarIcon, X } from 'lucide-react'
 import { format } from 'date-fns'
+import { useModalState } from '@/hooks/use-modal-state'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -41,7 +42,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
   showPresets = true,
   className,
 }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const popover = useModalState()
 
   // Convert to react-day-picker DateRange format
   const dateRange: DateRange | undefined = value
@@ -64,7 +65,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
   const handleToday = () => {
     const today = new Date()
     onChange({ start: today, end: today })
-    setIsOpen(false)
+    popover.close()
   }
 
   const handleThisWeek = () => {
@@ -75,7 +76,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
     const end = new Date(start)
     end.setDate(start.getDate() + 6) // Saturday
     onChange({ start, end })
-    setIsOpen(false)
+    popover.close()
   }
 
   const handleThisMonth = () => {
@@ -83,7 +84,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
     const start = new Date(today.getFullYear(), today.getMonth(), 1)
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     onChange({ start, end })
-    setIsOpen(false)
+    popover.close()
   }
 
   // Clear date range
@@ -98,7 +99,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
     : placeholder
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={popover.isOpen} onOpenChange={popover.setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -168,7 +169,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
               size="sm"
               onClick={() => {
                 onChange(null)
-                setIsOpen(false)
+                popover.close()
               }}
               className="flex-1"
             >
@@ -176,7 +177,7 @@ const FilterDateRangePickerComponent: React.FC<FilterDateRangePickerProps> = ({
             </Button>
             <Button
               size="sm"
-              onClick={() => setIsOpen(false)}
+              onClick={popover.close}
               className="flex-1"
               disabled={!value}
             >

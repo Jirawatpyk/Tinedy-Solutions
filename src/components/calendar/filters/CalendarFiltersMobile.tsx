@@ -9,9 +9,10 @@
  * - Optimized with React Query for data fetching
  */
 
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { SlidersHorizontal, User, Users, BookmarkCheck, CreditCard, Archive } from 'lucide-react'
+import { useModalState } from '@/hooks/use-modal-state'
 import {
   Sheet,
   SheetContent,
@@ -46,7 +47,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
   filterControls,
   onPresetDateChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const sheet = useModalState()
   const { filters, hasActiveFilters, activeFilterCount } = filterControls
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
@@ -102,17 +103,13 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
     []
   )
 
-  const handleClose = () => {
-    setIsOpen(false)
-  }
-
   const handleClearAll = () => {
     filterControls.clearAll()
-    handleClose()
+    sheet.close()
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={sheet.isOpen} onOpenChange={sheet.setIsOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" className="gap-2">
           <SlidersHorizontal className="h-4 w-4" />
@@ -261,7 +258,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
             >
               Clear All
             </Button>
-            <Button onClick={handleClose} className="flex-1">
+            <Button onClick={sheet.close} className="flex-1">
               Apply Filters
             </Button>
           </div>

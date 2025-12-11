@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react'
 import { Check } from 'lucide-react'
+import { useModalState } from '@/hooks/use-modal-state'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -45,10 +46,10 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
   disabled: _disabled = false,
   availableStatuses,
 }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const popover = useModalState()
+  const confirmDialog = useModalState()
   const [selectedStatus, setSelectedStatus] = useState(currentStatus)
   const [isLoading, setIsLoading] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // Filter status options based on availableStatuses prop
   const statusOptions = availableStatuses
@@ -57,20 +58,20 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
 
   const handleSubmit = async () => {
     if (selectedStatus === currentStatus) {
-      setIsOpen(false)
+      popover.close()
       return
     }
 
     // Show confirmation dialog instead of directly updating
-    setShowConfirmDialog(true)
+    confirmDialog.open()
   }
 
   const handleConfirm = async () => {
-    setShowConfirmDialog(false)
+    confirmDialog.close()
     setIsLoading(true)
     try {
       await onStatusChange(selectedStatus)
-      setIsOpen(false)
+      popover.close()
     } catch (error) {
       console.error('Failed to update status:', error)
       // Reset to current status on error
@@ -81,27 +82,31 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
   }
 
   const handleCancelConfirm = () => {
-    setShowConfirmDialog(false)
+    confirmDialog.close()
     // Don't close the popover, let user change their selection
   }
 
   const handleCancel = () => {
     setSelectedStatus(currentStatus)
-    setIsOpen(false)
+    popover.close()
   }
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
+    popover.setIsOpen(open)
 
     if (open) {
       // Reset to current status when opening
       setSelectedStatus(currentStatus)
+    } else {
+      // Cleanup: reset selectedStatus and close confirm dialog when closing popover
+      setSelectedStatus(currentStatus)
+      confirmDialog.close()
     }
   }
 
   return (
     <>
-      <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <Popover open={popover.isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -167,7 +172,7 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
 
       {/* Confirmation Dialog */}
       <StatusChangeConfirmDialog
-        isOpen={showConfirmDialog}
+        isOpen={confirmDialog.isOpen}
         onConfirm={handleConfirm}
         onCancel={handleCancelConfirm}
         currentStatus={currentStatus}
