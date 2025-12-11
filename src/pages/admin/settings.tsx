@@ -100,12 +100,12 @@ export default function AdminSettings() {
         {/* Settings Content with Tabs */}
         <div className="p-4 sm:p-6">
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="general" className="flex items-center gap-2">
+            <TabsList className="w-full grid grid-cols-2 mb-6">
+              <TabsTrigger value="general" className="flex items-center justify-center gap-2">
                 <Building2 className="h-4 w-4" />
                 General
               </TabsTrigger>
-              <TabsTrigger value="payment" className="flex items-center gap-2">
+              <TabsTrigger value="payment" className="flex items-center justify-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Payment
               </TabsTrigger>
