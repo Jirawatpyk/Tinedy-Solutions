@@ -112,16 +112,18 @@ export const exportRevenueAllToExcel = (
   const workbook = XLSX.utils.book_new()
 
   // ========== Sheet 1: Revenue Summary ==========
-  const completedBookings = filteredBookings.filter(b => b.status === 'completed')
-  if (completedBookings.length > 0) {
-    const summaryData = completedBookings.map(b => {
+  // Show all bookings (including future bookings) - not just completed
+  if (filteredBookings.length > 0) {
+    const summaryData = filteredBookings.map(b => {
       const baseData: Record<string, string | number> = {
         'Date': format(new Date(b.booking_date), 'dd/MM/yyyy'),
         'Time': b.start_time || 'N/A',
         'Service Package': b.service_packages?.name || 'N/A',
         'Service Type': b.service_packages?.service_type || 'N/A',
+        'Status': b.status,
       }
-      if (role === 'admin') {
+      // Admin and Manager can see revenue
+      if (role === 'admin' || role === 'manager') {
         baseData['Revenue (฿)'] = Number(b.total_price).toFixed(2)
       }
       return baseData
@@ -141,7 +143,8 @@ export const exportRevenueAllToExcel = (
       'Status': b.status,
       'Created': format(new Date(b.created_at), 'dd/MM/yyyy HH:mm'),
     }
-    if (role === 'admin') {
+    // Admin and Manager can see revenue
+    if (role === 'admin' || role === 'manager') {
       baseData['Price (฿)'] = Number(b.total_price).toFixed(2)
     }
     return baseData
@@ -165,7 +168,8 @@ export const exportRevenueAllToExcel = (
       'Service Type': type,
       'Total Bookings': data.count,
     }
-    if (role === 'admin') {
+    // Admin and Manager can see revenue
+    if (role === 'admin' || role === 'manager') {
       baseData['Total Revenue (฿)'] = data.revenue.toFixed(2)
       baseData['Average Price (฿)'] = (data.revenue / data.count).toFixed(2)
     }
@@ -216,13 +220,19 @@ export const exportRevenueAllToExcel = (
   })
 
   const topPackagesData = Object.entries(packageMap)
-    .map(([name, data]) => ({
-      'Package Name': name,
-      'Total Bookings': data.count,
-      'Completed Revenue (฿)': data.revenue.toFixed(2),
-      'Avg Price (฿)': data.count > 0 ? (data.revenue / data.count).toFixed(2) : '0.00',
-    }))
-    .sort((a, b) => b['Total Bookings'] - a['Total Bookings'])
+    .map(([name, data]) => {
+      const baseData: Record<string, string | number> = {
+        'Package Name': name,
+        'Total Bookings': data.count,
+      }
+      // Admin and Manager can see revenue
+      if (role === 'admin' || role === 'manager') {
+        baseData['Completed Revenue (฿)'] = data.revenue.toFixed(2)
+        baseData['Avg Price (฿)'] = data.count > 0 ? (data.revenue / data.count).toFixed(2) : '0.00'
+      }
+      return baseData
+    })
+    .sort((a, b) => (b['Total Bookings'] as number) - (a['Total Bookings'] as number))
     .slice(0, 10)
 
   if (topPackagesData.length > 0) {
