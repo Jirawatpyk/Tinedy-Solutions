@@ -975,6 +975,7 @@ export default function AdminPackageDetail() {
           </DialogHeader>
           <PackageFormV2
             package={packageData}
+            packageSource={packageSource}
             onSuccess={() => {
               setIsEditDialogOpen(false)
               fetchPackageDetails() // Refresh package data

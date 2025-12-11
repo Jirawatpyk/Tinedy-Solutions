@@ -391,6 +391,7 @@ export function AdminServicePackagesV2() {
 
           <PackageFormV2
             package={editingPackage}
+            packageSource="v2"
             onSuccess={handleFormSuccess}
             onCancel={handleFormCancel}
             showCancel={true}

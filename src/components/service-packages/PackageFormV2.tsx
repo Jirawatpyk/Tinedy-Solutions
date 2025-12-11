@@ -45,6 +45,8 @@ import {
 interface PackageFormV2Props {
   /** Package to edit (null for create mode) */
   package?: ServicePackageV2 | null
+  /** Source table: 'v1' = service_packages, 'v2' = service_packages_v2 */
+  packageSource?: 'v1' | 'v2'
   /** Callback when save is successful */
   onSuccess?: (packageId: string) => void
   /** Callback when cancel */
@@ -58,6 +60,7 @@ interface PackageFormV2Props {
  */
 export function PackageFormV2({
   package: editPackage,
+  packageSource = 'v2',
   onSuccess,
   onCancel,
   showCancel = true,
@@ -193,18 +196,38 @@ export function PackageFormV2({
 
       if (editPackage) {
         // Update existing package
-        const { error } = await supabase
-          .from('service_packages_v2')
-          .update(data.package)
-          .eq('id', editPackage.id)
-
-        if (error) throw error
-
         packageId = editPackage.id
 
-        // Update tiers if tiered pricing
-        if (data.package.pricing_model === PricingModel.Tiered) {
-          await updateTiers(packageId)
+        if (packageSource === 'v1') {
+          // Update V1 package (service_packages table)
+          const v1Data = {
+            name: data.package.name,
+            description: data.package.description,
+            service_type: data.package.service_type,
+            duration_minutes: data.package.duration_minutes,
+            price: data.package.base_price,
+            is_active: data.package.is_active,
+          }
+
+          const { error } = await supabase
+            .from('service_packages')
+            .update(v1Data)
+            .eq('id', editPackage.id)
+
+          if (error) throw error
+        } else {
+          // Update V2 package (service_packages_v2 table)
+          const { error } = await supabase
+            .from('service_packages_v2')
+            .update(data.package)
+            .eq('id', editPackage.id)
+
+          if (error) throw error
+
+          // Update tiers if tiered pricing (V2 only)
+          if (data.package.pricing_model === PricingModel.Tiered) {
+            await updateTiers(packageId)
+          }
         }
 
         toast({
@@ -401,7 +424,11 @@ export function PackageFormV2({
               control={form.control}
               render={({ field, fieldState }) => (
                 <>
-                  <Select value={field.value} onValueChange={handlePricingModelChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={handlePricingModelChange}
+                    disabled={!!editPackage}
+                  >
                     <SelectTrigger id="pricing_model">
                       <SelectValue />
                     </SelectTrigger>
@@ -414,6 +441,11 @@ export function PackageFormV2({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  {editPackage && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pricing type cannot be changed after creation
+                    </p>
+                  )}
                   {fieldState.error && (
                     <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
                   )}
