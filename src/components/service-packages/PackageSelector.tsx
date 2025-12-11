@@ -42,6 +42,9 @@ import type {
 } from '@/types'
 import { PricingModel } from '@/types'
 import { TieredPricingCard } from '@/components/booking/TieredPricingCard'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('PackageSelector')
 
 export interface PackageSelectionData {
   /** Selected package ID (V2) */
@@ -243,11 +246,11 @@ export function PackageSelector({
 
     // ถ้าเหมือนเดิม ไม่ต้อง emit ซ้ำ
     if (lastEmittedSelectionRef.current === signature) {
-      console.log('🔄 Skipping duplicate emit:', signature)
+      logger.debug('Skipping duplicate emit', { signature })
       return
     }
 
-    console.log('✅ Emitting selection:', signature)
+    logger.debug('Emitting selection', { signature })
     lastEmittedSelectionRef.current = signature
     onChangeRef.current?.(data)
   }, []) // ไม่มี dependency เพราะใช้ ref แทน
@@ -335,12 +338,12 @@ export function PackageSelector({
   useEffect(() => {
     // ข้ามถ้ากำลัง restore หรือยัง loading packages
     if (isRestoring || loading) {
-      console.log('⏭️ Skipping calculation: isRestoring or loading')
+      logger.debug('Skipping calculation: isRestoring or loading')
       return
     }
     // ข้ามถ้า disabled (Edit mode) - ใช้ราคาเดิมจาก value.price
     if (disabled) {
-      console.log('⏭️ Skipping calculation: disabled (Edit mode)')
+      logger.debug('Skipping calculation: disabled (Edit mode)')
       return
     }
     if (!selectedPackage || selectedPackage.pricing_model !== PricingModel.Tiered) return
@@ -358,17 +361,17 @@ export function PackageSelector({
 
     // ถ้า signature เดียวกับครั้งก่อน = ไม่ต้องคำนวณซ้ำ
     if (lastCalculationSignatureRef.current === calculationSignature) {
-      console.log('⏭️ Skipping duplicate calculation:', calculationSignature)
+      logger.debug('Skipping duplicate calculation', { calculationSignature })
       return
     }
 
     // ป้องกัน double calculation - ถ้ากำลังคำนวณอยู่ ข้ามเลย
     if (isCalculatingRef.current) {
-      console.log('⏭️ Skipping: already calculating')
+      logger.debug('Skipping: already calculating')
       return
     }
 
-    console.log('🧮 Starting price calculation:', calculationSignature)
+    logger.debug('Starting price calculation', { calculationSignature })
 
     // บันทึก signature ก่อนเริ่มคำนวณ
     lastCalculationSignatureRef.current = calculationSignature
@@ -383,7 +386,7 @@ export function PackageSelector({
     calculatePricing(selectedPackage.id, debouncedAreaSqm, frequency)
       .then((result) => {
         if (!isCancelled) {
-          console.log('✅ Calculation complete:', result)
+          logger.debug('Calculation complete', { result })
 
           // เปรียบเทียบกับผลลัพธ์ก่อนหน้า - ถ้าเหมือนกันไม่ต้อง setState
           const isSameResult =
@@ -392,11 +395,11 @@ export function PackageSelector({
             lastPricingResultRef.current?.required_staff === result?.required_staff
 
           if (!isSameResult) {
-            console.log('📊 Setting new pricing result')
+            logger.debug('Setting new pricing result')
             lastPricingResultRef.current = result
             setPricingResult(result)
           } else {
-            console.log('⏭️ Skipping setPricingResult: same result')
+            logger.debug('Skipping setPricingResult: same result')
           }
         }
       })
@@ -417,7 +420,7 @@ export function PackageSelector({
     // Cleanup function: cancel calculation เมื่อ component unmount หรือ dependencies เปลี่ยน
     return () => {
       if (!isCancelled) {
-        console.log('🧹 Cleaning up calculation')
+        logger.debug('Cleaning up calculation')
       }
       isCancelled = true
       isCalculatingRef.current = false
@@ -450,7 +453,7 @@ export function PackageSelector({
   useEffect(() => {
     // Guard clauses
     if (isRestoring || calculating || loading) {
-      console.log('⏭️ Skipping tiered emit: isRestoring/calculating/loading')
+      logger.debug('Skipping tiered emit: isRestoring/calculating/loading')
       return
     }
 
@@ -459,7 +462,7 @@ export function PackageSelector({
 
     // Edit mode (disabled): ใช้ราคาจาก value แทนการคำนวณใหม่
     if (disabled && value && value.pricingModel === 'tiered') {
-      console.log('📤 Emitting tiered selection (Edit mode - using existing price)')
+      logger.debug('Emitting tiered selection (Edit mode - using existing price)')
       emitSelection({
         packageId: pkg.id,
         pricingModel: 'tiered',
@@ -476,7 +479,7 @@ export function PackageSelector({
     // Create mode: ใช้ pricingResult ที่คำนวณได้
     if (!pricingResult || !pricingResult.found) return
 
-    console.log('📤 Preparing to emit tiered selection (Create mode - calculated price)')
+    logger.debug('Preparing to emit tiered selection (Create mode - calculated price)')
 
     emitSelection({
       packageId: pkg.id,

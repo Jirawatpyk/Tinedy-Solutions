@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('StaffAvailabilityCheck')
 
 interface Review {
   rating: number
@@ -164,7 +167,7 @@ export function useStaffAvailabilityCheck({
             .eq('recurring_group_id', excludedBooking.recurring_group_id)
 
           excludeBookingIds = recurringBookings?.map(b => b.id) || [excludeBookingId]
-          console.log(`🔗 [Single-Date] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
+          logger.debug(`[Single-Date] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
         } else {
           excludeBookingIds = [excludeBookingId]
         }
@@ -395,7 +398,7 @@ export function useStaffAvailabilityCheck({
             .eq('recurring_group_id', excludedBooking.recurring_group_id)
 
           excludeBookingIds = recurringBookings?.map(b => b.id) || [excludeBookingId]
-          console.log(`🔗 [Team Check] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
+          logger.debug(`[Team Check] Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
         } else {
           excludeBookingIds = [excludeBookingId]
         }

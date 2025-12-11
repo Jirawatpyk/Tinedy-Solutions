@@ -4,8 +4,11 @@ import { enUS } from 'date-fns/locale'
 import { CheckCircle2, Clock, XCircle, AlertCircle, Play } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { createLogger } from '@/lib/logger'
 import { getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { BOOKING_STATUS_CARD_COLORS, type BookingStatus } from '@/constants/booking-status'
+
+const logger = createLogger('BookingTimeline')
 
 interface StatusHistoryItem {
   id: string
@@ -39,13 +42,13 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
       const now = Date.now()
 
       if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-        console.log('[Timeline] Using cached data for', bookingId)
+        logger.debug('Using cached data', { bookingId })
         setHistory(cached.data)
         setLoading(false)
         return
       }
 
-      console.log('[Timeline] Fetching fresh data for', bookingId)
+      logger.debug('Fetching fresh data', { bookingId })
       setLoading(true)
 
       const { data, error } = await supabase
@@ -95,7 +98,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
           filter: `booking_id=eq.${bookingId}`,
         },
         (payload) => {
-          console.log('[Timeline] Real-time update received:', payload)
+          logger.debug('Real-time update received', { payload })
           // Clear cache and refetch
           timelineCache.delete(bookingId)
           setTimeout(() => {

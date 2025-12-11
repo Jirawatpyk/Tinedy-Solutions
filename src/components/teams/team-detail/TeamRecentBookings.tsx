@@ -1,6 +1,7 @@
 import type { Booking } from '@/types'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { createLogger } from '@/lib/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,8 @@ import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
+
+const logger = createLogger('TeamRecentBookings')
 
 interface TeamRecentBookingsProps {
   teamId: string
@@ -128,7 +131,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           filter: `team_id=eq.${teamId}`,
         },
         (payload) => {
-          console.log('[TeamRecentBookings] Booking changed:', payload.eventType)
+          logger.debug('Booking changed', { eventType: payload.eventType })
           loadRecentBookings()
         }
       )

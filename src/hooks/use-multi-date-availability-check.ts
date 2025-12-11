@@ -5,12 +5,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { createLogger } from '@/lib/logger'
 import type {
   MultiDateStaffResult,
   MultiDateTeamResult,
   DateConflict,
   DateAvailabilityStatus
 } from '@/types/staff-availability'
+
+const logger = createLogger('MultiDateAvailabilityCheck')
 
 interface Review {
   rating: number
@@ -131,7 +134,7 @@ export function useMultiDateAvailabilityCheck({
       setLoading(true)
       setError(null)
 
-      console.log('🔍 Checking multi-date availability:', {
+      logger.debug('Checking multi-date availability', {
         dates,
         startTime,
         endTime,
@@ -183,7 +186,7 @@ export function useMultiDateAvailabilityCheck({
             .eq('recurring_group_id', excludedBooking.recurring_group_id)
 
           excludeBookingIds = recurringBookings?.map(b => b.id) || [excludeBookingId]
-          console.log(`🔗 Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
+          logger.debug(`Excluding entire recurring group: ${excludeBookingIds.length} bookings`)
         } else {
           excludeBookingIds = [excludeBookingId]
         }
@@ -215,7 +218,7 @@ export function useMultiDateAvailabilityCheck({
 
       if (conflictError) throw conflictError
 
-      console.log(`📊 Found ${conflictBookings?.length || 0} potential conflicts across ${dates.length} dates`)
+      logger.debug(`Found ${conflictBookings?.length || 0} potential conflicts across ${dates.length} dates`)
 
       // 3. Check availability based on assignment type
       if (assignmentType === 'individual') {
@@ -335,7 +338,7 @@ export function useMultiDateAvailabilityCheck({
     // Sort by score (descending)
     results.sort((a, b) => b.overallScore - a.overallScore)
 
-    console.log('✅ Staff availability check complete:', {
+    logger.debug('Staff availability check complete', {
       totalStaff: results.length,
       fullyAvailable: results.filter(s => s.isAvailableAllDates).length,
       partial: results.filter(s => s.availableDatesCount > 0 && !s.isAvailableAllDates).length,
@@ -483,7 +486,7 @@ export function useMultiDateAvailabilityCheck({
     // Sort by score
     results.sort((a, b) => b.overallScore - a.overallScore)
 
-    console.log('✅ Team availability check complete:', {
+    logger.debug('Team availability check complete', {
       totalTeams: results.length,
       fullyAvailable: results.filter(t => t.isAvailableAllDates).length
     })

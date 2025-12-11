@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarCheck } from 'lucide-react'
 import { useModalState } from '@/hooks/use-modal-state'
+import { createLogger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,6 +29,8 @@ import { useToast } from '@/hooks/use-toast'
 import type { RecurringPattern } from '@/types/recurring-booking'
 import { RecurringPattern as Pattern } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
+
+const logger = createLogger('QuickAvailabilityCheck')
 
 export function QuickAvailabilityCheck() {
   const navigate = useNavigate()
@@ -346,7 +349,7 @@ export function QuickAvailabilityCheck() {
             const isRecurring = frequency > 1
 
             // Debug: Log recurring pattern
-            console.log('🔍 Quick Availability Check - Sending recurring data:', {
+            logger.debug('Sending recurring data', {
               isRecurring,
               recurringDates,
               recurringPattern,

@@ -7,11 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import { createLogger } from '@/lib/logger'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
 import { supabase } from '@/lib/supabase'
+
+const logger = createLogger('StaffRecentBookings')
 
 interface StaffRecentBookingsProps {
   staffId: string
@@ -158,7 +161,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
             table: 'bookings',
           },
           (payload) => {
-            console.log('[StaffRecentBookings] Booking changed:', payload.eventType)
+            logger.debug('Booking changed', { eventType: payload.eventType })
 
             // Check if this booking is relevant to this staff
             const booking = payload.new as { staff_id?: string | null; team_id?: string | null }
@@ -171,7 +174,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
               (oldBooking?.team_id && teamIds.includes(oldBooking.team_id) && !oldBooking.staff_id)
 
             if (isRelevant) {
-              console.log('[StaffRecentBookings] Relevant change, refreshing data...')
+              logger.debug('Relevant change, refreshing data...')
               loadRecentBookings()
             }
           }
