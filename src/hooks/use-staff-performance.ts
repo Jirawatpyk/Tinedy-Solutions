@@ -141,6 +141,7 @@ export function useStaffPerformance(staffId: string | undefined) {
           payment_status,
           payment_slip_url,
           payment_method,
+          payment_date,
           created_at,
           staff_id,
           team_id,
@@ -149,9 +150,18 @@ export function useStaffPerformance(staffId: string | undefined) {
           city,
           state,
           zip_code,
+          notes,
+          area_sqm,
+          frequency,
+          is_recurring,
+          recurring_sequence,
+          recurring_total,
+          parent_booking_id,
           service_packages (name, price, service_type),
           service_packages_v2:package_v2_id (name, service_type),
-          customers (id, full_name, email, phone)
+          customers (id, full_name, email, phone),
+          profiles:staff_id (id, full_name, email, avatar_url),
+          teams:team_id (id, name, team_lead:team_lead_id (id, full_name))
         `)
         .is('deleted_at', null)
         .order('booking_date', { ascending: false })

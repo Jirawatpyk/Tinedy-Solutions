@@ -13,6 +13,12 @@ export interface Settings {
   business_description: string | null
   business_logo_url: string | null
 
+  // Payment Settings (Bank Transfer & PromptPay)
+  bank_name: string
+  bank_account_name: string
+  bank_account_number: string
+  promptpay_id: string
+
   // Email Settings
   email_api_key: string | null
   email_from_address: string
@@ -103,6 +109,10 @@ export function useSettings() {
     email_from_address?: string
     email_reply_to?: string
     email_provider?: string
+    bank_name?: string
+    bank_account_name?: string
+    bank_account_number?: string
+    promptpay_id?: string
   }) => {
     try {
       if (!settings) throw new Error('Settings not loaded')
@@ -196,10 +206,15 @@ export function useSettings() {
       }
 
       // Delete old logo if exists
-      if (settings.business_logo_url) {
-        const oldPath = settings.business_logo_url.split('/').pop()
-        if (oldPath) {
-          await supabase.storage.from('business-logos').remove([oldPath])
+      if (settings.business_logo_url && settings.business_logo_url.includes('business-logos')) {
+        // Extract filename from URL: .../business-logos/business-logo-12345.png
+        const urlParts = settings.business_logo_url.split('/business-logos/')
+        const oldFileName = urlParts[1]
+        if (oldFileName) {
+          const { error: deleteError } = await supabase.storage.from('business-logos').remove([oldFileName])
+          if (deleteError) {
+            console.warn('Failed to delete old logo:', deleteError)
+          }
         }
       }
 

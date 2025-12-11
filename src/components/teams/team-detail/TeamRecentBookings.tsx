@@ -57,15 +57,25 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           payment_status,
           payment_slip_url,
           payment_method,
+          payment_date,
           address,
           city,
           state,
           zip_code,
+          notes,
           staff_id,
           team_id,
+          area_sqm,
+          frequency,
+          is_recurring,
+          recurring_sequence,
+          recurring_total,
+          parent_booking_id,
           customers (id, full_name, email, phone),
           service_packages (name, service_type),
-          service_packages_v2:package_v2_id (name, service_type)
+          service_packages_v2:package_v2_id (name, service_type),
+          profiles:staff_id (id, full_name, email, avatar_url),
+          teams:team_id (id, name, team_lead:team_lead_id (id, full_name))
         `)
         .eq('team_id', teamId)
         .is('deleted_at', null)

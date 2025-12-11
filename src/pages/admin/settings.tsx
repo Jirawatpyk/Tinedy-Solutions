@@ -2,17 +2,20 @@
  * Admin Settings Page
  *
  * จัดการการตั้งค่าระบบ:
- * - General Settings: ข้อมูลธุรกิจ
+ * - General Tab: ข้อมูลธุรกิจ
+ * - Payment Tab: การตั้งค่าการชำระเงิน
  *
  * Integrated with Zod schemas (Phase 5)
  */
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSettings } from '@/hooks/use-settings'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm'
-import { AlertCircle } from 'lucide-react'
+import { PaymentSettingsForm } from '@/components/settings/PaymentSettingsForm'
+import { AlertCircle, Building2, CreditCard } from 'lucide-react'
 
 export default function AdminSettings() {
   const { settings, loading, error, refresh } = useSettings()
@@ -68,8 +71,15 @@ export default function AdminSettings() {
     business_phone: settings.business_phone,
     business_address: settings.business_address,
     business_description: settings.business_description,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    business_logo_url: (settings as any).business_logo_url || null,
+    business_logo_url: settings.business_logo_url || null,
+  }
+
+  // Prepare payment settings initial data
+  const paymentInitialData = {
+    bank_name: settings.bank_name,
+    bank_account_name: settings.bank_account_name,
+    bank_account_number: settings.bank_account_number,
+    promptpay_id: settings.promptpay_id,
   }
 
   return (
@@ -87,15 +97,36 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Settings Content */}
+        {/* Settings Content with Tabs */}
         <div className="p-4 sm:p-6">
-          <div className="max-w-full mx-auto">
-            <GeneralSettingsForm
-              initialData={generalInitialData}
-              settingsId={settings.id}
-              onSuccess={refresh}
-            />
-          </div>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="general" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="payment" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payment
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="general">
+              <GeneralSettingsForm
+                initialData={generalInitialData}
+                settingsId={settings.id}
+                onSuccess={refresh}
+              />
+            </TabsContent>
+
+            <TabsContent value="payment">
+              <PaymentSettingsForm
+                initialData={paymentInitialData}
+                settingsId={settings.id}
+                onSuccess={refresh}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </AdminOnly>

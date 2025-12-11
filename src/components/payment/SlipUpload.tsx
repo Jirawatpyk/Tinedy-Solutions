@@ -2,7 +2,9 @@ import { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { useSettings } from '@/hooks/use-settings'
 import { supabase } from '@/lib/supabase'
 import { Upload, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
@@ -21,6 +23,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
   const [uploaded, setUploaded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const { settings, loading: settingsLoading } = useSettings()
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = e.target.files?.[0]
@@ -218,16 +221,25 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
           </p>
         </div>
 
-        {/* Bank Details - Example */}
+        {/* Bank Details - Dynamic from settings */}
         <Alert>
           <AlertDescription>
             <p className="font-semibold mb-2">Bank Transfer Details:</p>
-            <div className="space-y-1 text-sm">
-              <p><strong>Bank:</strong> ธนาคารกสิกรไทย (KBANK)</p>
-              <p><strong>Account Name:</strong> Tinedy Solutions</p>
-              <p><strong>Account Number:</strong> 507-2-69043-7</p>
-              <p><strong>Amount:</strong> {formatCurrency(amount)}</p>
-            </div>
+            {settingsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ) : (
+              <div className="space-y-1 text-sm">
+                <p><strong>Bank:</strong> {settings?.bank_name || 'ธนาคารกสิกรไทย (KBANK)'}</p>
+                <p><strong>Account Name:</strong> {settings?.bank_account_name || 'Tinedy Solutions'}</p>
+                <p><strong>Account Number:</strong> {settings?.bank_account_number || 'XXX-X-XXXXX-X'}</p>
+                <p><strong>Amount:</strong> {formatCurrency(amount)}</p>
+              </div>
+            )}
           </AlertDescription>
         </Alert>
 

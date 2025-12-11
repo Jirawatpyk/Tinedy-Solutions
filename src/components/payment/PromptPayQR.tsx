@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
+import { useSettings } from '@/hooks/use-settings'
 import { supabase } from '@/lib/supabase'
 import { Loader2, AlertCircle, Upload, Image as ImageIcon, X, CheckCircle2 } from 'lucide-react'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
@@ -28,14 +29,18 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
   const [uploaded, setUploaded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const { settings, loading: settingsLoading } = useSettings()
 
   const generateQRCode = useCallback(async () => {
+    // Wait for settings to load
+    if (settingsLoading) return
+
     try {
       setLoading(true)
       setError('')
 
-      // PromptPay ID จาก environment variable
-      const promptPayId = import.meta.env.VITE_PROMPTPAY_ID || '0000000000'
+      // PromptPay ID จาก settings (fallback to env for backwards compatibility)
+      const promptPayId = settings?.promptpay_id || import.meta.env.VITE_PROMPTPAY_ID || '0000000000'
 
       // Generate PromptPay payload
       const payload = generatePayload(promptPayId, { amount })
@@ -57,7 +62,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
     } finally {
       setLoading(false)
     }
-  }, [amount])
+  }, [amount, settings?.promptpay_id, settingsLoading])
 
   useEffect(() => {
     generateQRCode()
