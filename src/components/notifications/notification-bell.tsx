@@ -13,8 +13,6 @@ import { enUS } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 export function NotificationBell() {
-  console.log('[NotificationBell] 🔔 Component rendered')
-
   const {
     notifications,
     unreadCount,
@@ -24,12 +22,6 @@ export function NotificationBell() {
     deleteNotification,
     clearAll,
   } = useInAppNotifications()
-
-  console.log('[NotificationBell] Current state:', {
-    notificationCount: notifications.length,
-    unreadCount,
-    loading
-  })
 
   // Booking-related notification types that should display booking ID
   const BOOKING_RELATED_TYPES = [

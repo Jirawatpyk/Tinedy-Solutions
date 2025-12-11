@@ -69,8 +69,6 @@ export function useTeamsWithDetails(
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Teams] Setting up realtime subscription')
-
     const teamsChannel = supabase
       .channel('teams-realtime')
       .on(
@@ -80,8 +78,7 @@ export function useTeamsWithDetails(
           schema: 'public',
           table: 'teams',
         },
-        (payload) => {
-          console.log('[Teams] Team changed:', payload.eventType)
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
         }
       )
@@ -96,8 +93,7 @@ export function useTeamsWithDetails(
           schema: 'public',
           table: 'team_members',
         },
-        (payload) => {
-          console.log('[Teams] Team member changed:', payload.eventType)
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
         }
       )
@@ -112,8 +108,7 @@ export function useTeamsWithDetails(
           schema: 'public',
           table: 'reviews',
         },
-        (payload) => {
-          console.log('[Teams] Review changed:', payload.eventType)
+        () => {
           // Invalidate teams queries when reviews change (affects ratings)
           queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
         }
@@ -121,7 +116,6 @@ export function useTeamsWithDetails(
       .subscribe()
 
     return () => {
-      console.log('[Teams] Cleanup subscriptions')
       supabase.removeChannel(teamsChannel)
       supabase.removeChannel(membersChannel)
       supabase.removeChannel(reviewsChannel)
@@ -185,8 +179,6 @@ export function useTeamsList(options: UseTeamsListOptions = {}): UseTeamsListRet
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[TeamsList] Setting up realtime subscription')
-
     const channel = supabase
       .channel('teams-list-realtime')
       .on(
@@ -196,8 +188,7 @@ export function useTeamsList(options: UseTeamsListOptions = {}): UseTeamsListRet
           schema: 'public',
           table: 'teams',
         },
-        (payload) => {
-          console.log('[TeamsList] Team changed:', payload.eventType)
+        () => {
           // Invalidate teams list queries
           queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
         }
@@ -205,7 +196,6 @@ export function useTeamsList(options: UseTeamsListOptions = {}): UseTeamsListRet
       .subscribe()
 
     return () => {
-      console.log('[TeamsList] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime])

@@ -90,8 +90,6 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
       const customEvent = event as CustomEvent<{ senderId: string; count: number }>
       const { count } = customEvent.detail
 
-      console.log('📥 Sidebar received chat:messages-read event, reducing count by', count)
-
       // Optimistic update - immediately reduce badge count
       setUnreadCount((prev) => Math.max(0, prev - count))
     }

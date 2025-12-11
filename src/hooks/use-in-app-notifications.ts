@@ -24,11 +24,9 @@ export function useInAppNotifications() {
   // Load notifications
   const loadNotifications = useCallback(async () => {
     if (!user) {
-      console.log('[InAppNotifications] ⚠️ No user, skipping load')
       return
     }
 
-    console.log('[InAppNotifications] 📥 Loading notifications...')
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -37,11 +35,10 @@ export function useInAppNotifications() {
       .limit(50)
 
     if (error) {
-      console.error('[InAppNotifications] ❌ Error loading notifications:', error)
+      console.error('[InAppNotifications] Error loading notifications:', error)
       return
     }
 
-    console.log('[InAppNotifications] ✅ Loaded', data?.length || 0, 'notifications')
     setNotifications(data || [])
     setUnreadCount(data?.filter(n => !n.is_read).length || 0)
     setLoading(false)
@@ -157,12 +154,10 @@ export function useInAppNotifications() {
   // Load notifications on mount and subscribe to changes
   useEffect(() => {
     if (!user) {
-      console.log('[InAppNotifications] ⚠️ No user, skipping subscription setup')
       return
     }
 
     // Load notifications immediately
-    console.log('[InAppNotifications] 🔄 Loading notifications for user:', user.id)
     ;(async () => {
       const { data, error } = await supabase
         .from('notifications')
@@ -172,18 +167,16 @@ export function useInAppNotifications() {
         .limit(50)
 
       if (error) {
-        console.error('[InAppNotifications] ❌ Error loading notifications:', error)
+        console.error('[InAppNotifications] Error loading notifications:', error)
         return
       }
 
-      console.log('[InAppNotifications] ✅ Loaded', data?.length || 0, 'notifications')
       setNotifications(data || [])
       setUnreadCount(data?.filter(n => !n.is_read).length || 0)
       setLoading(false)
     })()
 
     // Subscribe to real-time changes
-    console.log('[InAppNotifications] 📡 Setting up realtime subscription for user:', user.id)
     const channel = supabase
       .channel(`in-app-notifications-${user.id}`)
       .on(
@@ -195,11 +188,9 @@ export function useInAppNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('[InAppNotifications] 📥 INSERT event received:', payload)
           const newNotification = payload.new as InAppNotification
           setNotifications(prev => [newNotification, ...prev])
           setUnreadCount(prev => prev + 1)
-          console.log('[InAppNotifications] ✅ Notification added to UI!')
         }
       )
       .on(
@@ -211,7 +202,6 @@ export function useInAppNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('[InAppNotifications] 📥 UPDATE event received:', payload)
           const updatedNotification = payload.new as InAppNotification
           setNotifications(prev =>
             prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
@@ -227,24 +217,19 @@ export function useInAppNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('[InAppNotifications] 📥 DELETE event received:', payload)
           const deletedNotification = payload.old as InAppNotification
           setNotifications(prev => prev.filter(n => n.id !== deletedNotification.id))
         }
       )
       .subscribe((status) => {
-        console.log('[InAppNotifications] 📡 Channel status:', status)
-        if (status === 'SUBSCRIBED') {
-          console.log('[InAppNotifications] ✅ Successfully subscribed to notification updates!')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[InAppNotifications] ❌ Channel subscription error!')
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[InAppNotifications] Channel subscription error!')
         } else if (status === 'TIMED_OUT') {
-          console.error('[InAppNotifications] ⏱️ Channel subscription timed out!')
+          console.error('[InAppNotifications] Channel subscription timed out!')
         }
       })
 
     return () => {
-      console.log('[InAppNotifications] 🧹 Cleaning up notification subscription for user:', user.id)
       supabase.removeChannel(channel)
     }
   }, [user])

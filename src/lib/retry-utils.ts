@@ -71,11 +71,6 @@ export async function withRetry<T>(
       // Calculate delay with exponential backoff
       const delay = opts.delayMs * Math.pow(opts.backoffMultiplier, attempt - 1)
 
-      console.log(
-        `[Retry] Attempt ${attempt}/${opts.maxAttempts} failed, retrying in ${delay}ms...`,
-        error instanceof Error ? error.message : String(error)
-      )
-
       // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, delay))
     }

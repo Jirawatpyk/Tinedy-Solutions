@@ -67,8 +67,6 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Bookings] Setting up realtime subscription')
-
     const channel = supabase
       .channel('bookings-realtime')
       .on(
@@ -78,8 +76,7 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
           schema: 'public',
           table: 'bookings',
         },
-        (payload) => {
-          console.log('[Bookings] Booking changed:', payload.eventType)
+        () => {
           // Invalidate all booking queries to refetch
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
         }
@@ -87,7 +84,6 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
       .subscribe()
 
     return () => {
-      console.log('[Bookings] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime])
@@ -200,8 +196,6 @@ export function useBookingsByDateRange(
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Bookings DateRange] Setting up realtime subscription')
-
     const channel = supabase
       .channel('bookings-daterange-realtime')
       .on(
@@ -211,8 +205,7 @@ export function useBookingsByDateRange(
           schema: 'public',
           table: 'bookings',
         },
-        (payload) => {
-          console.log('[Bookings DateRange] Booking changed:', payload.eventType)
+        () => {
           // Invalidate bookings queries
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
         }
@@ -220,7 +213,6 @@ export function useBookingsByDateRange(
       .subscribe()
 
     return () => {
-      console.log('[Bookings DateRange] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime])
@@ -308,8 +300,6 @@ export function useBookingsByCustomer(
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Bookings Customer] Setting up realtime subscription')
-
     const channel = supabase
       .channel('bookings-customer-realtime')
       .on(
@@ -319,8 +309,7 @@ export function useBookingsByCustomer(
           schema: 'public',
           table: 'bookings',
         },
-        (payload) => {
-          console.log('[Bookings Customer] Booking changed:', payload.eventType)
+        () => {
           // Invalidate customer bookings query
           queryClient.invalidateQueries({
             queryKey: queryKeys.bookings.byCustomer(customerId, showArchived),
@@ -330,7 +319,6 @@ export function useBookingsByCustomer(
       .subscribe()
 
     return () => {
-      console.log('[Bookings Customer] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime, customerId, showArchived])

@@ -54,7 +54,6 @@ async function sendPaymentConfirmationEmail(bookingId: string): Promise<void> {
     await supabase.functions.invoke('send-payment-confirmation', {
       body: { bookingId },
     })
-    console.log('Payment confirmation email sent for booking:', bookingId)
   } catch (error) {
     console.warn('Failed to send payment confirmation email:', error)
     // Don't throw - payment is still successful
@@ -70,7 +69,6 @@ async function sendRefundConfirmationEmail(bookingId: string): Promise<void> {
     await supabase.functions.invoke('send-refund-confirmation', {
       body: { bookingId },
     })
-    console.log('Refund confirmation email sent for booking:', bookingId)
   } catch (error) {
     console.warn('Failed to send refund confirmation email:', error)
     // Don't throw - refund is still successful

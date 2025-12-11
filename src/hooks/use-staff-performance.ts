@@ -366,8 +366,6 @@ export function useStaffPerformance(staffId: string | undefined) {
   useEffect(() => {
     if (!staffId) return
 
-    console.log('[StaffPerformance] Setting up realtime subscription for staff:', staffId)
-
     // Get team IDs for this staff
     const getTeamIds = async () => {
       const { data: teamMemberships } = await supabase
@@ -392,8 +390,6 @@ export function useStaffPerformance(staffId: string | undefined) {
             table: 'bookings',
           },
           (payload) => {
-            console.log('[StaffPerformance] Booking change detected:', payload.eventType)
-
             // Check if this booking is relevant to this staff
             const booking = payload.new as { staff_id?: string | null; team_id?: string | null }
             const oldBooking = payload.old as { staff_id?: string | null; team_id?: string | null }
@@ -405,7 +401,6 @@ export function useStaffPerformance(staffId: string | undefined) {
               (oldBooking?.team_id && teamIds.includes(oldBooking.team_id) && !oldBooking.staff_id)
 
             if (isRelevant) {
-              console.log('[StaffPerformance] Relevant change, refreshing data...')
               // Refresh bookings data when a relevant booking changes
               fetchBookings()
             }
@@ -419,7 +414,6 @@ export function useStaffPerformance(staffId: string | undefined) {
     const channelPromise = setupSubscription()
 
     return () => {
-      console.log('[StaffPerformance] Cleaning up realtime subscription')
       channelPromise.then((channel) => {
         supabase.removeChannel(channel)
       })

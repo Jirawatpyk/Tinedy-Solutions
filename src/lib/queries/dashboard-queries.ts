@@ -58,11 +58,6 @@ export async function fetchDashboardStats(): Promise<Stats> {
 export async function fetchTodayStats(): Promise<StatsChange> {
   const { todayStr } = getBangkokToday()
 
-  // Debug: แสดงค่า date ที่ใช้
-  console.log('🔍 fetchTodayStats Debug:', {
-    todayStr,
-  })
-
   // ใช้ DATE column แทน timestamp เพื่อหลีกเลี่ยง timezone issues
   // booking_date และ payment_date เป็น DATE type (YYYY-MM-DD) ไม่มี timezone
   const [todayBookingsRes, todayRevenueRes, todayCustomersRes, todayPendingRes] =
@@ -96,23 +91,6 @@ export async function fetchTodayStats(): Promise<StatsChange> {
 
   const todayRevenue =
     todayRevenueRes.data?.reduce((sum, booking) => sum + Number(booking.total_price), 0) || 0
-
-  // Debug: แสดงผลลัพธ์
-  console.log('📊 fetchTodayStats Results:', {
-    bookingsCount: todayBookingsRes.count,
-    revenueCount: todayRevenueRes.data?.length,
-    todayRevenue,
-    customersCount: todayCustomersRes.count,
-    pendingCount: todayPendingRes.count,
-  })
-
-  // Debug: แสดง bookings ที่นับได้
-  if (todayBookingsRes.data && todayBookingsRes.data.length > 0) {
-    console.log('📋 Today Bookings:', todayBookingsRes.data.map((b: { id: string; created_at: string }) => ({
-      id: b.id,
-      created_at: b.created_at,
-    })))
-  }
 
   return {
     bookingsChange: todayBookingsRes.count || 0,

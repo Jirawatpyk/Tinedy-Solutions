@@ -62,8 +62,6 @@ export function useCustomers(options: UseCustomersOptions = {}): UseCustomersRet
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Customers] Setting up realtime subscription')
-
     const channel = supabase
       .channel('customers-realtime')
       .on(
@@ -73,8 +71,7 @@ export function useCustomers(options: UseCustomersOptions = {}): UseCustomersRet
           schema: 'public',
           table: 'customers',
         },
-        (payload) => {
-          console.log('[Customers] Customer changed:', payload.eventType)
+        () => {
           // Invalidate all customer queries to refetch
           queryClient.invalidateQueries({ queryKey: queryKeys.customers.all })
         }
@@ -82,7 +79,6 @@ export function useCustomers(options: UseCustomersOptions = {}): UseCustomersRet
       .subscribe()
 
     return () => {
-      console.log('[Customers] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime])

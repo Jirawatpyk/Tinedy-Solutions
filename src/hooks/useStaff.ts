@@ -66,8 +66,6 @@ export function useStaffWithRatings(
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[Staff] Setting up realtime subscription')
-
     const profilesChannel = supabase
       .channel('staff-profiles-realtime')
       .on(
@@ -77,8 +75,7 @@ export function useStaffWithRatings(
           schema: 'public',
           table: 'profiles',
         },
-        (payload) => {
-          console.log('[Staff] Profile changed:', payload.eventType)
+        () => {
           // Invalidate all staff queries to refetch
           queryClient.invalidateQueries({ queryKey: queryKeys.staff.all })
         }
@@ -94,8 +91,7 @@ export function useStaffWithRatings(
           schema: 'public',
           table: 'reviews',
         },
-        (payload) => {
-          console.log('[Staff] Review changed:', payload.eventType)
+        () => {
           // Invalidate staff queries when reviews change (affects ratings)
           queryClient.invalidateQueries({ queryKey: queryKeys.staff.all })
         }
@@ -103,7 +99,6 @@ export function useStaffWithRatings(
       .subscribe()
 
     return () => {
-      console.log('[Staff] Cleanup subscriptions')
       supabase.removeChannel(profilesChannel)
       supabase.removeChannel(reviewsChannel)
     }
@@ -172,8 +167,6 @@ export function useStaffList(options: UseStaffListOptions = {}): UseStaffListRet
   useEffect(() => {
     if (!enableRealtime) return
 
-    console.log('[StaffList] Setting up realtime subscription')
-
     const channel = supabase
       .channel('staff-list-realtime')
       .on(
@@ -183,8 +176,7 @@ export function useStaffList(options: UseStaffListOptions = {}): UseStaffListRet
           schema: 'public',
           table: 'profiles',
         },
-        (payload) => {
-          console.log('[StaffList] Profile changed:', payload.eventType)
+        () => {
           // Invalidate staff list queries
           queryClient.invalidateQueries({ queryKey: queryKeys.staff.all })
         }
@@ -192,7 +184,6 @@ export function useStaffList(options: UseStaffListOptions = {}): UseStaffListRet
       .subscribe()
 
     return () => {
-      console.log('[StaffList] Cleanup subscription')
       supabase.removeChannel(channel)
     }
   }, [queryClient, enableRealtime])

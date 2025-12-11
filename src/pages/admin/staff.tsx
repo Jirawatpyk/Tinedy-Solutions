@@ -209,14 +209,10 @@ export function AdminStaff() {
         return
       }
 
-      console.log('[Delete Staff] Starting deletion for userId:', staffId)
-
       // Call Edge Function to delete user from auth.users (will cascade to profiles)
       const { data, error } = await supabase.functions.invoke('delete-user', {
         body: { userId: staffId },
       })
-
-      console.log('[Delete Staff] Edge Function response:', { data, error })
 
       if (error) {
         console.error('[Delete Staff] Edge Function error:', error)
@@ -227,8 +223,6 @@ export function AdminStaff() {
         console.error('[Delete Staff] Edge Function returned failure:', data)
         throw new Error(data?.error || data?.details || 'Failed to delete user')
       }
-
-      console.log('[Delete Staff] Success!', data)
 
       toast({
         title: 'Success',

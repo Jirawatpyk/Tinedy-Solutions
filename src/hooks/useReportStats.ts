@@ -83,11 +83,6 @@ export function useReportStats(): UseReportStatsReturn {
 
   // Setup realtime subscription for automatic updates
   useEffect(() => {
-    console.log('='.repeat(60))
-    console.log('[Reports Realtime] 🚀 Initializing subscription')
-    console.log('[Reports Realtime] Timestamp:', new Date().toISOString())
-    console.log('='.repeat(60))
-
     const channel = supabase
       .channel('reports-realtime')
       .on(
@@ -97,21 +92,11 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'bookings',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 📦 BOOKINGS EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('[Reports Realtime] Timestamp:', new Date().toISOString())
-          console.log('[Reports Realtime] Old Record:', payload.old)
-          console.log('[Reports Realtime] New Record:', payload.new)
-          console.log('='.repeat(60))
-
-          console.log('[Reports Realtime] 🔄 Invalidating queries...')
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.bookings() })
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.customers() })
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.staff() })
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.teams() })
-          console.log('[Reports Realtime] ✅ Queries invalidated\n')
         }
       )
       .on(
@@ -121,14 +106,8 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'customers',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 👥 CUSTOMERS EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.customers() })
-          console.log('[Reports Realtime] ✅ Query invalidated\n')
         }
       )
       .on(
@@ -138,14 +117,8 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'profiles',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 👤 PROFILES EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.staff() })
-          console.log('[Reports Realtime] ✅ Query invalidated\n')
         }
       )
       .on(
@@ -155,14 +128,8 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'teams',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 🏢 TEAMS EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.teams() })
-          console.log('[Reports Realtime] ✅ Query invalidated\n')
         }
       )
       .on(
@@ -172,15 +139,9 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'team_members',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 👥 TEAM_MEMBERS EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.teams() })
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.staff() })
-          console.log('[Reports Realtime] ✅ Queries invalidated\n')
         }
       )
       .on(
@@ -190,14 +151,8 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'service_packages',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 📦 SERVICE_PACKAGES EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.bookings() })
-          console.log('[Reports Realtime] ✅ Query invalidated\n')
         }
       )
       .on(
@@ -207,92 +162,23 @@ export function useReportStats(): UseReportStatsReturn {
           schema: 'public',
           table: 'service_packages_v2',
         },
-        (payload) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('[Reports Realtime] 📦 SERVICE_PACKAGES_V2 EVENT RECEIVED')
-          console.log('[Reports Realtime] Event Type:', payload.eventType)
-          console.log('='.repeat(60))
-
+        () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reports.bookings() })
-          console.log('[Reports Realtime] ✅ Query invalidated\n')
         }
       )
       .subscribe((status, err) => {
-        console.log('\n' + '='.repeat(60))
-        console.log('[Reports Realtime] 📡 SUBSCRIPTION STATUS CHANGE')
-        console.log('[Reports Realtime] Status:', status)
-        console.log('[Reports Realtime] Timestamp:', new Date().toISOString())
-
         if (err) {
-          console.error('[Reports Realtime] ❌ ERROR:', err)
+          console.error('[Reports Realtime] Error:', err)
         }
-
-        if (status === 'SUBSCRIBED') {
-          console.log('[Reports Realtime] ✅ Successfully subscribed to all channels!')
-          console.log('[Reports Realtime] Listening for changes on:')
-          console.log('  - bookings')
-          console.log('  - customers')
-          console.log('  - profiles')
-          console.log('  - teams')
-          console.log('  - team_members')
-          console.log('  - service_packages')
-          console.log('  - service_packages_v2')
-        } else if (status === 'CLOSED') {
-          console.warn('[Reports Realtime] ⚠️  Channel closed')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[Reports Realtime] ❌ Channel error occurred')
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Reports Realtime] Channel error occurred')
         }
-        console.log('='.repeat(60) + '\n')
       })
 
     return () => {
-      console.log('\n' + '='.repeat(60))
-      console.log('[Reports Realtime] 🧹 Cleaning up subscription')
-      console.log('[Reports Realtime] Timestamp:', new Date().toISOString())
-      console.log('='.repeat(60) + '\n')
       supabase.removeChannel(channel)
     }
   }, [queryClient])
-
-  // Monitor query fetch status
-  useEffect(() => {
-    if (bookingsQuery.isFetching) {
-      console.log('[Reports Query] 🔄 Bookings fetching...')
-    }
-  }, [bookingsQuery.isFetching])
-
-  useEffect(() => {
-    if (customersQuery.isFetching) {
-      console.log('[Reports Query] 🔄 Customers fetching...')
-    }
-  }, [customersQuery.isFetching])
-
-  useEffect(() => {
-    if (staffQuery.isFetching) {
-      console.log('[Reports Query] 🔄 Staff fetching...')
-    }
-  }, [staffQuery.isFetching])
-
-  useEffect(() => {
-    if (teamsQuery.isFetching) {
-      console.log('[Reports Query] 🔄 Teams fetching...')
-    }
-  }, [teamsQuery.isFetching])
-
-  // Monitor data updates
-  useEffect(() => {
-    if (bookingsQuery.data && !bookingsQuery.isFetching) {
-      console.log('[Reports Query] ✅ Bookings data updated:', bookingsQuery.data.length, 'records')
-      console.log('[Reports Query] Last updated:', new Date().toISOString())
-    }
-  }, [bookingsQuery.data, bookingsQuery.isFetching])
-
-  useEffect(() => {
-    if (customersQuery.data && !customersQuery.isFetching) {
-      console.log('[Reports Query] ✅ Customers data updated:', customersQuery.data.customers.length, 'records')
-      console.log('[Reports Query] Last updated:', new Date().toISOString())
-    }
-  }, [customersQuery.data, customersQuery.isFetching])
 
   // Combined loading state (all must finish loading)
   const isLoading =

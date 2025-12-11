@@ -78,13 +78,9 @@ export function useNotifications() {
   const [hasPermission, setHasPermission] = useState(() => {
     try {
       const granted = notificationService.isGranted()
-      console.log('[Notifications] 🔔 Initial Permission Check:', {
-        granted,
-        browserPermission: typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
-      })
       return granted
     } catch (error) {
-      console.error('[Notifications] ❌ Error checking initial permission:', error)
+      console.error('[Notifications] Error checking initial permission:', error)
       return false
     }
   })
@@ -103,21 +99,9 @@ export function useNotifications() {
   // REALTIME: Subscribe to notifications table (created by DB triggers)
   // ============================================================================
   useEffect(() => {
-    if (!user) {
-      console.log('[Notifications] ⚠️ No user, skipping realtime setup')
+    if (!user || !hasPermission) {
       return
     }
-
-    if (!hasPermission) {
-      console.log('[Notifications] ⚠️ No permission granted, skipping realtime setup')
-      return
-    }
-
-    console.log('[Notifications] ✅ Setting up notifications table realtime listener:', {
-      userId: user.id,
-      email: user.email,
-      hasPermission
-    })
 
     const channel = supabase
       .channel('staff-notifications-realtime')
@@ -131,15 +115,6 @@ export function useNotifications() {
         },
         async (payload: RealtimePostgresChangesPayload<InAppNotification>) => {
           const notification = payload.new as InAppNotification
-
-          console.log('[Notifications] 📥 New notification received from DB:', {
-            id: notification.id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            bookingId: notification.booking_id,
-            timestamp: new Date().toISOString()
-          })
 
           // Show browser notification popup
           // The notification is already created in DB by the trigger
@@ -156,25 +131,20 @@ export function useNotifications() {
                 url: '/staff'
               }
             })
-            console.log('[Notifications] ✅ Browser notification shown!')
           } catch (error) {
-            console.error('[Notifications] ❌ Error showing browser notification:', error)
+            console.error('[Notifications] Error showing browser notification:', error)
           }
         }
       )
       .subscribe((status) => {
-        console.log('[Notifications] 📡 Channel status:', status)
-        if (status === 'SUBSCRIBED') {
-          console.log('[Notifications] ✅ Successfully subscribed to notifications table!')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[Notifications] ❌ Channel error!')
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Notifications] Channel error!')
         } else if (status === 'TIMED_OUT') {
-          console.error('[Notifications] ⏱️ Subscription timed out!')
+          console.error('[Notifications] Subscription timed out!')
         }
       })
 
     return () => {
-      console.log('[Notifications] 🧹 Cleaning up notifications realtime listener')
       supabase.removeChannel(channel)
     }
   }, [user, hasPermission])

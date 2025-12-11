@@ -121,7 +121,6 @@ export async function sendPaymentLink(data: PaymentEmailData) {
   );
 
   // Note: This should be sent via Edge Function in production
-  console.log('Payment link email queued for:', data.customerEmail);
   return { success: true };
 }
 
@@ -140,7 +139,6 @@ export async function sendPaymentConfirmation(data: BookingEmailData) {
   );
 
   // Note: This should be sent via Edge Function in production
-  console.log('Payment confirmation email queued for:', data.customerEmail);
   return { success: true };
 }
 
@@ -159,7 +157,6 @@ export async function sendPaymentReminder(data: PaymentEmailData) {
   );
 
   // Note: This should be sent via Edge Function in production
-  console.log('Payment reminder email queued for:', data.customerEmail);
   return { success: true };
 }
 
@@ -185,7 +182,6 @@ export async function sendBookingReminder(data: BookingEmailData) {
   );
 
   // Note: Scheduled emails should be processed by Edge Function cron job
-  console.log('Booking reminder scheduled for:', reminderDate.toISOString(), data.customerEmail);
   return { success: true };
 }
 
@@ -204,7 +200,6 @@ export async function sendBookingRescheduled(data: BookingEmailData & { oldDate:
   );
 
   // Note: This should be sent via Edge Function in production
-  console.log('Booking rescheduled email queued for:', data.customerEmail);
   return { success: true };
 }
 
