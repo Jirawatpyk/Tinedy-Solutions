@@ -19,12 +19,7 @@ import { useStaffList } from '@/hooks/useStaff'
 import { useTeamsList } from '@/hooks/useTeams'
 import { useCalendarData } from '@/hooks/calendar'
 import { useToast } from '@/hooks/use-toast'
-import { getAvailableStatuses } from '@/lib/booking-badges'
-import {
-  getStatusBadge,
-  getPaymentStatusBadge,
-  getStatusLabel,
-} from '@/lib/booking-badges'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   ChevronLeft,
   ChevronRight,
@@ -333,7 +328,7 @@ export function AdminCalendar() {
             onBookingClick={openBookingDetail}
             onCreateBooking={handleCreateBooking}
             onStatusChange={calendar.actions.handleInlineStatusChange}
-            getAvailableStatuses={getAvailableStatuses}
+            getAvailableStatuses={calendar.actions.getAvailableStatuses}
           />
         </CalendarErrorBoundary>
       </div>
@@ -459,7 +454,7 @@ export function AdminCalendar() {
             conflictMap={calendar.bookingData.conflictMap}
             onBookingClick={openBookingDetail}
             onStatusChange={calendar.actions.handleInlineStatusChange}
-            getAvailableStatuses={getAvailableStatuses}
+            getAvailableStatuses={calendar.actions.getAvailableStatuses}
             loading={calendar.bookingData.isFetching && !calendar.bookingData.isLoading}
           />
           </div>
@@ -480,10 +475,10 @@ export function AdminCalendar() {
         onRequestRefund={calendar.actions.handleRequestRefund}
         onCompleteRefund={calendar.actions.handleCompleteRefund}
         onCancelRefund={calendar.actions.handleCancelRefund}
-        getStatusBadge={getStatusBadge}
-        getPaymentStatusBadge={getPaymentStatusBadge}
-        getAvailableStatuses={getAvailableStatuses}
-        getStatusLabel={getStatusLabel}
+        getStatusBadge={calendar.actions.getStatusBadge}
+        getPaymentStatusBadge={calendar.actions.getPaymentStatusBadge}
+        getAvailableStatuses={calendar.actions.getAvailableStatuses}
+        getStatusLabel={calendar.actions.getStatusLabel}
         isUpdatingStatus={calendar.actions.isUpdatingStatus}
         isUpdatingPayment={calendar.actions.isUpdatingPayment}
         isDeleting={calendar.actions.isDeleting}
@@ -679,6 +674,23 @@ export function AdminCalendar() {
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}
           excludeBookingId={calendar.modalControls.selectedBooking?.id}
+        />
+      )}
+
+      {/* Status Change Confirmation Dialog */}
+      {calendar.actions.pendingStatusChange && (
+        <ConfirmDialog
+          open={calendar.actions.showStatusConfirmDialog}
+          onOpenChange={(open) => !open && calendar.actions.cancelStatusChange()}
+          title="Confirm Status Change"
+          description={calendar.actions.getStatusTransitionMessage(
+            calendar.actions.pendingStatusChange.currentStatus,
+            calendar.actions.pendingStatusChange.newStatus
+          )}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          onConfirm={calendar.actions.confirmStatusChange}
+          variant={['cancelled', 'no_show'].includes(calendar.actions.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </div>

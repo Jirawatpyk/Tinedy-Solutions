@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import type { Booking } from '@/types/booking'
 import type { ActionLoading } from '@/types/dashboard'
 
@@ -15,7 +17,7 @@ interface DeleteConfirmState {
 export function useDashboardActions(
   refresh: () => void,
   selectedBooking: Booking | null,
-  onBookingUpdate?: (booking: Booking) => void
+  onBookingUpdate?: Dispatch<SetStateAction<Booking | null>>
 ) {
   const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
@@ -34,15 +36,33 @@ export function useDashboardActions(
   })
 
   // Wrapper to update booking via callback
-  const handleBookingUpdate = useCallback((booking: Booking) => {
+  const handleBookingUpdate = useCallback((value: SetStateAction<Booking | null>) => {
     if (onBookingUpdate) {
-      onBookingUpdate(booking)
+      onBookingUpdate(value)
     }
   }, [onBookingUpdate])
 
-  // Use centralized payment actions
+  // Use useBookingStatusManager for status management
   const {
-    markAsPaid: paymentMarkAsPaid,
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+    handleStatusChange,
+    confirmStatusChange: statusConfirm,
+    cancelStatusChange: statusCancel,
+    markAsPaid: statusMarkAsPaid,
+  } = useBookingStatusManager({
+    selectedBooking,
+    setSelectedBooking: handleBookingUpdate,
+    onSuccess: refresh,
+  })
+
+  // Use centralized payment actions for verify and refund
+  const {
     verifyPayment: paymentVerifyPayment,
     requestRefund: paymentRequestRefund,
     completeRefund: paymentCompleteRefund,
@@ -52,43 +72,6 @@ export function useDashboardActions(
     setSelectedBooking: handleBookingUpdate,
     onSuccess: refresh,
   })
-
-  const handleStatusChange = useCallback(
-    async (bookingId: string, currentStatus: string, newStatus: string) => {
-      if (currentStatus === newStatus) return
-
-      setActionLoading((prev) => ({ ...prev, statusChange: true }))
-      try {
-        const { error } = await supabase
-          .from('bookings')
-          .update({ status: newStatus })
-          .eq('id', bookingId)
-
-        if (error) throw error
-
-        toast({
-          title: 'Success',
-          description: `Status changed to ${newStatus}`,
-        })
-
-        if (selectedBooking && selectedBooking.id === bookingId && onBookingUpdate) {
-          onBookingUpdate({ ...selectedBooking, status: newStatus })
-        }
-
-        refresh()
-      } catch (error) {
-        const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
-      } finally {
-        setActionLoading((prev) => ({ ...prev, statusChange: false }))
-      }
-    },
-    [selectedBooking, toast, refresh, onBookingUpdate]
-  )
 
   // Open delete confirmation dialog
   const deleteBooking = useCallback(
@@ -140,12 +123,12 @@ export function useDashboardActions(
     async (bookingId: string, method: string = 'cash') => {
       setActionLoading((prev) => ({ ...prev, markAsPaid: true }))
       try {
-        await paymentMarkAsPaid(bookingId, method)
+        await statusMarkAsPaid(bookingId, method)
       } finally {
         setActionLoading((prev) => ({ ...prev, markAsPaid: false }))
       }
     },
-    [paymentMarkAsPaid]
+    [statusMarkAsPaid]
   )
 
   const archiveBooking = useCallback(
@@ -220,5 +203,20 @@ export function useDashboardActions(
     deleteConfirm,
     confirmDeleteBooking,
     cancelDeleteBooking,
+    // Status change confirmation dialog (from useBookingStatusManager)
+    statusChangeConfirm: {
+      show: showStatusConfirmDialog,
+      bookingId: pendingStatusChange?.bookingId || null,
+      currentStatus: pendingStatusChange?.currentStatus || null,
+      newStatus: pendingStatusChange?.newStatus || null,
+    },
+    confirmStatusChange: statusConfirm,
+    cancelStatusChange: statusCancel,
+    // Status utilities (from useBookingStatusManager)
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
   }
 }

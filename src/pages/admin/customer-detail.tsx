@@ -2,9 +2,9 @@ import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { useStaffList } from '@/hooks/useStaff'
 import { useBookingsByCustomer } from '@/hooks/useBookings'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +45,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { formatDate } from '@/lib/utils'
-import { formatTime, getStatusLabel, getAvailableStatuses } from '@/lib/booking-utils'
+import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Input } from '@/components/ui/input'
@@ -53,6 +53,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   BarChart,
   Bar,
@@ -189,7 +190,7 @@ export function AdminCustomerDetail() {
   // Dialog states
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false)
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false)
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isBookingDetailModalOpen, setIsBookingDetailModalOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
 
@@ -200,6 +201,23 @@ export function AdminCustomerDetail() {
   const [editBookingFormState, setEditBookingFormState] = useState<BookingFormState>({})
   const [isEditBookingAvailabilityOpen, setIsEditBookingAvailabilityOpen] = useState(false)
   const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
+
+  // Use useBookingStatusManager for status management
+  const {
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    getStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+    handleStatusChange,
+    confirmStatusChange,
+    cancelStatusChange,
+  } = useBookingStatusManager({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refetchBookings,
+  })
   const [editFormData, setEditFormData] = useState<{
     booking_date?: string
     start_time?: string
@@ -832,12 +850,6 @@ export function AdminCustomerDetail() {
 
   const relationshipInfo = relationshipConfig[customer.relationship_level]
 
-  // Status badge config - use constants from booking-status.ts
-  const getStatusBadgeClass = (status: string) =>
-    BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
-
-  // getStatusLabel imported from @/lib/booking-utils
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1162,7 +1174,7 @@ export function AdminCustomerDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Booking Status</SelectItem>
-                    {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                    {getAllStatusOptions().map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1213,29 +1225,7 @@ export function AdminCustomerDetail() {
                         setSelectedBookingId(bookingId)
                         setIsBookingDetailModalOpen(true)
                       }}
-                      onStatusChange={async (bookingId, _currentStatus, newStatus) => {
-                        try {
-                          const { error } = await supabase
-                            .from('bookings')
-                            .update({ status: newStatus })
-                            .eq('id', bookingId)
-
-                          if (error) throw error
-
-                          toast({
-                            title: 'Success',
-                            description: `Status updated to ${newStatus}`,
-                          })
-
-                          refetchBookings()
-                        } catch (error) {
-                          toast({
-                            title: 'Error',
-                            description: 'Failed to update status',
-                            variant: 'destructive',
-                          })
-                        }
-                      }}
+                      onStatusChange={handleStatusChange}
                       onVerifyPayment={async (bookingId) => {
                         try {
                           const booking = bookings.find(b => b.id === bookingId)
@@ -1270,10 +1260,6 @@ export function AdminCustomerDetail() {
                 } else {
                   // Render Individual Booking Card
                   const booking = item.data
-                  const statusInfo = {
-                    label: getStatusLabel(booking.status),
-                    className: getStatusBadgeClass(booking.status)
-                  }
                   return (
                     <Card
                       key={`booking-${booking.id}`}
@@ -1301,9 +1287,7 @@ export function AdminCustomerDetail() {
                                 </p>
                               </div>
                               <div className="sm:hidden flex-shrink-0">
-                                <Badge variant="outline" className={`${statusInfo.className} text-[10px]`}>
-                                  {statusInfo.label}
-                                </Badge>
+                                <div className="text-[10px]">{getStatusBadge(booking.status)}</div>
                               </div>
                             </div>
 
@@ -1347,9 +1331,7 @@ export function AdminCustomerDetail() {
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center sm:items-end justify-end">
-                              <Badge variant="outline" className={`${statusInfo.className} text-[10px] sm:text-xs`}>
-                                {statusInfo.label}
-                              </Badge>
+                              <div className="text-[10px] sm:text-xs">{getStatusBadge(booking.status)}</div>
                               <StatusBadge variant={getPaymentStatusVariant(booking.payment_status || 'unpaid')} className="text-[10px] sm:text-xs">
                                 {getPaymentStatusLabel(booking.payment_status || 'unpaid')}
                               </StatusBadge>
@@ -1629,29 +1611,7 @@ export function AdminCustomerDetail() {
               })
             }
           }}
-          onStatusChange={async (bookingId, _currentStatus, newStatus) => {
-            try {
-              const { error } = await supabase
-                .from('bookings')
-                .update({ status: newStatus })
-                .eq('id', bookingId)
-
-              if (error) throw error
-
-              toast({
-                title: 'Success',
-                description: `Status updated to ${newStatus}`,
-              })
-
-              refetchBookings()
-            } catch (error) {
-              toast({
-                title: 'Error',
-                description: 'Failed to update status',
-                variant: 'destructive',
-              })
-            }
-          }}
+          onStatusChange={handleStatusChange}
           onMarkAsPaid={async (bookingId, method) => {
             try {
               const booking = bookings.find(b => b.id === bookingId)
@@ -1787,13 +1747,7 @@ export function AdminCustomerDetail() {
               })
             }
           }}
-          getStatusBadge={(status) => {
-            return (
-              <Badge variant="outline" className={getStatusBadgeClass(status)}>
-                {getStatusLabel(status)}
-              </Badge>
-            )
-          }}
+          getStatusBadge={getStatusBadge}
           getPaymentStatusBadge={(status) => {
             // Map 'pending' to 'unpaid' for display
             const displayStatus = status === 'pending' ? 'unpaid' : (status || 'unpaid')
@@ -1880,6 +1834,23 @@ export function AdminCustomerDetail() {
           currentAssignedStaffId={editBookingFormState.staff_id}
           currentAssignedTeamId={editBookingFormState.team_id}
           excludeBookingId={selectedBooking?.id}
+        />
+      )}
+
+      {/* Status Change Confirmation Dialog */}
+      {pendingStatusChange && (
+        <ConfirmDialog
+          open={showStatusConfirmDialog}
+          onOpenChange={(open) => !open && cancelStatusChange()}
+          title="Confirm Status Change"
+          description={getStatusTransitionMessage(
+            pendingStatusChange.currentStatus,
+            pendingStatusChange.newStatus
+          )}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          onConfirm={confirmStatusChange}
+          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </div>

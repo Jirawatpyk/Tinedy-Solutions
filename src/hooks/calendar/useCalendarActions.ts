@@ -10,12 +10,13 @@
  */
 
 import { useState, useCallback } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { getAvailableStatuses } from '@/lib/booking-utils'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import type { Booking } from '@/types/booking'
 
 /**
@@ -25,7 +26,7 @@ export interface UseCalendarActionsParams {
   /** Currently selected booking in the modal */
   selectedBooking: Booking | null
   /** Function to update the selected booking state */
-  setSelectedBooking: (booking: Booking | null) => void
+  setSelectedBooking: Dispatch<SetStateAction<Booking | null>>
   /** Function to refetch bookings after mutations */
   refetchBookings: () => Promise<void>
   /** All bookings (for inline status change validation) */
@@ -55,6 +56,19 @@ export interface UseCalendarActionsReturn {
   handleDelete: (bookingId: string) => Promise<void>
   handleArchive: (bookingId: string) => Promise<void>
   isDeleting: boolean
+
+  // Status utilities (from useBookingStatusManager)
+  getStatusBadge: (status: string) => JSX.Element
+  getPaymentStatusBadge: (status?: string) => JSX.Element
+  getAvailableStatuses: (currentStatus: string) => string[]
+  getStatusLabel: (status: string) => string
+  getStatusTransitionMessage: (currentStatus: string, newStatus: string) => string
+
+  // Status confirmation dialog state
+  showStatusConfirmDialog: boolean
+  pendingStatusChange: { bookingId: string; currentStatus: string; newStatus: string } | null
+  confirmStatusChange: () => Promise<void>
+  cancelStatusChange: () => void
 }
 
 /**
@@ -96,9 +110,27 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
   const { softDelete } = useSoftDelete('bookings')
 
   // Loading states
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Use useBookingStatusManager for status management
+  const {
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+    handleStatusChange: statusManagerHandleStatusChange,
+    confirmStatusChange: statusManagerConfirmStatusChange,
+    cancelStatusChange: statusManagerCancelStatusChange,
+    isUpdatingStatus,
+  } = useBookingStatusManager({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refetchBookings,
+  })
 
   // Use centralized payment actions
   const {
@@ -109,12 +141,12 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     cancelRefund: paymentCancelRefund,
   } = usePaymentActions({
     selectedBooking,
-    setSelectedBooking: setSelectedBooking as (booking: Booking) => void,
+    setSelectedBooking,
     onSuccess: async () => { await refetchBookings() },
   })
 
   /**
-   * Update booking status
+   * Update booking status - wraps useBookingStatusManager
    *
    * @param bookingId - ID of booking to update
    * @param currentStatus - Current status (for validation)
@@ -125,41 +157,9 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     currentStatus: string,
     newStatus: string
   ) => {
-    if (currentStatus === newStatus) return
-
-    setIsUpdatingStatus(true)
-
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', bookingId)
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: `Status changed to ${newStatus}`,
-      })
-
-      // Update selected booking if it's the same one
-      if (selectedBooking && selectedBooking.id === bookingId) {
-        setSelectedBooking({ ...selectedBooking, status: newStatus })
-      }
-
-      // Refetch bookings to update data
-      await refetchBookings()
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    } finally {
-      setIsUpdatingStatus(false)
-    }
-  }, [toast, selectedBooking, setSelectedBooking, refetchBookings])
+    // Use statusManager which handles confirmation dialog
+    await statusManagerHandleStatusChange(bookingId, currentStatus, newStatus)
+  }, [statusManagerHandleStatusChange])
 
   /**
    * Inline status change handler (for BookingCard)
@@ -176,7 +176,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     const booking = bookings.find(b => b.id === bookingId)
     if (!booking) return
 
-    // Validate transition using shared utility
+    // Validate transition using shared utility from useBookingStatusManager
     const availableStatuses = getAvailableStatuses(booking.status)
     if (!availableStatuses.includes(newStatus)) {
       toast({
@@ -188,7 +188,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     }
 
     await handleStatusChange(bookingId, booking.status, newStatus)
-  }, [bookings, handleStatusChange, toast])
+  }, [bookings, handleStatusChange, toast, getAvailableStatuses])
 
   /**
    * Mark booking as paid
@@ -316,7 +316,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     // Status operations
     handleStatusChange,
     handleInlineStatusChange,
-    isUpdatingStatus,
+    isUpdatingStatus, // From useBookingStatusManager
 
     // Payment operations
     handleMarkAsPaid,
@@ -330,5 +330,18 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     handleDelete,
     handleArchive,
     isDeleting,
+
+    // Status utilities (from useBookingStatusManager)
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+
+    // Status confirmation dialog state
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    confirmStatusChange: statusManagerConfirmStatusChange,
+    cancelStatusChange: statusManagerCancelStatusChange,
   }
 }

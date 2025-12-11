@@ -1521,13 +1521,21 @@ export function AdminBookings() {
       />
 
       {/* Status Change Confirmation Dialog */}
-      <ConfirmDialog
-        open={showStatusConfirmDialog}
-        onOpenChange={(open) => !open && cancelStatusChange()}
-        title="Confirm Status Change"
-        description={pendingStatusChange ? getStatusTransitionMessage(pendingStatusChange.currentStatus, pendingStatusChange.newStatus) : ''}
-        onConfirm={confirmStatusChange}
-      />
+      {pendingStatusChange && (
+        <ConfirmDialog
+          open={showStatusConfirmDialog}
+          onOpenChange={(open) => !open && cancelStatusChange()}
+          title="Confirm Status Change"
+          description={getStatusTransitionMessage(
+            pendingStatusChange.currentStatus,
+            pendingStatusChange.newStatus
+          )}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          onConfirm={confirmStatusChange}
+          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+        />
+      )}
 
       {/* Conflict Warning Dialog */}
       <BookingConflictDialog

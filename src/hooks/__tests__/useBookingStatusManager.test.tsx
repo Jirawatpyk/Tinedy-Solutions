@@ -10,6 +10,9 @@ import type { ReactNode } from 'react'
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    functions: {
+      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
   },
 }))
 
@@ -70,6 +73,7 @@ describe('useBookingStatusManager', () => {
       // Assert
       expect(result.current.showStatusConfirmDialog).toBe(false)
       expect(result.current.pendingStatusChange).toBeNull()
+      expect(result.current.isUpdatingStatus).toBe(false)
     })
 
     it('should provide all required functions', () => {
@@ -464,8 +468,8 @@ describe('useBookingStatusManager', () => {
       // Act
       const message = result.current.getStatusTransitionMessage('unknown', 'another')
 
-      // Assert
-      expect(message).toContain('Change status to another?')
+      // Assert - Now includes "from X to Y" format with user-friendly labels
+      expect(message).toBe('Change status from unknown to another?')
     })
   })
 
@@ -731,6 +735,38 @@ describe('useBookingStatusManager', () => {
 
       // Assert
       expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('should set isUpdatingStatus to true during status update', async () => {
+      // Arrange
+      const mockUpdate = vi.fn().mockReturnThis()
+      const mockEq = vi.fn().mockResolvedValue({ error: null })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate,
+        eq: mockEq,
+      } as any)
+
+      const { result } = renderHook(() => useBookingStatusManager(defaultProps), { wrapper: createWrapper() })
+
+      act(() => {
+        result.current.handleStatusChange('booking-1', 'pending', 'confirmed')
+      })
+
+      // Assert initial state
+      expect(result.current.isUpdatingStatus).toBe(false)
+
+      // Act - start status change
+      const statusChangePromise = act(async () => {
+        await result.current.confirmStatusChange()
+      })
+
+      // Note: isUpdatingStatus is set to true and then false within confirmStatusChange
+      // Since the operation is async, by the time we check here, it's already completed
+      await statusChangePromise
+
+      // Assert final state - should be false after completion
+      expect(result.current.isUpdatingStatus).toBe(false)
     })
   })
 

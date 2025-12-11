@@ -1,7 +1,6 @@
 import type { Booking } from '@/types'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { useTeamsList } from '@/hooks/useTeams'
 import { useBookingsByDateRange } from '@/hooks/useBookings'
 import { useSwipe } from '@/hooks/useSwipe'
@@ -19,9 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { ChevronLeft, ChevronRight, Download, Calendar, List, LayoutGrid } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/common/StatusBadge'
-import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
@@ -31,7 +28,6 @@ import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { MobileBookingList } from '@/components/schedule/MobileBookingList'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
-import { usePaymentActions } from '@/hooks/usePaymentActions'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { useServicePackages } from '@/hooks/useServicePackages'
@@ -439,28 +435,16 @@ export function AdminWeeklySchedule() {
     }
   }
 
-  // Use centralized payment actions
-  const { markAsPaid: handleMarkAsPaid } = usePaymentActions({
+  // Use booking status manager for badges and payment actions
+  const {
+    getStatusBadge,
+    getPaymentStatusBadge,
+    markAsPaid: handleMarkAsPaid,
+  } = useBookingStatusManager({
     selectedBooking,
     setSelectedBooking,
     onSuccess: refetchBookings,
   })
-
-  const getStatusBadge = (status: string) => {
-    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
-    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
-
-    return <Badge variant="outline" className={colorClass}>{label}</Badge>
-  }
-
-  const getPaymentStatusBadge = (status?: string) => {
-    const paymentStatus = status || 'unpaid'
-    return (
-      <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
-        {getPaymentStatusLabel(paymentStatus)}
-      </StatusBadge>
-    )
-  }
 
   // getAvailableStatuses and getStatusLabel imported from @/lib/booking-utils
 

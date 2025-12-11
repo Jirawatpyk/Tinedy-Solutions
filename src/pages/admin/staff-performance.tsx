@@ -24,7 +24,7 @@ export function AdminStaffPerformance() {
   const basePath = '/admin'
 
   // Use custom hook for data fetching and stats calculation
-  const { staff, bookings, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
+  const { staff, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
 
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -189,7 +189,7 @@ export function AdminStaffPerformance() {
         </SectionErrorBoundary>
 
         <SectionErrorBoundary sectionName="Recent Bookings">
-          <StaffRecentBookings bookings={bookings} onRefresh={refresh} />
+          <StaffRecentBookings staffId={id!} />
         </SectionErrorBoundary>
       </div>
 

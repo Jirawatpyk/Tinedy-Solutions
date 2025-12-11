@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import type { ReactElement, Dispatch, SetStateAction } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
@@ -37,6 +37,7 @@ interface UseBookingStatusManagerReturn {
   confirmStatusChange: () => Promise<void>
   cancelStatusChange: () => void
   markAsPaid: (bookingId: string, method?: string) => Promise<void>
+  isUpdatingStatus: boolean
 }
 
 /**
@@ -54,6 +55,7 @@ export function useBookingStatusManager<T extends BookingBase>({
   const queryClient = useQueryClient()
   const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
   // Use centralized payment actions
   const { markAsPaid } = usePaymentActions({
@@ -80,9 +82,11 @@ export function useBookingStatusManager<T extends BookingBase>({
       pending: {
         confirmed: 'Confirm this booking?',
         cancelled: 'Cancel this booking? This action cannot be undone.',
+        no_show: 'Mark this booking as no-show? This action cannot be undone.',
       },
       confirmed: {
         in_progress: 'Mark this booking as in progress?',
+        completed: 'Mark this booking as completed?',
         cancelled: 'Cancel this booking? This action cannot be undone.',
         no_show: 'Mark this booking as no-show? This action cannot be undone.',
       },
@@ -90,8 +94,18 @@ export function useBookingStatusManager<T extends BookingBase>({
         completed: 'Mark this booking as completed?',
         cancelled: 'Cancel this booking? This action cannot be undone.',
       },
+      completed: {
+        cancelled: 'Cancel this completed booking? You may need to process a refund.',
+      },
     }
-    return messages[currentStatus]?.[newStatus] || `Change status to ${newStatus}?`
+
+    const message = messages[currentStatus]?.[newStatus]
+    if (message) return message
+
+    // Fallback with user-friendly labels
+    const fromLabel = getStatusLabel(currentStatus)
+    const toLabel = getStatusLabel(newStatus)
+    return `Change status from ${fromLabel} to ${toLabel}?`
   }
 
   // Handle status change with validation
@@ -115,7 +129,7 @@ export function useBookingStatusManager<T extends BookingBase>({
   }
 
   // Helper function to update booking status in all cached queries (Optimistic Update)
-  const updateBookingStatusInCache = (bookingId: string, newStatus: string) => {
+  const updateBookingStatusInCache = useCallback((bookingId: string, newStatus: string) => {
     // Update all booking-related queries in cache
     queryClient.setQueriesData<Booking[]>(
       { queryKey: queryKeys.bookings.all },
@@ -128,10 +142,10 @@ export function useBookingStatusManager<T extends BookingBase>({
         )
       }
     )
-  }
+  }, [queryClient])
 
   // Confirm and execute status change with Optimistic Update
-  const confirmStatusChange = async () => {
+  const confirmStatusChange = useCallback(async () => {
     if (!pendingStatusChange) return
 
     const { bookingId, currentStatus, newStatus } = pendingStatusChange
@@ -140,19 +154,22 @@ export function useBookingStatusManager<T extends BookingBase>({
     setShowStatusConfirmDialog(false)
     setPendingStatusChange(null)
 
-    // 2. Optimistic Update - Update cache immediately (UI changes instantly)
+    // 2. Set loading state
+    setIsUpdatingStatus(true)
+
+    // 3. Optimistic Update - Update cache immediately (UI changes instantly)
     const previousData = queryClient.getQueriesData<Booking[]>({
       queryKey: queryKeys.bookings.all,
     })
     updateBookingStatusInCache(bookingId, newStatus)
 
-    // 3. Update selected booking state immediately
+    // 4. Update selected booking state immediately
     if (selectedBooking && selectedBooking.id === bookingId) {
       setSelectedBooking({ ...selectedBooking, status: newStatus })
     }
 
     try {
-      // 4. Call API in background
+      // 5. Call API in background
       const { error } = await supabase
         .from('bookings')
         .update({ status: newStatus })
@@ -160,16 +177,16 @@ export function useBookingStatusManager<T extends BookingBase>({
 
       if (error) throw error
 
-      // 5. Show success toast
+      // 6. Show success toast
       toast({
         title: 'Success',
         description: `Status changed to ${getStatusLabel(newStatus)}`,
       })
 
-      // 6. Trigger background refetch to sync with server
+      // 7. Trigger background refetch to sync with server
       onSuccess()
     } catch (error) {
-      // 7. Rollback on error - restore previous cache data
+      // 8. Rollback on error - restore previous cache data
       previousData.forEach(([queryKey, data]) => {
         if (data) {
           queryClient.setQueryData(queryKey, data)
@@ -187,8 +204,11 @@ export function useBookingStatusManager<T extends BookingBase>({
         description: errorMsg.description,
         variant: 'destructive',
       })
+    } finally {
+      // 9. Clear loading state
+      setIsUpdatingStatus(false)
     }
-  }
+  }, [pendingStatusChange, selectedBooking, setSelectedBooking, queryClient, toast, onSuccess, updateBookingStatusInCache])
 
   // Cancel status change
   const cancelStatusChange = () => {
@@ -219,5 +239,6 @@ export function useBookingStatusManager<T extends BookingBase>({
     confirmStatusChange,
     cancelStatusChange,
     markAsPaid,
+    isUpdatingStatus,
   }
 }

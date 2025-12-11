@@ -3,11 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { Badge } from '@/components/ui/badge'
-import { getPaymentStatusBadge as getPaymentBadge } from '@/lib/booking-badges'
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { usePaymentActions } from '@/hooks/usePaymentActions'
-import { getStatusLabel, getAvailableStatuses } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
 
 export interface UseBookingDetailModalProps {
@@ -26,6 +23,11 @@ export interface UseBookingDetailModalReturn {
   isOpen: boolean
   openDetail: (booking: Booking) => void
   closeDetail: () => void
+  showStatusConfirm: boolean
+  pendingStatusChange: { bookingId: string; currentStatus: string; newStatus: string } | null
+  confirmStatusChange: () => Promise<void>
+  cancelStatusChange: () => void
+  getStatusTransitionMessage: (currentStatus: string, newStatus: string) => string
   modalProps: {
     booking: Booking | null
     isOpen: boolean
@@ -75,9 +77,27 @@ export function useBookingDetailModal({
     }
   }, [bookings, selectedBooking])
 
-  // Use centralized payment actions
+  // Use useBookingStatusManager for status management
   const {
+    showStatusConfirmDialog,
+    pendingStatusChange,
+    getStatusBadge,
+    getPaymentStatusBadge,
+    getAvailableStatuses,
+    getStatusLabel,
+    getStatusTransitionMessage,
+    handleStatusChange,
+    confirmStatusChange,
+    cancelStatusChange,
     markAsPaid: handleMarkAsPaid,
+  } = useBookingStatusManager({
+    selectedBooking,
+    setSelectedBooking,
+    onSuccess: refresh,
+  })
+
+  // Use centralized payment actions for verify and refund
+  const {
     verifyPayment: handleVerifyPayment,
     requestRefund: handleRequestRefund,
     completeRefund: handleCompleteRefund,
@@ -97,39 +117,6 @@ export function useBookingDetailModal({
     setIsOpen(false)
     setSelectedBooking(null)
   }, [])
-
-  const handleStatusChange = useCallback(
-    async (bookingId: string, _currentStatus: string, newStatus: string) => {
-      try {
-        const { error } = await supabase
-          .from('bookings')
-          .update({ status: newStatus })
-          .eq('id', bookingId)
-
-        if (error) throw error
-
-        // Update local state immediately
-        if (selectedBooking && selectedBooking.id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, status: newStatus })
-        }
-
-        toast({
-          title: 'Success',
-          description: `Status updated to ${newStatus}`,
-        })
-
-        refresh()
-      } catch (error) {
-        const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
-      }
-    },
-    [selectedBooking, toast, refresh]
-  )
 
   const archiveBooking = useCallback(
     async (bookingId: string) => {
@@ -171,30 +158,16 @@ export function useBookingDetailModal({
     [toast, closeDetail, refresh]
   )
 
-  const getStatusBadge = useCallback((status: string) => {
-    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
-    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
-    return <Badge variant="outline" className={colorClass}>{label}</Badge>
-  }, [])
-
-  const getPaymentStatusBadge = useCallback((status?: string) => {
-    return getPaymentBadge(status)
-  }, [])
-
-  // Use centralized status utilities (wrapped in useCallback for stable reference)
-  const getAvailableStatusesCallback = useCallback((currentStatus: string) => {
-    return getAvailableStatuses(currentStatus)
-  }, [])
-
-  const getStatusLabelCallback = useCallback((status: string) => {
-    return getStatusLabel(status)
-  }, [])
-
   return {
     selectedBooking,
     isOpen,
     openDetail,
     closeDetail,
+    showStatusConfirm: showStatusConfirmDialog,
+    pendingStatusChange,
+    confirmStatusChange,
+    cancelStatusChange,
+    getStatusTransitionMessage,
     modalProps: {
       booking: selectedBooking,
       isOpen,
@@ -209,8 +182,8 @@ export function useBookingDetailModal({
       onCancelRefund: handleCancelRefund,
       getStatusBadge,
       getPaymentStatusBadge,
-      getAvailableStatuses: getAvailableStatusesCallback,
-      getStatusLabel: getStatusLabelCallback,
+      getAvailableStatuses,
+      getStatusLabel,
     },
   }
 }

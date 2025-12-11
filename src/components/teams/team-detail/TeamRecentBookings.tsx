@@ -10,6 +10,7 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
 
 interface TeamRecentBookingsProps {
@@ -255,6 +256,23 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
 
       {/* Booking Detail Modal */}
       <BookingDetailModal {...modal.modalProps} />
+
+      {/* Status Change Confirmation Dialog */}
+      {modal.selectedBooking && modal.pendingStatusChange && (
+        <ConfirmDialog
+          open={modal.showStatusConfirm}
+          onOpenChange={(open) => !open && modal.cancelStatusChange()}
+          title="Confirm Status Change"
+          description={modal.getStatusTransitionMessage(
+            modal.pendingStatusChange.currentStatus,
+            modal.pendingStatusChange.newStatus
+          )}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          onConfirm={modal.confirmStatusChange}
+          variant={['cancelled', 'no_show'].includes(modal.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+        />
+      )}
     </Card>
   )
 }

@@ -4,7 +4,6 @@ import { useServicePackages } from '@/hooks/useServicePackages'
 import { useStaffList } from '@/hooks/useStaff'
 import { useTeamsList } from '@/hooks/useTeams'
 import { calculateEndTime } from '@/lib/dashboard-utils'
-import { getStatusBadge, getPaymentStatusBadge, getAvailableStatuses, getStatusLabel } from '@/lib/booking-badges'
 
 // Hooks
 import { useDashboardStats, useDashboardActions, useBookingModal } from '@/hooks/dashboard'
@@ -30,7 +29,7 @@ export function AdminDashboard() {
   const actions = useDashboardActions(
     dashboardData.refresh,
     modal.selectedBooking,
-    modal.updateSelectedBooking
+    modal.setSelectedBooking
   )
 
   // Service Packages & Staff/Team Data
@@ -231,10 +230,10 @@ export function AdminDashboard() {
         onRequestRefund={actions.requestRefund}
         onCompleteRefund={actions.completeRefund}
         onCancelRefund={actions.cancelRefund}
-        getStatusBadge={getStatusBadge}
-        getPaymentStatusBadge={getPaymentStatusBadge}
-        getAvailableStatuses={getAvailableStatuses}
-        getStatusLabel={getStatusLabel}
+        getStatusBadge={actions.getStatusBadge}
+        getPaymentStatusBadge={actions.getPaymentStatusBadge}
+        getAvailableStatuses={actions.getAvailableStatuses}
+        getStatusLabel={actions.getStatusLabel}
         actionLoading={{
           statusChange: actions.actionLoading.statusChange,
           delete: actions.actionLoading.delete,
@@ -345,6 +344,24 @@ export function AdminDashboard() {
         onConfirm={actions.confirmDeleteBooking}
         isLoading={actions.actionLoading.delete}
       />
+
+      {/* Status Change Confirmation Dialog */}
+      {actions.statusChangeConfirm.currentStatus && actions.statusChangeConfirm.newStatus && (
+        <ConfirmDialog
+          open={actions.statusChangeConfirm.show}
+          onOpenChange={(open) => !open && actions.cancelStatusChange()}
+          title="Confirm Status Change"
+          description={actions.getStatusTransitionMessage(
+            actions.statusChangeConfirm.currentStatus,
+            actions.statusChangeConfirm.newStatus
+          )}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          onConfirm={actions.confirmStatusChange}
+          variant={['cancelled', 'no_show'].includes(actions.statusChangeConfirm.newStatus) ? 'destructive' : 'default'}
+          isLoading={actions.actionLoading.statusChange}
+        />
+      )}
     </div>
   )
 }

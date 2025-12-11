@@ -5,10 +5,10 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { formatTime } from '@/lib/booking-utils'
+import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
+import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import type { ServicePackageV2WithTiers, PackagePricingTier } from '@/types'
 import { PricingModel } from '@/types'
 
@@ -125,6 +125,13 @@ export default function AdminPackageDetail() {
 
   // Ref for cleanup on unmount
   const isMountedRef = useRef(true)
+
+  // Use booking status manager for badge rendering
+  const { getStatusBadge } = useBookingStatusManager({
+    selectedBooking: null,
+    setSelectedBooking: () => {},
+    onSuccess: () => {},
+  })
 
   // Reset to page 1 when status filter changes
   useEffect(() => {
@@ -411,13 +418,6 @@ export default function AdminPackageDetail() {
       setDeleting(false)
       setIsDeleteDialogOpen(false)
     }
-  }
-
-  const getStatusBadge = (status: string) => {
-    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
-    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || status
-
-    return <Badge className={colorClass}>{label}</Badge>
   }
 
   // Loading state
@@ -809,7 +809,7 @@ export default function AdminPackageDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Booking</SelectItem>
-                    {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
+                    {getAllStatusOptions().map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
                     ))}
                   </SelectContent>

@@ -41,6 +41,19 @@ export function getStatusLabel(status: string): string {
 }
 
 /**
+ * Get all booking statuses with their labels
+ *
+ * @returns Array of [value, label] pairs for all booking statuses
+ *
+ * @example
+ * getAllStatusOptions()
+ * // Returns: [['pending', 'Pending'], ['confirmed', 'Confirmed'], ...]
+ */
+export function getAllStatusOptions(): [string, string][] {
+  return Object.entries(BOOKING_STATUS_LABELS)
+}
+
+/**
  * Get all available statuses that a booking can be changed to from current status
  * This includes the current status itself
  *

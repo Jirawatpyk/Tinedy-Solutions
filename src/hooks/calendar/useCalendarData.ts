@@ -108,7 +108,7 @@ export function useCalendarData() {
   // ========== CRUD Actions ==========
   const actions = useCalendarActions({
     selectedBooking: modalControls.selectedBooking as Booking | null,
-    setSelectedBooking: modalControls.setSelectedBooking as (booking: Booking | null) => void,
+    setSelectedBooking: modalControls.setSelectedBooking,
     refetchBookings,
     bookings,
     closeDetailModal: modalControls.closeDetail,
@@ -414,6 +414,17 @@ export function useCalendarData() {
       handleDelete: actions.handleDelete,
       handleArchive: actions.handleArchive,
       isDeleting: actions.isDeleting,
+      // Status utilities (from useBookingStatusManager)
+      getStatusBadge: actions.getStatusBadge,
+      getPaymentStatusBadge: actions.getPaymentStatusBadge,
+      getAvailableStatuses: actions.getAvailableStatuses,
+      getStatusLabel: actions.getStatusLabel,
+      getStatusTransitionMessage: actions.getStatusTransitionMessage,
+      // Status confirmation dialog state
+      showStatusConfirmDialog: actions.showStatusConfirmDialog,
+      pendingStatusChange: actions.pendingStatusChange,
+      confirmStatusChange: actions.confirmStatusChange,
+      cancelStatusChange: actions.cancelStatusChange,
     },
   }
 }
