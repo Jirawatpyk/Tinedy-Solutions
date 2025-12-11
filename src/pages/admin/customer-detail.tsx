@@ -320,7 +320,7 @@ export function AdminCustomerDetail() {
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name')
-        .eq('is_active', true)
+        .is('deleted_at', null)
         .order('name')
 
       if (teamsError) throw teamsError

@@ -367,7 +367,7 @@ export function useMultiDateAvailabilityCheck({
           )
         )
       `)
-      .eq('is_active', true)
+      .is('deleted_at', null)
 
     if (teamsError) throw teamsError
     if (!teams || teams.length === 0) {

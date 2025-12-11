@@ -260,7 +260,7 @@ export async function fetchStaffTeamMembership(userId: string): Promise<TeamMemb
       .from('teams')
       .select('id, created_at')
       .eq('team_lead_id', userId)
-      .eq('is_active', true)
+      .is('deleted_at', null)
 
     if (leadError) throw leadError
 

@@ -619,7 +619,7 @@ export function AdminBookings() {
       const { data, error} = await supabase
         .from('teams')
         .select('id, name')
-        .eq('is_active', true)
+        .is('deleted_at', null)
         .order('name')
 
       if (error) throw error

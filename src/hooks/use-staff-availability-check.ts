@@ -449,7 +449,7 @@ export function useStaffAvailabilityCheck({
             )
           )
         `)
-        .eq('is_active', true)
+        .is('deleted_at', null)
         .is('team_members.left_at', null)
         .order('name')
 

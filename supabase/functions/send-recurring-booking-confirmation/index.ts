@@ -502,17 +502,19 @@ function getEmailStyles(): string {
       padding: 20px;
       margin: 20px 0;
       border: 1px solid #e5e7eb;
+      text-align: left;
     }
     .business-name {
       font-size: 18px;
       font-weight: 700;
       color: #1f2937;
       margin-bottom: 12px;
+      text-align: center;
     }
     .contact-item {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: flex-start;
+      justify-content: flex-start;
       margin: 8px 0;
       font-size: 14px;
       color: #4b5563;
