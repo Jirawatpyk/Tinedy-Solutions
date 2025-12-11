@@ -735,35 +735,17 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return 0
 
-        // Filter team bookings by membership periods before calculating earnings
-        // Staff only earns from bookings created during their membership period(s)
-        const filteredBookings = bookings.filter(booking => {
-          // Direct staff assignment - always count
-          if (booking.staff_id === userId) return true
-
-          // Team booking - check if staff was a member when booking was created
-          if (booking.team_id) {
-            // Get ALL membership periods for this team (may have multiple after re-join)
-            const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
-            if (periodsForTeam.length === 0) return false
-
-            const bookingCreatedAt = new Date(booking.created_at)
-            // Check if booking falls within ANY of the membership periods
-            return periodsForTeam.some(period => {
-              const staffJoinedAt = new Date(period.joinedAt)
-              const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
-              if (bookingCreatedAt < staffJoinedAt) return false
-              if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
-              return true
-            })
-          }
-          return true
-        })
+        // Filter by membership periods using shared helper
+        const filteredBookings = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
 
         // Calculate earnings using shared calculateBookingRevenue function
         // Same logic as use-staff-profile.ts for consistency
         return filteredBookings.reduce((sum, booking) => {
-          return sum + calculateBookingRevenue(booking, new Map())
+          return sum + calculateBookingRevenue(booking as unknown as Parameters<typeof calculateBookingRevenue>[0], new Map())
         }, 0)
       })(),
 
@@ -813,29 +795,12 @@ export async function fetchStaffStats(
 
         if (!bookings || bookings.length === 0) return []
 
-        // Filter team bookings by membership periods before calculating
-        const filteredBookings = bookings.filter(booking => {
-          // Direct staff assignment - always count
-          if (booking.staff_id === userId) return true
-
-          // Team booking - check if staff was a member when booking was created
-          if (booking.team_id) {
-            // Get ALL membership periods for this team (may have multiple after re-join)
-            const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
-            if (periodsForTeam.length === 0) return false
-
-            const bookingCreatedAt = new Date(booking.created_at)
-            // Check if booking falls within ANY of the membership periods
-            return periodsForTeam.some(period => {
-              const staffJoinedAt = new Date(period.joinedAt)
-              const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
-              if (bookingCreatedAt < staffJoinedAt) return false
-              if (staffLeftAt && bookingCreatedAt > staffLeftAt) return false
-              return true
-            })
-          }
-          return true
-        })
+        // Filter by membership periods using shared helper
+        const filteredBookings = filterBookingsByMembershipPeriods(
+          bookings as unknown as StaffBooking[],
+          userId,
+          allMembershipPeriods
+        )
 
         // Group by month with revenue divided by team_member_count
         // Revenue only counts completed + paid bookings (same logic as Earnings)

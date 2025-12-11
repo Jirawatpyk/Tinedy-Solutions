@@ -90,6 +90,7 @@ export default function StaffProfile() {
           staffProfile.role === 'manager' ? 'Manager' : 'Staff',
     staff_number: staffProfile.staff_number,
     skills: staffProfile.skills,
+    created_at: staffProfile.created_at,
   } : undefined
 
   return (

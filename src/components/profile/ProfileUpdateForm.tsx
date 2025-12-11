@@ -363,34 +363,37 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
             )}
           </div>
 
-          {/* Staff Number (if exists) */}
-          {initialData?.staff_number && (
+          {/* Staff Number & Skills - 2 Columns */}
+          {(initialData?.staff_number || (initialData?.skills && initialData.skills.length > 0)) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Staff Number (Read-only)</Label>
-                <Input
-                  value={initialData.staff_number}
-                  disabled
-                  className="bg-gray-50"
-                />
-              </div>
-            </div>
-          )}
+              {/* Staff Number (if exists) */}
+              {initialData?.staff_number && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Staff Number (Read-only)</Label>
+                  <Input
+                    value={initialData.staff_number}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+              )}
 
-          {/* Skills (Read-only for staff) */}
-          {initialData?.skills && initialData.skills.length > 0 && (
-            <div className="space-y-2">
-              <Label>Skills (Read-only)</Label>
-              <div className="flex flex-wrap gap-2">
-                {initialData.skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+              {/* Skills (Read-only for staff) */}
+              {initialData?.skills && initialData.skills.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Skills (Read-only)</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {initialData.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
