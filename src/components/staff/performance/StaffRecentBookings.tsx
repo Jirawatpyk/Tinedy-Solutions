@@ -20,7 +20,66 @@ interface StaffRecentBookingsProps {
   staffId: string
 }
 
+interface MembershipPeriod {
+  teamId: string
+  joinedAt: string
+  leftAt: string | null
+}
+
 const ITEMS_PER_PAGE = 5
+
+/**
+ * Filter bookings by membership periods
+ * Staff should only see team bookings created during their membership period(s)
+ * Same logic as staff-bookings-queries.ts filterBookingsByMembershipPeriods()
+ */
+function filterBookingsByMembershipPeriods<T extends { staff_id?: string | null; team_id?: string | null; created_at?: string }>(
+  bookings: T[],
+  staffId: string,
+  allMembershipPeriods: MembershipPeriod[]
+): T[] {
+  return bookings.filter(booking => {
+    // Direct staff assignment - always show
+    if (booking.staff_id === staffId) {
+      return true
+    }
+
+    // Team booking - check if staff was a member when booking was created
+    if (booking.team_id && !booking.staff_id) {
+      // Get ALL membership periods for this team (may have multiple after re-join)
+      const periodsForTeam = allMembershipPeriods.filter(p => p.teamId === booking.team_id)
+
+      if (periodsForTeam.length === 0) {
+        // Staff is not in this team - shouldn't happen but exclude just in case
+        return false
+      }
+
+      // Use booking.created_at for filtering
+      if (!booking.created_at) return false
+      const bookingCreatedAt = new Date(booking.created_at)
+
+      // Check if booking falls within ANY of the membership periods
+      return periodsForTeam.some(period => {
+        const staffJoinedAt = new Date(period.joinedAt)
+        const staffLeftAt = period.leftAt ? new Date(period.leftAt) : null
+
+        // Booking must be created AFTER staff joined
+        if (bookingCreatedAt < staffJoinedAt) {
+          return false
+        }
+
+        // Booking must be created BEFORE staff left (if they left)
+        if (staffLeftAt && bookingCreatedAt > staffLeftAt) {
+          return false
+        }
+
+        return true
+      })
+    }
+
+    return true
+  })
+}
 
 export const StaffRecentBookings = memo(function StaffRecentBookings({
   staffId,
@@ -33,13 +92,21 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   const loadRecentBookings = useCallback(async () => {
     try {
-      // Get ACTIVE team memberships for this staff (exclude teams they left)
+      // Get ALL team memberships for this staff (with date ranges for filtering)
+      // Include both active AND former memberships to support multiple periods per team
       const { data: teamMemberships } = await supabase
         .from('team_members')
-        .select('team_id')
+        .select('team_id, joined_at, left_at')
         .eq('staff_id', staffId)
-        .is('left_at', null) // Only current team memberships
 
+      // Build membership periods array for filtering
+      const allMembershipPeriods: MembershipPeriod[] = (teamMemberships || []).map(tm => ({
+        teamId: tm.team_id,
+        joinedAt: tm.joined_at || '2020-01-01T00:00:00Z',
+        leftAt: tm.left_at || null
+      }))
+
+      // Get unique team IDs (all teams, including former - for querying bookings)
       const allTeamIds = [...new Set((teamMemberships || []).map(tm => tm.team_id))]
 
       // Build OR condition: staff_id = id OR (team_id IN teamIds AND staff_id IS NULL)
@@ -48,25 +115,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
         orCondition = `staff_id.eq.${staffId},and(team_id.in.(${allTeamIds.join(',')}),staff_id.is.null)`
       }
 
-      // Build count query with filters
-      let countQuery = supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .or(orCondition)
-        .is('deleted_at', null)
-
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        countQuery = countQuery.eq('status', statusFilter)
-      }
-
-      const { count } = await countQuery
-      setTotalCount(count || 0)
-
-      // Get paginated data with filters
-      const from = (currentPage - 1) * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
-
+      // Get ALL matching bookings (we'll filter by membership periods client-side)
       let dataQuery = supabase
         .from('bookings')
         .select(`
@@ -87,6 +136,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           notes,
           staff_id,
           team_id,
+          created_at,
           area_sqm,
           frequency,
           is_recurring,
@@ -110,13 +160,24 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
       const { data, error } = await dataQuery
         .order('booking_date', { ascending: false })
-        .range(from, to)
 
       if (error) throw error
 
+      // Filter bookings by membership periods (same logic as Staff Portal)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const filteredData = filterBookingsByMembershipPeriods(data || [], staffId, allMembershipPeriods)
+
+      // Update total count after filtering
+      setTotalCount(filteredData.length)
+
+      // Apply pagination client-side
+      const from = (currentPage - 1) * ITEMS_PER_PAGE
+      const to = from + ITEMS_PER_PAGE
+      const paginatedData = filteredData.slice(from, to)
+
       // Merge V1 and V2 package data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const processedData = (data || []).map((booking: any) => ({
+      const processedData = paginatedData.map((booking: any) => ({
         ...booking,
         service_packages: booking.service_packages || booking.service_packages_v2
       }))
@@ -138,13 +199,12 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   // Realtime subscription for booking changes
   useEffect(() => {
-    // Get ACTIVE team IDs for this staff (exclude teams they left)
+    // Get ALL team IDs for this staff (including former teams for proper filtering)
     const getTeamIds = async () => {
       const { data: teamMemberships } = await supabase
         .from('team_members')
         .select('team_id')
         .eq('staff_id', staffId)
-        .is('left_at', null) // Only current team memberships
 
       return teamMemberships?.map(tm => tm.team_id) || []
     }
@@ -169,6 +229,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
             const booking = payload.new as { staff_id?: string | null; team_id?: string | null }
             const oldBooking = payload.old as { staff_id?: string | null; team_id?: string | null }
 
+            // Simplified check - full filtering happens in loadRecentBookings
             const isRelevant =
               booking?.staff_id === staffId ||
               oldBooking?.staff_id === staffId ||
