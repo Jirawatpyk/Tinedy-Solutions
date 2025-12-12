@@ -126,6 +126,44 @@ export async function deleteChatFile(filePath: string): Promise<boolean> {
 }
 
 /**
+ * Extract storage path from public URL
+ * URL format: https://xxx.supabase.co/storage/v1/object/public/chat-attachments/userId/filename.ext
+ */
+export function extractStoragePathFromUrl(url: string): string | null {
+  try {
+    const bucketPath = `/storage/v1/object/public/${BUCKET_NAME}/`
+    const index = url.indexOf(bucketPath)
+    if (index === -1) return null
+    return url.substring(index + bucketPath.length)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Delete multiple files from Supabase Storage
+ */
+export async function deleteChatFiles(filePaths: string[]): Promise<{ success: boolean; deletedCount: number }> {
+  if (filePaths.length === 0) {
+    return { success: true, deletedCount: 0 }
+  }
+
+  try {
+    const { error } = await supabase.storage.from(BUCKET_NAME).remove(filePaths)
+
+    if (error) {
+      logger.error('Batch delete error:', error)
+      return { success: false, deletedCount: 0 }
+    }
+
+    return { success: true, deletedCount: filePaths.length }
+  } catch (error) {
+    logger.error('Unexpected error during batch delete:', error)
+    return { success: false, deletedCount: 0 }
+  }
+}
+
+/**
  * Format file size for display
  */
 export function formatFileSize(bytes: number): string {

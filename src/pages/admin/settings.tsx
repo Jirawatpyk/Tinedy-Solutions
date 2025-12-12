@@ -8,6 +8,7 @@
  * Integrated with Zod schemas (Phase 5)
  */
 
+import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,6 +20,7 @@ import { AlertCircle, Building2, CreditCard } from 'lucide-react'
 
 export default function AdminSettings() {
   const { settings, loading, error, refresh } = useSettings()
+  const [activeTab, setActiveTab] = useState('general')
 
   // Show loading skeleton while settings load
   if (loading || !settings) {
@@ -99,7 +101,7 @@ export default function AdminSettings() {
 
         {/* Settings Content with Tabs */}
         <div className="p-4 sm:p-6">
-          <Tabs defaultValue="general" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-2 mb-6">
               <TabsTrigger value="general" className="flex items-center justify-center gap-2">
                 <Building2 className="h-4 w-4" />

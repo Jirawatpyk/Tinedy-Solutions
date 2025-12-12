@@ -110,7 +110,7 @@ export function UserList({
             />
           </div>
         </CardHeader>
-      <CardContent className="p-0 flex-1 overflow-y-auto">
+      <CardContent className="p-0 max-h-[calc(100vh-280px)] overflow-y-auto">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
             <User className="h-12 w-12 text-muted-foreground mb-3" />

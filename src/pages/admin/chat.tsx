@@ -111,33 +111,35 @@ export function AdminChat() {
       </div>
 
       {/* Chat Container - Mobile: Stack, Desktop: Side by side */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-        {/* User List - Sidebar: Hide on mobile when chat is selected */}
-        <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>
-          <UserList
-            conversations={conversations}
-            selectedUserId={selectedUser?.id || null}
-            onSelectUser={handleSelectUser}
-            onDeleteConversation={handleDeleteConversation}
-            onNewChat={handleNewChat}
-            isLoading={isLoading}
-          />
-        </div>
+      <div className="flex-1 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+          {/* User List - Sidebar: Hide on mobile when chat is selected */}
+          <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>
+            <UserList
+              conversations={conversations}
+              selectedUserId={selectedUser?.id || null}
+              onSelectUser={handleSelectUser}
+              onDeleteConversation={handleDeleteConversation}
+              onNewChat={handleNewChat}
+              isLoading={isLoading}
+            />
+          </div>
 
-        {/* Chat Area: Show fullscreen on mobile when selected, side-by-side on desktop */}
-        <div className={`lg:col-span-8 h-full overflow-hidden ${selectedUser ? 'block' : 'hidden lg:block'}`}>
-          <ChatArea
-            selectedUser={selectedUser}
-            messages={messages}
-            currentUserId={user?.id || ''}
-            onSendMessage={handleSendMessage}
-            onLoadMore={() => selectedUser && loadMoreMessages(selectedUser.id)}
-            onBack={handleBackToList}
-            isSending={isSending}
-            isLoadingMessages={isLoadingMessages}
-            isLoadingMore={isLoadingMore}
-            hasMoreMessages={hasMoreMessages}
-          />
+          {/* Chat Area: Show fullscreen on mobile when selected, side-by-side on desktop */}
+          <div className={`lg:col-span-8 h-full overflow-hidden ${selectedUser ? 'block' : 'hidden lg:block'}`}>
+            <ChatArea
+              selectedUser={selectedUser}
+              messages={messages}
+              currentUserId={user?.id || ''}
+              onSendMessage={handleSendMessage}
+              onLoadMore={() => selectedUser && loadMoreMessages(selectedUser.id)}
+              onBack={handleBackToList}
+              isSending={isSending}
+              isLoadingMessages={isLoadingMessages}
+              isLoadingMore={isLoadingMore}
+              hasMoreMessages={hasMoreMessages}
+            />
+          </div>
         </div>
       </div>
 

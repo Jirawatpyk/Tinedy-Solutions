@@ -78,7 +78,7 @@ export function NewChatModal({
           </div>
 
           {/* User List */}
-          <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
+          <div className="max-h-[400px] overflow-y-auto border rounded-lg">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

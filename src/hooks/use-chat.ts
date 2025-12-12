@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Message, Profile, Conversation, Attachment } from '@/types/chat'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { uploadChatFile } from '@/lib/chat-storage'
+import { uploadChatFile, deleteChatFiles, extractStoragePathFromUrl } from '@/lib/chat-storage'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
 import { logger } from '@/lib/logger'
 
@@ -409,7 +409,40 @@ export function useChat() {
         setMessages([])
       }
 
-      // Delete messages sent BY current user TO other user
+      // Step 1: Fetch all messages with attachments before deleting
+      const { data: messagesWithAttachments } = await supabase
+        .from('messages')
+        .select('attachments')
+        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+        .not('attachments', 'is', null)
+
+      // Step 2: Extract file paths from attachments and delete from storage
+      if (messagesWithAttachments && messagesWithAttachments.length > 0) {
+        const filePaths: string[] = []
+
+        for (const msg of messagesWithAttachments) {
+          const attachments = msg.attachments as Attachment[] | null
+          if (attachments && Array.isArray(attachments)) {
+            for (const attachment of attachments) {
+              const path = extractStoragePathFromUrl(attachment.url)
+              if (path) {
+                filePaths.push(path)
+              }
+            }
+          }
+        }
+
+        // Delete files from storage (best effort - don't fail if storage delete fails)
+        if (filePaths.length > 0) {
+          const deleteResult = await deleteChatFiles(filePaths)
+          logger.info('Deleted chat attachments:', {
+            deletedCount: deleteResult.deletedCount,
+            totalFiles: filePaths.length
+          }, { context: 'Chat' })
+        }
+      }
+
+      // Step 3: Delete messages sent BY current user TO other user
       const { error: error1 } = await supabase
         .from('messages')
         .delete()
@@ -418,7 +451,7 @@ export function useChat() {
 
       if (error1) throw error1
 
-      // Delete messages sent BY other user TO current user
+      // Step 4: Delete messages sent BY other user TO current user
       const { error: error2 } = await supabase
         .from('messages')
         .delete()
