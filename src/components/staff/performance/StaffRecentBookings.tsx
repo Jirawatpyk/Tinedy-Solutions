@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatTime } from '@/lib/booking-utils'
+import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 import { supabase } from '@/lib/supabase'
 
 const logger = createLogger('StaffRecentBookings')
@@ -136,6 +136,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           notes,
           staff_id,
           team_id,
+          team_member_count,
           created_at,
           area_sqm,
           frequency,
@@ -148,7 +149,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
           profiles:staff_id (id, full_name, email, avatar_url),
-          teams:team_id (id, name, team_lead:team_lead_id (id, full_name))
+          ${TEAMS_WITH_LEAD_ALIASED_QUERY}
         `)
         .or(orCondition)
         .is('deleted_at', null)
@@ -266,17 +267,6 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
 
-  const getStatusBadge = (status: string) => {
-    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || BOOKING_STATUS_COLORS.pending
-    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || 'Unknown'
-
-    return (
-      <Badge variant="outline" className={`${colorClass} text-[10px] sm:text-xs`}>
-        {label}
-      </Badge>
-    )
-  }
-
   return (
     <Card className={`transition-opacity duration-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <CardHeader className="p-4 sm:p-6">
@@ -363,7 +353,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                     {formatCurrency(Number(booking.total_price))}
                   </p>
                   <div className="scale-90 sm:scale-100 origin-right">
-                    {getStatusBadge(booking.status)}
+                    {modal.modalProps.getStatusBadge(booking.status)}
                   </div>
                 </div>
               </div>

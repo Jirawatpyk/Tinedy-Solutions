@@ -127,7 +127,7 @@ export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersList
             <p className="text-xs sm:text-sm mt-1">Add team members to get started</p>
           </div>
         ) : (
-          <div className="space-y-1.5 sm:space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 sm:space-y-2 max-h-[400px] overflow-y-auto pr-1" tabIndex={0}>
             {sortedMembers.map((member) => (
               <div
                 key={member.id}

@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown, FileText } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown, FileText, ChevronDown, Loader2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -86,12 +87,55 @@ export function BookingDetailModal({
   const [hoverRating, setHoverRating] = useState(0)
   const [savingReview, setSavingReview] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [showTeamMembers, setShowTeamMembers] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; avatar_url: string | null }>>([])
+  const [loadingTeamMembers, setLoadingTeamMembers] = useState(false)
   const { toast } = useToast()
 
   const resetReview = useCallback(() => {
     setReview(null)
     setRating(0)
   }, [])
+
+  // Fetch team members when expanded
+  const fetchTeamMembers = useCallback(async () => {
+    if (!booking?.team_id || !booking?.created_at) return
+
+    setLoadingTeamMembers(true)
+    try {
+      // Get team members who were active at the time of booking creation
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('profiles:staff_id(id, full_name, avatar_url)')
+        .eq('team_id', booking.team_id)
+        .lte('joined_at', booking.created_at)
+        .or(`left_at.is.null,left_at.gt.${booking.created_at}`)
+
+      if (error) throw error
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const members = (data || []).map((m: any) => m.profiles).filter(Boolean)
+      setTeamMembers(members)
+    } catch (error) {
+      console.error('Error fetching team members:', error)
+    } finally {
+      setLoadingTeamMembers(false)
+    }
+  }, [booking?.team_id, booking?.created_at])
+
+  // Toggle team members visibility
+  const toggleTeamMembers = useCallback(() => {
+    if (!showTeamMembers && teamMembers.length === 0) {
+      fetchTeamMembers()
+    }
+    setShowTeamMembers(prev => !prev)
+  }, [showTeamMembers, teamMembers.length, fetchTeamMembers])
+
+  // Reset team members state when modal closes or booking changes
+  useEffect(() => {
+    setShowTeamMembers(false)
+    setTeamMembers([])
+  }, [booking?.id])
 
   const fetchReview = useCallback(async () => {
     if (!booking?.id) return
@@ -423,21 +467,63 @@ export function BookingDetailModal({
 
               {/* Assigned Team with Team Lead (2 columns) */}
               {booking.teams && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Assigned Team</Label>
-                    <p className="font-medium flex items-center gap-1">
-                      <Users className="h-3 w-3 text-tinedy-green" />
-                      {booking.teams.name}
-                    </p>
-                  </div>
-                  {booking.teams.team_lead && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-muted-foreground">Team Lead</Label>
+                      <Label className="text-muted-foreground">Assigned Team</Label>
                       <p className="font-medium flex items-center gap-1">
-                        <Crown className="h-3 w-3 text-amber-600" />
-                        {booking.teams.team_lead.full_name}
+                        <Users className="h-3 w-3 text-tinedy-green" />
+                        {booking.teams.name}
+                        {booking.team_member_count && booking.team_member_count > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-1 text-[10px] px-1.5 py-0 cursor-pointer hover:bg-secondary/80 transition-colors"
+                            aria-label={`${booking.team_member_count} team members - click to ${showTeamMembers ? 'hide' : 'show'}`}
+                            onClick={toggleTeamMembers}
+                          >
+                            {booking.team_member_count} members
+                            <ChevronDown className={`h-3 w-3 ml-0.5 transition-transform ${showTeamMembers ? 'rotate-180' : ''}`} />
+                          </Badge>
+                        )}
                       </p>
+                    </div>
+                    {booking.teams.team_lead && (
+                      <div>
+                        <Label className="text-muted-foreground">Team Lead</Label>
+                        <p className="font-medium flex items-center gap-1">
+                          <Crown className="h-3 w-3 text-amber-600" />
+                          {booking.teams.team_lead.full_name}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expandable Team Members List */}
+                  {showTeamMembers && (
+                    <div className="pl-4 border-l-2 border-tinedy-green/30 space-y-2">
+                      <Label className="text-muted-foreground text-xs">Team Members (at booking time)</Label>
+                      {loadingTeamMembers ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading...
+                        </div>
+                      ) : teamMembers.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {teamMembers.map((member) => (
+                            <div key={member.id} className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={member.avatar_url || undefined} />
+                                <AvatarFallback className="text-[10px] bg-tinedy-green/20 text-tinedy-green">
+                                  {member.full_name?.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{member.full_name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No members found</p>
+                      )}
                     </div>
                   )}
                 </div>

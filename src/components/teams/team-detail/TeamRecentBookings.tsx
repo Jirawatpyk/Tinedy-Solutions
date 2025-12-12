@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { formatTime } from '@/lib/booking-utils'
+import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingStatus } from '@/constants/booking-status'
+import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 
 const logger = createLogger('TeamRecentBookings')
 
@@ -69,6 +69,8 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           notes,
           staff_id,
           team_id,
+          team_member_count,
+          created_at,
           area_sqm,
           frequency,
           is_recurring,
@@ -80,7 +82,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
           service_packages (name, service_type),
           service_packages_v2:package_v2_id (name, service_type),
           profiles:staff_id (id, full_name, email, avatar_url),
-          teams:team_id (id, name, team_lead:team_lead_id (id, full_name))
+          ${TEAMS_WITH_LEAD_ALIASED_QUERY}
         `)
         .eq('team_id', teamId)
         .is('deleted_at', null)
@@ -149,17 +151,6 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
 
   // No need for client-side filtering anymore - it's done server-side
   const filteredBookings = bookings
-
-  const getStatusBadge = (status: string) => {
-    const colorClass = BOOKING_STATUS_COLORS[status as BookingStatus] || BOOKING_STATUS_COLORS.pending
-    const label = BOOKING_STATUS_LABELS[status as BookingStatus] || 'Unknown'
-
-    return (
-      <Badge variant="outline" className={`${colorClass} text-[10px] sm:text-xs`}>
-        {label}
-      </Badge>
-    )
-  }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)
 
@@ -249,7 +240,7 @@ export function TeamRecentBookings({ teamId }: TeamRecentBookingsProps) {
                     {formatCurrency(Number(booking.total_price))}
                   </p>
                   <div className="scale-90 sm:scale-100 origin-right">
-                    {getStatusBadge(booking.status)}
+                    {modal.modalProps.getStatusBadge(booking.status)}
                   </div>
                 </div>
               </div>

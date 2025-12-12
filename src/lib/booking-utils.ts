@@ -155,6 +155,12 @@ export function formatTime(time: string): string {
  */
 export const TEAMS_WITH_LEAD_QUERY = 'teams(id, name, team_lead:team_lead_id(id, full_name))'
 
+/**
+ * Aliased version for explicit foreign key reference (team_id)
+ * Use this when you need to specify the foreign key explicitly
+ */
+export const TEAMS_WITH_LEAD_ALIASED_QUERY = 'teams:team_id(id, name, team_lead:team_lead_id(id, full_name))'
+
 export interface TeamLead {
   id: string
   full_name: string
