@@ -9,6 +9,7 @@ interface BookingForExport {
   total_price: number
   status: string
   payment_status?: string
+  payment_date?: string | null
   created_at: string
   service_packages?: {
     name: string
@@ -29,7 +30,7 @@ interface TopCustomerForExport {
   email: string
   totalBookings: number
   totalRevenue: number
-  lastBooking?: string
+  lastBookingDate?: string
 }
 
 interface StaffPerformanceForExport {
@@ -99,11 +100,37 @@ export const exportRevenueAllToExcel = (
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
-  // Filter bookings by date range
-  const filteredBookings = bookings.filter(b => {
-    const bookingDate = new Date(b.booking_date)
-    return isWithinInterval(bookingDate, { start, end })
+  console.log('[Export Debug] Date Range:', {
+    preset: dateRange,
+    start: format(start, 'yyyy-MM-dd'),
+    end: format(end, 'yyyy-MM-dd'),
+    totalBookings: bookings.length
   })
+
+  // Filter bookings by date range using payment_date (same logic as UI)
+  // Use payment_date if available, fallback to booking_date
+  const filteredBookings = bookings.filter(b => {
+    const paymentDate = b.payment_date
+    const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(b.booking_date)
+    return isWithinInterval(dateToCheck, { start, end })
+  })
+
+  const paidCount = filteredBookings.filter(b => b.payment_status === 'paid').length
+
+  console.log('[Export Debug] Filtered Result:', {
+    filteredCount: filteredBookings.length,
+    paidCount,
+    paidPercentage: filteredBookings.length > 0 ? `${((paidCount / filteredBookings.length) * 100).toFixed(1)}%` : '0%'
+  })
+
+  // Log all bookings as table for full visibility
+  console.table(filteredBookings.map(b => ({
+    booking_date: b.booking_date,
+    payment_date: b.payment_date,
+    payment_status: b.payment_status,
+    total_price: b.total_price,
+    used_date: b.payment_date || b.booking_date
+  })))
 
   if (filteredBookings.length === 0) {
     return false
@@ -156,7 +183,7 @@ export const exportRevenueAllToExcel = (
 
   // ========== Sheet 3: Revenue by Service Type ==========
   const serviceTypeMap: Record<string, { count: number; revenue: number }> = {}
-  filteredBookings.filter(b => b.status === 'completed').forEach(b => {
+  filteredBookings.filter(b => b.payment_status === 'paid').forEach(b => {
     const serviceType = b.service_packages?.service_type || 'Unknown'
     if (!serviceTypeMap[serviceType]) {
       serviceTypeMap[serviceType] = { count: 0, revenue: 0 }
@@ -216,7 +243,7 @@ export const exportRevenueAllToExcel = (
       packageMap[packageName] = { count: 0, revenue: 0 }
     }
     packageMap[packageName].count++
-    if (b.status === 'completed') {
+    if (b.payment_status === 'paid') {
       packageMap[packageName].revenue += Number(b.total_price)
     }
   })
@@ -284,7 +311,7 @@ export const exportCustomersToExcel = (
       'Email': c.email,
       'Total Bookings': c.totalBookings,
       'Total Revenue (฿)': c.totalRevenue.toFixed(2),
-      'Last Booking': c.lastBooking ? format(new Date(c.lastBooking), 'yyyy-MM-dd') : 'N/A',
+      'Last Booking': c.lastBookingDate ? format(new Date(c.lastBookingDate), 'dd/MM/yyyy') : 'N/A',
     }))
     const topCustomersSheet = XLSX.utils.json_to_sheet(topCustomerData)
     XLSX.utils.book_append_sheet(workbook, topCustomersSheet, 'Top Customers')

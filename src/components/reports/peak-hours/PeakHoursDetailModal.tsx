@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { Calendar, Clock } from 'lucide-react'
 import type { PeakHourData, DayOfWeek } from './types'
 import { DAY_NAMES } from './types'
@@ -62,12 +61,7 @@ export function PeakHoursDetailModal({ data, open, onClose }: PeakHoursDetailMod
           <div className="p-4 bg-tinedy-green/10 border-2 border-tinedy-green/30 rounded-lg">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">Total Bookings</p>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-4xl font-bold text-tinedy-green">{data.count}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {data.count === 1 ? 'booking' : 'bookings'}
-                </Badge>
-              </div>
+              <span className="text-4xl font-bold text-tinedy-green">{data.count}</span>
             </div>
           </div>
 

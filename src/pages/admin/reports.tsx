@@ -93,6 +93,7 @@ export function AdminReports() {
   // ===================================================================
 
   const handleExport = (exportType: string) => {
+    console.log('[Reports Export] User clicked export:', { exportType, dateRange, activeTab })
     try {
       let success = false
 
@@ -112,12 +113,15 @@ export function AdminReports() {
         // Staff exports
         case 'staff-excel': {
           // Use filtered staff data based on selected date range
+          // Use payment_date if available, fallback to booking_date (same logic as Revenue export)
           const { start, end } = getDateRangePreset(dateRange)
           const filteredStaff = staffWithBookings.map((staffMember) => ({
             ...staffMember,
-            bookings: staffMember.bookings.filter((booking) =>
-              isWithinInterval(new Date(booking.booking_date), { start, end })
-            ),
+            bookings: staffMember.bookings.filter((booking) => {
+              const paymentDate = (booking as { payment_date?: string | null }).payment_date
+              const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+              return isWithinInterval(dateToCheck, { start, end })
+            }),
           }))
           const staffPerformanceData = getStaffPerformance(filteredStaff)
           success = exportStaffToExcel(staffPerformanceData, role)
@@ -127,12 +131,15 @@ export function AdminReports() {
         // Teams exports
         case 'teams-excel': {
           // Use filtered teams data based on selected date range
+          // Use payment_date if available, fallback to booking_date (same logic as Revenue export)
           const { start, end } = getDateRangePreset(dateRange)
           const filteredTeams = teamsWithBookings.map((team) => ({
             ...team,
-            bookings: team.bookings.filter((booking) =>
-              isWithinInterval(new Date(booking.booking_date), { start, end })
-            ),
+            bookings: team.bookings.filter((booking) => {
+              const paymentDate = (booking as { payment_date?: string | null }).payment_date
+              const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
+              return isWithinInterval(dateToCheck, { start, end })
+            }),
           }))
           success = exportTeamsToExcel(filteredTeams, role)
           break
