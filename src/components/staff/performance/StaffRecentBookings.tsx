@@ -33,11 +33,12 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   const loadRecentBookings = useCallback(async () => {
     try {
-      // Get ALL team memberships for this staff
+      // Get ACTIVE team memberships for this staff (exclude teams they left)
       const { data: teamMemberships } = await supabase
         .from('team_members')
         .select('team_id')
         .eq('staff_id', staffId)
+        .is('left_at', null) // Only current team memberships
 
       const allTeamIds = [...new Set((teamMemberships || []).map(tm => tm.team_id))]
 
@@ -137,12 +138,13 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
   // Realtime subscription for booking changes
   useEffect(() => {
-    // Get team IDs for this staff
+    // Get ACTIVE team IDs for this staff (exclude teams they left)
     const getTeamIds = async () => {
       const { data: teamMemberships } = await supabase
         .from('team_members')
         .select('team_id')
         .eq('staff_id', staffId)
+        .is('left_at', null) // Only current team memberships
 
       return teamMemberships?.map(tm => tm.team_id) || []
     }
