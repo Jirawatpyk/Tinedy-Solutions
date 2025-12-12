@@ -105,23 +105,28 @@ export function AdminReports() {
 
         // Customers exports
         case 'customers-excel': {
-          const topCustomersData = getTopCustomers(customersWithBookings, 10)
+          // Filter by booking_date (customer activity based on booking date)
+          const { start, end } = getDateRangePreset(dateRange)
+          const filteredCustomers = customersWithBookings.map((customer) => ({
+            ...customer,
+            bookings: customer.bookings.filter((booking) =>
+              isWithinInterval(new Date(booking.booking_date), { start, end })
+            ),
+          }))
+          const topCustomersData = getTopCustomers(filteredCustomers, 10)
           success = exportCustomersToExcel(customers, topCustomersData)
           break
         }
 
         // Staff exports
         case 'staff-excel': {
-          // Use filtered staff data based on selected date range
-          // Use payment_date if available, fallback to booking_date (same logic as Revenue export)
+          // Filter by booking_date (staff performance based on job date)
           const { start, end } = getDateRangePreset(dateRange)
           const filteredStaff = staffWithBookings.map((staffMember) => ({
             ...staffMember,
-            bookings: staffMember.bookings.filter((booking) => {
-              const paymentDate = (booking as { payment_date?: string | null }).payment_date
-              const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
-              return isWithinInterval(dateToCheck, { start, end })
-            }),
+            bookings: staffMember.bookings.filter((booking) =>
+              isWithinInterval(new Date(booking.booking_date), { start, end })
+            ),
           }))
           const staffPerformanceData = getStaffPerformance(filteredStaff)
           success = exportStaffToExcel(staffPerformanceData, role)
@@ -130,16 +135,13 @@ export function AdminReports() {
 
         // Teams exports
         case 'teams-excel': {
-          // Use filtered teams data based on selected date range
-          // Use payment_date if available, fallback to booking_date (same logic as Revenue export)
+          // Filter by booking_date (team performance based on job date)
           const { start, end } = getDateRangePreset(dateRange)
           const filteredTeams = teamsWithBookings.map((team) => ({
             ...team,
-            bookings: team.bookings.filter((booking) => {
-              const paymentDate = (booking as { payment_date?: string | null }).payment_date
-              const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(booking.booking_date)
-              return isWithinInterval(dateToCheck, { start, end })
-            }),
+            bookings: team.bookings.filter((booking) =>
+              isWithinInterval(new Date(booking.booking_date), { start, end })
+            ),
           }))
           success = exportTeamsToExcel(filteredTeams, role)
           break
