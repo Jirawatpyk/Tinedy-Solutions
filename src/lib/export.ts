@@ -100,13 +100,6 @@ export const exportRevenueAllToExcel = (
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
 
-  console.log('[Export Debug] Date Range:', {
-    preset: dateRange,
-    start: format(start, 'yyyy-MM-dd'),
-    end: format(end, 'yyyy-MM-dd'),
-    totalBookings: bookings.length
-  })
-
   // Filter bookings by date range using payment_date (same logic as UI)
   // Use payment_date if available, fallback to booking_date
   const filteredBookings = bookings.filter(b => {
@@ -114,23 +107,6 @@ export const exportRevenueAllToExcel = (
     const dateToCheck = paymentDate ? new Date(paymentDate) : new Date(b.booking_date)
     return isWithinInterval(dateToCheck, { start, end })
   })
-
-  const paidCount = filteredBookings.filter(b => b.payment_status === 'paid').length
-
-  console.log('[Export Debug] Filtered Result:', {
-    filteredCount: filteredBookings.length,
-    paidCount,
-    paidPercentage: filteredBookings.length > 0 ? `${((paidCount / filteredBookings.length) * 100).toFixed(1)}%` : '0%'
-  })
-
-  // Log all bookings as table for full visibility
-  console.table(filteredBookings.map(b => ({
-    booking_date: b.booking_date,
-    payment_date: b.payment_date,
-    payment_status: b.payment_status,
-    total_price: b.total_price,
-    used_date: b.payment_date || b.booking_date
-  })))
 
   if (filteredBookings.length === 0) {
     return false

@@ -93,7 +93,6 @@ export function AdminReports() {
   // ===================================================================
 
   const handleExport = (exportType: string) => {
-    console.log('[Reports Export] User clicked export:', { exportType, dateRange, activeTab })
     try {
       let success = false
 
