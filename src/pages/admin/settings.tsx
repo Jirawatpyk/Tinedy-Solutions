@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSettings } from '@/hooks/use-settings'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin } from '@/components/auth/permission-guard'
 import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm'
 import { PaymentSettingsForm } from '@/components/settings/PaymentSettingsForm'
 import { AlertCircle, Building2, CreditCard } from 'lucide-react'
@@ -85,9 +85,9 @@ export default function AdminSettings() {
   }
 
   return (
-    <AdminOnly
+    <ManagerOrAdmin
       fallback="alert"
-      fallbackMessage="You do not have permission to access system settings. Only administrators can manage settings."
+      fallbackMessage="You do not have permission to access system settings. Only administrators and managers can manage settings."
     >
       <div className="min-h-screen bg-gray-50">
         {/* Page Header */}
@@ -131,6 +131,6 @@ export default function AdminSettings() {
           </Tabs>
         </div>
       </div>
-    </AdminOnly>
+    </ManagerOrAdmin>
   )
 }
