@@ -196,7 +196,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           </div>
 
           {/* Navigation - ทำให้ scrollable ทั้งหมดรวมปุ่ม Sign Out */}
-          <nav className="flex-1 overflow-y-auto py-4 lg:scrollbar-hide">
+          <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide">
             <div className="flex flex-col min-h-full">
               {/* Menu items */}
               <ul className="space-y-1 px-3 flex-1">
