@@ -428,6 +428,30 @@ export function PackageSelector({
   }, [selectedPackage, debouncedAreaSqm, frequency, isRestoring, loading, disabled])
 
   /**
+   * Clear selection when switching to tiered package without area/frequency
+   * เมื่อเปลี่ยนจาก fixed → tiered แต่ยังไม่กรอก area/frequency ให้ clear price
+   */
+  useEffect(() => {
+    // Guard clauses
+    if (isRestoring || calculating || loading) return
+    if (!selectedPackage) return
+    if (disabled) return // Skip in edit mode
+    if (selectedPackage.pricing_model !== PricingModel.Tiered) return
+
+    // ถ้ายังไม่มี area หรือ frequency ให้ emit selection ที่มี price = 0
+    if (!debouncedAreaSqm || !frequency) {
+      logger.debug('Clearing price for tiered package (no area/frequency yet)')
+      emitSelection({
+        packageId: selectedPackage.id,
+        pricingModel: 'tiered',
+        price: 0,
+        requiredStaff: 0,
+        packageName: selectedPackage.name,
+      })
+    }
+  }, [selectedPackage, debouncedAreaSqm, frequency, isRestoring, calculating, loading, disabled, emitSelection])
+
+  /**
    * Emit Fixed pricing selection when package is selected
    */
   useEffect(() => {
