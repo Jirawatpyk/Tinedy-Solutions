@@ -304,7 +304,7 @@ export const ADMIN_ROUTES = {
     icon: UserCircle,
     allowedRoles: ['admin', 'manager'],
     breadcrumbs: ['Dashboard', 'My Profile'],
-    showInNav: true,
+    showInNav: false, // Hidden - accessible via user dropdown
   },
   ADMIN_SETTINGS: {
     key: 'admin-settings',
@@ -364,7 +364,7 @@ export const STAFF_ROUTES = {
     icon: Users,
     allowedRoles: ['staff'],
     breadcrumbs: ['My Bookings', 'My Profile'],
-    showInNav: true,
+    showInNav: false, // Hidden - accessible via user dropdown
   },
 } as const satisfies Record<string, RouteConfig>
 

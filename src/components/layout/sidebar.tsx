@@ -4,10 +4,19 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { supabase } from '@/lib/supabase'
 import { getNavigationRoutes } from '@/lib/route-utils'
 
@@ -162,77 +171,71 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             </button>
           </div>
 
-          {/* User info with Sign Out */}
+          {/* User info with dropdown */}
           <div className="p-4 border-b border-tinedy-blue/20">
-            <div className={cn(
-              'flex items-center transition-all duration-300',
-              isCollapsed ? 'justify-center' : 'space-x-3'
-            )}>
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.full_name || 'User'}
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-tinedy-green"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-tinedy-green flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold">
-                    {profile?.full_name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div className={cn(
-                "flex-1 min-w-0 transition-all duration-300 overflow-hidden",
-                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-              )}>
-                <p className="text-sm font-medium truncate">
-                  {profile?.full_name}
-                </p>
-                <p className="text-xs text-tinedy-off-white/70 capitalize">
-                  {profile?.role}
-                </p>
-              </div>
-            </div>
-
-            {/* Sign out button */}
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={isLoggingOut}
-              className={cn(
-                "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50 relative group mt-3",
-                isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
-              )}
-              title={isCollapsed ? 'Sign Out' : undefined}
-            >
-              {isLoggingOut ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
-                  <span className={cn(
-                    "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                  )}>
-                    Signing out...
-                  </span>
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className={cn(
-                    "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                  )}>
-                    Sign Out
-                  </span>
-                  {/* Tooltip on hover when collapsed */}
-                  {isCollapsed && (
-                    <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      Sign Out
-                    </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full flex items-center rounded-lg transition-all duration-300 hover:bg-tinedy-blue/50 p-2 -m-2",
+                    isCollapsed ? 'justify-center' : 'space-x-3'
                   )}
-                </>
-              )}
-            </button>
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.full_name || 'User'}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-tinedy-green"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-tinedy-green flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-semibold">
+                        {profile?.full_name?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div className={cn(
+                    "flex-1 min-w-0 transition-all duration-300 overflow-hidden text-left",
+                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                  )}>
+                    <p className="text-sm font-medium truncate">
+                      {profile?.full_name}
+                    </p>
+                    <p className="text-xs text-tinedy-off-white/70 capitalize">
+                      {profile?.role}
+                    </p>
+                  </div>
+                  <ChevronDown className={cn(
+                    "h-4 w-4 flex-shrink-0 transition-all duration-300",
+                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                  )} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => {
+                  navigate(profile?.role === 'staff' ? '/staff/profile' : '/admin/profile')
+                  onClose()
+                }}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
+                  {isLoggingOut ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                      <span>Signing out...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign Out</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Navigation */}
