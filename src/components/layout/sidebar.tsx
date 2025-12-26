@@ -195,99 +195,108 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - ทำให้ scrollable ทั้งหมดรวมปุ่ม Sign Out */}
           <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide">
-            <ul className="space-y-1 px-3">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path
-                const isChatItem = item.title === 'Chat'
-                const Icon = item.icon
-                return (
-                  <li key={item.key}>
-                    <Link
-                      to={item.path}
-                      onClick={onClose}
-                      className={cn(
-                        'flex items-center rounded-lg text-sm font-medium transition-all duration-300 relative group',
-                        isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5',
-                        isActive
-                          ? 'bg-tinedy-green text-white'
-                          : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
-                      )}
-                      title={isCollapsed ? item.title : undefined}
-                    >
-                      {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
-                      <span className={cn(
-                        "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
-                        isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                      )}>
-                        {item.title}
-                      </span>
-                      {isChatItem && unreadCount > 0 && (
-                        <Badge className={cn(
-                          "bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-300",
-                          isCollapsed ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-auto"
+            <div className="flex flex-col min-h-full">
+              {/* Menu items */}
+              <ul className="space-y-1 px-3 flex-1">
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path
+                  const isChatItem = item.title === 'Chat'
+                  const Icon = item.icon
+                  return (
+                    <li key={item.key}>
+                      <Link
+                        to={item.path}
+                        onClick={onClose}
+                        className={cn(
+                          'flex items-center rounded-lg text-sm font-medium transition-all duration-300 relative group',
+                          isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5',
+                          isActive
+                            ? 'bg-tinedy-green text-white'
+                            : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
+                        )}
+                        title={isCollapsed ? item.title : undefined}
+                      >
+                        {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+                        <span className={cn(
+                          "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
+                          isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                         )}>
-                          {unreadCount > 10 ? '10+' : unreadCount}
-                        </Badge>
-                      )}
-                      {/* Show unread count as dot when collapsed */}
-                      {isCollapsed && isChatItem && unreadCount > 0 && (
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                      )}
-                      {/* Tooltip on hover when collapsed */}
-                      {isCollapsed && (
-                        <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                           {item.title}
-                          {isChatItem && unreadCount > 0 && ` (${unreadCount > 10 ? '10+' : unreadCount})`}
                         </span>
-                      )}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
+                        {isChatItem && unreadCount > 0 && (
+                          <Badge className={cn(
+                            "bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-300",
+                            isCollapsed ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-auto"
+                          )}>
+                            {unreadCount > 10 ? '10+' : unreadCount}
+                          </Badge>
+                        )}
+                        {/* Show unread count as dot when collapsed */}
+                        {isCollapsed && isChatItem && unreadCount > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                        {/* Tooltip on hover when collapsed */}
+                        {isCollapsed && (
+                          <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                            {item.title}
+                            {isChatItem && unreadCount > 0 && ` (${unreadCount > 10 ? '10+' : unreadCount})`}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
 
-          {/* Sign out button */}
-          <div className="border-t border-tinedy-blue/20 pt-4 pb-4">
-            <ul className="space-y-1 px-3">
-              <li>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={isLoggingOut}
-              className={cn(
-                "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50",
-                isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
-              )}
-                  title={isCollapsed ? 'Sign Out' : undefined}
-                >
-                {isLoggingOut ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
-                    <span className={cn(
-                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                      isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                    )}>
-                      Signing out...
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="h-5 w-5 flex-shrink-0" />
-                    <span className={cn(
-                      "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                      isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                    )}>
-                      Sign Out
-                    </span>
-                  </>
-                )}
-              </button>
-              </li>
-            </ul>
-          </div>
+              {/* Sign out button - ย้ายมาอยู่ใน nav scrollable area */}
+              <div className="border-t border-tinedy-blue/20 pt-4 pb-4 mt-4">
+                <ul className="space-y-1 px-3">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={isLoggingOut}
+                      className={cn(
+                        "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50 relative group",
+                        isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
+                      )}
+                      title={isCollapsed ? 'Sign Out' : undefined}
+                    >
+                      {isLoggingOut ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
+                          <span className={cn(
+                            "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                          )}>
+                            Signing out...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <LogOut className="h-5 w-5 flex-shrink-0" />
+                          <span className={cn(
+                            "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                          )}>
+                            Sign Out
+                          </span>
+                          {/* Tooltip on hover when collapsed */}
+                          {isCollapsed && (
+                            <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                              Sign Out
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </nav>
         </div>
       </aside>
     </>
