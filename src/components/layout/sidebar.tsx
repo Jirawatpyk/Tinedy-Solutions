@@ -162,7 +162,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             </button>
           </div>
 
-          {/* User info */}
+          {/* User info with Sign Out */}
           <div className="p-4 border-b border-tinedy-blue/20">
             <div className={cn(
               'flex items-center transition-all duration-300',
@@ -193,10 +193,50 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                 </p>
               </div>
             </div>
+
+            {/* Sign out button */}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isLoggingOut}
+              className={cn(
+                "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50 relative group mt-3",
+                isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
+              )}
+              title={isCollapsed ? 'Sign Out' : undefined}
+            >
+              {isLoggingOut ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
+                  <span className={cn(
+                    "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                  )}>
+                    Signing out...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span className={cn(
+                    "transition-all duration-300 overflow-hidden whitespace-nowrap",
+                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                  )}>
+                    Sign Out
+                  </span>
+                  {/* Tooltip on hover when collapsed */}
+                  {isCollapsed && (
+                    <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      Sign Out
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
           </div>
 
-          {/* Navigation - ทำให้ scrollable ทั้งหมดรวมปุ่ม Sign Out */}
-          <nav className="flex-1 overflow-y-auto py-4 lg:scrollbar-hide overscroll-contain touch-pan-y">
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-4 lg:scrollbar-hide">
             <div className="flex flex-col min-h-full">
               {/* Menu items */}
               <ul className="space-y-1 px-3 flex-1">
@@ -249,52 +289,6 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   )
                 })}
               </ul>
-
-              {/* Sign out button - ย้ายมาอยู่ใน nav scrollable area */}
-              <div className="border-t border-tinedy-blue/20 pt-4 pb-4 mt-4">
-                <ul className="space-y-1 px-3">
-                  <li>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      disabled={isLoggingOut}
-                      className={cn(
-                        "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-300 text-tinedy-off-white hover:bg-tinedy-blue/50 relative group",
-                        isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5'
-                      )}
-                      title={isCollapsed ? 'Sign Out' : undefined}
-                    >
-                      {isLoggingOut ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0" />
-                          <span className={cn(
-                            "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                          )}>
-                            Signing out...
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <LogOut className="h-5 w-5 flex-shrink-0" />
-                          <span className={cn(
-                            "transition-all duration-300 overflow-hidden whitespace-nowrap",
-                            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                          )}>
-                            Sign Out
-                          </span>
-                          {/* Tooltip on hover when collapsed */}
-                          {isCollapsed && (
-                            <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                              Sign Out
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </button>
-                  </li>
-                </ul>
-              </div>
             </div>
           </nav>
         </div>
