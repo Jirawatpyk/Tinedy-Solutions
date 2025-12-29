@@ -12,6 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Trash2, Archive } from 'lucide-react'
 import { ConfirmDialog } from './ConfirmDialog'
 import { usePermissions } from '@/hooks/use-permissions'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { PermissionResource } from '@/types/common'
 
 interface PermissionAwareDeleteButtonProps {
@@ -64,6 +70,16 @@ interface PermissionAwareDeleteButtonProps {
    * Custom warning message (e.g., "This customer has 5 bookings that will be deleted")
    */
   warningMessage?: string
+
+  /**
+   * Disable the button (e.g., when item has related records)
+   */
+  disabled?: boolean
+
+  /**
+   * Tooltip message when button is disabled
+   */
+  disabledReason?: string
 }
 
 export function PermissionAwareDeleteButton({
@@ -77,6 +93,8 @@ export function PermissionAwareDeleteButton({
   className = '',
   cancelText = 'Cancel',
   warningMessage,
+  disabled = false,
+  disabledReason,
 }: PermissionAwareDeleteButtonProps) {
   const { canDelete, canSoftDelete } = usePermissions()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -139,41 +157,56 @@ export function PermissionAwareDeleteButton({
     </>
   )
 
+  const isDisabled = disabled || isProcessing
+
+  const buttonElement = (
+    <Button
+      variant={buttonVariant}
+      size={size}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (!isDisabled) {
+          setConfirmOpen(true)
+        }
+      }}
+      className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      disabled={isDisabled}
+      title={isDisabled && disabledReason ? disabledReason : (showDeleteButton ? 'Delete (Admin only)' : `${cancelText} (Cancel/Archive)`)}
+    >
+      {showDeleteButton ? <DeleteButtonContent /> : <CancelButtonContent />}
+    </Button>
+  )
+
   return (
     <>
-      <Button
-        variant={buttonVariant}
-        size={size}
-        onClick={(e) => {
-          e.stopPropagation()
-          setConfirmOpen(true)
-        }}
-        className={className}
-        disabled={isProcessing}
-        title={showDeleteButton ? 'Delete (Admin only)' : `${cancelText} (Cancel/Archive)`}
-      >
-        {showDeleteButton ? <DeleteButtonContent /> : <CancelButtonContent />}
-      </Button>
+      {disabled && disabledReason ? (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>{buttonElement}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{disabledReason}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        buttonElement
+      )}
 
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         onConfirm={handleConfirm}
-        title={
-          showDeleteButton
-            ? `Are you sure you want to delete ${itemName}?`
-            : `Are you sure you want to cancel ${itemName}?`
-        }
+        title={showDeleteButton ? 'Delete Item?' : 'Archive Item?'}
         description={
           showDeleteButton
-            ? warningMessage
-              ? `${warningMessage}\n\nThis action cannot be undone.`
-              : 'This action cannot be undone. This will permanently delete the item from the system.'
-            : 'This will cancel/archive the item. Admins can restore it later if needed.'
+            ? `Are you sure you want to delete "${itemName}"? ${warningMessage ? warningMessage + ' ' : ''}This action cannot be undone.`
+            : `Are you sure you want to archive "${itemName}"? The item will be hidden but can be restored by admin.`
         }
-        confirmText={showDeleteButton ? 'Delete' : cancelText}
+        confirmText={showDeleteButton ? 'Delete' : 'Archive'}
         cancelText="Cancel"
-        variant={showDeleteButton ? 'destructive' : 'default'}
+        variant={showDeleteButton ? 'destructive' : 'warning'}
       />
     </>
   )

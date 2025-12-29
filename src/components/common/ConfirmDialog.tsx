@@ -17,7 +17,7 @@ interface ConfirmDialogProps {
   description: string
   confirmText?: string
   cancelText?: string
-  variant?: 'default' | 'destructive'
+  variant?: 'default' | 'destructive' | 'warning'
   /** Warning message to show (e.g., "Cannot delete - has bookings") */
   warningMessage?: string
   /** Disable confirm button */
@@ -71,6 +71,8 @@ export function ConfirmDialog({
             className={`flex-1 sm:flex-none ${
               variant === 'destructive'
                 ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : variant === 'warning'
+                ? 'bg-orange-600 text-white hover:bg-orange-700'
                 : ''
             }`}
           >
