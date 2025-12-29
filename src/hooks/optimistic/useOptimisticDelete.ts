@@ -11,12 +11,13 @@
  */
 
 import { useOptimisticMutation } from './useOptimisticMutation'
+import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { supabase } from '@/lib/supabase'
 
 // ===== Types =====
 
-export type SoftDeleteTable = 'bookings' | 'customers' | 'teams' | 'staff'
+export type SoftDeleteTable = 'bookings' | 'customers' | 'teams' | 'staff' | 'service_packages_v2'
 
 interface DeleteVariables {
   id: string
@@ -57,6 +58,8 @@ function getQueryKeyForTable(table: SoftDeleteTable): readonly unknown[] {
       return queryKeys.teams.all
     case 'staff':
       return queryKeys.staff.all
+    case 'service_packages_v2':
+      return queryKeys.packages.all
     default:
       return [table]
   }
@@ -99,6 +102,7 @@ export function useOptimisticDelete(
   options: UseOptimisticDeleteOptions
 ): UseOptimisticDeleteReturn {
   const { table, onSuccess } = options
+  const queryClient = useQueryClient()
 
   // ===== Soft Delete (Archive) =====
 
@@ -116,7 +120,7 @@ export function useOptimisticDelete(
       queryKeys: [getQueryKeyForTable(table)],
       updater: (oldData, variables) => {
         // Remove item from list immediately (optimistic)
-        return removeItemFromCache(oldData as any[], variables.id)
+        return removeItemFromCache(oldData as { id: string }[], variables.id)
       },
     },
     toast: {
@@ -155,7 +159,16 @@ export function useOptimisticDelete(
       successDescription: `${table.slice(0, -1).charAt(0).toUpperCase() + table.slice(1, -1)} restored successfully`,
       errorContext: table === 'bookings' ? 'booking' : table === 'customers' ? 'customer' : 'general',
     },
-    onSuccess,
+    onSuccess: async () => {
+      // Invalidate + refetch ทุก queries ของ table นี้
+      // ใช้ refetchType: 'all' เพื่อ refetch ทุก queries (ไม่ใช่แค่ที่ mount)
+      await queryClient.invalidateQueries({
+        queryKey: getQueryKeyForTable(table),
+        refetchType: 'all',
+      })
+      // เรียก onSuccess callback ที่ user ส่งมา (ถ้ามี)
+      if (onSuccess) await onSuccess()
+    },
   })
 
   // ===== Permanent Delete =====
@@ -171,7 +184,7 @@ export function useOptimisticDelete(
       queryKeys: [getQueryKeyForTable(table)],
       updater: (oldData, variables) => {
         // Remove item from list immediately (optimistic)
-        return removeItemFromCache(oldData as any[], variables.id)
+        return removeItemFromCache(oldData as { id: string }[], variables.id)
       },
     },
     toast: {

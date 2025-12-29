@@ -310,11 +310,14 @@ export async function fetchTeamDetail(id: string): Promise<TeamWithDetails> {
 export const teamQueryOptions = {
   /**
    * Teams list with full details (for Teams management page)
+   * staleTime: 0 - ทำให้ refetch ทันทีเมื่อ showArchived toggle (query key เปลี่ยน)
+   * refetchOnMount: 'always' - บังคับ refetch เมื่อกลับมาจากหน้าอื่น (sync cross-user changes)
    */
   withDetails: (showArchived: boolean = false) => ({
     queryKey: queryKeys.teams.withDetails(showArchived),
     queryFn: () => fetchTeamsWithDetails(showArchived),
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    staleTime: 0, // Always stale - refetch ทันทีเมื่อ query key เปลี่ยน (showArchived toggle)
+    refetchOnMount: 'always' as const, // บังคับ refetch ทุกครั้งที่ mount (sync cross-user changes)
   }),
 
   /**

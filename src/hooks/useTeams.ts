@@ -79,7 +79,11 @@ export function useTeamsWithDetails(
           table: 'teams',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
+          // Invalidate + refetch ทุก team queries (รวมทั้ง showArchived: true/false)
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.teams.all,
+            refetchType: 'all',
+          })
         }
       )
       .subscribe()
@@ -94,7 +98,10 @@ export function useTeamsWithDetails(
           table: 'team_members',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.teams.all,
+            refetchType: 'all',
+          })
         }
       )
       .subscribe()
@@ -110,7 +117,10 @@ export function useTeamsWithDetails(
         },
         () => {
           // Invalidate teams queries when reviews change (affects ratings)
-          queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.teams.all,
+            refetchType: 'all',
+          })
         }
       )
       .subscribe()

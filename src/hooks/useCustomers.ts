@@ -51,6 +51,7 @@ export function useCustomers(options: UseCustomersOptions = {}): UseCustomersRet
   const queryClient = useQueryClient()
 
   // Fetch customers list
+  // staleTime: 0 ใน customerQueryOptions ทำให้ refetch อัตโนมัติเมื่อ showArchived เปลี่ยน
   const {
     data: customers = [],
     isLoading: loading,
@@ -72,8 +73,11 @@ export function useCustomers(options: UseCustomersOptions = {}): UseCustomersRet
           table: 'customers',
         },
         () => {
-          // Invalidate all customer queries to refetch
-          queryClient.invalidateQueries({ queryKey: queryKeys.customers.all })
+          // Invalidate + refetch ทุก customer queries (รวมทั้ง showArchived: true/false)
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.customers.all,
+            refetchType: 'all',
+          })
         }
       )
       .subscribe()
