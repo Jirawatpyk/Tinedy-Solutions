@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { Package, Plus, CheckCircle, XCircle } from 'lucide-react'
+import { Package, Plus, CheckCircle, XCircle, Search } from 'lucide-react'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
 import { PricingModel, ServiceCategory } from '@/types'
@@ -842,18 +842,21 @@ export function AdminServicePackages() {
       {/* Filters */}
       <Card>
         <CardContent className="py-3">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
-            <Input
-              placeholder="Search packages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 text-xs"
-            />
-            {/* Type and Pricing filters - side by side */}
+            <div className="relative sm:flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search packages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 text-xs pl-8"
+              />
+            </div>
+            {/* Type and Pricing filters - side by side on mobile, inline on desktop */}
             <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
+                <SelectTrigger className="w-full sm:w-36 h-8 text-xs">
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -863,7 +866,7 @@ export function AdminServicePackages() {
                 </SelectContent>
               </Select>
               <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
-                <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
+                <SelectTrigger className="w-full sm:w-36 h-8 text-xs">
                   <SelectValue placeholder="Filter by pricing" />
                 </SelectTrigger>
                 <SelectContent>

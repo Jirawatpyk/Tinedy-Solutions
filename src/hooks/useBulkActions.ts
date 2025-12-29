@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { formatFullAddress, getValidTransitions } from '@/lib/booking-utils'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { usePermissions } from '@/hooks/use-permissions'
 import type { Booking } from '@/types/booking'
 import * as XLSX from 'xlsx'
@@ -251,7 +251,7 @@ export function useBulkActions({
         : Number(b.total_price)
 
       return {
-        'Booking ID': b.id.slice(0, 8),
+        'Booking ID': formatBookingId(b.id),
         'Customer': b.customers?.full_name || '',
         'Email': b.customers?.email || '',
         'Phone': b.customers?.phone || '',

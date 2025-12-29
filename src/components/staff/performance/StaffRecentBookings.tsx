@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, formatBookingId } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
 import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
@@ -333,8 +333,8 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                 <div className="flex-1 min-w-0 w-full">
                   <p className="text-xs sm:text-sm font-medium mb-1">
                     {booking.customers?.full_name || 'Unknown Customer'}
-                    <span className="ml-2 text-[10px] sm:text-xs font-mono text-muted-foreground font-normal">
-                      #{booking.id.slice(0, 8)}
+                    <span className="ml-2 text-[10px] sm:text-xs text-muted-foreground font-normal">
+                      {formatBookingId(booking.id)}
                     </span>
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">

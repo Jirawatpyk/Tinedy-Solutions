@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { getStatusBadge, getPaymentStatusBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import type { TodayBooking } from '@/types/dashboard'
@@ -136,8 +136,8 @@ export const TodayAppointmentsList = ({
                       <div>
                         <p className="font-medium text-tinedy-dark">
                           {booking.customers?.full_name || 'Unknown Customer'}
-                          <span className="ml-2 text-sm font-mono text-muted-foreground font-normal">
-                            #{booking.id.slice(0, 8)}
+                          <span className="ml-2 text-sm text-muted-foreground font-normal">
+                            {formatBookingId(booking.id)}
                           </span>
                         </p>
                         <p className="text-sm text-muted-foreground">

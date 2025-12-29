@@ -118,3 +118,17 @@ export function getRankBadgeColor(index: number): string {
     default: return RANK_BADGE_COLORS.default
   }
 }
+
+// ============================================================================
+// Booking ID Utilities
+// ============================================================================
+
+/**
+ * Format a booking ID for display
+ * Uses consistent format: #BK-XXXXXX (first 6 chars uppercase)
+ * @example formatBookingId('6g12c6co-1234-5678-9abc-def012345678') => '#BK-6G12C6'
+ */
+export function formatBookingId(bookingId: string): string {
+  if (!bookingId || typeof bookingId !== 'string') return '#BK-??????'
+  return `#BK-${bookingId.substring(0, 6).toUpperCase()}`
+}

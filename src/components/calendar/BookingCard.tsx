@@ -11,6 +11,7 @@
 import React from 'react'
 import { Clock, User, Briefcase, Users, AlertTriangle, Calendar, DollarSign, CreditCard } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
+import { formatBookingId } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { StatusBadgeEditor } from './StatusBadgeEditor'
@@ -116,8 +117,8 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
               })}
             </span>
           </div>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            #{booking.id.slice(0, 8)}
+          <span className="text-[10px] text-muted-foreground">
+            {formatBookingId(booking.id)}
           </span>
         </div>
 

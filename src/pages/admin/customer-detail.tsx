@@ -48,7 +48,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatBookingId } from '@/lib/utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
@@ -1296,8 +1296,8 @@ export function AdminCustomerDetail() {
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
                                   {customer.full_name}
-                                  <span className="ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">
-                                    #{booking.id.slice(0, 8)}
+                                  <span className="ml-2 text-xs sm:text-sm text-muted-foreground font-normal">
+                                    {formatBookingId(booking.id)}
                                   </span>
                                 </p>
                                 {/* 2. Email */}

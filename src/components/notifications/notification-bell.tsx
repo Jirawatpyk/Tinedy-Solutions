@@ -11,7 +11,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useInAppNotifications } from '@/hooks/use-in-app-notifications'
 import { formatDistanceToNow } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
+import { cn, formatBookingId } from '@/lib/utils'
 
 export function NotificationBell() {
   const {
@@ -35,9 +35,6 @@ export function NotificationBell() {
     'payment_received'
   ]
 
-  const formatBookingId = (bookingId: string): string => {
-    return `#BK-${bookingId.substring(0, 6).toUpperCase()}`
-  }
 
   const isBookingRelatedNotification = (type: string): boolean => {
     return BOOKING_RELATED_TYPES.includes(type)

@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast'
 import { formatFullAddress } from '@/lib/booking-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatTime } from '@/lib/booking-utils'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { BookingTimeline } from './booking-timeline'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
@@ -263,7 +263,7 @@ export function BookingDetailsModal({
             </StatusBadge>
           </DialogTitle>
           <DialogDescription>
-            Booking ID: {currentBooking.id.slice(0, 8)}
+            Booking ID: {formatBookingId(currentBooking.id)}
           </DialogDescription>
         </DialogHeader>
 

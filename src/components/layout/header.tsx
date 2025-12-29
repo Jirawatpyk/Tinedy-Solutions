@@ -8,6 +8,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { formatBookingId } from '@/lib/utils'
 import {
   CommandDialog,
   CommandEmpty,
@@ -64,11 +65,14 @@ export function Header({ onMenuClick }: HeaderProps) {
     const basePath = (profile?.role === 'admin' || profile?.role === 'manager') ? '/admin' : '/staff'
 
     try {
-      // Remove # prefix if present (users often copy ID with # from UI)
-      const cleanedQuery = query.startsWith('#') ? query.substring(1) : query
+      // Remove # prefix and BK- prefix if present (users often copy ID with #BK- from UI)
+      let cleanedQuery = query.trim()
+      if (cleanedQuery.startsWith('#')) cleanedQuery = cleanedQuery.substring(1)
+      if (cleanedQuery.toUpperCase().startsWith('BK-')) cleanedQuery = cleanedQuery.substring(3)
 
       // Check if cleaned query matches UUID pattern (with or without dashes, partial or full)
-      const isUuidPattern = /^[0-9a-f]{8}(-?[0-9a-f]{4}){0,3}(-?[0-9a-f]{0,12})?$/i.test(cleanedQuery)
+      // Also match if it looks like first 6 chars of UUID (from #BK-XXXXXX format)
+      const isUuidPattern = /^[0-9a-f]{6,}$/i.test(cleanedQuery) || /^[0-9a-f]{8}(-?[0-9a-f]{4}){0,3}(-?[0-9a-f]{0,12})?$/i.test(cleanedQuery)
 
       // Search Customers (exclude archived)
       const { data: customers } = await supabase
@@ -139,7 +143,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             id: booking.id,
             type: 'booking',
             title: `Booking - ${customerName}`,
-            subtitle: `ID: #${booking.id.substring(0, 8)} • ${booking.booking_date} • ${booking.status}`,
+            subtitle: `ID: ${formatBookingId(booking.id)} • ${booking.booking_date} • ${booking.status}`,
             link: `${basePath}/bookings`,
             bookingId: booking.id,
           })
@@ -168,7 +172,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             id: booking.id,
             type: 'booking',
             title: `Booking - ${customerName}`,
-            subtitle: `ID: #${booking.id.substring(0, 8)} • ${booking.booking_date} • ${booking.status}`,
+            subtitle: `ID: ${formatBookingId(booking.id)} • ${booking.booking_date} • ${booking.status}`,
             link: `${basePath}/bookings`,
             bookingId: booking.id,
           })

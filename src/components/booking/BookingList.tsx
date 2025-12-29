@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
 import type { CombinedItem } from '@/types/recurring-booking'
@@ -194,7 +194,7 @@ function BookingListComponent({
                           />
                           <p className="font-medium text-tinedy-dark text-sm sm:text-base truncate">
                             {booking.customers?.full_name || 'Unknown Customer'}
-                            <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm font-mono text-muted-foreground font-normal">#{booking.id.slice(0, 8)}</span>
+                            <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm text-muted-foreground font-normal">{formatBookingId(booking.id)}</span>
                           </p>
                           {isArchived && (
                             <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs flex-shrink-0">
@@ -287,7 +287,7 @@ function BookingListComponent({
                               )}
                               <PermissionAwareDeleteButton
                                 resource="bookings"
-                                itemName={`Booking #${booking.id.slice(0, 8)}`}
+                                itemName={`Booking ${formatBookingId(booking.id)}`}
                                 onDelete={() => onDeleteBooking(booking.id)}
                                 onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
                                 cancelText="Archive"
@@ -323,7 +323,7 @@ function BookingListComponent({
                           ) : (
                             <PermissionAwareDeleteButton
                               resource="bookings"
-                              itemName={`Booking #${booking.id.slice(0, 8)}`}
+                              itemName={`Booking ${formatBookingId(booking.id)}`}
                               onDelete={() => onDeleteBooking(booking.id)}
                               onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
                               cancelText="Archive"

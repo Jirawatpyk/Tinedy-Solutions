@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PaymentMethodSkeleton } from '@/components/skeletons/lazy-loading-skeletons'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -161,7 +161,7 @@ export function PaymentPage() {
             Complete Your Payment
           </h1>
           <p className="text-gray-600">
-            Booking ID: <span className="font-mono font-semibold">#{booking.id.slice(0, 8)}</span>
+            Booking ID: <span className="font-semibold">{formatBookingId(booking.id)}</span>
             {isRecurring && (
               <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
                 🔄 Recurring ({recurringBookings.length} sessions)

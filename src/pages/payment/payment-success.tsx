@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CheckCircle2, Calendar, Clock, MapPin, CheckCheck } from 'lucide-react'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 
 export function PaymentSuccessPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
@@ -130,7 +130,7 @@ export function PaymentSuccessPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Booking ID</span>
                     <span className="font-mono font-medium">
-                      #{booking.id.slice(0, 8)}
+                      {formatBookingId(booking.id)}
                       {isRecurring && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
                           {recurringBookings.length} sessions

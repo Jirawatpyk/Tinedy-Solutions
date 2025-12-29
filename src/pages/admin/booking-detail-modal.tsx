@@ -19,12 +19,13 @@ import {
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User, Users, Mail, MapPin, Clock, Edit, Send, CreditCard, Star, Copy, Link2, Check, Package, Crown, FileText, ChevronDown, Loader2 } from 'lucide-react'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 
 interface Review {
@@ -319,7 +320,7 @@ export function BookingDetailModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onCloseAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Booking Details - #{booking.id.slice(0, 8)}</DialogTitle>
+          <DialogTitle>Booking Details - {formatBookingId(booking.id)}</DialogTitle>
           <DialogDescription>
             View and manage booking information
           </DialogDescription>
@@ -358,27 +359,29 @@ export function BookingDetailModal({
               </h3>
             }
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
                 <Label className="text-muted-foreground">Service Package</Label>
-                <p className="font-medium">{booking.service_packages?.name || booking.service_packages_v2?.name || 'N/A'}</p>
+                <p className="font-medium mt-0.5">{booking.service_packages?.name || booking.service_packages_v2?.name || 'N/A'}</p>
               </div>
-              <div className="flex flex-col gap-2">
+              <div>
                 <Label className="text-muted-foreground">Service Type</Label>
-                <Badge variant="outline" className="w-fit">{booking.service_packages?.service_type || booking.service_packages_v2?.service_type || 'N/A'}</Badge>
+                <div className="mt-0.5">
+                  <Badge variant="outline" className="w-fit">{booking.service_packages?.service_type || booking.service_packages_v2?.service_type || 'N/A'}</Badge>
+                </div>
               </div>
 
               {/* Show area and frequency (for Tiered Pricing) */}
               {booking.area_sqm && booking.area_sqm > 0 && (
                 <div>
                   <Label className="text-muted-foreground">Area</Label>
-                  <p className="font-medium">{booking.area_sqm} sqm</p>
+                  <p className="font-medium mt-0.5">{booking.area_sqm} sqm</p>
                 </div>
               )}
               {booking.frequency && (
                 <div>
                   <Label className="text-muted-foreground">Frequency</Label>
-                  <p className="font-medium">
+                  <p className="font-medium mt-0.5">
                     {booking.is_recurring && booking.recurring_sequence && booking.recurring_total
                       ? `${booking.recurring_sequence}/${booking.recurring_total} (${getFrequencyLabel(booking.frequency)})`
                       : getFrequencyLabel(booking.frequency)}
@@ -388,13 +391,13 @@ export function BookingDetailModal({
 
               <div>
                 <Label className="text-muted-foreground">Price</Label>
-                <p className="font-semibold text-tinedy-blue text-lg">
+                <p className="font-semibold text-tinedy-blue text-lg mt-0.5">
                   {formatCurrency(Number(booking.total_price))}
                 </p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Status</Label>
-                <div className="mt-1">{getStatusBadge(booking.status)}</div>
+                <div className="mt-0.5">{getStatusBadge(booking.status)}</div>
               </div>
             </div>
           </CollapsibleSection>
@@ -408,7 +411,7 @@ export function BookingDetailModal({
               </h3>
             }
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Date</Label>
                 <p className="font-medium">{formatDate(booking.booking_date)}</p>
@@ -453,22 +456,11 @@ export function BookingDetailModal({
             <CollapsibleSection
               title={<h3 className="font-semibold text-lg">Assignment</h3>}
             >
-
-              {/* Assigned Staff (if exists) */}
-              {booking.profiles && (
-                <div>
-                  <Label className="text-muted-foreground">Assigned Staff</Label>
-                  <p className="font-medium flex items-center gap-1">
-                    <User className="h-3 w-3 text-tinedy-blue" />
-                    {booking.profiles.full_name}
-                  </p>
-                </div>
-              )}
-
-              {/* Assigned Team with Team Lead (2 columns) */}
+              {/* Assigned Team with Team Lead (2 columns on desktop) */}
               {booking.teams && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Left: Assigned Team + Team Members */}
+                  <div className="space-y-3">
                     <div>
                       <Label className="text-muted-foreground">Assigned Team</Label>
                       <p className="font-medium flex items-center gap-1">
@@ -487,43 +479,45 @@ export function BookingDetailModal({
                         )}
                       </p>
                     </div>
-                    {booking.teams.team_lead && (
-                      <div>
-                        <Label className="text-muted-foreground">Team Lead</Label>
-                        <p className="font-medium flex items-center gap-1">
-                          <Crown className="h-3 w-3 text-amber-600" />
-                          {booking.teams.team_lead.full_name}
-                        </p>
+
+                    {/* Expandable Team Members List - under Assigned Team */}
+                    {showTeamMembers && (
+                      <div className="pl-4 border-l-2 border-tinedy-green/30 space-y-2">
+                        <Label className="text-muted-foreground text-xs">Team Members (at booking time)</Label>
+                        {loadingTeamMembers ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Loading...
+                          </div>
+                        ) : teamMembers.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {teamMembers.map((member) => (
+                              <div key={member.id} className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={member.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[10px] bg-tinedy-green/20 text-tinedy-green">
+                                    {member.full_name?.slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{member.full_name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No members found</p>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Expandable Team Members List */}
-                  {showTeamMembers && (
-                    <div className="pl-4 border-l-2 border-tinedy-green/30 space-y-2">
-                      <Label className="text-muted-foreground text-xs">Team Members (at booking time)</Label>
-                      {loadingTeamMembers ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Loading...
-                        </div>
-                      ) : teamMembers.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {teamMembers.map((member) => (
-                            <div key={member.id} className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={member.avatar_url || undefined} />
-                                <AvatarFallback className="text-[10px] bg-tinedy-green/20 text-tinedy-green">
-                                  {member.full_name?.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{member.full_name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No members found</p>
-                      )}
+                  {/* Right: Team Lead */}
+                  {booking.teams.team_lead && (
+                    <div>
+                      <Label className="text-muted-foreground">Team Lead</Label>
+                      <p className="font-medium flex items-center gap-1">
+                        <Crown className="h-3 w-3 text-amber-600" />
+                        {booking.teams.team_lead.full_name}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -773,7 +767,70 @@ export function BookingDetailModal({
           {/* Quick Actions */}
           <div className="space-y-3 pt-2">
             <h3 className="font-semibold text-lg">Quick Actions</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {/* Mobile: 4 icon buttons in a row */}
+            <div className="flex sm:hidden items-center gap-2">
+              {onEdit && (
+                <SimpleTooltip content="Edit booking">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => onEdit(booking)}
+                    disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </SimpleTooltip>
+              )}
+              <SimpleTooltip content="Send reminder">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleSendReminder}
+                  disabled={sendingReminder || !booking.customers?.email}
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </SimpleTooltip>
+              <Select
+                value={booking.status}
+                onValueChange={(value) => {
+                  onStatusChange(booking.id, booking.status, value)
+                }}
+                disabled={actionLoading?.statusChange}
+              >
+                <SimpleTooltip content="Change status">
+                  <SelectTrigger className="w-10 h-10 p-0 justify-center [&>svg:last-child]:hidden">
+                    <ChevronDown className="h-4 w-4" />
+                  </SelectTrigger>
+                </SimpleTooltip>
+                <SelectContent>
+                  {getAvailableStatuses(booking.status).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {getStatusLabel(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <PermissionAwareDeleteButton
+                resource="bookings"
+                itemName={`Booking for ${booking.customers?.full_name || 'customer'} on ${formatDate(booking.booking_date)}`}
+                onDelete={() => {
+                  onDelete(booking.id)
+                  onClose()
+                }}
+                onCancel={onCancel ? () => {
+                  onCancel(booking.id)
+                  onClose()
+                } : undefined}
+                variant="icon"
+                size="icon"
+                buttonVariant="outline"
+                cancelText="Archive"
+              />
+            </div>
+            {/* Desktop: 4 columns with text */}
+            <div className="hidden sm:grid sm:grid-cols-4 gap-2">
               {onEdit && (
                 <Button
                   variant="outline"
@@ -827,6 +884,7 @@ export function BookingDetailModal({
                 size="default"
                 buttonVariant="outline"
                 cancelText="Archive"
+                className="w-full"
               />
             </div>
           </div>
