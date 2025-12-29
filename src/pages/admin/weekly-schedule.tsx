@@ -619,7 +619,7 @@ export function AdminWeeklySchedule() {
       <div className="space-y-6">
         {/* Page header skeleton - ตรงกับของจริง */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             View weekly booking schedules for staff and teams
           </p>
           <Button variant="outline" disabled>

@@ -268,7 +268,7 @@ export function AdminServicePackagesV2() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Manage cleaning service packages with tiered pricing
           </p>
           <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
@@ -321,7 +321,7 @@ export function AdminServicePackagesV2() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Manage cleaning service packages with tiered pricing
         </p>
         <div className="flex items-center gap-4">

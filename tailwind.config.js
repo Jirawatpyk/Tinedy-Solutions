@@ -57,8 +57,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Poppins', 'sans-serif'],
-        display: ['Raleway', 'sans-serif'],
+        sans: ['Poppins', 'Sarabun', 'sans-serif'],
+        display: ['Raleway', 'Sarabun', 'sans-serif'],
         rule: ['Sarabun', 'sans-serif'],
       },
       borderRadius: {

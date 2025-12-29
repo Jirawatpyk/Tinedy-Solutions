@@ -161,9 +161,9 @@ export function AdminCustomers() {
               Manage your customer database
             </p>
           </div>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled size="sm">
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">New Customer</span>
+          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            New Customer
           </Button>
         </div>
 
@@ -217,15 +217,11 @@ export function AdminCustomers() {
   }
 
   return (
-    <div className="space-y-3 sm:space-y-6">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 min-h-[40px]">
-        <div>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage your customer database
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
+        <p className="text-xs sm:text-sm text-muted-foreground">Manage your customer database</p>
+        <div className="flex items-center gap-4">
           {/* Show archived toggle - Admin only */}
           <AdminOnly>
             <div className="flex items-center space-x-2">
@@ -245,10 +241,9 @@ export function AdminCustomers() {
           <Button
             className="bg-tinedy-blue hover:bg-tinedy-blue/90"
             onClick={openCreateDialog}
-            size="sm"
           >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">New Customer</span>
+            <Plus className="h-4 w-4 mr-2" />
+            New Customer
           </Button>
 
           {/* Customer Form Dialog */}

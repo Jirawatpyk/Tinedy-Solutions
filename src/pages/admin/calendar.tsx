@@ -204,7 +204,7 @@ export function AdminCalendar() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
-            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
         </div>
 
@@ -242,7 +242,7 @@ export function AdminCalendar() {
         {/* Page Header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
-            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
         </div>
 
@@ -310,8 +310,9 @@ export function AdminCalendar() {
     <div>
       {/* Mobile Calendar View - แสดงเฉพาะ mobile */}
       <div className="block md:hidden h-[calc(100vh-120px)]">
-        {/* Mobile Filter Button */}
-        <div className="flex justify-end mb-2 px-2">
+        {/* Mobile Header with Title and Filter */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-muted-foreground">View and manage your bookings</p>
           <CalendarFilters
             filterControls={calendar.filterControls}
             onPresetDateChange={calendar.dateControls.handlePresetDateChange}
@@ -339,7 +340,7 @@ export function AdminCalendar() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
-            <p className="text-sm text-muted-foreground">View and manage your bookings</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
           </div>
         </div>
 

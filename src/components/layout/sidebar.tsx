@@ -246,7 +246,13 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               {/* Menu items */}
               <ul className="space-y-1 px-3 flex-1">
                 {navItems.map((item) => {
-                  const isActive = location.pathname === item.path
+                  // Check if current path matches this nav item
+                  // Use startsWith to match child routes (e.g., /admin/packages/123 matches /admin/packages)
+                  // Special handling for root paths like /admin or /staff (dashboard) - exact match only
+                  const isRootPath = item.path === '/admin' || item.path === '/staff'
+                  const isActive = isRootPath
+                    ? location.pathname === item.path
+                    : location.pathname === item.path || location.pathname.startsWith(item.path + '/')
                   const isChatItem = item.title === 'Chat'
                   const Icon = item.icon
                   return (

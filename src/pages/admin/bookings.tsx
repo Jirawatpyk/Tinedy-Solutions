@@ -1182,7 +1182,7 @@ export function AdminBookings() {
         {/* Page header skeleton - matches current structure */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Manage all service bookings
             </p>
           </div>
@@ -1332,7 +1332,7 @@ export function AdminBookings() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
         <div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Manage all service bookings
           </p>
         </div>
@@ -1347,7 +1347,7 @@ export function AdminBookings() {
               />
               <label
                 htmlFor="show-archived-bookings"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
                 Show archived
               </label>

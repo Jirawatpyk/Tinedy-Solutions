@@ -107,7 +107,7 @@ export function AdminChat() {
     <div className="flex-1 flex flex-col space-y-4 min-h-0">
       {/* Page Header - Hide on mobile when chat is open */}
       <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px] ${selectedUser ? 'hidden lg:flex' : 'flex'}`}>
-        <p className="text-sm text-muted-foreground">Communicate with your team in real-time</p>
+        <p className="text-xs sm:text-sm text-muted-foreground">Communicate with your team in real-time</p>
       </div>
 
       {/* Chat Container - Mobile: Stack, Desktop: Side by side */}

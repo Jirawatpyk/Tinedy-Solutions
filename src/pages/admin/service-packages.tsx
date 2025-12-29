@@ -584,7 +584,7 @@ export function AdminServicePackages() {
       <div className="space-y-6">
         {/* Page header - Always show */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Manage cleaning and training service packages
           </p>
           {can('create', 'service_packages') && (
@@ -656,7 +656,7 @@ export function AdminServicePackages() {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Manage cleaning and training service packages
         </p>
         <div className="flex items-center gap-4">
@@ -842,35 +842,37 @@ export function AdminServicePackages() {
       {/* Filters */}
       <Card>
         <CardContent className="py-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <Input
-                placeholder="Search packages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 text-xs"
-              />
+          <div className="flex flex-col gap-3">
+            {/* Search */}
+            <Input
+              placeholder="Search packages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 text-xs"
+            />
+            {/* Type and Pricing filters - side by side */}
+            <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="cleaning">Cleaning</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
+                  <SelectValue placeholder="Filter by pricing" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pricing</SelectItem>
+                  <SelectItem value="fixed">Fixed Price</SelectItem>
+                  <SelectItem value="tiered">Tiered Price</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
-                <SelectItem value="training">Training</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={pricingModelFilter} onValueChange={setPricingModelFilter}>
-              <SelectTrigger className="w-full sm:w-48 h-8 text-xs">
-                <SelectValue placeholder="Filter by pricing" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Pricing</SelectItem>
-                <SelectItem value="fixed">Fixed Price</SelectItem>
-                <SelectItem value="tiered">Tiered Price</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>

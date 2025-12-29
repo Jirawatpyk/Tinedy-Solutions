@@ -281,6 +281,9 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
                     placeholder="contact@tinedy.com"
                     {...field}
                   />
+                  <p className="text-xs text-amber-600">
+                    ⚠️ This email is used to send booking confirmations to customers. Change with caution.
+                  </p>
                   {fieldState.error && (
                     <p className="text-sm text-red-500">{fieldState.error.message}</p>
                   )}

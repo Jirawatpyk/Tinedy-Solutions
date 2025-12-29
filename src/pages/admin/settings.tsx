@@ -29,8 +29,8 @@ export default function AdminSettings() {
         {/* Page Header */}
         <div className="bg-white border-b">
           <div className="px-4 sm:px-6 py-6">
-            <p className="text-sm text-muted-foreground">
-              Manage your system settings and preferences
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Manage your business information and payment settings
             </p>
           </div>
         </div>
@@ -49,8 +49,8 @@ export default function AdminSettings() {
         {/* Page Header */}
         <div className="bg-white border-b">
           <div className="px-4 sm:px-6 py-6">
-            <p className="text-sm text-muted-foreground">
-              Manage your system settings and preferences
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Manage your business information and payment settings
             </p>
           </div>
         </div>
@@ -93,8 +93,8 @@ export default function AdminSettings() {
         {/* Page Header */}
         <div className="bg-white border-b">
           <div className="px-4 sm:px-6 py-6">
-            <p className="text-sm text-muted-foreground">
-              Manage your system settings and preferences
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Manage your business information and payment settings
             </p>
           </div>
         </div>
