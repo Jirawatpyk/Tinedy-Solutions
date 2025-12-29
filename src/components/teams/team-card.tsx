@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 
 interface TeamMember {
   id: string
@@ -81,7 +82,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
   )
 
   return (
-    <Card className={`hover:shadow-md transition-shadow ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
+    <Card className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
       <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
@@ -113,7 +114,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
               </div>
             </div>
           </div>
-          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex gap-1 flex-shrink-0">
             {isArchived && onRestore ? (
               <Button
                 variant="outline"
@@ -126,22 +127,24 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
               </Button>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(team)}
-                  disabled={isArchived}
-                  className="h-8 w-8 sm:h-10 sm:w-10"
-                >
-                  <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
+                <SimpleTooltip content="Edit team">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(team)}
+                    disabled={isArchived}
+                    className="h-7 w-7 sm:h-8 sm:w-8"
+                  >
+                    <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </Button>
+                </SimpleTooltip>
                 <PermissionAwareDeleteButton
                   resource="teams"
                   itemName={team.name}
                   onDelete={() => onDelete(team.id)}
                   onCancel={onCancel ? () => onCancel(team.id) : undefined}
                   cancelText="Archive"
-                  className="h-8 w-8 sm:h-10 sm:w-10"
+                  className="h-7 w-7 sm:h-8 sm:w-8"
                   warningMessage={
                     (team.member_count || 0) > 0 || (team.booking_count || 0) > 0
                       ? `This team has ${team.member_count || 0} member(s)${(team.booking_count || 0) > 0 ? ` and ${team.booking_count} booking(s)` : ''} that will be affected.`

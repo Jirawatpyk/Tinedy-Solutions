@@ -19,6 +19,7 @@ import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useOptimisticDelete } from '@/hooks/optimistic'
 import {
   Select,
@@ -477,18 +478,20 @@ export function AdminCustomers() {
                         </Button>
                       ) : (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(customer)
-                            }}
-                            className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-tinedy-blue/10 hover:text-tinedy-blue"
-                            disabled={isArchived}
-                          >
-                            <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </Button>
+                          <SimpleTooltip content="Edit customer">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEditDialog(customer)
+                              }}
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              disabled={isArchived}
+                            >
+                              <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                          </SimpleTooltip>
                           <PermissionAwareDeleteButton
                             resource="customers"
                             itemName={customer.full_name}

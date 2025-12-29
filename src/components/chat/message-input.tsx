@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Send, Paperclip, X } from 'lucide-react'
 
 interface MessageInputProps {
@@ -94,16 +95,17 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
         />
 
         {/* Attach button */}
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          className="h-[60px] w-[60px]"
-          title="Attach file"
-        >
-          <Paperclip className="h-5 w-5" />
-        </Button>
+        <SimpleTooltip content="Attach file" side="top">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="h-[60px] w-[60px]"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+        </SimpleTooltip>
 
         <Textarea
           ref={textareaRef}

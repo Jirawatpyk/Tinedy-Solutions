@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Download, Trash2, Archive } from 'lucide-react'
 import { usePermissions } from '@/hooks/use-permissions'
 
@@ -78,42 +79,45 @@ export function BulkActionsToolbar({
 
           {/* Right: Export + Delete/Archive */}
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onBulkExport}
-              className="h-8 w-8 sm:w-auto p-0 sm:px-3"
-              title="Export to Excel"
-            >
-              <Download className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+            <SimpleTooltip content="Export to Excel">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onBulkExport}
+                className="h-8 w-8 sm:w-auto p-0 sm:px-3"
+              >
+                <Download className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </SimpleTooltip>
 
             {/* Permission-aware Delete/Archive button */}
             {hasDeletePermission && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={onBulkDelete}
-                title="Delete selected bookings (Admin only)"
-                className="h-8 w-8 sm:w-auto p-0 sm:px-3"
-              >
-                <Trash2 className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Delete</span>
-              </Button>
+              <SimpleTooltip content="Delete selected bookings (Admin only)">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={onBulkDelete}
+                  className="h-8 w-8 sm:w-auto p-0 sm:px-3"
+                >
+                  <Trash2 className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              </SimpleTooltip>
             )}
 
             {!hasDeletePermission && hasArchivePermission && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={onBulkDelete}
-                title="Archive selected bookings (Manager)"
-                className="h-8 w-8 sm:w-auto p-0 sm:px-3"
-              >
-                <Archive className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Archive</span>
-              </Button>
+              <SimpleTooltip content="Archive selected bookings (Manager)">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={onBulkDelete}
+                  className="h-8 w-8 sm:w-auto p-0 sm:px-3"
+                >
+                  <Archive className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Archive</span>
+                </Button>
+              </SimpleTooltip>
             )}
           </div>
         </div>

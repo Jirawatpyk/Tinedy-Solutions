@@ -4,6 +4,7 @@ import { Menu, Search, User, Users, Calendar, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
@@ -271,29 +272,44 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
         {/* Left side - Menu button */}
         <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-
-          {/* Search bar - Admin & Manager, icon on mobile, full on tablet+ */}
-          {(profile?.role === 'admin' || profile?.role === 'manager') && (
+          <SimpleTooltip content="Menu" enabled={true}>
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
-              className="md:w-64 lg:w-96 md:justify-start text-muted-foreground md:px-3"
-              onClick={() => setOpen(true)}
+              className="lg:hidden"
+              onClick={onMenuClick}
             >
-              <Search className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Search...</span>
-              <kbd className="hidden md:inline-flex pointer-events-none ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                <span className="text-xs">⌘</span>K
-              </kbd>
+              <Menu className="h-6 w-6" />
             </Button>
+          </SimpleTooltip>
+
+          {/* Search bar - Admin & Manager */}
+          {(profile?.role === 'admin' || profile?.role === 'manager') && (
+            <>
+              {/* Mobile: icon only with tooltip */}
+              <SimpleTooltip content="Search (⌘K)">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setOpen(true)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </SimpleTooltip>
+              {/* Tablet+: full search bar without tooltip */}
+              <Button
+                variant="outline"
+                className="hidden md:flex w-64 lg:w-96 justify-start text-muted-foreground px-3"
+                onClick={() => setOpen(true)}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                <span>Search...</span>
+                <kbd className="pointer-events-none ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 inline-flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+            </>
           )}
 
           {/* Quick Availability Check - Admin & Manager, show on all screens */}

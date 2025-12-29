@@ -3,6 +3,9 @@
  *
  * Inline status editor with Popover for quick status changes
  * Displays current status as a badge and opens Popover with radio group when clicked
+ *
+ * Note: This component does NOT show its own confirmation dialog.
+ * The parent component (e.g., Calendar page via useCalendarActions) handles confirmation.
  */
 
 import React, { useState } from 'react'
@@ -12,7 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { StatusChangeConfirmDialog } from './StatusChangeConfirmDialog'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, type BookingStatus } from '@/constants/booking-status'
 
 // Text colors for radio group labels
@@ -47,7 +49,6 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
   availableStatuses,
 }) => {
   const popover = useModalState()
-  const confirmDialog = useModalState()
   const [selectedStatus, setSelectedStatus] = useState(currentStatus)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -62,16 +63,12 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
       return
     }
 
-    // Show confirmation dialog instead of directly updating
-    confirmDialog.open()
-  }
-
-  const handleConfirm = async () => {
-    confirmDialog.close()
+    // Close popover and call onStatusChange
+    // The parent component (useCalendarActions) will handle the confirmation dialog
     setIsLoading(true)
+    popover.close()
     try {
       await onStatusChange(selectedStatus)
-      popover.close()
     } catch (error) {
       console.error('Failed to update status:', error)
       // Reset to current status on error
@@ -79,11 +76,6 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleCancelConfirm = () => {
-    confirmDialog.close()
-    // Don't close the popover, let user change their selection
   }
 
   const handleCancel = () => {
@@ -98,9 +90,8 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
       // Reset to current status when opening
       setSelectedStatus(currentStatus)
     } else {
-      // Cleanup: reset selectedStatus and close confirm dialog when closing popover
+      // Cleanup: reset selectedStatus when closing popover
       setSelectedStatus(currentStatus)
-      confirmDialog.close()
     }
   }
 
@@ -169,15 +160,6 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
           </div>
         </PopoverContent>
       </Popover>
-
-      {/* Confirmation Dialog */}
-      <StatusChangeConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        onConfirm={handleConfirm}
-        onCancel={handleCancelConfirm}
-        currentStatus={currentStatus}
-        newStatus={selectedStatus}
-      />
     </>
   )
 }

@@ -50,6 +50,7 @@ import {
   BarChart3,
   FileText,
 } from 'lucide-react'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 
 interface PackageStats {
   total_bookings: number
@@ -506,15 +507,17 @@ export default function AdminPackageDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="h-8 w-8 sm:h-10 sm:w-10"
-            aria-label="Go back to packages list"
-          >
-            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
+          <SimpleTooltip content="Back">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="h-8 w-8 sm:h-10 sm:w-10"
+              aria-label="Go back to packages list"
+            >
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+          </SimpleTooltip>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-tinedy-dark truncate">
               {packageData.name}
@@ -526,45 +529,72 @@ export default function AdminPackageDetail() {
         {/* Action Buttons - Based on permissions.ts */}
         <PermissionGuard requires={{ mode: 'action', action: 'update', resource: 'service_packages' }}>
           <div className="flex gap-1 sm:gap-2 w-full sm:w-auto justify-end">
+            {/* Toggle Active - Mobile: icon with tooltip, Desktop: full button */}
+            <SimpleTooltip content={packageData.is_active ? 'Deactivate' : 'Activate'}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleToggleActive}
+                disabled={toggling}
+                className="h-8 w-8 sm:hidden"
+              >
+                {packageData.is_active ? (
+                  <XCircle className="h-3.5 w-3.5" />
+                ) : (
+                  <CheckCircle className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </SimpleTooltip>
             <Button
               variant="outline"
               size="sm"
               onClick={handleToggleActive}
               disabled={toggling}
-              className="h-8 sm:h-9"
+              className="hidden sm:flex h-9"
             >
               {packageData.is_active ? (
                 <>
-                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Deactivate</span>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Deactivate
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Activate</span>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Activate
                 </>
               )}
             </Button>
+
+            {/* Edit - Mobile: icon with tooltip, Desktop: full button */}
+            <SimpleTooltip content="Edit">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsEditDialogOpen(true)}
+                className="h-8 w-8 sm:hidden"
+              >
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </SimpleTooltip>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsEditDialogOpen(true)}
-              className="h-8 sm:h-9"
+              className="hidden sm:flex h-9"
             >
-              <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Edit</span>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
-            {/* Archive/Delete - Uses PermissionAwareDeleteButton */}
+
+            {/* Archive/Delete - responsive: icon on mobile, full button on desktop */}
             <PermissionAwareDeleteButton
               resource="service_packages"
               itemName={packageData.name}
               onDelete={handleDelete}
               onCancel={handleArchive}
               cancelText="Archive"
-              variant="default"
-              size="sm"
               buttonVariant="outline"
-              className="h-8 sm:h-9"
+              responsive
               disabled={stats.total_bookings > 0}
               disabledReason={stats.total_bookings > 0 ? `Cannot delete/archive: Package has ${stats.total_bookings} booking(s)` : undefined}
             />

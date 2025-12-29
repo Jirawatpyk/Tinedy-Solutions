@@ -4,6 +4,7 @@ import { CalendarCheck } from 'lucide-react'
 import { useModalState } from '@/hooks/use-modal-state'
 import { createLogger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import {
   Dialog,
   DialogContent,
@@ -149,15 +150,27 @@ export function QuickAvailabilityCheck() {
 
   return (
     <>
-      {/* Quick Access Button - icon on mobile, text on tablet+ */}
+      {/* Quick Access Button - icon on mobile with tooltip, text on tablet+ without tooltip */}
+      {/* Mobile: icon only with tooltip */}
+      <SimpleTooltip content="Check Availability">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={dialog.open}
+          className="md:hidden"
+        >
+          <CalendarCheck className="h-4 w-4" />
+        </Button>
+      </SimpleTooltip>
+      {/* Tablet+: full button without tooltip */}
       <Button
         variant="outline"
         size="sm"
         onClick={dialog.open}
-        className="gap-2"
+        className="hidden md:flex gap-2"
       >
         <CalendarCheck className="h-4 w-4" />
-        <span className="hidden md:inline">Check Availability</span>
+        <span>Check Availability</span>
       </Button>
 
       {/* Step 1: Input Dialog */}

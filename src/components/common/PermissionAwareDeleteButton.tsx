@@ -5,6 +5,8 @@
  * - Admin: Shows "Delete" button (hard delete)
  * - Manager: Shows "Cancel/Archive" button (soft delete)
  * - Others: Shows nothing
+ *
+ * Supports responsive mode: icon-only on mobile, full button on desktop
  */
 
 import { useState } from 'react'
@@ -12,12 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Trash2, Archive } from 'lucide-react'
 import { ConfirmDialog } from './ConfirmDialog'
 import { usePermissions } from '@/hooks/use-permissions'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import type { PermissionResource } from '@/types/common'
 
 interface PermissionAwareDeleteButtonProps {
@@ -42,7 +39,7 @@ interface PermissionAwareDeleteButtonProps {
   onCancel?: () => void | Promise<void>
 
   /**
-   * Button variant
+   * Button variant: 'icon' = icon only, 'default' = icon + text
    */
   variant?: 'default' | 'icon'
 
@@ -80,6 +77,18 @@ interface PermissionAwareDeleteButtonProps {
    * Tooltip message when button is disabled
    */
   disabledReason?: string
+
+  /**
+   * Enable responsive mode: icon-only on mobile (< sm), full button on desktop
+   * When true, ignores 'variant' prop and uses responsive behavior
+   */
+  responsive?: boolean
+
+  /**
+   * Breakpoint for responsive mode (default: 'sm')
+   * 'sm' = 640px, 'md' = 768px, 'lg' = 1024px
+   */
+  responsiveBreakpoint?: 'sm' | 'md' | 'lg'
 }
 
 export function PermissionAwareDeleteButton({
@@ -95,6 +104,8 @@ export function PermissionAwareDeleteButton({
   warningMessage,
   disabled = false,
   disabledReason,
+  responsive = false,
+  responsiveBreakpoint = 'sm',
 }: PermissionAwareDeleteButtonProps) {
   const { canDelete, canSoftDelete } = usePermissions()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -129,70 +140,124 @@ export function PermissionAwareDeleteButton({
     }
   }
 
-  // Button content for delete action
-  const DeleteButtonContent = () => (
-    <>
-      {variant === 'icon' ? (
-        <Trash2 className="h-4 w-4 text-destructive" />
-      ) : (
-        <>
-          <Trash2 className="h-4 w-4 mr-2 text-destructive" />
-          Delete
-        </>
-      )}
-    </>
-  )
-
-  // Button content for cancel action
-  const CancelButtonContent = () => (
-    <>
-      {variant === 'icon' ? (
-        <Archive className="h-4 w-4 text-orange-500" />
-      ) : (
-        <>
-          <Archive className="h-4 w-4 mr-2 text-orange-500" />
-          {cancelText}
-        </>
-      )}
-    </>
-  )
-
   const isDisabled = disabled || isProcessing
 
-  const buttonElement = (
-    <Button
-      variant={buttonVariant}
-      size={size}
-      onClick={(e) => {
-        e.stopPropagation()
-        if (!isDisabled) {
-          setConfirmOpen(true)
-        }
-      }}
-      className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      disabled={isDisabled}
-      title={isDisabled && disabledReason ? disabledReason : (showDeleteButton ? 'Delete (Admin only)' : `${cancelText} (Cancel/Archive)`)}
-    >
-      {showDeleteButton ? <DeleteButtonContent /> : <CancelButtonContent />}
-    </Button>
-  )
+  // Tooltip text based on action and state
+  const tooltipText = isDisabled && disabledReason
+    ? disabledReason
+    : showDeleteButton
+      ? 'Delete (Admin only)'
+      : `${cancelText}`
 
+  const actionText = showDeleteButton ? 'Delete' : cancelText
+  const iconColor = showDeleteButton ? 'text-destructive' : 'text-orange-500'
+  const Icon = showDeleteButton ? Trash2 : Archive
+
+  // Responsive breakpoint classes
+  const breakpointHidden = {
+    sm: 'sm:hidden',
+    md: 'md:hidden',
+    lg: 'lg:hidden',
+  }
+  const breakpointFlex = {
+    sm: 'hidden sm:flex',
+    md: 'hidden md:flex',
+    lg: 'hidden lg:flex',
+  }
+
+  // Non-responsive mode (original behavior)
+  if (!responsive) {
+    const buttonElement = (
+      <Button
+        variant={buttonVariant}
+        size={size}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!isDisabled) {
+            setConfirmOpen(true)
+          }
+        }}
+        className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        disabled={isDisabled}
+      >
+        {variant === 'icon' ? (
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+        ) : (
+          <>
+            <Icon className={`h-4 w-4 mr-2 ${iconColor}`} />
+            {actionText}
+          </>
+        )}
+      </Button>
+    )
+
+    return (
+      <>
+        <SimpleTooltip content={tooltipText}>
+          <span className="inline-flex">{buttonElement}</span>
+        </SimpleTooltip>
+
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={handleConfirm}
+          title={showDeleteButton ? 'Delete Item?' : 'Archive Item?'}
+          description={
+            showDeleteButton
+              ? `Are you sure you want to delete "${itemName}"? ${warningMessage ? warningMessage + ' ' : ''}This action cannot be undone.`
+              : `Are you sure you want to archive "${itemName}"? The item will be hidden but can be restored by admin.`
+          }
+          confirmText={showDeleteButton ? 'Delete' : 'Archive'}
+          cancelText="Cancel"
+          variant={showDeleteButton ? 'destructive' : 'warning'}
+        />
+      </>
+    )
+  }
+
+  // Responsive mode: icon on mobile, full button on desktop
   return (
     <>
-      {disabled && disabledReason ? (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>{buttonElement}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{disabledReason}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      ) : (
-        buttonElement
-      )}
+      {/* Mobile: icon only with tooltip */}
+      <SimpleTooltip content={tooltipText}>
+        <span className={`inline-flex ${breakpointHidden[responsiveBreakpoint]}`}>
+          <Button
+            variant={buttonVariant}
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!isDisabled) {
+                setConfirmOpen(true)
+              }
+            }}
+            className={`h-8 w-8 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isDisabled}
+          >
+            <Icon className={`h-4 w-4 ${iconColor}`} />
+          </Button>
+        </span>
+      </SimpleTooltip>
+
+      {/* Desktop: full button with tooltip */}
+      <SimpleTooltip content={isDisabled && disabledReason ? disabledReason : tooltipText}>
+        <span className={`inline-flex ${breakpointFlex[responsiveBreakpoint]}`}>
+          <Button
+            variant={buttonVariant}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!isDisabled) {
+                setConfirmOpen(true)
+              }
+            }}
+            className={`h-9 ${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isDisabled}
+          >
+            <Icon className={`h-4 w-4 mr-2 ${iconColor}`} />
+            {actionText}
+          </Button>
+        </span>
+      </SimpleTooltip>
 
       <ConfirmDialog
         open={confirmOpen}

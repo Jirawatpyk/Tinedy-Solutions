@@ -207,7 +207,7 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
 
                 {/* Status Filter */}
                 <FilterMultiSelect
-                  label="Status"
+                  label="Booking Status"
                   icon={<BookmarkCheck className="h-4 w-4" />}
                   options={statusOptions}
                   selectedValues={filters.statuses}
@@ -330,7 +330,7 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
           {selectedStatusLabels.map((label, index) => (
             <FilterBadge
               key={`status-${filters.statuses[index]}`}
-              label="Status"
+              label="Booking Status"
               value={label || 'Unknown'}
               onRemove={() => filterControls.toggleStatus(filters.statuses[index])}
               icon={<BookmarkCheck className="h-3 w-3" />}

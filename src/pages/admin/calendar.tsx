@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { format } from 'date-fns'
 
 export function AdminCalendar() {
@@ -357,23 +358,27 @@ export function AdminCalendar() {
                   <CardTitle className="font-display text-2xl">
                     {format(calendar.dateControls.currentDate, 'MMMM yyyy')}
                   </CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={calendar.dateControls.goToPreviousMonth}
-                      className="h-8 w-8"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={calendar.dateControls.goToNextMonth}
-                      className="h-8 w-8"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                  <div className="flex gap-1">
+                    <SimpleTooltip content="Previous month">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={calendar.dateControls.goToPreviousMonth}
+                        className="h-8 w-8"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                    </SimpleTooltip>
+                    <SimpleTooltip content="Next month">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={calendar.dateControls.goToNextMonth}
+                        className="h-8 w-8"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </SimpleTooltip>
                   </div>
                 </div>
               </CardHeader>

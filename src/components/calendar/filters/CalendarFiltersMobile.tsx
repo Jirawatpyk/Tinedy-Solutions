@@ -193,7 +193,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
 
             {/* Status Filter */}
             <FilterMultiSelect
-              label="Status"
+              label="Booking Status"
               icon={<BookmarkCheck className="h-4 w-4" />}
               options={statusOptions}
               selectedValues={filters.statuses}

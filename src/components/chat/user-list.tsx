@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Search, User, Trash2, Plus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import type { Conversation } from '@/types/chat'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -165,13 +166,16 @@ export function UserList({
                           </span>
                         )}
                         {/* Delete Button */}
-                        <button
-                          onClick={(e) => handleDeleteClick(conversation.user.id, e)}
-                          className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-1"
-                          title="Delete chat"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <SimpleTooltip content="Delete chat">
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteClick(conversation.user.id, e)}
+                            className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-1"
+                            aria-label="Delete chat"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </SimpleTooltip>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

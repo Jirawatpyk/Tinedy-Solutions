@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { supabase } from '@/lib/supabase'
 import { getNavigationRoutes } from '@/lib/route-utils'
 
@@ -157,18 +158,19 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               </span>
             </div>
             {/* Collapse button - absolute positioned */}
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-tinedy-blue/50 transition-colors absolute right-2 top-1/2 -translate-y-1/2"
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-5 w-5" />
-              ) : (
-                <ChevronLeft className="h-5 w-5" />
-              )}
-            </button>
+            <SimpleTooltip content={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} side="right">
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-tinedy-blue/50 transition-colors absolute right-2 top-1/2 -translate-y-1/2"
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </button>
+            </SimpleTooltip>
           </div>
 
           {/* User info with dropdown */}
@@ -249,45 +251,43 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   const Icon = item.icon
                   return (
                     <li key={item.key}>
-                      <Link
-                        to={item.path}
-                        onClick={onClose}
-                        className={cn(
-                          'flex items-center rounded-lg text-sm font-medium transition-all duration-300 relative group',
-                          isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5',
-                          isActive
-                            ? 'bg-tinedy-green text-white'
-                            : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
-                        )}
-                        title={isCollapsed ? item.title : undefined}
+                      <SimpleTooltip
+                        content={`${item.title}${isChatItem && unreadCount > 0 ? ` (${unreadCount > 10 ? '10+' : unreadCount})` : ''}`}
+                        side="right"
+                        enabled={isCollapsed}
                       >
-                        {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
-                        <span className={cn(
-                          "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
-                          isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                        )}>
-                          {item.title}
-                        </span>
-                        {isChatItem && unreadCount > 0 && (
-                          <Badge className={cn(
-                            "bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-300",
-                            isCollapsed ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-auto"
+                        <Link
+                          to={item.path}
+                          onClick={onClose}
+                          className={cn(
+                            'flex items-center rounded-lg text-sm font-medium transition-all duration-300 relative',
+                            isCollapsed ? 'justify-center px-3 py-2.5' : 'space-x-3 px-3 py-2.5',
+                            isActive
+                              ? 'bg-tinedy-green text-white'
+                              : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
+                          )}
+                        >
+                          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+                          <span className={cn(
+                            "flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap",
+                            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                           )}>
-                            {unreadCount > 10 ? '10+' : unreadCount}
-                          </Badge>
-                        )}
-                        {/* Show unread count as dot when collapsed */}
-                        {isCollapsed && isChatItem && unreadCount > 0 && (
-                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        )}
-                        {/* Tooltip on hover when collapsed */}
-                        {isCollapsed && (
-                          <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                             {item.title}
-                            {isChatItem && unreadCount > 0 && ` (${unreadCount > 10 ? '10+' : unreadCount})`}
                           </span>
-                        )}
-                      </Link>
+                          {isChatItem && unreadCount > 0 && (
+                            <Badge className={cn(
+                              "bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-300",
+                              isCollapsed ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-auto"
+                            )}>
+                              {unreadCount > 10 ? '10+' : unreadCount}
+                            </Badge>
+                          )}
+                          {/* Show unread count as dot when collapsed */}
+                          {isCollapsed && isChatItem && unreadCount > 0 && (
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                          )}
+                        </Link>
+                      </SimpleTooltip>
                     </li>
                   )
                 })}

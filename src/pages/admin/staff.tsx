@@ -31,6 +31,7 @@ import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { useAuth } from '@/contexts/auth-context'
 import { useStaffWithRatings } from '@/hooks/useStaff'
@@ -620,7 +621,7 @@ export function AdminStaff() {
             {filteredStaff.slice(0, displayCount).map((member) => (
               <Card
                 key={member.id}
-                className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
+                className="hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer"
                 onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
                 <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
@@ -659,19 +660,21 @@ export function AdminStaff() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-1 sm:gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       {/* Admin: แก้ไขได้ทุกคน | Manager: แก้ไขได้ตัวเอง + Staff | Staff: แก้ไขได้ตัวเอง */}
                       {(profile?.role === 'admin' ||
                         member.id === user?.id ||
                         (profile?.role === 'manager' && member.role === 'staff')) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(member)}
-                          className="h-8 w-8 sm:h-10 sm:w-10"
-                        >
-                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </Button>
+                        <SimpleTooltip content="Edit staff">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(member)}
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                          >
+                            <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          </Button>
+                        </SimpleTooltip>
                       )}
                       {/* ซ่อนปุ่ม Delete ถ้าเป็นโปรไฟล์ตัวเอง */}
                       {user?.id !== member.id && (
@@ -679,7 +682,7 @@ export function AdminStaff() {
                           resource="staff"
                           itemName={member.full_name}
                           onDelete={() => deleteStaff(member.id)}
-                          className="h-8 w-8 sm:h-10 sm:w-10"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           warningMessage={
                             (member.booking_count || 0) > 0 || (member.team_count || 0) > 0
                               ? `This staff has ${member.booking_count || 0} booking(s)${(member.team_count || 0) > 0 ? ` and is a member of ${member.team_count} team(s)` : ''}.`

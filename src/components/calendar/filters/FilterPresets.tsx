@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { cn } from '@/lib/utils'
 import type { CalendarFilterPreset } from '@/types/calendar-filters'
 
@@ -122,26 +123,26 @@ export const FilterPresets: React.FC<FilterPresetsProps> = ({
         const isActive = activePreset === preset.value
 
         return (
-          <Button
-            key={preset.value}
-            onClick={() => handlePresetClick(preset.value)}
-            variant={isActive ? 'default' : 'outline'}
-            size={showDescriptions ? 'default' : 'sm'}
-            className={cn(
-              'transition-all',
-              orientation === 'vertical' && 'justify-start',
-              isActive && 'ring-2 ring-tinedy-blue ring-offset-2'
-            )}
-            title={preset.description}
-          >
-            {preset.icon}
-            <span className="ml-2">{preset.label}</span>
-            {showDescriptions && orientation === 'vertical' && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {preset.description}
-              </span>
-            )}
-          </Button>
+          <SimpleTooltip key={preset.value} content={preset.description}>
+            <Button
+              onClick={() => handlePresetClick(preset.value)}
+              variant={isActive ? 'default' : 'outline'}
+              size={showDescriptions ? 'default' : 'sm'}
+              className={cn(
+                'transition-all',
+                orientation === 'vertical' && 'justify-start',
+                isActive && 'ring-2 ring-tinedy-blue ring-offset-2'
+              )}
+            >
+              {preset.icon}
+              <span className="ml-2">{preset.label}</span>
+              {showDescriptions && orientation === 'vertical' && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {preset.description}
+                </span>
+              )}
+            </Button>
+          </SimpleTooltip>
         )
       })}
     </div>
@@ -174,20 +175,20 @@ export const FilterPresetsCompact: React.FC<FilterPresetsCompactProps> = ({
         const isActive = activePreset === preset.value
 
         return (
-          <Button
-            key={preset.value}
-            onClick={() => onPresetChange(preset.value)}
-            variant={isActive ? 'default' : 'ghost'}
-            size="sm"
-            className={cn(
-              'h-8 w-8 p-0',
-              isActive && 'ring-2 ring-tinedy-blue ring-offset-1'
-            )}
-            title={`${preset.label} - ${preset.description}`}
-          >
-            {preset.icon}
-            <span className="sr-only">{preset.label}</span>
-          </Button>
+          <SimpleTooltip key={preset.value} content={`${preset.label} - ${preset.description}`}>
+            <Button
+              onClick={() => onPresetChange(preset.value)}
+              variant={isActive ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                'h-8 w-8 p-0',
+                isActive && 'ring-2 ring-tinedy-blue ring-offset-1'
+              )}
+            >
+              {preset.icon}
+              <span className="sr-only">{preset.label}</span>
+            </Button>
+          </SimpleTooltip>
         )
       })}
     </div>

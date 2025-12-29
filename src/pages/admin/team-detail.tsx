@@ -26,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Edit } from 'lucide-react'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { useToast } from '@/hooks/use-toast'
 import { TeamDetailHeader } from '@/components/teams/team-detail/TeamDetailHeader'
 import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
@@ -479,15 +481,78 @@ export function AdminTeamDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => navigate(`${basePath}/teams`)}
-        className="gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Teams
-      </Button>
+      {/* Header with Back, Edit and Delete Buttons */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <SimpleTooltip content="Back">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(`${basePath}/teams`)}
+            className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+        </SimpleTooltip>
+
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-tinedy-dark flex-1 min-w-0 truncate">
+          {team.name}
+        </h1>
+
+        {/* Action buttons */}
+        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+          {/* Edit: icon on mobile with tooltip, full on desktop */}
+          <SimpleTooltip content="Edit">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={openEditDialog}
+              className="h-8 w-8 sm:hidden"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </SimpleTooltip>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openEditDialog}
+            className="hidden sm:flex h-9"
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+
+          {/* Delete: responsive mode */}
+          <PermissionAwareDeleteButton
+            resource="teams"
+            itemName={team.name}
+            onDelete={async () => {
+              // Hard delete
+              const { error } = await supabase
+                .from('teams')
+                .delete()
+                .eq('id', team.id)
+
+              if (error) throw error
+
+              toast({
+                title: 'Success',
+                description: 'Team deleted successfully',
+              })
+
+              navigate(`${basePath}/teams`)
+            }}
+            onCancel={archiveTeam}
+            cancelText="Archive"
+            buttonVariant="outline"
+            responsive
+            warningMessage={
+              (team.members?.length || 0) > 0 || (stats?.totalBookings || 0) > 0
+                ? `This team has ${team.members?.length || 0} member(s)${(stats?.totalBookings || 0) > 0 ? ` and ${stats?.totalBookings} booking(s)` : ''} that will be affected.`
+                : undefined
+            }
+          />
+        </div>
+      </div>
 
       {/* Team Header */}
       <TeamDetailHeader
@@ -496,10 +561,6 @@ export function AdminTeamDetail() {
           member_count: team.members?.length || 0,
           booking_count: stats?.totalBookings || 0,
         }}
-        onUpdate={loadTeamDetail}
-        onEdit={openEditDialog}
-        onArchive={archiveTeam}
-        basePath={basePath}
       />
 
       {/* Team Stats */}

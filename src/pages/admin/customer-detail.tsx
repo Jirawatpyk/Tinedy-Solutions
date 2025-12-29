@@ -8,6 +8,7 @@ import { useStaffList } from '@/hooks/useStaff'
 import { useBookingsByCustomer } from '@/hooks/useBookings'
 import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -875,32 +876,48 @@ export function AdminCustomerDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to={`${basePath}/customers`}>
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+          <SimpleTooltip content="Back">
+            <Link to={`${basePath}/customers`}>
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+          </SimpleTooltip>
           <div>
             <p className="text-sm text-muted-foreground">View and manage customer details</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2">
+          {/* Edit - Mobile: icon with tooltip, Desktop: full button */}
+          <SimpleTooltip content="Edit">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsEditDialogOpen(true)}
+              className="h-8 w-8 sm:hidden"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </SimpleTooltip>
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setIsEditDialogOpen(true)}
+            className="hidden sm:flex h-9"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
+
+          {/* Delete - responsive: icon on mobile, full button on desktop */}
           <PermissionAwareDeleteButton
             resource="customers"
             itemName={customer.full_name}
             onDelete={deleteCustomer}
             onCancel={archiveCustomer}
             cancelText="Archive"
-            variant="default"
-            size="sm"
             buttonVariant="outline"
+            responsive
             warningMessage={
               stats?.total_bookings && stats.total_bookings > 0
                 ? `This customer has ${stats.total_bookings} booking(s) that will also be deleted.`
