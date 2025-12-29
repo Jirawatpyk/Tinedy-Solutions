@@ -2,7 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
+import { useOptimisticDelete } from '@/hooks/optimistic'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,7 +33,7 @@ import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
 import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
 import { TeamRecentBookings } from '@/components/teams/team-detail/TeamRecentBookings'
 import { TeamPerformanceCharts } from '@/components/teams/team-detail/TeamPerformanceCharts'
-import { mapErrorToUserMessage, getArchiveErrorMessage } from '@/lib/error-messages'
+import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
   TeamUpdateSchema,
   TeamUpdateTransformSchema,
@@ -73,6 +76,7 @@ export function AdminTeamDetail() {
   const { teamId } = useParams<{ teamId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -83,6 +87,16 @@ export function AdminTeamDetail() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
+
+  // Initialize optimistic delete hook - เหมือนกับหน้า teams.tsx
+  const deleteOps = useOptimisticDelete({
+    table: 'teams',
+    onSuccess: () => {
+      // ลบ cache และ navigate กลับไปหน้า list
+      queryClient.removeQueries({ queryKey: queryKeys.teams.all })
+      navigate(`${basePath}/teams`)
+    },
+  })
 
   // React Hook Form - Update Team
   const updateTeamForm = useForm<TeamUpdateFormData>({
@@ -319,33 +333,10 @@ export function AdminTeamDetail() {
     }
   }
 
-  const archiveTeam = async () => {
+  // ใช้ useOptimisticDelete เหมือนกับหน้า teams.tsx
+  const archiveTeam = () => {
     if (!team) return
-
-    try {
-      const { error } = await supabase
-        .rpc('soft_delete_record', {
-          table_name: 'teams',
-          record_id: team.id
-        })
-
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Team archived successfully',
-      })
-
-      navigate(`${basePath}/teams`)
-    } catch (error) {
-      console.error('Error archiving team:', error)
-      const errorMessage = getArchiveErrorMessage()
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
+    deleteOps.softDelete.mutate({ id: team.id })
   }
 
   const onSubmitAddMember = async (data: AddTeamMemberFormData) => {

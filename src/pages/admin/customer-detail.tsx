@@ -1,7 +1,9 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
 import { useStaffList } from '@/hooks/useStaff'
 import { useBookingsByCustomer } from '@/hooks/useBookings'
 import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
@@ -11,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
-import { useOptimisticPayment } from '@/hooks/optimistic'
+import { useOptimisticPayment, useOptimisticDelete } from '@/hooks/optimistic'
 import { mapErrorToUserMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
@@ -152,7 +154,18 @@ export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const { softDelete } = useSoftDelete('bookings')
+
+  // Initialize optimistic delete hook for customers - เหมือนกับ team-detail
+  const customerDeleteOps = useOptimisticDelete({
+    table: 'customers',
+    onSuccess: () => {
+      // ลบ cache และ navigate กลับไปหน้า list
+      queryClient.removeQueries({ queryKey: queryKeys.customers.all })
+      navigate(`/admin/customers`)
+    },
+  })
 
   // Both admin and manager use /admin routes
   const basePath = '/admin'
@@ -570,6 +583,11 @@ export function AdminCustomerDetail() {
     }
   }
 
+  const archiveCustomer = () => {
+    if (!id) return
+    customerDeleteOps.softDelete.mutate({ id })
+  }
+
   const deleteCustomer = async () => {
     try {
       const { error } = await supabase.from('customers').delete().eq('id', id)
@@ -878,6 +896,8 @@ export function AdminCustomerDetail() {
             resource="customers"
             itemName={customer.full_name}
             onDelete={deleteCustomer}
+            onCancel={archiveCustomer}
+            cancelText="Archive"
             variant="default"
             size="sm"
             buttonVariant="outline"

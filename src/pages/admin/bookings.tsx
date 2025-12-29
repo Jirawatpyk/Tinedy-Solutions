@@ -420,6 +420,9 @@ export function AdminBookings() {
       lastSyncedBooking.current = updatedBooking
       setSelectedBooking(updatedBooking)
     }
+    // Note: We intentionally use selectedBooking?.id instead of selectedBooking
+    // to avoid infinite loop when setSelectedBooking is called
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, selectedBooking?.id, isDetailOpen])
 
   // Handle bookings error

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useStaffDashboard } from '@/hooks/useStaffDashboard'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -71,7 +71,7 @@ export default function StaffDashboard() {
   const { toast } = useToast()
 
   // Filter bookings based on debounced search query
-  const filterBookings = (bookings: StaffBooking[]): StaffBooking[] => {
+  const filterBookings = useCallback((bookings: StaffBooking[]): StaffBooking[] => {
     if (!searchQuery.trim()) return bookings
 
     const query = searchQuery.toLowerCase().trim()
@@ -93,12 +93,12 @@ export default function StaffDashboard() {
         status.includes(query)
       )
     })
-  }
+  }, [searchQuery])
 
   // Filtered bookings
-  const filteredTodayBookings = useMemo(() => filterBookings(todayBookings), [todayBookings, searchQuery])
-  const filteredUpcomingBookings = useMemo(() => filterBookings(upcomingBookings), [upcomingBookings, searchQuery])
-  const filteredCompletedBookings = useMemo(() => filterBookings(completedBookings), [completedBookings, searchQuery])
+  const filteredTodayBookings = useMemo(() => filterBookings(todayBookings), [todayBookings, filterBookings])
+  const filteredUpcomingBookings = useMemo(() => filterBookings(upcomingBookings), [upcomingBookings, filterBookings])
+  const filteredCompletedBookings = useMemo(() => filterBookings(completedBookings), [completedBookings, filterBookings])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)

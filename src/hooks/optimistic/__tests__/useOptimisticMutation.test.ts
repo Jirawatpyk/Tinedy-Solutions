@@ -248,7 +248,7 @@ describe('useOptimisticMutation', () => {
     })
 
     it('should respect shouldUpdate condition', async () => {
-      let localState = { id: '1', name: 'Original' }
+      const localState = { id: '1', name: 'Original' }
       const setState = vi.fn()
 
       const mutationFn = vi.fn().mockResolvedValue({ success: true })

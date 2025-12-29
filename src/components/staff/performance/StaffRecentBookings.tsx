@@ -165,7 +165,6 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
       if (error) throw error
 
       // Filter bookings by membership periods (same logic as Staff Portal)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filteredData = filterBookingsByMembershipPeriods(data || [], staffId, allMembershipPeriods)
 
       // Update total count after filtering

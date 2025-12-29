@@ -7,7 +7,7 @@
  * ✨ Refactored to use optimistic updates internally while maintaining the same external API
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useOptimisticDelete, type SoftDeleteTable as OptimisticSoftDeleteTable } from '@/hooks/optimistic'
 
 // Re-export type for backwards compatibility
@@ -17,6 +17,9 @@ interface SoftDeleteResult {
   success: boolean
   error?: unknown
 }
+
+// Default table for useOptimisticDelete when table is not supported
+const DEFAULT_TABLE: OptimisticSoftDeleteTable = 'bookings'
 
 /**
  * Hook for managing soft delete operations
@@ -41,18 +44,22 @@ interface SoftDeleteResult {
  * ```
  */
 export function useSoftDelete(table: SoftDeleteTable) {
-  // Use optimistic delete for supported tables
-  const isSupportedTable = (t: SoftDeleteTable): t is OptimisticSoftDeleteTable => {
-    return t !== 'service_packages'
-  }
+  // Check if table is supported for optimistic updates
+  const isSupportedTable = table !== 'service_packages'
 
-  // For supported tables, use optimistic delete
-  const deleteOps = isSupportedTable(table)
-    ? useOptimisticDelete({
-        table,
-        onSuccess: () => {}, // No-op, caller handles refetch
-      })
-    : null
+  // Get the table to use for useOptimisticDelete (always call hook unconditionally)
+  const optimisticTable: OptimisticSoftDeleteTable = isSupportedTable
+    ? (table as OptimisticSoftDeleteTable)
+    : DEFAULT_TABLE
+
+  // Always call hook unconditionally (React Hooks rule)
+  const deleteOps = useOptimisticDelete({
+    table: optimisticTable,
+    onSuccess: () => {}, // No-op, caller handles refetch
+  })
+
+  // Memoize whether we should use deleteOps
+  const shouldUseOptimistic = useMemo(() => isSupportedTable, [isSupportedTable])
 
   /**
    * Soft delete a record (archive)
@@ -60,7 +67,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
    */
   const softDelete = useCallback(
     async (id: string): Promise<SoftDeleteResult> => {
-      if (deleteOps) {
+      if (shouldUseOptimistic) {
         try {
           await deleteOps.softDelete.mutate({ id })
           return { success: true }
@@ -73,7 +80,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
       // This maintains backwards compatibility
       return { success: false, error: 'Table not supported for optimistic updates' }
     },
-    [deleteOps]
+    [deleteOps, shouldUseOptimistic]
   )
 
   /**
@@ -82,7 +89,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
    */
   const restore = useCallback(
     async (id: string): Promise<SoftDeleteResult> => {
-      if (deleteOps) {
+      if (shouldUseOptimistic) {
         try {
           await deleteOps.restore.mutate({ id })
           return { success: true }
@@ -94,7 +101,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
       // Fallback for unsupported tables
       return { success: false, error: 'Table not supported for optimistic updates' }
     },
-    [deleteOps]
+    [deleteOps, shouldUseOptimistic]
   )
 
   /**
@@ -104,7 +111,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
    */
   const permanentDelete = useCallback(
     async (id: string): Promise<SoftDeleteResult> => {
-      if (deleteOps) {
+      if (shouldUseOptimistic) {
         try {
           await deleteOps.permanentDelete.mutate({ id })
           return { success: true }
@@ -116,7 +123,7 @@ export function useSoftDelete(table: SoftDeleteTable) {
       // Fallback for unsupported tables
       return { success: false, error: 'Table not supported for optimistic updates' }
     },
-    [deleteOps]
+    [deleteOps, shouldUseOptimistic]
   )
 
   return {

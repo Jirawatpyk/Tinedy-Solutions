@@ -36,7 +36,7 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
     reports: { create: false, read: true, update: false, delete: false, export: true },
     settings: { create: false, read: true, update: true, delete: false, export: false },
     users: { create: false, read: false, update: false, delete: false, export: false },
-    service_packages: { create: false, read: true, update: false, delete: false, export: false },
+    service_packages: { create: true, read: true, update: true, delete: false, export: false },
   },
   staff: {
     bookings: { create: false, read: true, update: true, delete: false, export: false },
@@ -286,6 +286,7 @@ export const FEATURE_FLAGS: Record<string, UserRole[]> = {
   view_all_data: ['admin', 'manager'],
   manage_teams: ['admin', 'manager'],
   assign_staff: ['admin', 'manager'],
+  view_archived: ['admin'], // Only admin can view archived/soft-deleted records
 }
 
 /**

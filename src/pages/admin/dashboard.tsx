@@ -68,6 +68,9 @@ export function AdminDashboard() {
       lastSyncedBooking.current = updatedBooking
       modal.updateSelectedBooking(updatedBooking)
     }
+    // Note: We only use specific modal properties, not the entire modal object
+    // to prevent unnecessary re-renders and infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dashboardData.todayBookings, modal.selectedBooking?.id, modal.isDetailOpen, modal.updateSelectedBooking])
 
   // Edit Modal State

@@ -96,6 +96,9 @@ export function useBookingDetailModal({
       lastSyncedBooking.current = updatedBooking
       setSelectedBooking(updatedBooking)
     }
+    // Note: We intentionally use selectedBooking?.id instead of selectedBooking
+    // to avoid infinite loop when setSelectedBooking is called
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, selectedBooking?.id, isOpen])
 
   // Use useBookingStatusManager for status management
