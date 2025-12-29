@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { MetricCard } from '@/components/reports/MetricCard'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import type { ChartDataPoint } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
 import {
@@ -110,46 +110,38 @@ function RevenueBookingsTabComponent({
     <div className="space-y-6">
       {/* Revenue Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Total Revenue"
           value={formatCurrency(revenueMetrics.total)}
           icon={DollarSign}
-          iconClassName="h-4 w-4 text-tinedy-yellow"
-          subtitle="All time"
+          iconColor="text-tinedy-yellow"
+          description="All time"
         />
 
-        <MetricCard
-          variant="trend"
+        <StatCard
           title="This Month"
           value={formatCurrency(revenueMetrics.thisMonth)}
           icon={Calendar}
-          iconClassName="h-4 w-4 text-tinedy-blue"
-          trend={{
-            value: revenueMetrics.monthGrowth,
-            comparisonText: 'vs last month',
-          }}
+          iconColor="text-tinedy-blue"
+          trendValue={revenueMetrics.monthGrowth}
+          trendLabel="vs last month"
         />
 
-        <MetricCard
-          variant="trend"
+        <StatCard
           title="This Week"
           value={formatCurrency(revenueMetrics.thisWeek)}
           icon={BarChart3}
-          iconClassName="h-4 w-4 text-tinedy-green"
-          trend={{
-            value: revenueMetrics.weekGrowth,
-            comparisonText: 'vs last week',
-          }}
+          iconColor="text-tinedy-green"
+          trendValue={revenueMetrics.weekGrowth}
+          trendLabel="vs last week"
         />
 
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Avg Order Value"
           value={formatCurrency(revenueMetrics.avgOrderValue)}
           icon={ShoppingCart}
-          iconClassName="h-4 w-4 text-purple-500"
-          subtitle="Per booking"
+          iconColor="text-purple-500"
+          description="Per booking"
         />
       </div>
 

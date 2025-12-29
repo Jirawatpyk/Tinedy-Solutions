@@ -19,14 +19,22 @@ import { cn } from '@/lib/utils'
  *   description="From completed bookings"
  * />
  *
- * // With icon and trend
+ * // With icon and trend (manual direction)
  * <StatCard
  *   title="Total Bookings"
  *   value={150}
  *   icon={Calendar}
  *   iconColor="text-blue-600"
- *   iconBgColor="bg-blue-100"
  *   trend={{ value: "+12%", direction: "up", label: "from last month" }}
+ * />
+ *
+ * // With trend percentage (auto direction based on value)
+ * <StatCard
+ *   title="This Month"
+ *   value="฿12,345"
+ *   icon={Calendar}
+ *   trendValue={15.5}
+ *   trendLabel="vs last month"
  * />
  *
  * // With action button
@@ -79,7 +87,7 @@ export interface StatCardProps {
   iconBgColor?: string
 
   /**
-   * Optional trend indicator with value, direction, and label
+   * Optional trend indicator with value, direction, and label (manual control)
    */
   trend?: {
     /**
@@ -95,6 +103,17 @@ export interface StatCardProps {
      */
     label?: string
   }
+
+  /**
+   * Trend value as number - direction is auto-calculated (positive = up, negative = down)
+   * Use this for simple percentage trends instead of the trend object
+   */
+  trendValue?: number
+
+  /**
+   * Label for trendValue (e.g., 'vs last month', 'vs last week')
+   */
+  trendLabel?: string
 
   /**
    * Optional action button
@@ -115,6 +134,55 @@ export interface StatCardProps {
    * @default false
    */
   isLoading?: boolean
+
+  /**
+   * Additional CSS class for the Card container
+   */
+  className?: string
+
+  /**
+   * Additional CSS class for the value text
+   */
+  valueClassName?: string
+}
+
+/**
+ * Format growth percentage with sign
+ */
+const formatGrowth = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0.0%'
+  const sign = value >= 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}
+
+/**
+ * Get trend color based on direction - extracted for performance
+ */
+const getTrendColor = (direction: 'up' | 'down' | 'neutral'): string => {
+  switch (direction) {
+    case 'up':
+      return 'text-green-500'
+    case 'down':
+      return 'text-red-500'
+    case 'neutral':
+    default:
+      return 'text-gray-600'
+  }
+}
+
+/**
+ * Get trend icon based on direction - extracted for performance
+ */
+const getTrendIcon = (direction: 'up' | 'down' | 'neutral') => {
+  switch (direction) {
+    case 'up':
+      return TrendingUp
+    case 'down':
+      return TrendingDown
+    case 'neutral':
+    default:
+      return null
+  }
 }
 
 /**
@@ -130,45 +198,21 @@ export const StatCard = ({
   icon: Icon,
   iconColor = 'text-muted-foreground',
   trend,
+  trendValue,
+  trendLabel,
   action,
   isLoading = false,
+  className,
+  valueClassName,
 }: StatCardProps) => {
-  // Determine trend color based on direction
-  const getTrendColor = (direction: 'up' | 'down' | 'neutral') => {
-    switch (direction) {
-      case 'up':
-        return 'text-green-600'
-      case 'down':
-        return 'text-red-600'
-      case 'neutral':
-        return 'text-gray-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
-  // Get trend icon based on direction
-  const getTrendIcon = (direction: 'up' | 'down' | 'neutral') => {
-    switch (direction) {
-      case 'up':
-        return TrendingUp
-      case 'down':
-        return TrendingDown
-      case 'neutral':
-        return null
-      default:
-        return null
-    }
-  }
-
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+      <Card className={className}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 sm:pt-3 px-3 sm:px-6">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-4 rounded" />
         </CardHeader>
-        <CardContent className="pb-3">
+        <CardContent className="pb-2 sm:pb-3 px-3 sm:px-6">
           <Skeleton className="h-8 w-20 mb-0" />
           <Skeleton className="h-3 w-32" />
         </CardContent>
@@ -176,45 +220,55 @@ export const StatCard = ({
     )
   }
 
-  const TrendIcon = trend ? getTrendIcon(trend.direction) : null
+  // Handle trendValue (auto-direction) or trend object (manual direction)
+  const hasTrend = trend || trendValue !== undefined
+  const trendDirection: 'up' | 'down' | 'neutral' = trend
+    ? trend.direction
+    : trendValue !== undefined
+      ? trendValue >= 0 ? 'up' : 'down'
+      : 'neutral'
+  const trendDisplayValue = trend
+    ? trend.value
+    : trendValue !== undefined
+      ? formatGrowth(trendValue)
+      : ''
+  const trendDisplayLabel = trend?.label || trendLabel
+
+  const TrendIcon = hasTrend ? getTrendIcon(trendDirection) : null
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 sm:pt-3 px-3 sm:px-6">
+        <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">{title}</CardTitle>
         {Icon && (
-          <Icon className={cn('h-4 w-4', iconColor)} />
+          <Icon className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', iconColor)} />
         )}
       </CardHeader>
-      <CardContent className="pb-3">
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="pb-2 sm:pb-3 px-3 sm:px-6">
+        <div className={cn('text-xl sm:text-2xl font-bold', valueClassName)}>{value}</div>
 
         {/* Description or Trend */}
         <div className="mt-0 flex items-center justify-between">
-          {description && !trend && (
+          {description && !hasTrend && (
             <p className="text-xs text-muted-foreground">{description}</p>
           )}
 
-          {trend && (
-            <div className="flex items-center gap-4 w-full">
-              {description && (
-                <p className="text-xs text-muted-foreground flex-1">{description}</p>
+          {hasTrend && (
+            <div className="flex items-center gap-1 mt-0">
+              {TrendIcon && <TrendIcon className={cn('h-3 w-3', getTrendColor(trendDirection))} />}
+              <p className={cn('text-xs font-medium', getTrendColor(trendDirection))}>
+                {trendDisplayValue}
+              </p>
+              {trendDisplayLabel && (
+                <p className="text-xs text-muted-foreground hidden sm:inline">
+                  {trendDisplayLabel}
+                </p>
               )}
-              <div
-                className={cn(
-                  'flex items-center gap-1 text-xs font-semibold',
-                  getTrendColor(trend.direction)
-                )}
-              >
-                {TrendIcon && <TrendIcon className="h-3 w-3" />}
-                <span>{trend.value}</span>
-                {trend.label && (
-                  <span className="font-normal text-muted-foreground ml-1">
-                    {trend.label}
-                  </span>
-                )}
-              </div>
             </div>
+          )}
+
+          {description && hasTrend && (
+            <p className="text-xs text-muted-foreground hidden sm:block">{description}</p>
           )}
         </div>
 
@@ -222,6 +276,7 @@ export const StatCard = ({
         {action && (
           <div className="mt-3">
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={action.onClick}

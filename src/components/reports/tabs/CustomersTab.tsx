@@ -8,7 +8,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { MetricCard } from '@/components/reports/MetricCard'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import { TopCustomersCard } from '@/components/reports/TopCustomersCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset, type CustomerWithBookings } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
@@ -120,38 +120,36 @@ function CustomersTabComponent({
     <div className="space-y-6">
       {/* Customer Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard
+        <StatCard
           title="Total Customers"
           value={customerMetrics.total}
           icon={Users}
-          iconClassName="h-4 w-4 text-tinedy-blue"
+          iconColor="text-tinedy-blue"
         />
 
-        <MetricCard
+        <StatCard
           title="New This Month"
           value={customerMetrics.newThisMonth}
           icon={UserCheck}
-          iconClassName="h-4 w-4 text-green-500"
-          valueClassName="text-2xl font-bold text-green-600"
+          iconColor="text-green-500"
+          valueClassName="text-green-600"
         />
 
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Returning Customers"
           value={customerMetrics.returning}
           icon={Repeat}
-          iconClassName="h-4 w-4 text-purple-500"
-          valueClassName="text-2xl font-bold text-purple-600"
-          subtitle={`${customerMetrics.retentionRate.toFixed(1)}% retention rate`}
+          iconColor="text-purple-500"
+          valueClassName="text-purple-600"
+          description={`${customerMetrics.retentionRate.toFixed(1)}% retention rate`}
         />
 
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Avg CLV"
           value={formatCurrency(customerMetrics.averageCLV)}
           icon={DollarSign}
-          iconClassName="h-4 w-4 text-tinedy-yellow"
-          subtitle="Revenue per customer"
+          iconColor="text-tinedy-yellow"
+          description="Revenue per customer"
         />
       </div>
 

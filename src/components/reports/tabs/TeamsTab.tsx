@@ -9,7 +9,7 @@ import {
   Award,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { MetricCard } from '@/components/reports/MetricCard'
+import { StatCard } from '@/components/common/StatCard/StatCard'
 import { TeamPerformanceTable, TeamPerformanceMobile, TeamWorkloadMobile } from '@/components/reports/team'
 import { CHART_COLORS } from '@/types/reports'
 import { useChartAnimation } from '@/hooks/useChartAnimation'
@@ -61,38 +61,36 @@ function TeamsTabComponent({
     <div className="space-y-6">
       {/* Team Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard
+        <StatCard
           title="Total Teams"
           value={teamMetrics.totalTeams}
           icon={BriefcaseBusiness}
-          iconClassName="h-4 w-4 text-tinedy-blue"
+          iconColor="text-tinedy-blue"
         />
 
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Active Teams"
           value={teamMetrics.activeTeams}
           icon={Activity}
-          iconClassName="h-4 w-4 text-green-500"
-          valueClassName="text-2xl font-bold text-green-600"
-          subtitle="With assigned jobs"
+          iconColor="text-green-500"
+          valueClassName="text-green-600"
+          description="With assigned jobs"
         />
 
-        <MetricCard
-          variant="subtitle"
+        <StatCard
           title="Total Team Jobs"
           value={teamMetrics.totalTeamBookings}
           icon={Package}
-          iconClassName="h-4 w-4 text-purple-500"
-          valueClassName="text-2xl font-bold text-purple-600"
-          subtitle="All team bookings"
+          iconColor="text-purple-500"
+          valueClassName="text-purple-600"
+          description="All team bookings"
         />
 
-        <MetricCard
+        <StatCard
           title="Team Revenue"
           value={formatCurrency(teamMetrics.totalTeamRevenue)}
           icon={DollarSign}
-          iconClassName="h-4 w-4 text-tinedy-yellow"
+          iconColor="text-tinedy-yellow"
         />
       </div>
 
