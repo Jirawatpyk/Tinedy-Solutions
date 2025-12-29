@@ -45,7 +45,7 @@ import {
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  FileSpreadsheet,
+  Download,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { formatDate, formatBookingId } from '@/lib/utils'
@@ -1022,50 +1022,105 @@ export function AdminCustomerDetail() {
             {/* Quick Actions Sidebar */}
             <div className="lg:w-64 space-y-2">
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">Quick Actions</h3>
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={handleCreateBooking}
-              >
-                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">New Booking</span>
-              </Button>
-              <a href={`tel:${customer.phone}`} className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <PhoneCall className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Call Customer</span>
-                </Button>
-              </a>
-              <a href={`mailto:${customer.email}`} className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <Send className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Send Email</span>
-                </Button>
-              </a>
-              {customer.line_id && (
+              {/* Mobile: Icon buttons in a row */}
+              <div className="flex lg:hidden items-center gap-2">
+                <SimpleTooltip content="New Booking">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCreateBooking}
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                </SimpleTooltip>
+                <SimpleTooltip content="Call Customer">
+                  <a href={`tel:${customer.phone}`} aria-label="Call Customer">
+                    <Button variant="outline" size="icon">
+                      <PhoneCall className="h-4 w-4" />
+                    </Button>
+                  </a>
+                </SimpleTooltip>
+                <SimpleTooltip content="Send Email">
+                  <a href={`mailto:${customer.email}`} aria-label="Send Email">
+                    <Button variant="outline" size="icon">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </a>
+                </SimpleTooltip>
+                {customer.line_id && (
+                  <SimpleTooltip content="Copy LINE ID">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(customer.line_id || '')
+                        toast({
+                          title: 'LINE ID Copied',
+                          description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.`,
+                        })
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  </SimpleTooltip>
+                )}
+                <SimpleTooltip content="Add Note">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsNoteDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </SimpleTooltip>
+              </div>
+              {/* Desktop: Full buttons stacked */}
+              <div className="hidden lg:flex lg:flex-col lg:space-y-2">
                 <Button
                   className="w-full justify-start"
                   variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(customer.line_id || '')
-                    toast({
-                      title: 'LINE ID Copied',
-                      description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.`,
-                    })
-                  }}
+                  onClick={handleCreateBooking}
                 >
-                  <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Copy LINE ID</span>
+                  <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">New Booking</span>
                 </Button>
-              )}
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => setIsNoteDialogOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">Add Note</span>
-              </Button>
+                <a href={`tel:${customer.phone}`} className="block">
+                  <Button className="w-full justify-start" variant="outline">
+                    <PhoneCall className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Call Customer</span>
+                  </Button>
+                </a>
+                <a href={`mailto:${customer.email}`} className="block">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Send className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Send Email</span>
+                  </Button>
+                </a>
+                {customer.line_id && (
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(customer.line_id || '')
+                      toast({
+                        title: 'LINE ID Copied',
+                        description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.`,
+                      })
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Copy LINE ID</span>
+                  </Button>
+                )}
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => setIsNoteDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Add Note</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -1212,7 +1267,7 @@ export function AdminCustomerDetail() {
                     <SelectValue placeholder="Booking Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Booking Status</SelectItem>
+                    <SelectItem value="all">All Booking</SelectItem>
                     {getAllStatusOptions().map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
                     ))}
@@ -1223,21 +1278,34 @@ export function AdminCustomerDetail() {
                     <SelectValue placeholder="Payment Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Payment Status</SelectItem>
+                    <SelectItem value="all">All Payment</SelectItem>
                     {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Mobile: Icon only with tooltip */}
+                <SimpleTooltip content="Export to Excel">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={exportToExcel}
+                    disabled={filteredBookings.length === 0}
+                    className="h-9 w-9 sm:hidden"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </SimpleTooltip>
+                {/* Desktop: Icon + text, no tooltip */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={exportToExcel}
                   disabled={filteredBookings.length === 0}
-                  className="h-9 px-2 sm:px-3"
+                  className="h-9 hidden sm:flex"
                 >
-                  <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Export Excel</span>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </Button>
               </div>
             </div>

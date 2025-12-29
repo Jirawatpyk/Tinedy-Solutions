@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
-import { Download, Trash2, Archive } from 'lucide-react'
+import { Download, Trash2, Archive, Check } from 'lucide-react'
 import { usePermissions } from '@/hooks/use-permissions'
 
 interface BulkActionsToolbarProps {
@@ -67,29 +67,52 @@ export function BulkActionsToolbar({
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
+            {/* Mobile: Icon only with tooltip */}
+            <SimpleTooltip content="Update Status">
+              <Button
+                size="sm"
+                onClick={onBulkStatusUpdate}
+                disabled={!bulkStatus}
+                className="h-8 w-8 p-0 sm:hidden"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </SimpleTooltip>
+            {/* Desktop: Icon + text, no tooltip */}
             <Button
               size="sm"
               onClick={onBulkStatusUpdate}
               disabled={!bulkStatus}
-              className="h-8 text-xs sm:text-sm"
+              className="h-8 hidden sm:flex px-3"
             >
+              <Check className="h-4 w-4 mr-1" />
               Update
             </Button>
           </div>
 
           {/* Right: Export + Delete/Archive */}
           <div className="flex items-center gap-2">
+            {/* Mobile: Icon only with tooltip */}
             <SimpleTooltip content="Export to Excel">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={onBulkExport}
-                className="h-8 w-8 sm:w-auto p-0 sm:px-3"
+                className="h-8 w-8 p-0 sm:hidden"
               >
-                <Download className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Export</span>
+                <Download className="h-4 w-4" />
               </Button>
             </SimpleTooltip>
+            {/* Desktop: Icon + text, no tooltip */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onBulkExport}
+              className="h-8 hidden sm:flex px-3"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
 
             {/* Permission-aware Delete/Archive button */}
             {hasDeletePermission && (

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import { isWithinInterval } from 'date-fns'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useReportStats } from '@/hooks/useReportStats'
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 // formatCurrency imported by tab components
 import { Button } from '@/components/ui/button'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +74,14 @@ export function AdminReports() {
   const [activeTab, setActiveTab] = useState('revenue')
   const { toast } = useToast()
   const { role } = usePermissions()
+
+  // Tab configuration for cleaner JSX
+  const reportTabs = useMemo(() => [
+    { value: 'revenue', icon: BarChart3, mobileLabel: 'Rev', desktopLabel: 'Revenue', tooltip: 'Revenue & Bookings' },
+    { value: 'customers', icon: Users, mobileLabel: 'Cust', desktopLabel: 'Customers', tooltip: 'Customer Analytics' },
+    { value: 'staff', icon: Briefcase, mobileLabel: 'Staff', desktopLabel: 'Staff', tooltip: 'Staff Performance' },
+    { value: 'teams', icon: BriefcaseBusiness, mobileLabel: 'Teams', desktopLabel: 'Teams', tooltip: 'Team Performance' },
+  ] as const, [])
 
   // Show error toast if query fails (use useEffect to avoid infinite loop)
   useEffect(() => {
@@ -389,7 +398,7 @@ export function AdminReports() {
         <p className="text-xs sm:text-sm text-muted-foreground">
           Revenue insights and business metrics
         </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-row gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Select period" />
@@ -409,10 +418,19 @@ export function AdminReports() {
             </SelectContent>
           </Select>
           <DropdownMenu>
+            {/* Mobile: Icon only with tooltip */}
+            <SimpleTooltip content="Export to Excel">
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9 w-9 p-0 sm:hidden">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </SimpleTooltip>
+            {/* Desktop: Icon + text, no tooltip */}
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-8 sm:h-9 gap-1 sm:gap-2">
-                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>Export Excel</span>
+              <Button variant="outline" className="h-9 hidden sm:flex gap-2">
+                <Download className="h-4 w-4" />
+                <span>Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -443,24 +461,25 @@ export function AdminReports() {
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto sm:h-9">
-          <TabsTrigger value="revenue" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
-            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-            <span className="hidden lg:inline">Revenue & Bookings</span>
-            <span className="lg:hidden truncate">Revenue</span>
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-            <span className="truncate">Customers</span>
-          </TabsTrigger>
-          <TabsTrigger value="staff" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
-            <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-            <span className="truncate">Staff</span>
-          </TabsTrigger>
-          <TabsTrigger value="teams" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-w-0">
-            <BriefcaseBusiness className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-            <span className="truncate">Teams</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 gap-1 h-auto sm:h-9">
+          {reportTabs.map(({ value, icon: Icon, mobileLabel, desktopLabel, tooltip }) => (
+            <Fragment key={value}>
+              {/* Mobile: tooltip */}
+              <SimpleTooltip content={tooltip} className="sm:hidden">
+                <span className="sm:hidden w-full">
+                  <TabsTrigger value={value} className="flex items-center justify-center gap-1 text-xs min-w-0 w-full">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{mobileLabel}</span>
+                  </TabsTrigger>
+                </span>
+              </SimpleTooltip>
+              {/* Desktop: no tooltip */}
+              <TabsTrigger value={value} className="hidden sm:flex items-center justify-center gap-2 text-sm min-w-0 w-full">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{desktopLabel}</span>
+              </TabsTrigger>
+            </Fragment>
+          ))}
         </TabsList>
 
         {/* Tab 1: Revenue & Bookings Analytics */}
