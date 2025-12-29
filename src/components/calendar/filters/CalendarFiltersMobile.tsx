@@ -122,7 +122,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="bottom" className="h-[85vh]">
+      <SheetContent side="bottom" className="h-[85vh] flex flex-col">
         <SheetHeader>
           <SheetTitle>Filter Bookings</SheetTitle>
           <SheetDescription>
@@ -130,7 +130,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(85vh-140px)] mt-4">
+        <ScrollArea className="flex-1 mt-4">
           <div className="space-y-6 px-1">
             {/* Quick Presets */}
             <div>
@@ -248,7 +248,7 @@ export const CalendarFiltersMobile: React.FC<CalendarFiltersMobileProps> = ({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="mt-4">
+        <SheetFooter className="mt-4 pb-6 flex-shrink-0">
           <div className="flex gap-2 w-full">
             <Button
               variant="outline"
