@@ -130,6 +130,10 @@ export interface ServicePackageV2 {
   is_active: boolean
   created_at: string
   updated_at: string
+  /** Soft delete timestamp */
+  deleted_at?: string | null
+  /** User who soft deleted this package */
+  deleted_by?: string | null
 }
 
 // ============================================================================

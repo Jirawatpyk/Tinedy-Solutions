@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/contexts/auth-context'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { packageQueryOptions } from '@/lib/queries/package-queries'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { PermissionGuard } from '@/components/auth/permission-guard'
+import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
@@ -24,16 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { PackageFormV2 } from '@/components/service-packages/PackageFormV2'
 import {
   Table,
@@ -49,7 +41,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   ArrowLeft,
   Edit,
-  Trash2,
   Package as PackageIcon,
   DollarSign,
   Clock,
@@ -94,6 +85,7 @@ export default function AdminPackageDetail() {
   const { packageId } = useParams<{ packageId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   // Both admin and manager use /admin routes
@@ -115,9 +107,7 @@ export default function AdminPackageDetail() {
   // UI state
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [bookingsPage, setBookingsPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -235,8 +225,9 @@ export default function AdminPackageDetail() {
       const errorMsg = mapErrorToUserMessage(err, 'general')
       setError(errorMsg.description)
     } finally {
-      if (!isMountedRef.current) return
-      setLoading(false)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -336,10 +327,10 @@ export default function AdminPackageDetail() {
         is_active: !packageData.is_active,
       })
 
-      // Invalidate React Query cache with exact query key and force refetch
-      await queryClient.invalidateQueries({
-        queryKey: packageQueryOptions.allForAdmin.queryKey,
-        refetchType: 'active'
+      // ลบ cache ของ packages ทั้งหมด (v1, v2, unified) เพื่อบังคับให้ refetch ใหม่เมื่อกลับไปหน้า list
+      queryClient.removeQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === 'packages',
       })
 
       toast({
@@ -361,20 +352,17 @@ export default function AdminPackageDetail() {
   const handleDelete = async () => {
     if (!packageData) return
 
+    // Check if package has bookings (extra safety check)
+    if (stats.total_bookings > 0) {
+      toast({
+        title: 'Cannot Delete',
+        description: `This package has ${stats.total_bookings} booking(s). Cannot delete packages with existing bookings.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
     try {
-      setDeleting(true)
-
-      // Check if package has bookings
-      if (stats.total_bookings > 0) {
-        toast({
-          title: 'Cannot Delete',
-          description: `This package has ${stats.total_bookings} booking(s). Cannot delete packages with existing bookings.`,
-          variant: 'destructive',
-        })
-        setIsDeleteDialogOpen(false)
-        return
-      }
-
       // Delete tiers first if V2 tiered
       if (packageSource === 'v2' && packageData.pricing_model === PricingModel.Tiered && packageData.tiers && packageData.tiers.length > 0) {
         const { error: tiersError } = await supabase
@@ -394,10 +382,9 @@ export default function AdminPackageDetail() {
 
       if (error) throw error
 
-      // Invalidate React Query cache with exact query key before navigation
-      await queryClient.invalidateQueries({
-        queryKey: packageQueryOptions.allForAdmin.queryKey,
-        refetchType: 'active'
+      // ลบ cache ของ packages เพื่อบังคับให้ refetch ใหม่เมื่อกลับไปหน้า list
+      queryClient.removeQueries({
+        queryKey: queryKeys.packages.all,
       })
 
       toast({
@@ -414,9 +401,54 @@ export default function AdminPackageDetail() {
         description: errorMsg.description,
         variant: 'destructive',
       })
-    } finally {
-      setDeleting(false)
-      setIsDeleteDialogOpen(false)
+    }
+  }
+
+  const handleArchive = async () => {
+    if (!packageData) return
+
+    // Check if package has bookings (extra safety check)
+    if (stats.total_bookings > 0) {
+      toast({
+        title: 'Cannot Archive',
+        description: `This package has ${stats.total_bookings} booking(s). Cannot archive packages with existing bookings.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      // Soft delete - update deleted_at and deleted_by
+      const tableName = packageSource === 'v1' ? 'service_packages' : 'service_packages_v2'
+      const { error } = await supabase
+        .from(tableName)
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id,
+        })
+        .eq('id', packageData.id)
+
+      if (error) throw error
+
+      // ลบ cache ของ packages เพื่อบังคับให้ refetch ใหม่เมื่อกลับไปหน้า list
+      queryClient.removeQueries({
+        queryKey: queryKeys.packages.all,
+      })
+
+      toast({
+        title: 'Success',
+        description: 'Package archived successfully',
+      })
+
+      // Navigate back to packages list
+      navigate(`${basePath}/packages`)
+    } catch (err) {
+      const errorMsg = mapErrorToUserMessage(err, 'general')
+      toast({
+        title: errorMsg.title,
+        description: errorMsg.description,
+        variant: 'destructive',
+      })
     }
   }
 
@@ -491,8 +523,8 @@ export default function AdminPackageDetail() {
           </div>
         </div>
 
-        {/* Action Buttons (Admin Only) */}
-        <AdminOnly>
+        {/* Action Buttons - Based on permissions.ts */}
+        <PermissionGuard requires={{ mode: 'action', action: 'update', resource: 'service_packages' }}>
           <div className="flex gap-1 sm:gap-2 w-full sm:w-auto justify-end">
             <Button
               variant="outline"
@@ -522,17 +554,22 @@ export default function AdminPackageDetail() {
               <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
               <span className="hidden sm:inline">Edit</span>
             </Button>
-            <Button
-              variant="destructive"
+            {/* Archive/Delete - Uses PermissionAwareDeleteButton */}
+            <PermissionAwareDeleteButton
+              resource="service_packages"
+              itemName={packageData.name}
+              onDelete={handleDelete}
+              onCancel={handleArchive}
+              cancelText="Archive"
+              variant="default"
               size="sm"
-              onClick={() => setIsDeleteDialogOpen(true)}
+              buttonVariant="outline"
               className="h-8 sm:h-9"
-            >
-              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
+              disabled={stats.total_bookings > 0}
+              disabledReason={stats.total_bookings > 0 ? `Cannot delete/archive: Package has ${stats.total_bookings} booking(s)` : undefined}
+            />
           </div>
-        </AdminOnly>
+        </PermissionGuard>
       </div>
 
       {/* Main Content */}
@@ -936,33 +973,6 @@ export default function AdminPackageDetail() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Package?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{packageData.name}"? This action cannot be undone.
-              {stats.total_bookings > 0 && (
-                <p className="mt-2 text-red-600 font-semibold">
-                  Warning: This package has {stats.total_bookings} booking(s). You cannot delete packages with existing bookings.
-                </p>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting || stats.total_bookings > 0}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Edit Package Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

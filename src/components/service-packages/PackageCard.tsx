@@ -23,6 +23,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   Package,
   Edit,
   MoreVertical,
@@ -32,8 +38,11 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
+  Archive,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react'
-import { DeleteButton } from '@/components/common/DeleteButton'
+import { PermissionGuard } from '@/components/auth/permission-guard'
 import { formatPrice } from '@/lib/pricing-utils'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PricingModel } from '@/types'
@@ -43,7 +52,11 @@ interface PackageCardProps {
   package: ServicePackageV2WithTiers
   /** Edit handler */
   onEdit?: (pkg: ServicePackageV2WithTiers) => void
-  /** Delete handler */
+  /** Archive handler (soft delete - Manager) */
+  onArchive?: (pkg: ServicePackageV2WithTiers) => void
+  /** Restore handler (Admin only - restore archived package) */
+  onRestore?: (pkg: ServicePackageV2WithTiers) => void
+  /** Delete handler (hard delete - Admin only) */
   onDelete?: (id: string) => Promise<void>
   /** Toggle active handler */
   onToggleActive?: (pkg: ServicePackageV2WithTiers) => void
@@ -51,6 +64,8 @@ interface PackageCardProps {
   showActions?: boolean
   /** Number of bookings using this package */
   bookingCount?: number
+  /** Is this package archived (soft deleted) */
+  isArchived?: boolean
 }
 
 /**
@@ -104,10 +119,13 @@ function getPricingModelBadge(model: string) {
 export function PackageCard({
   package: pkg,
   onEdit,
+  onArchive,
+  onRestore,
   onDelete,
   onToggleActive,
   showActions = true,
   bookingCount = 0,
+  isArchived = false,
 }: PackageCardProps) {
   const navigate = useNavigate()
   const isTiered = pkg.pricing_model === PricingModel.Tiered
@@ -126,7 +144,7 @@ export function PackageCard({
 
   return (
     <Card
-      className={`relative transition-all hover:shadow-md cursor-pointer ${!isActive ? 'opacity-60' : ''}`}
+      className={`relative transition-all hover:shadow-md cursor-pointer ${!isActive ? 'opacity-60' : ''} ${isArchived ? 'opacity-50 border-dashed border-orange-300' : ''}`}
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">
@@ -144,49 +162,108 @@ export function PackageCard({
               {getPricingModelBadge(pkg.pricing_model)}
               {isTiered && pkg.category && getCategoryBadge(pkg.category)}
               {!isActive && <Badge variant="secondary">Inactive</Badge>}
+              {isArchived && <Badge variant="outline" className="border-orange-400 text-orange-600">Archived</Badge>}
             </div>
           </div>
 
-          {/* Actions Menu */}
+          {/* Actions - Show Restore button for archived, otherwise show dropdown menu */}
           {showActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
+            isArchived ? (
+              // Archived: Show Restore button (Admin only)
+              <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRestore?.(pkg)
+                  }}
+                  className="border-green-500 text-green-700 hover:bg-green-50 text-xs"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Restore</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit?.(pkg)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onToggleActive?.(pkg)}>
-                  {isActive ? (
-                    <>
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Deactivate
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Activate
-                    </>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <DeleteButton
-                    itemName={pkg.name}
-                    onDelete={() => onDelete?.(pkg.id)}
-                    variant="default"
-                    size="sm"
-                    className="w-full justify-start text-red-600"
-                    warningMessage={bookingCount > 0 ? `Warning: This package has ${bookingCount} booking(s). You cannot delete packages with existing bookings.` : undefined}
-                    disableConfirm={bookingCount > 0}
-                  />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PermissionGuard>
+            ) : (
+              // Not archived: Show normal dropdown menu
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit?.(pkg)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onToggleActive?.(pkg)}>
+                    {isActive ? (
+                      <>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Deactivate
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Activate
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+
+                  {/* Archive - Manager only (soft delete) */}
+                  <PermissionGuard requires={{ mode: 'role', roles: ['manager'] }}>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="w-full">
+                            <DropdownMenuItem
+                              onClick={() => bookingCount === 0 && onArchive?.(pkg)}
+                              className={`text-orange-600 ${bookingCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onSelect={(e) => bookingCount > 0 && e.preventDefault()}
+                            >
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                          </span>
+                        </TooltipTrigger>
+                        {bookingCount > 0 && (
+                          <TooltipContent side="left">
+                            <p>Cannot archive: Package has {bookingCount} booking(s)</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </PermissionGuard>
+
+                  {/* Delete - Admin only (hard delete) */}
+                  <PermissionGuard requires={{ mode: 'action', action: 'delete', resource: 'service_packages' }}>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="w-full">
+                            <DropdownMenuItem
+                              onClick={() => bookingCount === 0 && onDelete?.(pkg.id)}
+                              className={`text-red-600 ${bookingCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onSelect={(e) => bookingCount > 0 && e.preventDefault()}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </span>
+                        </TooltipTrigger>
+                        {bookingCount > 0 && (
+                          <TooltipContent side="left">
+                            <p>Cannot delete: Package has {bookingCount} booking(s)</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </PermissionGuard>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
           )}
         </div>
       </CardHeader>

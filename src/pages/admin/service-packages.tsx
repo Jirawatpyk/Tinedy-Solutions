@@ -1,12 +1,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/auth-context'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
+import { PermissionGuard } from '@/components/auth/permission-guard'
 import {
   Dialog,
   DialogContent,
@@ -32,6 +35,10 @@ import { packageQueryOptions } from '@/lib/queries/package-queries'
 export function AdminServicePackages() {
   // Permission checks
   const { can, canDelete } = usePermissions()
+  const { user } = useAuth()
+
+  // Show archived state
+  const [showArchived, setShowArchived] = useState(false)
 
   // React Query - Fetch ALL packages (V1 + V2 unified) including inactive for admin management
   const {
@@ -44,11 +51,23 @@ export function AdminServicePackages() {
     refetchOnMount: 'always' // Always refetch when navigating back to this page
   })
 
+  // Fetch archived packages (Admin only)
+  const {
+    data: archivedPackages = [],
+    refetch: refetchArchived,
+  } = useQuery({
+    ...packageQueryOptions.v2WithArchived,
+    enabled: showArchived, // Only fetch when checkbox is checked
+  })
+
   const error = queryError?.message || null
   const refresh = async () => {
     await refetch()
     // Also refetch booking counts
     refetchBookingCounts()
+    if (showArchived) {
+      refetchArchived()
+    }
   }
 
   // Query to get booking counts per package (both V1 and V2)
@@ -81,13 +100,22 @@ export function AdminServicePackages() {
   })
 
   // Separate V1 and V2 packages (keep as UnifiedServicePackage for type safety)
+  // When showArchived is true, use archivedPackages for V2 (includes both Fixed and Tiered from V2 table)
   const packagesV1Unified = useMemo(() => {
-    return unifiedPackages.filter(pkg => pkg.pricing_model === PricingModel.Fixed)
+    // V1 packages (from service_packages table) - always use unifiedPackages
+    // Note: V1 table doesn't support soft delete, so no archived filtering needed
+    return unifiedPackages.filter(pkg => pkg._source === 'v1')
   }, [unifiedPackages])
 
   const packagesV2Unified = useMemo(() => {
-    return unifiedPackages.filter(pkg => pkg.pricing_model === PricingModel.Tiered)
-  }, [unifiedPackages])
+    if (showArchived && archivedPackages.length > 0) {
+      // Use archived packages (includes deleted) - add _source field
+      // Include ALL pricing models (both Fixed and Tiered) from V2 table
+      return archivedPackages.map(pkg => ({ ...pkg, _source: 'v2' as const }))
+    }
+    // Normal view: only non-archived V2 packages
+    return unifiedPackages.filter(pkg => pkg._source === 'v2')
+  }, [unifiedPackages, archivedPackages, showArchived])
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -130,48 +158,39 @@ export function AdminServicePackages() {
     return { total, active, inactive }
   }, [unifiedPackages])
 
-  // Filter packages (moved to useMemo)
-  const { filteredPackages, filteredPackagesV2 } = useMemo(() => {
-    // Filter V1 Packages
-    let filteredV1 = packagesV1Unified
+  // Filter and merge all packages into single array (moved to useMemo)
+  const allFilteredPackages = useMemo(() => {
+    // Combine V1 and V2 packages
+    let allPackages = [...packagesV1Unified, ...packagesV2Unified]
 
+    // Search filter
     if (searchQuery) {
-      filteredV1 = filteredV1.filter((pkg) =>
+      allPackages = allPackages.filter((pkg) =>
         pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
+    // Type filter
     if (typeFilter !== 'all') {
-      filteredV1 = filteredV1.filter((pkg) => pkg.service_type === typeFilter)
+      allPackages = allPackages.filter((pkg) => pkg.service_type === typeFilter)
     }
 
-    // V1 packages are all "fixed" pricing
-    if (pricingModelFilter === 'tiered') {
-      filteredV1 = [] // Hide V1 when filtering for tiered only
-    }
-
-    // Filter V2 Packages
-    let filteredV2 = packagesV2Unified
-
-    if (searchQuery) {
-      filteredV2 = filteredV2.filter((pkg) =>
-        pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    if (typeFilter !== 'all') {
-      filteredV2 = filteredV2.filter((pkg) => pkg.service_type === typeFilter)
-    }
-
+    // Pricing model filter
     if (pricingModelFilter === 'fixed') {
-      filteredV2 = filteredV2.filter((pkg) => pkg.pricing_model === PricingModel.Fixed)
+      allPackages = allPackages.filter((pkg) => pkg.pricing_model === PricingModel.Fixed)
     } else if (pricingModelFilter === 'tiered') {
-      filteredV2 = filteredV2.filter((pkg) => pkg.pricing_model === PricingModel.Tiered)
+      allPackages = allPackages.filter((pkg) => pkg.pricing_model === PricingModel.Tiered)
     }
 
-    return { filteredPackages: filteredV1, filteredPackagesV2: filteredV2 }
+    // Sort: Tiered first, then Fixed (for better UX)
+    allPackages.sort((a, b) => {
+      if (a.pricing_model === PricingModel.Tiered && b.pricing_model === PricingModel.Fixed) return -1
+      if (a.pricing_model === PricingModel.Fixed && b.pricing_model === PricingModel.Tiered) return 1
+      return a.name.localeCompare(b.name)
+    })
+
+    return allPackages
   }, [packagesV1Unified, packagesV2Unified, searchQuery, typeFilter, pricingModelFilter])
 
   // Reset display count when filters change
@@ -396,6 +415,71 @@ export function AdminServicePackages() {
   }
 
   /**
+   * Handle Archive Package (Manager - soft delete)
+   */
+  const handleArchivePackage = async (pkg: ServicePackageV2WithTiers) => {
+    try {
+      const { error } = await supabase
+        .from('service_packages_v2')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id,
+        })
+        .eq('id', pkg.id)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Package archived successfully',
+      })
+
+      refresh()
+      if (showArchived) {
+        refetchArchived()
+      }
+    } catch (error) {
+      console.error('Archive package error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to archive package',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  /**
+   * Handle Restore Package (Admin only - restore archived package)
+   */
+  const handleRestorePackage = async (pkg: ServicePackageV2WithTiers) => {
+    try {
+      const { error } = await supabase
+        .from('service_packages_v2')
+        .update({ deleted_at: null, deleted_by: null })
+        .eq('id', pkg.id)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Package restored successfully',
+      })
+
+      refresh()
+      if (showArchived) {
+        refetchArchived()
+      }
+    } catch (error) {
+      console.error('Restore package error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to restore package',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  /**
    * Handle Edit V1 Package
    */
   const handleEditV1 = (pkg: ServicePackageV2WithTiers) => {
@@ -575,18 +659,36 @@ export function AdminServicePackages() {
         <p className="text-sm text-muted-foreground">
           Manage cleaning and training service packages
         </p>
-        {can('create', 'service_packages') && (
-          <Button
-            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-            onClick={() => {
-              resetForm()
-              setIsDialogOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Package
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {/* Show Archived - Admin only */}
+          <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="showArchived"
+                checked={showArchived}
+                onCheckedChange={(checked) => setShowArchived(checked === true)}
+              />
+              <label
+                htmlFor="showArchived"
+                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show archived
+              </label>
+            </div>
+          </PermissionGuard>
+          {can('create', 'service_packages') && (
+            <Button
+              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+              onClick={() => {
+                resetForm()
+                setIsDialogOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Package
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Create/Edit Dialog with V2 Form */}
@@ -774,7 +876,7 @@ export function AdminServicePackages() {
       </Card>
 
       {/* Packages Grid */}
-      {filteredPackages.length === 0 && filteredPackagesV2.length === 0 ? (
+      {allFilteredPackages.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
@@ -786,49 +888,21 @@ export function AdminServicePackages() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* V2 Packages - Display using PackageCard component */}
-            {filteredPackagesV2.slice(0, displayCount).map((pkg) => {
-              // Convert UnifiedServicePackage to ServicePackageV2WithTiers
-              const pkgV2: ServicePackageV2WithTiers = {
-                id: pkg.id,
-                name: pkg.name,
-                description: pkg.description,
-                service_type: pkg.service_type,
-                category: pkg.category as ServiceCategory | null,
-                pricing_model: pkg.pricing_model,
-                duration_minutes: pkg.duration_minutes,
-                base_price: Number(pkg.base_price || 0),
-                is_active: pkg.is_active,
-                created_at: pkg.created_at,
-                updated_at: pkg.updated_at,
-                tier_count: pkg.tier_count || 0,
-                min_price: pkg.min_price,
-                max_price: pkg.max_price,
-                tiers: pkg.tiers || [],
-              }
-              return (
-                <PackageCard
-                  key={pkg.id}
-                  package={pkgV2}
-                  onEdit={handleEditV2}
-                  onDelete={deletePackageV2}
-                  onToggleActive={toggleActiveV2}
-                  showActions={can('update', 'service_packages') || canDelete('service_packages')}
-                  bookingCount={bookingCounts[pkg.id] || 0}
-                />
-              )
-            })}
+            {/* All Packages - Single loop for both V1 and V2 */}
+            {allFilteredPackages.slice(0, displayCount).map((pkg) => {
+              // Check if package is archived (has deleted_at)
+              const isArchived = !!(pkg as { deleted_at?: string | null }).deleted_at
+              const isTiered = pkg.pricing_model === PricingModel.Tiered
+              const isV2Source = pkg._source === 'v2'
 
-            {/* Fixed Pricing Packages (from both V1 and V2 tables) */}
-            {filteredPackages.slice(0, Math.max(0, displayCount - filteredPackagesV2.length)).map((pkg) => {
-              // Convert to V2 format for PackageCard, preserving _source
-              const pkgWithSource: ServicePackageV2WithTiers & { _source: 'v1' | 'v2' } = {
+              // Convert UnifiedServicePackage to ServicePackageV2WithTiers
+              const pkgForCard: ServicePackageV2WithTiers = {
                 id: pkg.id,
                 name: pkg.name,
                 description: pkg.description,
                 service_type: pkg.service_type,
                 category: (pkg.category as ServiceCategory | null) ?? null,
-                pricing_model: PricingModel.Fixed,
+                pricing_model: pkg.pricing_model,
                 duration_minutes: pkg.duration_minutes,
                 base_price: Number(pkg.base_price || 0),
                 is_active: pkg.is_active,
@@ -838,28 +912,36 @@ export function AdminServicePackages() {
                 min_price: pkg.min_price,
                 max_price: pkg.max_price,
                 tiers: pkg.tiers || [],
-                _source: pkg._source, // ใช้ _source จาก UnifiedServicePackage
               }
+
+              // Create toggle handler with captured _source
+              const handleToggle = isTiered
+                ? toggleActiveV2
+                : (p: ServicePackageV2WithTiers) => handleUnifiedToggle({ ...p, _source: pkg._source })
+
               return (
                 <PackageCard
                   key={pkg.id}
-                  package={pkgWithSource}
-                  onEdit={handleUnifiedEdit}
-                  onDelete={(id) => handleUnifiedDelete(id, pkg._source)}
-                  onToggleActive={handleUnifiedToggle}
+                  package={pkgForCard}
+                  onEdit={isTiered ? handleEditV2 : handleUnifiedEdit}
+                  onArchive={isV2Source ? handleArchivePackage : undefined}
+                  onRestore={isV2Source ? handleRestorePackage : undefined}
+                  onDelete={isTiered ? deletePackageV2 : (id) => handleUnifiedDelete(id, pkg._source)}
+                  onToggleActive={handleToggle}
                   showActions={can('update', 'service_packages') || canDelete('service_packages')}
                   bookingCount={bookingCounts[pkg.id] || 0}
+                  isArchived={isArchived}
                 />
               )
             })}
           </div>
 
           {/* Load More Button */}
-          {displayCount < (filteredPackages.length + filteredPackagesV2.length) && (
+          {displayCount < allFilteredPackages.length && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Showing {Math.min(displayCount, filteredPackages.length + filteredPackagesV2.length)} of {filteredPackages.length + filteredPackagesV2.length} packages
+                  Showing {Math.min(displayCount, allFilteredPackages.length)} of {allFilteredPackages.length} packages
                 </p>
                 <Button
                   variant="outline"

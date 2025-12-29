@@ -58,6 +58,10 @@ export interface ServicePackageV2WithTiers extends ServicePackageV2 {
   tier_count: number
   min_price?: number
   max_price?: number
+  /** Soft delete timestamp */
+  deleted_at?: string | null
+  /** User who soft deleted this package */
+  deleted_by?: string | null
 }
 
 /**
@@ -102,12 +106,14 @@ export async function fetchServicePackagesV1(): Promise<ServicePackage[]> {
 
 /**
  * Fetch V2 Service Packages (with tiers)
+ * Excludes soft-deleted packages (deleted_at IS NULL)
  */
 export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTiers[]> {
-  // Fetch packages
+  // Fetch packages (exclude soft-deleted)
   const { data: packages, error: pkgError } = await supabase
     .from('service_packages_v2')
     .select('*')
+    .is('deleted_at', null)
     .order('name')
 
   if (pkgError) {
@@ -153,6 +159,72 @@ export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTier
       }
     } else if (pkg.pricing_model === 'fixed' && pkg.base_price && pkg.base_price > 0) {
       // For fixed pricing, use base_price
+      min_price = pkg.base_price
+      max_price = pkg.base_price
+    }
+
+    return {
+      ...pkg,
+      tiers: pkgTiers,
+      tier_count: pkgTiers.length,
+      min_price,
+      max_price,
+    }
+  })
+
+  return packagesWithTiers
+}
+
+/**
+ * Fetch V2 Service Packages including archived (for Admin)
+ */
+export async function fetchServicePackagesV2WithArchived(): Promise<ServicePackageV2WithTiers[]> {
+  // Fetch ALL packages (including soft-deleted)
+  const { data: packages, error: pkgError } = await supabase
+    .from('service_packages_v2')
+    .select('*')
+    .order('name')
+
+  if (pkgError) {
+    throw new Error(`Failed to fetch V2 packages: ${pkgError.message}`)
+  }
+
+  if (!packages || packages.length === 0) {
+    return []
+  }
+
+  // Fetch all tiers for these packages
+  const packageIds = packages.map(pkg => pkg.id)
+  const { data: allTiers, error: tiersError } = await supabase
+    .from('package_pricing_tiers')
+    .select('*')
+    .in('package_id', packageIds)
+    .order('area_min', { ascending: true })
+
+  if (tiersError) {
+    console.error('Failed to fetch tiers:', tiersError.message)
+  }
+
+  // Map packages with their tiers
+  const packagesWithTiers: ServicePackageV2WithTiers[] = packages.map(pkg => {
+    const pkgTiers = (allTiers || []).filter(tier => tier.package_id === pkg.id)
+
+    let min_price: number | undefined
+    let max_price: number | undefined
+
+    if (pkg.pricing_model === 'tiered' && pkgTiers.length > 0) {
+      const prices = pkgTiers.flatMap(tier => [
+        tier.price_1_time,
+        tier.price_2_times,
+        tier.price_4_times,
+        tier.price_8_times
+      ]).filter((p): p is number => p !== null && p > 0)
+
+      if (prices.length > 0) {
+        min_price = Math.min(...prices)
+        max_price = Math.max(...prices)
+      }
+    } else if (pkg.pricing_model === 'fixed' && pkg.base_price && pkg.base_price > 0) {
       min_price = pkg.base_price
       max_price = pkg.base_price
     }
@@ -308,5 +380,10 @@ export const packageQueryOptions = {
     queryKey: [...queryKeys.packages.unified(), 'all-for-admin'],
     queryFn: fetchAllServicePackagesForAdmin,
     staleTime: 0, // Always refetch when invalidated (for admin package management)
+  },
+  v2WithArchived: {
+    queryKey: [...queryKeys.packages.v2(), 'with-archived'],
+    queryFn: fetchServicePackagesV2WithArchived,
+    staleTime: 0, // Always refetch for admin
   },
 }

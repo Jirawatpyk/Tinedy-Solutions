@@ -5,12 +5,16 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/auth-context'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
+import { PermissionGuard } from '@/components/auth/permission-guard'
 import {
   Dialog,
   DialogContent,
@@ -31,26 +35,44 @@ import type { ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
 import { PricingModel } from '@/types'
 import { useServicePackages } from '@/hooks/useServicePackages'
+import { packageQueryOptions } from '@/lib/queries/package-queries'
 
 export function AdminServicePackagesV2() {
   const { toast } = useToast()
+  const { user } = useAuth()
 
   // React Query - Fetch packages (V1 + V2 unified)
   const { packages: unifiedPackages, loading, error, refresh } = useServicePackages()
-
-  // Filter to V2 packages only (Tiered pricing model)
-  const packagesV2 = useMemo(() => {
-    return unifiedPackages.filter(pkg =>
-      pkg.pricing_model === PricingModel.Tiered
-    ) as unknown as ServicePackageV2WithTiers[]
-  }, [unifiedPackages])
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all')
+  const [showArchived, setShowArchived] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackageV2WithTiers | null>(null)
+
+  // Fetch archived packages (Admin only)
+  const {
+    data: archivedPackages = [],
+    refetch: refetchArchived,
+  } = useQuery({
+    ...packageQueryOptions.v2WithArchived,
+    enabled: showArchived, // Only fetch when checkbox is checked
+  })
+
+  // Filter to V2 packages only (Tiered pricing model)
+  // When showArchived is true, use archivedPackages (includes all), otherwise use normal packages
+  const packagesV2 = useMemo(() => {
+    if (showArchived && archivedPackages.length > 0) {
+      return archivedPackages.filter(pkg =>
+        pkg.pricing_model === PricingModel.Tiered
+      ) as ServicePackageV2WithTiers[]
+    }
+    return unifiedPackages.filter(pkg =>
+      pkg.pricing_model === PricingModel.Tiered
+    ) as unknown as ServicePackageV2WithTiers[]
+  }, [unifiedPackages, archivedPackages, showArchived])
 
   // Show error toast
   useEffect(() => {
@@ -191,6 +213,40 @@ export function AdminServicePackagesV2() {
   }
 
   /**
+   * Handle Archive Package (Soft Delete - Manager)
+   */
+  const handleArchivePackage = async (pkg: ServicePackageV2WithTiers) => {
+    try {
+      const { error } = await supabase
+        .from('service_packages_v2')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id,
+        })
+        .eq('id', pkg.id)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Package archived successfully',
+      })
+
+      refresh()
+      if (showArchived) {
+        refetchArchived()
+      }
+    } catch (error) {
+      console.error('Archive package error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to archive package',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  /**
    * Handle Form Success
    */
   const handleFormSuccess = () => {
@@ -268,13 +324,31 @@ export function AdminServicePackagesV2() {
         <p className="text-sm text-muted-foreground">
           Manage cleaning service packages with tiered pricing
         </p>
-        <Button
-          className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-          onClick={handleCreatePackage}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Package
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* Show Archived - Admin only */}
+          <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="showArchived"
+                checked={showArchived}
+                onCheckedChange={(checked) => setShowArchived(checked === true)}
+              />
+              <label
+                htmlFor="showArchived"
+                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show archived
+              </label>
+            </div>
+          </PermissionGuard>
+          <Button
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={handleCreatePackage}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Package
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -367,9 +441,11 @@ export function AdminServicePackagesV2() {
               key={pkg.id}
               package={pkg}
               onEdit={handleEditPackage}
+              onArchive={handleArchivePackage}
               onDelete={handleDeletePackage}
               onToggleActive={handleToggleActive}
               showActions={true}
+              isArchived={!!pkg.deleted_at}
             />
           ))}
         </div>

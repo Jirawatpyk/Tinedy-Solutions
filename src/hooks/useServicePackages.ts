@@ -12,15 +12,24 @@
  * - โหลด V2 packages (service_packages_v2 table)
  * - รวม packages เป็น array เดียว
  * - Normalize field names (price -> base_price)
+ * - Realtime subscription สำหรับ auto-update
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
 import {
   packageQueryOptions,
   type ServicePackageV2,
   type UnifiedServicePackage,
 } from '@/lib/queries/package-queries'
 import type { ServicePackage } from '@/types'
+
+interface UseServicePackagesOptions {
+  /** Enable realtime subscription หรือไม่ (default: true) */
+  enableRealtime?: boolean
+}
 
 interface UseServicePackagesReturn {
   /** รวม V1 + V2 packages ทั้งหมด */
@@ -42,7 +51,7 @@ interface UseServicePackagesReturn {
  *
  * @example
  * ```tsx
- * const { packages, loading, error, refresh } = useServicePackages()
+ * const { packages, loading, error, refresh } = useServicePackages({ enableRealtime: true })
  *
  * if (loading) return <div>Loading...</div>
  * if (error) return <div>Error: {error}</div>
@@ -57,7 +66,12 @@ interface UseServicePackagesReturn {
  * )
  * ```
  */
-export function useServicePackages(): UseServicePackagesReturn {
+export function useServicePackages(
+  options: UseServicePackagesOptions = {}
+): UseServicePackagesReturn {
+  const { enableRealtime = true } = options
+  const queryClient = useQueryClient()
+
   // Fetch V1 packages
   const {
     data: packagesV1 = [],
@@ -87,6 +101,49 @@ export function useServicePackages(): UseServicePackagesReturn {
   } = useQuery({
     ...packageQueryOptions.unified,
   })
+
+  // Realtime subscription - invalidate queries when packages change
+  useEffect(() => {
+    if (!enableRealtime) return
+
+    // Subscribe to service_packages_v2 changes
+    const packagesV2Channel = supabase
+      .channel('packages-v2-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_packages_v2',
+        },
+        () => {
+          // Invalidate all package-related queries
+          queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+        }
+      )
+      .subscribe()
+
+    // Subscribe to package_pricing_tiers changes (for tiered pricing)
+    const tiersChannel = supabase
+      .channel('package-tiers-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'package_pricing_tiers',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(packagesV2Channel)
+      supabase.removeChannel(tiersChannel)
+    }
+  }, [queryClient, enableRealtime])
 
   // Combined loading state
   const loading = loadingV1 || loadingV2 || loadingUnified
