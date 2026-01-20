@@ -71,6 +71,29 @@ The application uses Thai Baht (?/THB) with locale `th-TH` via `formatCurrency()
 - **Manager**: Operational access at `/admin/*` routes with limited privileges (no hard delete, no settings)
 - **Staff**: Limited access at `/staff/*` routes for personal work
 
+**Role Display Names (UI vs Database):**
+| Database Role | UI Display | Description |
+|---------------|------------|-------------|
+| `admin` | Super Admin | ผู้ดูแลระบบสูงสุด |
+| `manager` | Admin | ผู้จัดการ/Admin ทั่วไป |
+| `staff` | Staff | พนักงาน |
+
+Use `formatRole()` from `src/lib/role-utils.ts` for consistent role display:
+```typescript
+import { formatRole, formatRoleWithIcon, getRoleBadgeVariant } from '@/lib/role-utils'
+
+// Display role name
+formatRole('admin')     // "Super Admin"
+formatRole('manager')   // "Admin"
+
+// Display with icon
+formatRoleWithIcon('admin')  // "👑 Super Admin"
+
+// Get badge variant for styling
+getRoleBadgeVariant('admin')  // "destructive"
+getRoleBadgeVariant('manager') // "default"
+```
+
 **Permission System:**
 The application implements a comprehensive RBAC system via `src/lib/permissions.ts`:
 - **Permission Matrix**: Defines granular permissions (create, read, update, delete, export) for each role and resource
@@ -275,8 +298,18 @@ Located in `src/lib/supabase.ts` using environment variables:
 **Edge Functions:**
 Located in `supabase/functions/`:
 - `create-staff` - Creates staff users with proper auth and profile setup
+- `delete-user` - Deletes user from `auth.users` and `profiles` (requires Admin role)
 - `send-booking-reminder` - Sends booking reminder notifications
 - Call via: `supabase.functions.invoke('function-name', { body: {...} })`
+
+**Delete User Edge Function:**
+```typescript
+// Admin only - permanently delete user
+const { error } = await supabase.functions.invoke('delete-user', {
+  body: { userId: 'user-uuid-here' }
+})
+```
+⚠️ **Important:** This permanently deletes the user. Use soft delete (`deleted_at`) for normal cases.
 
 **Realtime Subscriptions:**
 ```typescript
@@ -367,6 +400,7 @@ Migration files in `supabase/migrations/` are manually run in Supabase Dashboard
 
 **Feature Migrations:**
 - `20250112_add_recurring_bookings.sql` - Recurring booking schedules
+- `20250120_fix_deleted_by_foreign_keys.sql` - ⭐ Fix FK constraints for user deletion (SET NULL on delete)
 - `20250121_create_booking_status_history.sql` - Audit trail for booking status changes
 - `20250121_add_payment_fields.sql` - Payment tracking fields
 - `20250121_add_customer_avatar.sql` - Customer avatar support
@@ -525,6 +559,16 @@ DO $$ ... $$;
     - Managers can soft delete; only admins can hard delete
 
 13. **RLS Security**: ⚠️ **CRITICAL** - Never bypass RLS. Always run `enable_rls_policies_v2.sql` before production
+
+14. **User Deletion FK Constraint**: When deleting users who have soft-deleted records (via `deleted_by` column), you'll get FK constraint errors. Run `20250120_fix_deleted_by_foreign_keys.sql` to set `ON DELETE SET NULL` for `deleted_by` columns. This allows user deletion while preserving audit trail.
+    ```sql
+    -- Example: If FK error occurs when deleting user
+    -- Error: "update or delete on table 'profiles' violates foreign key constraint"
+    -- Solution: Run the migration or manually update FK to SET NULL
+    ALTER TABLE bookings DROP CONSTRAINT bookings_deleted_by_fkey;
+    ALTER TABLE bookings ADD CONSTRAINT bookings_deleted_by_fkey
+      FOREIGN KEY (deleted_by) REFERENCES profiles(id) ON DELETE SET NULL;
+    ```
 
 ### Git Workflow
 
