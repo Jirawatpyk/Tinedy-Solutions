@@ -5,27 +5,27 @@
  * ใช้ตาม Best Practice เพื่อ Maintainability และ Consistency
  */
 
-type UserRole = 'admin' | 'manager' | 'staff'
+export type UserRole = 'admin' | 'manager' | 'staff'
 
 /**
  * แปลง role code เป็นชื่อที่แสดงผล (Display Name)
  *
- * @param role - User role ('admin' | 'manager' | 'staff')
+ * @param role - User role ('admin' | 'manager' | 'staff') หรือ string ทั่วไป
  * @returns Display name สำหรับแสดงใน UI
  *
  * @example
- * formatRole('admin') // Returns: 'Admin'
- * formatRole('manager') // Returns: 'Manager'
+ * formatRole('admin') // Returns: 'Super admin'
+ * formatRole('manager') // Returns: 'Admin'
  * formatRole('staff') // Returns: 'Staff'
  */
-export function formatRole(role: UserRole): string {
-  const roleMap: Record<UserRole, string> = {
-    admin: 'Admin',
-    manager: 'Manager',
+export function formatRole(role: string | null | undefined): string {
+  const roleMap: Record<string, string> = {
+    admin: 'Super admin',
+    manager: 'Admin',
     staff: 'Staff',
   }
 
-  return roleMap[role] || 'Unknown'
+  return roleMap[role || ''] || 'Unknown'
 }
 
 /**

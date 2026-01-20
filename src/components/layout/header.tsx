@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { formatBookingId } from '@/lib/utils'
+import { formatRole } from '@/lib/role-utils'
 import {
   CommandDialog,
   CommandEmpty,
@@ -104,7 +105,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           id: member.id,
           type: 'staff',
           title: member.full_name,
-          subtitle: `${member.role} • ${member.email}`,
+          subtitle: `${formatRole(member.role)} • ${member.email}`,
           link: `${basePath}/staff/${member.id}`,
         })
       })

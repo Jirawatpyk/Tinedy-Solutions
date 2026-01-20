@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Lock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { formatRole } from '@/lib/role-utils'
 
 export default function AdminProfile() {
   const {
@@ -109,8 +110,7 @@ export default function AdminProfile() {
     phone: adminProfile.phone || undefined, // Convert null to undefined
     email: adminProfile.email,
     avatar_url: adminProfile.avatar_url,
-    role: adminProfile.role === 'admin' ? 'Administrator' :
-          adminProfile.role === 'manager' ? 'Manager' : 'Staff',
+    role: formatRole(adminProfile.role),
     created_at: adminProfile.created_at,
   } : undefined
 

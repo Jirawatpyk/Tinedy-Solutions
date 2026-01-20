@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { formatRole } from '@/lib/role-utils'
 
 export default function StaffProfile() {
   const {
@@ -86,8 +87,7 @@ export default function StaffProfile() {
     phone: staffProfile.phone || undefined, // Convert null to undefined
     email: staffProfile.email,
     avatar_url: staffProfile.avatar_url,
-    role: staffProfile.role === 'admin' ? 'Administrator' :
-          staffProfile.role === 'manager' ? 'Manager' : 'Staff',
+    role: formatRole(staffProfile.role),
     staff_number: staffProfile.staff_number,
     skills: staffProfile.skills,
     created_at: staffProfile.created_at,

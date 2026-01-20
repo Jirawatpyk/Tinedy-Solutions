@@ -510,8 +510,8 @@ export function AdminStaff() {
                         <SelectContent>
                           <SelectItem value="staff">Staff</SelectItem>
                           <AdminOnly>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Admin</SelectItem>
+                            <SelectItem value="admin">Super admin</SelectItem>
                           </AdminOnly>
                         </SelectContent>
                       </Select>
@@ -554,7 +554,7 @@ export function AdminStaff() {
         />
 
         <StatCard
-          title="Administrators"
+          title="Super Admins"
           value={stats.admins}
           description="Full access users"
           icon={Shield}
@@ -562,9 +562,9 @@ export function AdminStaff() {
         />
 
         <StatCard
-          title="Managers"
+          title="Admins"
           value={stats.managers}
-          description="Team managers"
+          description="Operational managers"
           icon={Users}
           iconColor="text-tinedy-purple"
         />
@@ -597,8 +597,8 @@ export function AdminStaff() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="admin">Super admin</SelectItem>
+                <SelectItem value="manager">Admin</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
               </SelectContent>
             </Select>
@@ -647,7 +647,7 @@ export function AdminStaff() {
                             variant={member.role === 'admin' ? 'default' : member.role === 'manager' ? 'default' : 'secondary'}
                             className={`text-[10px] sm:text-xs ${member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                           >
-                            {member.role === 'admin' ? '👑 Admin' : member.role === 'manager' ? '👔 Manager' : 'Staff'}
+                            {member.role === 'admin' ? '👑 Super admin' : member.role === 'manager' ? '👔 Admin' : 'Staff'}
                           </Badge>
                           {member.average_rating !== undefined && (
                             <div className="flex items-center gap-1 text-yellow-500">

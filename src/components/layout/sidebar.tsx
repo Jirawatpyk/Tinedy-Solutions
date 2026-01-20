@@ -20,6 +20,7 @@ import {
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { supabase } from '@/lib/supabase'
 import { getNavigationRoutes } from '@/lib/route-utils'
+import { formatRole } from '@/lib/role-utils'
 
 interface SidebarProps {
   isOpen: boolean
@@ -204,8 +205,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                     <p className="text-sm font-medium truncate">
                       {profile?.full_name}
                     </p>
-                    <p className="text-xs text-tinedy-off-white/70 capitalize">
-                      {profile?.role}
+                    <p className="text-xs text-tinedy-off-white/70">
+                      {profile?.role ? formatRole(profile.role) : ''}
                     </p>
                   </div>
                   <ChevronDown className={cn(

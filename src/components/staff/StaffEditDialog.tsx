@@ -329,8 +329,8 @@ export function StaffEditDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="manager">Admin</SelectItem>
+                          <SelectItem value="admin">Super admin</SelectItem>
                         </SelectContent>
                       </Select>
                       {fieldState.error && (
