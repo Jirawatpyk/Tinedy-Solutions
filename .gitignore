@@ -34,3 +34,11 @@ coverage
 *.sw?
 nul
 supabase/.temp/
+
+# Claude Code
+.agent/
+.claude/
+_bmad/
+
+# Generated files
+*.zip
