@@ -34,7 +34,7 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
     staff: { create: false, read: true, update: true, delete: false, export: false },
     teams: { create: true, read: true, update: true, delete: false, export: false },
     reports: { create: false, read: true, update: false, delete: false, export: true },
-    settings: { create: false, read: true, update: true, delete: false, export: false },
+    settings: { create: false, read: false, update: false, delete: false, export: false },
     users: { create: false, read: false, update: false, delete: false, export: false },
     service_packages: { create: true, read: true, update: true, delete: false, export: false },
   },
@@ -81,7 +81,7 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   '/admin/weekly-schedule': ['admin', 'manager'],
   '/admin/chat': ['admin', 'manager'],
   '/admin/packages': ['admin', 'manager'],
-  '/admin/settings': ['admin', 'manager'],
+  '/admin/settings': ['admin'],
   '/admin/profile': ['admin', 'manager'],
 
   // Staff routes

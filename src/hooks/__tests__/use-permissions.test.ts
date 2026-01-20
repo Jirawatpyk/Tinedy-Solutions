@@ -181,11 +181,12 @@ describe('usePermissions', () => {
       expect(result.current.canAccessRoute('/manager/bookings')).toBe(true)
     })
 
-    it('should allow manager to access admin routes (per ROUTE_PERMISSIONS)', () => {
-      // Note: Current implementation allows admin + manager to access /admin routes
-      // Routes not in ROUTE_PERMISSIONS (like /admin/settings) are treated as public
+    it('should allow manager to access most admin routes except settings', () => {
+      // Note: Current implementation allows admin + manager to access most /admin routes
+      // But /admin/settings is restricted to admin only
       const { result } = renderHook(() => usePermissions())
-      expect(result.current.canAccessRoute('/admin/settings')).toBe(true)
+      expect(result.current.canAccessRoute('/admin')).toBe(true)
+      expect(result.current.canAccessRoute('/admin/settings')).toBe(false) // Settings is admin-only
     })
 
     it('should NOT allow manager to delete customers', () => {

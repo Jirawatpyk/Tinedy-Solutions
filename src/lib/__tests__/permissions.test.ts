@@ -251,11 +251,17 @@ describe('canDelete', () => {
 
 describe('canAccessRoute', () => {
   describe('Admin Routes', () => {
-    // Note: In current implementation, admin routes are shared with managers
-    it('should allow admin and manager to access admin routes', () => {
+    it('should allow admin to access all admin routes', () => {
       expect(canAccessRoute('admin', '/admin')).toBe(true)
       expect(canAccessRoute('admin', '/admin/settings')).toBe(true)
+    })
+
+    it('should allow manager to access most admin routes except settings', () => {
       expect(canAccessRoute('manager', '/admin')).toBe(true) // Managers can access /admin
+      expect(canAccessRoute('manager', '/admin/settings')).toBe(false) // Settings is admin-only
+    })
+
+    it('should NOT allow staff to access admin routes', () => {
       expect(canAccessRoute('staff', '/admin')).toBe(false)
     })
   })

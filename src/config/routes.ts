@@ -312,7 +312,7 @@ export const ADMIN_ROUTES = {
     title: 'Settings',
     description: 'ตั้งค่าระบบ',
     icon: Settings,
-    allowedRoles: ['admin', 'manager'],
+    allowedRoles: ['admin'],
     permissions: {
       view: 'settings',
       edit: 'settings',

@@ -36,13 +36,16 @@ describe('Manager Role - Route Access Integration', () => {
   })
 
   describe('Admin routes access by manager', () => {
-    it('should allow manager to access /admin routes (as per current ROUTE_PERMISSIONS)', () => {
-      // Note: Current implementation allows admin + manager to access /admin routes
+    it('should allow manager to access most /admin routes', () => {
+      // Note: Current implementation allows admin + manager to access most /admin routes
       // The ROUTE_PERMISSIONS defines /admin as: ['admin', 'manager']
       expect(canAccessRoute(managerRole, '/admin')).toBe(true)
-      // Routes not in ROUTE_PERMISSIONS are treated as public
-      expect(canAccessRoute(managerRole, '/admin/settings')).toBe(true)
       expect(canAccessRoute(managerRole, '/admin/packages')).toBe(true)
+    })
+
+    it('should NOT allow manager to access /admin/settings', () => {
+      // Settings page is admin-only
+      expect(canAccessRoute(managerRole, '/admin/settings')).toBe(false)
     })
   })
 
