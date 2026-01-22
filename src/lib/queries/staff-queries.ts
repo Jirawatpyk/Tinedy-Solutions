@@ -8,16 +8,81 @@
  * - Support with/without ratings
  * - Shared cache across pages
  * - Type-safe query keys
+ * - Team reviews included with membership period filtering
  */
 
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
+import { isWithinMembershipPeriod, type MembershipPeriod } from '@/lib/review-utils'
 import type { StaffWithRating, StaffListItem } from '@/types/staff'
+
+/**
+ * Helper: Validate rating value
+ * @param rating - Value to validate
+ * @returns true if rating is a valid number between 1-5
+ */
+function isValidRating(rating: unknown): rating is number {
+  return typeof rating === 'number' && !isNaN(rating) && rating >= 1 && rating <= 5
+}
+
+/**
+ * Helper: Collect ratings for a single staff member
+ * Includes both direct staff reviews and team reviews (filtered by membership period)
+ * @param staffId - Staff UUID
+ * @param membershipPeriods - Array of team membership periods
+ * @returns Promise resolving to array of valid rating numbers (1-5)
+ */
+async function collectStaffRatings(
+  staffId: string,
+  membershipPeriods: MembershipPeriod[]
+): Promise<number[]> {
+  const allRatings: number[] = []
+  const teamIds = [...new Set(membershipPeriods.map((p) => p.teamId))]
+
+  // Fetch direct staff reviews
+  const { data: directReviews, error: directError } = await supabase
+    .from('reviews')
+    .select('rating')
+    .eq('staff_id', staffId)
+
+  if (directError) {
+    console.warn(`[staff-queries] Failed to fetch direct reviews for staff ${staffId}:`, directError.message)
+  } else if (directReviews) {
+    directReviews.forEach((r) => {
+      if (isValidRating(r.rating)) {
+        allRatings.push(r.rating)
+      }
+    })
+  }
+
+  // Fetch and filter team reviews
+  if (teamIds.length > 0) {
+    const { data: teamReviews, error: teamError } = await supabase
+      .from('reviews')
+      .select('rating, created_at, team_id')
+      .in('team_id', teamIds)
+
+    if (teamError) {
+      console.warn(`[staff-queries] Failed to fetch team reviews for staff ${staffId}:`, teamError.message)
+    } else if (teamReviews) {
+      teamReviews.forEach((review) => {
+        if (!review.team_id || !isValidRating(review.rating)) return
+        const reviewCreatedAt = new Date(review.created_at)
+        if (isWithinMembershipPeriod(reviewCreatedAt, review.team_id, membershipPeriods)) {
+          allRatings.push(review.rating)
+        }
+      })
+    }
+  }
+
+  return allRatings
+}
 
 /**
  * Fetch Staff List with Ratings
  *
  * ดึง staff ทั้งหมด (admin, manager, staff) พร้อม average rating, booking count, team count
+ * รวม reviews จาก direct staff assignment และ team assignment (กรอง membership period)
  * ใช้สำหรับหน้า Staff management
  *
  * @returns Promise<StaffWithRating[]>
@@ -33,58 +98,130 @@ export async function fetchStaffWithRatings(): Promise<StaffWithRating[]> {
   if (error) throw new Error(`Failed to fetch staff: ${error.message}`)
   if (!staffData || staffData.length === 0) return []
 
-  // Fetch ratings for all staff
   const staffIds = staffData.map((s) => s.id)
 
-  interface ReviewData {
-    rating: number
-    bookings: { staff_id: string } | { staff_id: string }[]
+  // Parallel queries for better performance
+  const [
+    teamMembershipsResult,
+    directReviewsResult,
+    bookingsResult,
+    activeTeamMembersResult
+  ] = await Promise.all([
+    // Fetch ALL team memberships (including historical) for membership period filtering
+    supabase
+      .from('team_members')
+      .select('staff_id, team_id, joined_at, left_at')
+      .in('staff_id', staffIds),
+    // Fetch direct staff reviews
+    supabase
+      .from('reviews')
+      .select('rating, staff_id')
+      .in('staff_id', staffIds),
+    // Fetch booking counts for all staff (direct assignment only)
+    supabase
+      .from('bookings')
+      .select('staff_id')
+      .in('staff_id', staffIds)
+      .is('deleted_at', null),
+    // Fetch team membership counts for all staff (active only)
+    supabase
+      .from('team_members')
+      .select('staff_id')
+      .in('staff_id', staffIds)
+      .is('left_at', null)
+  ])
+
+  // Log warnings for query failures (non-blocking)
+  if (teamMembershipsResult.error) {
+    console.warn('[staff-queries] Failed to fetch team memberships:', teamMembershipsResult.error.message)
+  }
+  if (directReviewsResult.error) {
+    console.warn('[staff-queries] Failed to fetch direct reviews:', directReviewsResult.error.message)
+  }
+  if (bookingsResult.error) {
+    console.warn('[staff-queries] Failed to fetch bookings:', bookingsResult.error.message)
+  }
+  if (activeTeamMembersResult.error) {
+    console.warn('[staff-queries] Failed to fetch active team members:', activeTeamMembersResult.error.message)
   }
 
-  const { data: ratingsData } = await supabase
-    .from('reviews')
-    .select('rating, bookings!inner(staff_id)')
-    .in('bookings.staff_id', staffIds)
+  const allTeamMemberships = teamMembershipsResult.data || []
+  const directReviewsData = directReviewsResult.data || []
+  const bookingsData = bookingsResult.data || []
+  const activeTeamMembersData = activeTeamMembersResult.data || []
 
-  // Fetch booking counts for all staff
-  const { data: bookingsData } = await supabase
-    .from('bookings')
-    .select('staff_id')
-    .in('staff_id', staffIds)
-    .is('deleted_at', null)
+  // Build membership periods map per staff
+  const staffMembershipPeriods: Record<string, MembershipPeriod[]> = {}
+  allTeamMemberships.forEach((m) => {
+    if (!staffMembershipPeriods[m.staff_id]) {
+      staffMembershipPeriods[m.staff_id] = []
+    }
+    staffMembershipPeriods[m.staff_id].push({
+      teamId: m.team_id,
+      joinedAt: m.joined_at,
+      leftAt: m.left_at,
+    })
+  })
 
-  // Fetch team membership counts for all staff
-  const { data: teamMembersData } = await supabase
-    .from('team_members')
-    .select('staff_id')
-    .in('staff_id', staffIds)
-    .is('left_at', null) // Only active memberships
+  // Get unique team IDs for querying team reviews
+  const allTeamIds = [...new Set(allTeamMemberships.map((m) => m.team_id))]
 
-  // Group ratings by staff_id
+  // Fetch team reviews (only if there are teams)
+  let teamReviewsData: { rating: number; created_at: string; team_id: string }[] = []
+  if (allTeamIds.length > 0) {
+    const { data, error: teamReviewsError } = await supabase
+      .from('reviews')
+      .select('rating, created_at, team_id')
+      .in('team_id', allTeamIds)
+
+    if (teamReviewsError) {
+      console.warn('[staff-queries] Failed to fetch team reviews:', teamReviewsError.message)
+    } else if (data) {
+      teamReviewsData = data
+    }
+  }
+
+  // Group direct ratings by staff_id (with validation)
   const staffRatings: Record<string, number[]> = {}
 
-  ratingsData?.forEach((review: ReviewData) => {
-    const bookings = Array.isArray(review.bookings) ? review.bookings[0] : review.bookings
-    const staffId = bookings?.staff_id
-    if (staffId) {
-      if (!staffRatings[staffId]) {
-        staffRatings[staffId] = []
+  directReviewsData.forEach((review) => {
+    if (review.staff_id && isValidRating(review.rating)) {
+      if (!staffRatings[review.staff_id]) {
+        staffRatings[review.staff_id] = []
       }
-      staffRatings[staffId].push(review.rating)
+      staffRatings[review.staff_id].push(review.rating)
     }
+  })
+
+  // Add team reviews to staff ratings (optimized: iterate staff first, with validation)
+  staffIds.forEach((staffId) => {
+    const membershipPeriods = staffMembershipPeriods[staffId] || []
+    if (membershipPeriods.length === 0) return // Skip staff without teams
+
+    teamReviewsData.forEach((review) => {
+      if (!review.team_id || !isValidRating(review.rating)) return
+
+      const reviewCreatedAt = new Date(review.created_at)
+      if (isWithinMembershipPeriod(reviewCreatedAt, review.team_id, membershipPeriods)) {
+        if (!staffRatings[staffId]) {
+          staffRatings[staffId] = []
+        }
+        staffRatings[staffId].push(review.rating)
+      }
+    })
   })
 
   // Count bookings per staff
   const staffBookingCounts: Record<string, number> = {}
-  bookingsData?.forEach((booking: { staff_id: string }) => {
+  bookingsData.forEach((booking) => {
     if (booking.staff_id) {
       staffBookingCounts[booking.staff_id] = (staffBookingCounts[booking.staff_id] || 0) + 1
     }
   })
 
-  // Count teams per staff
+  // Count teams per staff (active memberships only)
   const staffTeamCounts: Record<string, number> = {}
-  teamMembersData?.forEach((member: { staff_id: string }) => {
+  activeTeamMembersData.forEach((member) => {
     if (member.staff_id) {
       staffTeamCounts[member.staff_id] = (staffTeamCounts[member.staff_id] || 0) + 1
     }
@@ -100,7 +237,7 @@ export async function fetchStaffWithRatings(): Promise<StaffWithRating[]> {
       const average = ratings.reduce((a, b) => a + b, 0) / ratings.length
       return {
         ...staff,
-        average_rating: average,
+        average_rating: Math.round(average * 10) / 10, // Round to 1 decimal
         booking_count: bookingCount,
         team_count: teamCount,
       } as StaffWithRating
@@ -145,7 +282,7 @@ export async function fetchStaffList(role: 'staff' | 'all' = 'all'): Promise<Sta
 /**
  * Fetch Single Staff Detail
  *
- * ดึงข้อมูล staff คนเดียวพร้อม rating
+ * ดึงข้อมูล staff คนเดียวพร้อม rating (รวม team reviews)
  *
  * @param id - Staff ID
  * @returns Promise<StaffWithRating>
@@ -160,21 +297,28 @@ export async function fetchStaffDetail(id: string): Promise<StaffWithRating> {
 
   if (error) throw new Error(`Failed to fetch staff detail: ${error.message}`)
 
-  // Fetch ratings for this staff
-  interface ReviewData {
-    rating: number
-  }
+  // Fetch team memberships for this staff (including historical)
+  const { data: teamMemberships, error: membershipError } = await supabase
+    .from('team_members')
+    .select('team_id, joined_at, left_at')
+    .eq('staff_id', id)
 
-  const { data: ratingsData } = await supabase
-    .from('reviews')
-    .select('rating, bookings!inner(staff_id)')
-    .eq('bookings.staff_id', id)
+  // Build membership periods (handle error gracefully - exclude team reviews if failed)
+  const membershipPeriods: MembershipPeriod[] = !membershipError && teamMemberships
+    ? teamMemberships.map((m) => ({
+        teamId: m.team_id,
+        joinedAt: m.joined_at,
+        leftAt: m.left_at,
+      }))
+    : []
+
+  // Use shared helper to collect ratings
+  const allRatings = await collectStaffRatings(id, membershipPeriods)
 
   // Calculate average rating
-  if (ratingsData && ratingsData.length > 0) {
-    const ratings = ratingsData.map((r: ReviewData) => r.rating)
-    const average = ratings.reduce((a, b) => a + b, 0) / ratings.length
-    return { ...staff, average_rating: average } as StaffWithRating
+  if (allRatings.length > 0) {
+    const average = allRatings.reduce((a, b) => a + b, 0) / allRatings.length
+    return { ...staff, average_rating: Math.round(average * 10) / 10 } as StaffWithRating
   }
 
   return staff as StaffWithRating

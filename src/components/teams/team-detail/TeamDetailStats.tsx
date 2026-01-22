@@ -6,6 +6,7 @@ interface TeamStats {
   totalBookings: number
   completedBookings: number
   averageRating: number
+  reviewCount: number
   totalRevenue: number
 }
 
@@ -59,11 +60,14 @@ export function TeamDetailStats({ stats }: TeamDetailStatsProps) {
           <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 fill-yellow-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-tinedy-dark">
+          <div className="text-xl sm:text-2xl font-bold text-tinedy-dark flex items-center gap-1">
             {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
+            {stats.averageRating > 0 && <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 fill-yellow-500" />}
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-            {stats.averageRating > 0 ? 'Out of 5.0' : 'No ratings yet'}
+            {stats.reviewCount > 0
+              ? `From ${stats.reviewCount} review${stats.reviewCount > 1 ? 's' : ''}`
+              : 'No reviews yet'}
           </p>
         </CardContent>
       </Card>

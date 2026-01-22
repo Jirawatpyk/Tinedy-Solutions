@@ -371,7 +371,7 @@ export default function StaffDashboard() {
                       title="Rating"
                       value={stats?.averageRating && stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
                       icon={Star}
-                      description="From reviews"
+                      description={stats?.reviewCount && stats.reviewCount > 0 ? `From ${stats.reviewCount} review${stats.reviewCount > 1 ? 's' : ''}` : 'No reviews yet'}
                     />
                   </div>
                   <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '250ms' }}>

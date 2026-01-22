@@ -91,6 +91,7 @@ describe('useStaffPerformance', () => {
         cancelledRate: 0,
         totalRevenue: 0,
         averageRating: 0,
+        reviewCount: 0,
       })
     })
 
@@ -156,6 +157,7 @@ describe('useStaffPerformance', () => {
       expect(stats).toHaveProperty('cancelledRate')
       expect(stats).toHaveProperty('totalRevenue')
       expect(stats).toHaveProperty('averageRating')
+      expect(stats).toHaveProperty('reviewCount')
     })
   })
 })

@@ -71,6 +71,7 @@ interface TeamStats {
   totalBookings: number
   completedBookings: number
   averageRating: number
+  reviewCount: number
   totalRevenue: number
 }
 
@@ -235,14 +236,16 @@ export function AdminTeamDetail() {
       if (reviewsError) throw reviewsError
 
       const ratings = reviews?.map(r => r.rating) || []
-      const averageRating = ratings.length > 0
-        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      const reviewCount = ratings.length
+      const averageRating = reviewCount > 0
+        ? ratings.reduce((sum, r) => sum + r, 0) / reviewCount
         : 0
 
       setStats({
         totalBookings,
         completedBookings,
         averageRating,
+        reviewCount,
         totalRevenue,
       })
     } catch (error) {

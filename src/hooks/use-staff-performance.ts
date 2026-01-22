@@ -6,6 +6,7 @@ import {
   calculateBookingRevenue,
   getUniqueTeamIds,
 } from '@/lib/team-revenue-utils'
+import { fetchStaffReviewStats, type MembershipPeriod } from '@/lib/review-utils'
 import type { Booking } from '@/types'
 
 export interface StaffPerformanceStats {
@@ -15,6 +16,7 @@ export interface StaffPerformanceStats {
   cancelledRate: number
   totalRevenue: number
   averageRating: number
+  reviewCount: number
 }
 
 export interface MonthlyPerformanceData {
@@ -71,6 +73,7 @@ export function useStaffPerformance(staffId: string | undefined) {
     cancelledRate: 0,
     totalRevenue: 0,
     averageRating: 0,
+    reviewCount: 0,
   })
   const [monthlyData, setMonthlyData] = useState<MonthlyPerformanceData[]>([])
   const [loading, setLoading] = useState(true)
@@ -254,7 +257,8 @@ export function useStaffPerformance(staffId: string | undefined) {
       })
 
       setBookings(filteredData)
-      await calculateStats(filteredData)
+      // Pass allMembershipPeriods for consistent filtering in reviews (same logic as bookings)
+      await calculateStats(filteredData, allMembershipPeriods)
       await calculateMonthlyData(filteredData)
     } catch (error) {
       console.error('Error fetching bookings:', error)
@@ -266,12 +270,10 @@ export function useStaffPerformance(staffId: string | undefined) {
     }
   }, [staffId, toast])
 
-  const calculateStats = async (bookingsData: Booking[]) => {
+  const calculateStats = async (bookingsData: Booking[], membershipPeriods: MembershipPeriod[] = []) => {
     const total = bookingsData.length
     const completed = bookingsData.filter((b) => b.status === 'completed').length
     const pending = bookingsData.filter((b) => b.status === 'pending').length
-    const cancelled = bookingsData.filter((b) => b.status === 'cancelled').length
-    const cancelledRate = total > 0 ? (cancelled / total) * 100 : 0
 
     // Get unique team IDs that need member counts (OPTIMIZE: Single query for all teams)
     const paidBookings = bookingsData.filter(b => b.payment_status === 'paid')
@@ -284,13 +286,30 @@ export function useStaffPerformance(staffId: string | undefined) {
       totalRevenue += calculateBookingRevenue(booking, teamMemberCounts)
     }
 
+    // Calculate average rating from reviews using utility function
+    // Use membershipPeriods for consistent filtering (same logic as bookings)
+    let reviewStats = { averageRating: 0, reviewCount: 0 }
+    if (staffId) {
+      try {
+        reviewStats = await fetchStaffReviewStats(staffId, membershipPeriods)
+      } catch (error) {
+        // Reviews table may not exist in all deployments - show warning toast
+        console.warn('Could not fetch reviews:', error)
+        toast({
+          title: 'Warning',
+          description: 'Could not load rating data. Other statistics are available.',
+        })
+      }
+    }
+
     setStats({
       totalBookings: total,
       completedBookings: completed,
       pendingBookings: pending,
-      cancelledRate: Number(cancelledRate.toFixed(1)),
+      cancelledRate: 0, // No longer used, keeping for backwards compatibility
       totalRevenue,
-      averageRating: 0, // TODO: Implement rating system
+      averageRating: reviewStats.averageRating,
+      reviewCount: reviewStats.reviewCount,
     })
   }
 

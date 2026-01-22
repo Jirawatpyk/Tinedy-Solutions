@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, CheckCircle2, DollarSign, XCircle } from 'lucide-react'
+import { Calendar, CheckCircle2, DollarSign, Star } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
 interface StaffPerformanceStats {
   totalBookings: number
@@ -9,6 +10,7 @@ interface StaffPerformanceStats {
   cancelledRate: number
   totalRevenue: number
   averageRating: number
+  reviewCount: number
 }
 
 interface StaffStatsCardsProps {
@@ -54,24 +56,28 @@ export const StaffStatsCards = memo(function StaffStatsCards({ stats }: StaffSta
         </CardHeader>
         <CardContent>
           <div className="text-xl sm:text-2xl font-bold">
-            ฿{stats.totalRevenue.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
+            {formatCurrency(stats.totalRevenue)}
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Revenue generated</p>
         </CardContent>
       </Card>
 
-      {/* Cancelled Rate */}
+      {/* Average Rating */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Cancelled Rate</CardTitle>
-          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Average Rating</CardTitle>
+          <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 fill-yellow-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.cancelledRate}%</div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Cancellation rate</p>
+          <div className="text-xl sm:text-2xl font-bold text-yellow-600 flex items-center gap-1">
+            {stats.averageRating > 0 ? stats.averageRating : '-'}
+            {stats.averageRating > 0 && <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 fill-yellow-500" />}
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+            {stats.reviewCount > 0
+              ? `From ${stats.reviewCount} review${stats.reviewCount > 1 ? 's' : ''}`
+              : 'No reviews yet'}
+          </p>
         </CardContent>
       </Card>
     </div>

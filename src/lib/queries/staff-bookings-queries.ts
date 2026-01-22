@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
 import { calculateBookingRevenue, buildTeamFilterCondition } from '@/lib/team-revenue-utils'
+import { isWithinMembershipPeriod } from '@/lib/review-utils'
 
 // ============================================================================
 // TYPES
@@ -114,6 +115,7 @@ export interface StaffStats {
   jobsThisWeek: number
   completionRate: number // percentage
   averageRating: number
+  reviewCount: number // number of reviews used for average
   totalEarnings: number // current month
   // Extended stats for enhanced Stats tab
   totalTasks6Months: number
@@ -703,6 +705,7 @@ export async function fetchStaffStats(
       })(),
 
       // Average rating from reviews (staff + team reviews)
+      // Filter by membership period for consistency with bookings/earnings
       (async () => {
         // Build filter for staff reviews OR team reviews
         let filterStr = `staff_id.eq.${userId}`
@@ -712,18 +715,38 @@ export async function fetchStaffStats(
 
         const { data: reviews, error } = await supabase
           .from('reviews')
-          .select('rating')
+          .select('rating, staff_id, team_id, created_at')
           .or(filterStr)
 
         if (error) {
           logger.error('Error fetching reviews', { error, userId }, { context: 'StaffBookings' })
-          return 0
+          return { averageRating: 0, reviewCount: 0 }
         }
 
-        if (!reviews || reviews.length === 0) return 0
+        if (!reviews || reviews.length === 0) return { averageRating: 0, reviewCount: 0 }
 
-        const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0)
-        return Math.round((totalRating / reviews.length) * 10) / 10
+        // Filter team reviews by membership period (consistent with bookings)
+        // Uses shared isWithinMembershipPeriod utility from review-utils.ts
+        const filteredReviews = reviews.filter(review => {
+          // Direct staff assignment - always include
+          if (review.staff_id === userId) {
+            return true
+          }
+
+          // Team review - check if staff was a member when review was created
+          if (review.team_id && review.created_at) {
+            const reviewCreatedAt = new Date(review.created_at)
+            return isWithinMembershipPeriod(reviewCreatedAt, review.team_id, allMembershipPeriods)
+          }
+
+          return true
+        })
+
+        if (filteredReviews.length === 0) return { averageRating: 0, reviewCount: 0 }
+
+        const totalRating = filteredReviews.reduce((sum, review) => sum + (review.rating || 0), 0)
+        const averageRating = Math.round((totalRating / filteredReviews.length) * 10) / 10
+        return { averageRating, reviewCount: filteredReviews.length }
       })(),
 
       // Total earnings (current month) - divided by team_member_count stored at booking creation
@@ -850,7 +873,8 @@ export async function fetchStaffStats(
       jobsToday: jobsTodayResult,
       jobsThisWeek: jobsWeekResult,
       completionRate,
-      averageRating: reviewsResult,
+      averageRating: reviewsResult.averageRating,
+      reviewCount: reviewsResult.reviewCount,
       totalEarnings: Math.round(earningsResult), // Round to avoid decimal issues
       totalTasks6Months: totalTasks6MonthsResult,
       monthlyData: monthlyDataResult,
@@ -867,6 +891,7 @@ export async function fetchStaffStats(
       jobsThisWeek: 0,
       completionRate: 0,
       averageRating: 0,
+      reviewCount: 0,
       totalEarnings: 0,
       totalTasks6Months: 0,
       monthlyData: [],
