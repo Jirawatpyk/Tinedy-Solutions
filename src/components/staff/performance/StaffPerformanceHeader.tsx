@@ -5,12 +5,13 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { ArrowLeft, Edit } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { useAuth } from '@/contexts/auth-context'
+import { formatRole, type UserRole } from '@/lib/role-utils'
 
 interface Staff {
   id: string
   full_name: string
   email: string
-  role: string
+  role: UserRole
   phone?: string
   avatar_url?: string
   booking_count?: number
@@ -76,7 +77,7 @@ export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({
             {staff.full_name}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground truncate">
-            {staff.role} • {staff.email}
+            {formatRole(staff.role)} • {staff.email}
           </p>
         </div>
 

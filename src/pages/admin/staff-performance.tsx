@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { XCircle } from 'lucide-react'
 import { useStaffPerformance } from '@/hooks/use-staff-performance'
 import { StaffPerformanceHeader } from '@/components/staff/performance/StaffPerformanceHeader'
+import { type UserRole } from '@/lib/role-utils'
 import { StaffStatsCards } from '@/components/staff/performance/StaffStatsCards'
 import { StaffPerformanceCharts } from '@/components/staff/performance/StaffPerformanceCharts'
 import { StaffRecentBookings } from '@/components/staff/performance/StaffRecentBookings'
@@ -159,6 +160,7 @@ export function AdminStaffPerformance() {
           <StaffPerformanceHeader
             staff={{
               ...staff,
+              role: staff.role as UserRole,
               booking_count: staffCounts.booking_count,
               team_count: staffCounts.team_count,
             }}
