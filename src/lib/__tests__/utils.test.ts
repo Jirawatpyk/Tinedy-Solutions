@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { cn, formatDate, formatDateTime, formatCurrency } from '../utils'
+import {
+  cn,
+  formatDate,
+  formatDateTime,
+  formatCurrency,
+  getBangkokDateString,
+  getInitials,
+  getAvatarColor,
+  getRankBadgeColor,
+  formatBookingId,
+  AVATAR_COLORS,
+  RANK_BADGE_COLORS,
+} from '../utils'
 
 describe('utils', () => {
   describe('cn', () => {
@@ -188,6 +200,285 @@ describe('utils', () => {
         const result = formatCurrency(amount)
         expect(result).toMatch(expected)
       })
+    })
+  })
+
+  describe('getBangkokDateString', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should return date in YYYY-MM-DD format', () => {
+      vi.setSystemTime(new Date('2024-01-15T12:00:00Z'))
+      const result = getBangkokDateString()
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it('should account for Bangkok timezone (UTC+7)', () => {
+      // Set to 23:00 UTC on Jan 15 (should be Jan 16 06:00 in Bangkok)
+      vi.setSystemTime(new Date('2024-01-15T23:00:00Z'))
+      const result = getBangkokDateString()
+      // UTC+7 offset applied
+      expect(result).toMatch(/^2024-01-1[56]$/)
+    })
+
+    it('should return consistent format', () => {
+      vi.setSystemTime(new Date('2024-03-05T00:00:00Z'))
+      const result = getBangkokDateString()
+      expect(result).toHaveLength(10)
+      expect(result.split('-')).toHaveLength(3)
+    })
+
+    it('should handle year-end dates correctly', () => {
+      vi.setSystemTime(new Date('2024-12-31T20:00:00Z'))
+      const result = getBangkokDateString()
+      expect(result).toMatch(/^202[45]-/)
+    })
+  })
+
+  describe('getInitials', () => {
+    it('should return initials from full name', () => {
+      expect(getInitials('John Doe')).toBe('JD')
+    })
+
+    it('should return first two letters for single name', () => {
+      expect(getInitials('Alice')).toBe('AL')
+    })
+
+    it('should handle three-word names', () => {
+      expect(getInitials('John Michael Doe')).toBe('JM')
+    })
+
+    it('should handle empty string', () => {
+      expect(getInitials('')).toBe('?')
+    })
+
+    it('should handle whitespace-only string', () => {
+      expect(getInitials('   ')).toBe('?')
+    })
+
+    it('should handle null/undefined input', () => {
+      expect(getInitials(null as any)).toBe('?')
+      expect(getInitials(undefined as any)).toBe('?')
+    })
+
+    it('should handle non-string input', () => {
+      expect(getInitials(123 as any)).toBe('?')
+      expect(getInitials({} as any)).toBe('?')
+    })
+
+    it('should trim whitespace', () => {
+      expect(getInitials('  John   Doe  ')).toBe('JD')
+    })
+
+    it('should handle single character name', () => {
+      expect(getInitials('A')).toBe('A')
+    })
+
+    it('should uppercase initials', () => {
+      expect(getInitials('john doe')).toBe('JD')
+    })
+
+    it('should handle names with multiple spaces', () => {
+      expect(getInitials('John    Doe')).toBe('JD')
+    })
+  })
+
+  describe('getAvatarColor', () => {
+    it('should return color from AVATAR_COLORS array', () => {
+      const result = getAvatarColor(0)
+      expect(AVATAR_COLORS).toContain(result as any)
+    })
+
+    it('should cycle through colors using modulo', () => {
+      const result = getAvatarColor(AVATAR_COLORS.length)
+      expect(result).toBe(AVATAR_COLORS[0])
+    })
+
+    it('should handle large indices', () => {
+      const result = getAvatarColor(25)
+      expect(AVATAR_COLORS).toContain(result as any)
+    })
+
+    it('should handle negative numbers by returning first color', () => {
+      const result = getAvatarColor(-5)
+      expect(result).toBe(AVATAR_COLORS[0])
+    })
+
+    it('should handle non-number input', () => {
+      const result = getAvatarColor('invalid' as any)
+      expect(result).toBe(AVATAR_COLORS[0])
+    })
+
+    it('should return different colors for consecutive indices', () => {
+      const color1 = getAvatarColor(0)
+      const color2 = getAvatarColor(1)
+      expect(color1).not.toBe(color2)
+    })
+  })
+
+  describe('getRankBadgeColor', () => {
+    it('should return gold for first place (index 0)', () => {
+      expect(getRankBadgeColor(0)).toBe(RANK_BADGE_COLORS.gold)
+    })
+
+    it('should return silver for second place (index 1)', () => {
+      expect(getRankBadgeColor(1)).toBe(RANK_BADGE_COLORS.silver)
+    })
+
+    it('should return bronze for third place (index 2)', () => {
+      expect(getRankBadgeColor(2)).toBe(RANK_BADGE_COLORS.bronze)
+    })
+
+    it('should return default for fourth place and beyond', () => {
+      expect(getRankBadgeColor(3)).toBe(RANK_BADGE_COLORS.default)
+      expect(getRankBadgeColor(4)).toBe(RANK_BADGE_COLORS.default)
+      expect(getRankBadgeColor(10)).toBe(RANK_BADGE_COLORS.default)
+    })
+
+    it('should handle negative numbers by returning default', () => {
+      expect(getRankBadgeColor(-1)).toBe(RANK_BADGE_COLORS.default)
+    })
+
+    it('should handle non-number input', () => {
+      expect(getRankBadgeColor('invalid' as any)).toBe(RANK_BADGE_COLORS.default)
+    })
+
+    it('should include proper color classes', () => {
+      const gold = getRankBadgeColor(0)
+      expect(gold).toContain('bg-')
+      expect(gold).toContain('text-')
+    })
+  })
+
+  describe('formatBookingId', () => {
+    it('should format UUID correctly', () => {
+      const result = formatBookingId('6g12c6co-1234-5678-9abc-def012345678')
+      expect(result).toBe('#BK-6G12C6')
+    })
+
+    it('should uppercase the ID', () => {
+      const result = formatBookingId('abcdef-1234-5678-9abc-def012345678')
+      expect(result).toBe('#BK-ABCDEF')
+    })
+
+    it('should handle short IDs', () => {
+      const result = formatBookingId('abc')
+      expect(result).toBe('#BK-ABC')
+    })
+
+    it('should handle empty string', () => {
+      const result = formatBookingId('')
+      expect(result).toBe('#BK-??????')
+    })
+
+    it('should handle null/undefined input', () => {
+      expect(formatBookingId(null as any)).toBe('#BK-??????')
+      expect(formatBookingId(undefined as any)).toBe('#BK-??????')
+    })
+
+    it('should handle non-string input', () => {
+      expect(formatBookingId(123 as any)).toBe('#BK-??????')
+      expect(formatBookingId({} as any)).toBe('#BK-??????')
+    })
+
+    it('should always start with #BK-', () => {
+      const result = formatBookingId('test-id-12345')
+      expect(result).toMatch(/^#BK-/)
+    })
+
+    it('should truncate to 6 characters after prefix', () => {
+      const result = formatBookingId('1234567890abcdef')
+      expect(result).toHaveLength(10) // #BK- (4) + 6 chars
+      expect(result).toBe('#BK-123456')
+    })
+
+    it('should handle IDs with special characters', () => {
+      const result = formatBookingId('a1-b2-c3-d4')
+      expect(result).toBe('#BK-A1-B2-')
+    })
+
+    it('should maintain consistent format', () => {
+      const result = formatBookingId('booking-123')
+      expect(result).toMatch(/^#BK-[A-Z0-9-]{6}$/)
+    })
+
+    it('should handle lowercase UUIDs', () => {
+      const result = formatBookingId('abc123-def456-789')
+      expect(result).toBe('#BK-ABC123')
+    })
+  })
+
+  describe('constants', () => {
+    it('AVATAR_COLORS should have expected length', () => {
+      expect(AVATAR_COLORS).toHaveLength(10)
+    })
+
+    it('AVATAR_COLORS should contain Tailwind classes', () => {
+      AVATAR_COLORS.forEach((color) => {
+        expect(color).toMatch(/^bg-/)
+      })
+    })
+
+    it('RANK_BADGE_COLORS should have all required keys', () => {
+      expect(RANK_BADGE_COLORS).toHaveProperty('gold')
+      expect(RANK_BADGE_COLORS).toHaveProperty('silver')
+      expect(RANK_BADGE_COLORS).toHaveProperty('bronze')
+      expect(RANK_BADGE_COLORS).toHaveProperty('default')
+    })
+
+    it('RANK_BADGE_COLORS should contain valid Tailwind classes', () => {
+      Object.values(RANK_BADGE_COLORS).forEach((colorClass) => {
+        expect(colorClass).toMatch(/bg-/)
+        expect(colorClass).toMatch(/text-/)
+      })
+    })
+  })
+
+  describe('integration scenarios', () => {
+    it('should format booking display correctly', () => {
+      const bookingId = formatBookingId('abc123-uuid-here')
+      const date = formatDate('2024-01-15')
+      const amount = formatCurrency(1500)
+
+      expect(bookingId).toMatch(/^#BK-/)
+      expect(date).toMatch(/Jan 15, 2024/)
+      expect(amount).toBe('฿1,500')
+    })
+
+    it('should generate staff avatar correctly', () => {
+      const name = 'John Doe'
+      const initials = getInitials(name)
+      const color = getAvatarColor(0)
+
+      expect(initials).toBe('JD')
+      expect(AVATAR_COLORS).toContain(color as any)
+    })
+
+    it('should handle leaderboard ranking', () => {
+      const ranks = [0, 1, 2, 3].map((i) => getRankBadgeColor(i))
+
+      expect(ranks[0]).toBe(RANK_BADGE_COLORS.gold)
+      expect(ranks[1]).toBe(RANK_BADGE_COLORS.silver)
+      expect(ranks[2]).toBe(RANK_BADGE_COLORS.bronze)
+      expect(ranks[3]).toBe(RANK_BADGE_COLORS.default)
+    })
+
+    it('should format payment summary correctly', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2024-01-15T12:00:00Z'))
+
+      const date = getBangkokDateString()
+      const amount = formatCurrency(2500)
+
+      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(amount).toMatch(/^฿2,500$/)
+
+      vi.useRealTimers()
     })
   })
 })

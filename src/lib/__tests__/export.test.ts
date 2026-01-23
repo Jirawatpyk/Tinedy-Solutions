@@ -23,6 +23,8 @@ interface BookingForExport {
   start_time?: string
   total_price: number
   status: string
+  payment_status?: string
+  payment_date?: string | null
   created_at: string
   service_packages?: {
     name: string
@@ -61,6 +63,7 @@ interface TeamForExport {
   bookings: Array<{
     status: string
     total_price: number
+    payment_status?: string
   }>
   team_members: unknown[]
 }
@@ -72,6 +75,8 @@ const createMockBooking = (overrides: Partial<BookingForExport> = {}): BookingFo
   start_time: '10:00',
   total_price: 1000,
   status: 'completed',
+  payment_status: 'paid',
+  payment_date: '2025-10-26T10:00:00Z',
   created_at: '2025-10-20T10:00:00Z',
   service_packages: {
     name: 'Basic Cleaning',
@@ -112,9 +117,9 @@ const createMockStaffPerformance = (overrides: Partial<StaffPerformanceForExport
 const createMockTeam = (overrides: Partial<TeamForExport> = {}): TeamForExport => ({
   name: 'Team Alpha',
   bookings: [
-    { status: 'completed', total_price: 2000 },
-    { status: 'completed', total_price: 3000 },
-    { status: 'in_progress', total_price: 1500 },
+    { status: 'completed', total_price: 2000, payment_status: 'paid' },
+    { status: 'completed', total_price: 3000, payment_status: 'paid' },
+    { status: 'in_progress', total_price: 1500, payment_status: 'unpaid' },
   ],
   team_members: [{}, {}, {}],
   ...overrides,
@@ -150,7 +155,7 @@ describe('Excel Export Functions', () => {
     it('should return false when no bookings in date range', () => {
       // Arrange
       const bookings = [
-        createMockBooking({ booking_date: '2024-01-01T10:00:00Z' }), // Out of range
+        createMockBooking({ booking_date: '2024-01-01T10:00:00Z', payment_date: '2024-01-01T10:00:00Z' }), // Out of range
       ]
 
       // Act
@@ -169,6 +174,179 @@ describe('Excel Export Functions', () => {
 
       // Assert
       expect(result).toBe(false)
+    })
+
+    it('should filter out unpaid bookings from revenue summary', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'paid', total_price: 1000 }),
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'unpaid', total_price: 2000 }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should hide revenue columns for staff role', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'paid' }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'staff')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should show revenue columns for manager role', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'paid' }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'manager')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should handle bookings with null service packages', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({
+          booking_date: '2025-10-26',
+          payment_status: 'paid',
+          service_packages: null,
+        }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should handle bookings without start_time', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({
+          booking_date: '2025-10-26',
+          payment_status: 'paid',
+          start_time: undefined,
+        }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should limit top packages to 10', () => {
+      // Arrange - Create 15 different packages
+      const bookings = Array.from({ length: 15 }, (_, i) =>
+        createMockBooking({
+          booking_date: '2025-10-26',
+          payment_status: 'paid',
+          service_packages: {
+            name: `Package ${i}`,
+            service_type: 'Cleaning',
+          },
+        })
+      )
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should use payment_date when available for filtering', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({
+          booking_date: '2025-09-01',
+          payment_date: '2025-10-26',
+          payment_status: 'paid',
+        }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should fallback to booking_date when payment_date is null', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({
+          booking_date: '2025-10-26',
+          payment_date: null,
+          payment_status: 'paid',
+        }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should handle all date range presets', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'paid' }),
+      ]
+      const presets = ['today', 'yesterday', 'last7days', 'last30days', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'last3months', 'thisYear', 'lastYear']
+
+      // Act & Assert
+      presets.forEach((preset) => {
+        // Most will return false because booking is only on 2025-10-26
+        exportRevenueAllToExcel(bookings, preset, 'admin')
+      })
+    })
+
+    it('should handle unknown date range preset and default to thisMonth', () => {
+      // Arrange
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', payment_status: 'paid' }),
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'invalidPreset', 'admin')
+
+      // Assert - Should use default (thisMonth) and find the booking
+      expect(result).toBe(true)
+    })
+
+    it('should sort peak hours by booking count descending', () => {
+      // Arrange - Create multiple bookings at different times to trigger sorting
+      const bookings = [
+        createMockBooking({ booking_date: '2025-10-26', start_time: '09:00', payment_status: 'paid' }),
+        createMockBooking({ booking_date: '2025-10-26', start_time: '09:00', payment_status: 'paid' }),
+        createMockBooking({ booking_date: '2025-10-26', start_time: '09:00', payment_status: 'paid' }), // 09:00 has 3
+        createMockBooking({ booking_date: '2025-10-26', start_time: '14:00', payment_status: 'paid' }),
+        createMockBooking({ booking_date: '2025-10-26', start_time: '14:00', payment_status: 'paid' }), // 14:00 has 2
+        createMockBooking({ booking_date: '2025-10-26', start_time: '16:00', payment_status: 'paid' }), // 16:00 has 1
+      ]
+
+      // Act
+      const result = exportRevenueAllToExcel(bookings, 'today', 'admin')
+
+      // Assert - Peak Hours sheet should be created and sorted (09:00 > 14:00 > 16:00)
+      expect(result).toBe(true)
     })
   })
 

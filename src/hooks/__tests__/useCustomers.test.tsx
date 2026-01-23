@@ -58,7 +58,9 @@ const mockCustomers: CustomerRecord[] = [
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
     deleted_at: null,
-  },
+    booking_count: 0,
+    bookings: undefined,
+  } as any,
   {
     id: '2',
     full_name: 'Jane Smith',
@@ -81,7 +83,9 @@ const mockCustomers: CustomerRecord[] = [
     created_at: '2025-01-02T00:00:00Z',
     updated_at: '2025-01-02T00:00:00Z',
     deleted_at: null,
-  },
+    booking_count: 0,
+    bookings: undefined,
+  } as any,
 ]
 
 describe('useCustomers', () => {

@@ -81,6 +81,7 @@ describe('useStaffAvailabilityCheck', () => {
       or: vi.fn(() => chain),
       order: vi.fn(() => chain),
       not: vi.fn(() => chain),
+      is: vi.fn(() => chain),
       single: vi.fn().mockResolvedValue({ data, error: null }),
       maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
       // Make it thenable for await support

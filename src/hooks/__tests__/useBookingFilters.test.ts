@@ -35,6 +35,7 @@ describe('useBookingFilters', () => {
         staffId: 'all',
         teamId: 'all',
         serviceType: 'all',
+        paymentStatus: 'all',
       })
     })
 
@@ -57,6 +58,7 @@ describe('useBookingFilters', () => {
         staffId: 'staff-123',
         teamId: 'all',
         serviceType: 'all',
+        paymentStatus: 'all',
       })
     })
 
@@ -201,6 +203,7 @@ describe('useBookingFilters', () => {
         staffId: 'all',
         teamId: 'all',
         serviceType: 'all',
+        paymentStatus: 'all',
       })
     })
   })

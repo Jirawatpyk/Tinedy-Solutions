@@ -935,9 +935,13 @@ describe('useBookingStatusManager', () => {
         { wrapper: createWrapper() }
       )
 
-      // Act
+      // Act - markAsPaid throws error on failure
       await act(async () => {
-        await result.current.markAsPaid('booking-1')
+        try {
+          await result.current.markAsPaid('booking-1')
+        } catch (error) {
+          // Expected to throw on error
+        }
       })
 
       // Assert - onSuccess should not be called on error
