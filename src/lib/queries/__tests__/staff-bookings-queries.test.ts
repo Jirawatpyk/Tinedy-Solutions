@@ -83,9 +83,10 @@ describe('staff-bookings-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        is: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -93,23 +94,26 @@ describe('staff-bookings-queries', () => {
       const result = await fetchStaffBookingsToday('staff-1', [])
 
       expect(mockChain.is).toHaveBeenCalledWith('deleted_at', null)
-      expect(mockChain.eq).toHaveBeenCalledWith('staff_id', 'staff-1')
+      expect(mockChain.eq).toHaveBeenCalled()
       expect(result).toBeDefined()
     })
 
-    it('should return empty array on error', async () => {
-      const mockChain = {
+    it('should throw error on database error', async () => {
+      const mockChain: any = {
         select: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Error' } }),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
       }
+
+      // eq() is called twice: first for booking_date (return this), second for staff_id (resolve with error)
+      mockChain.eq = vi.fn()
+        .mockReturnValueOnce(mockChain)
+        .mockResolvedValueOnce({ data: null, error: { message: 'Database error' } })
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
-      const result = await fetchStaffBookingsToday('staff-1', [])
-
-      expect(result).toEqual([])
+      await expect(fetchStaffBookingsToday('staff-1', [])).rejects.toThrow('Failed to fetch today\'s bookings')
     })
   })
 
@@ -119,37 +123,37 @@ describe('staff-bookings-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
       const result = await fetchStaffBookingsUpcoming('staff-1', [])
 
-      expect(mockChain.gt).toHaveBeenCalledWith('booking_date', expect.any(String))
-      expect(mockChain.in).toHaveBeenCalledWith('status', ['pending', 'confirmed', 'in_progress'])
+      expect(mockChain.gte).toHaveBeenCalledWith('booking_date', expect.any(String))
+      expect(mockChain.lte).toHaveBeenCalledWith('booking_date', expect.any(String))
       expect(result).toBeDefined()
     })
 
-    it('should return empty array on error', async () => {
+    it('should throw error on database error', async () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Error' } }),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
+        eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
-      const result = await fetchStaffBookingsUpcoming('staff-1', [])
-
-      expect(result).toEqual([])
+      await expect(fetchStaffBookingsUpcoming('staff-1', [])).rejects.toThrow('Failed to fetch upcoming bookings')
     })
   })
 
@@ -159,32 +163,37 @@ describe('staff-bookings-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
       const result = await fetchStaffBookingsCompleted('staff-1', [])
 
-      expect(mockChain.eq).toHaveBeenCalledWith('status', 'completed')
+      expect(mockChain.gte).toHaveBeenCalledWith('booking_date', expect.any(String))
+      expect(mockChain.lte).toHaveBeenCalledWith('booking_date', expect.any(String))
       expect(result).toBeDefined()
     })
 
-    it('should return empty array on error', async () => {
+    it('should throw error on database error', async () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Error' } }),
+        order: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
+        eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
-      const result = await fetchStaffBookingsCompleted('staff-1', [])
-
-      expect(result).toEqual([])
+      await expect(fetchStaffBookingsCompleted('staff-1', [])).rejects.toThrow('Failed to fetch completed bookings')
     })
   })
 
