@@ -17,6 +17,11 @@ dist.zip
 coverage
 *.lcov
 
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Environment variables
 .env
 .env.local
