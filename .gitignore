@@ -16,6 +16,9 @@ dist.zip
 # Test coverage
 coverage
 *.lcov
+.coverage-temp.json
+coverage-output.txt
+test-summary.json
 
 # Playwright test artifacts
 test-results/
@@ -26,6 +29,7 @@ playwright/.cache/
 .env
 .env.local
 .env.production
+.env.test
 
 # Editor directories and files
 .vscode/*
@@ -44,6 +48,7 @@ supabase/.temp/
 .agent/
 .claude/
 _bmad/
+_bmad-output/
 
 # Generated files
 *.zip
