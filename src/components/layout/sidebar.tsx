@@ -273,6 +273,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                               ? 'bg-tinedy-green text-white'
                               : 'text-tinedy-off-white hover:bg-tinedy-blue/50'
                           )}
+                          data-testid={`nav-${item.key}`}
                         >
                           {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
                           <span className={cn(

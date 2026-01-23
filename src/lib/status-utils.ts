@@ -23,7 +23,7 @@ export function getBookingStatusVariant(status: string): StatusBadgeVariant {
     pending: 'warning',
     cancelled: 'danger',
     in_progress: 'purple',
-    no_show: 'default',
+    no_show: 'danger',
   }
   return statusMap[status] || 'default'
 }
@@ -40,7 +40,7 @@ export function getPaymentStatusVariant(status: string): StatusBadgeVariant {
     pending_verification: 'warning',
     partial: 'warning',
     refund_pending: 'purple',
-    refunded: 'default',
+    refunded: 'purple',
   }
   return statusMap[status] || 'default'
 }

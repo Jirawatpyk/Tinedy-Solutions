@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom'
-import { expect, afterEach, vi } from 'vitest'
+import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import * as React from 'react'
+import { server } from '@/mocks/server'
 
 // ========== Types for Radix UI Select Mock ==========
 interface SelectRootProps {
@@ -34,6 +35,7 @@ interface ChildrenOnlyProps {
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  server.resetHandlers() // Reset MSW handlers for test isolation
 })
 
 // Mock Radix UI Select - doesn't work properly in happy-dom
@@ -120,4 +122,19 @@ expect.extend({
           : `expected element to be in the document`,
     }
   },
+})
+
+// ========== MSW Server Lifecycle ==========
+// Establish API mocking before all tests
+beforeAll(() => {
+  server.listen({
+    onUnhandledRequest: 'error', // Fail tests if unhandled request found
+  })
+})
+
+// Note: server.resetHandlers() is called in the main afterEach hook above (line 38)
+
+// Clean up after all tests are done
+afterAll(() => {
+  server.close()
 })
