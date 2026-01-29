@@ -366,7 +366,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     },
   })
 
-  // Mutation: Add Notes
+  // Mutation: Add Notes (with optimistic update for all staff-bookings caches)
   const addNotesMutation = useMutation({
     mutationFn: async ({ bookingId, notes }: { bookingId: string; notes: string }) => {
       const { error } = await supabase
@@ -378,8 +378,36 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
 
       logger.debug('Booking notes updated', { bookingId }, { context: 'StaffDashboard' })
     },
-    onSuccess: () => {
-      // Invalidate all staff bookings queries
+    onMutate: async ({ bookingId, notes }) => {
+      // Cancel all staff-bookings queries to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['staff-bookings'] })
+
+      // Snapshot ALL staff-bookings caches for rollback
+      const previousData = queryClient.getQueriesData<StaffBooking[]>({
+        queryKey: ['staff-bookings'],
+      })
+
+      // Optimistically update across ALL tabs (today, upcoming, past)
+      // Use predicate to only update array caches (avoid stats/count caches)
+      queryClient.setQueriesData<StaffBooking[]>(
+        {
+          queryKey: ['staff-bookings'],
+          predicate: (query) => Array.isArray(query.state.data),
+        },
+        (old) => old?.map((b) => (b.id === bookingId ? { ...b, notes } : b))
+      )
+
+      return { previousData }
+    },
+    onError: (_error, _vars, context) => {
+      // Rollback ALL caches on error
+      context?.previousData?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data)
+      })
+      logger.debug('Rolled back addNotes optimistic update', {}, { context: 'StaffDashboard' })
+    },
+    onSettled: () => {
+      // Invalidate all staff bookings queries to sync with server
       invalidateStaffBookings()
     },
   })

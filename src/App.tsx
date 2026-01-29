@@ -51,6 +51,46 @@ const PageLoader = () => (
   </div>
 )
 
+// Staff-specific loading fallback with mobile-appropriate skeleton layout
+const StaffPageLoader = () => (
+  <div className="min-h-screen bg-background">
+    {/* Header skeleton */}
+    <div className="h-14 sm:h-16 border-b bg-card animate-pulse" />
+    {/* Content area skeleton */}
+    <div className="p-4 space-y-4">
+      {/* Stats row skeleton */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="h-20 bg-muted rounded-xl animate-pulse" />
+        <div className="h-20 bg-muted rounded-xl animate-pulse" />
+      </div>
+      {/* Cards skeleton */}
+      <div className="space-y-3">
+        <div className="h-32 bg-muted rounded-2xl animate-pulse" />
+        <div className="h-32 bg-muted rounded-2xl animate-pulse" />
+        <div className="h-32 bg-muted rounded-2xl animate-pulse" />
+      </div>
+    </div>
+  </div>
+)
+
+// HOC to wrap lazy components with Staff-specific Suspense
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function withStaffSuspense(Component: React.LazyExoticComponent<React.ComponentType<any>>) {
+  return function StaffPage() {
+    return (
+      <Suspense fallback={<StaffPageLoader />}>
+        <Component />
+      </Suspense>
+    )
+  }
+}
+
+// Wrap staff lazy imports with staff-specific suspense
+const StaffDashboardPage = withStaffSuspense(StaffDashboard)
+const StaffCalendarPage = withStaffSuspense(StaffCalendar)
+const StaffChatPage = withStaffSuspense(StaffChat)
+const StaffProfilePage = withStaffSuspense(StaffProfile)
+
 // 403 Unauthorized Page Component
 function UnauthorizedPage() {
   const navigate = useNavigate()
@@ -128,10 +168,10 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<StaffDashboard />} />
-              <Route path="calendar" element={<StaffCalendar />} />
-              <Route path="chat" element={<StaffChat />} />
-              <Route path="profile" element={<StaffProfile />} />
+              <Route index element={<StaffDashboardPage />} />
+              <Route path="calendar" element={<StaffCalendarPage />} />
+              <Route path="chat" element={<StaffChatPage />} />
+              <Route path="profile" element={<StaffProfilePage />} />
             </Route>
 
           {/* Redirect root based on user role */}

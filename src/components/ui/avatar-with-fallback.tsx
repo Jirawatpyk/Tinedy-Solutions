@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { getOptimizedUrl } from '@/lib/image-utils'
 
 interface AvatarWithFallbackProps {
   src?: string | null
@@ -8,6 +10,14 @@ interface AvatarWithFallbackProps {
   className?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }
+
+// Size to pixels mapping for image optimization
+const SIZE_PIXELS = {
+  sm: 32,
+  md: 40,
+  lg: 48,
+  xl: 64,
+} as const
 
 export function AvatarWithFallback({
   src,
@@ -32,11 +42,27 @@ export function AvatarWithFallback({
     xl: 'h-16 w-16 text-lg',
   }
 
+  const pixels = SIZE_PIXELS[size]
+
+  // Memoize optimized URL to prevent re-construction on every render
+  const optimizedSrc = useMemo(
+    () => (src ? getOptimizedUrl(src, pixels) : undefined),
+    [src, pixels]
+  )
+
   const initials = fallback || getInitials(alt)
 
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
-      {src && <AvatarImage src={src} alt={alt} />}
+      {optimizedSrc && (
+        <AvatarImage
+          src={optimizedSrc}
+          alt={alt}
+          loading="lazy"
+          width={pixels}
+          height={pixels}
+        />
+      )}
       <AvatarFallback className="bg-tinedy-blue text-white font-semibold">
         {initials}
       </AvatarFallback>

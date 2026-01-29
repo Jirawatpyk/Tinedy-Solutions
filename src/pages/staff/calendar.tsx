@@ -24,6 +24,7 @@ import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBounda
 import type { Booking } from '@/types/booking'
 import { STATUS_DOTS, STATUS_COLORS } from '@/constants/booking-status'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { PullToRefresh } from '@/components/staff/pull-to-refresh'
 import './calendar.css'
 
 // Staff can only view - no status transitions from calendar dropdown
@@ -32,7 +33,7 @@ const getAvailableStatuses = (_currentStatus: string): string[] => {
 }
 
 export default function StaffCalendar() {
-  const { events, loading, error } = useStaffCalendar()
+  const { events, loading, error, refresh } = useStaffCalendar()
   const { startProgress, markAsCompleted, addNotes } = useStaffDashboard()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -126,8 +127,8 @@ export default function StaffCalendar() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Content with Pull-to-Refresh */}
+          <PullToRefresh onRefresh={refresh} className="flex-1 min-h-0">
             {error && (
               <div className="p-4">
                 <Alert variant="destructive">
@@ -160,7 +161,7 @@ export default function StaffCalendar() {
                 hidePaymentStatus
               />
             )}
-          </div>
+          </PullToRefresh>
 
           {/* Booking Details Modal */}
           {renderBookingDetailsModal()}

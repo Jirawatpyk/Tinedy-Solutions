@@ -1,6 +1,6 @@
 import { StatsCard } from '@/components/staff/stats-card'
-import { PerformanceChart } from '@/components/staff/performance-chart'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PerformanceChart } from '@/components/charts'
+import { StatsCardSkeleton } from '@/components/staff/skeletons'
 import { Briefcase, Calendar, TrendingUp, DollarSign, Award, Star } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { StaffStats } from '@/lib/queries/staff-bookings-queries'
@@ -18,7 +18,7 @@ export function StatsSection({ stats, loading }: StatsSectionProps) {
         {loading ? (
           <>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-28 sm:h-32 rounded-2xl" />
+              <StatsCardSkeleton key={i} />
             ))}
           </>
         ) : (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -33,8 +33,11 @@ import { formatFullAddress } from '@/lib/booking-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatTime } from '@/lib/booking-utils'
 import { formatCurrency, formatBookingId } from '@/lib/utils'
-import { BookingTimeline } from './booking-timeline'
+import { BookingTimelineSkeleton } from '@/components/staff/skeletons'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+
+// Lazy load BookingTimeline to improve modal open performance
+const BookingTimelineLazy = lazy(() => import('./booking-timeline').then(m => ({ default: m.BookingTimeline })))
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
 import { useBookingReview, useBookingTeamMembers } from '@/hooks/use-booking-details'
 
@@ -432,7 +435,9 @@ export function BookingDetailsModal({
 
           {/* Timeline */}
           <Separator />
-          <BookingTimeline bookingId={currentBooking.id} />
+          <Suspense fallback={<BookingTimelineSkeleton />}>
+            <BookingTimelineLazy bookingId={currentBooking.id} />
+          </Suspense>
 
           {/* Notes Section - Editable */}
           {onAddNotes && currentBooking.status !== 'cancelled' && (

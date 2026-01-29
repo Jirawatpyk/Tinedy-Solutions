@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Camera, Upload, User } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { getOptimizedUrl } from '@/lib/image-utils'
 
 interface ProfileAvatarProps {
   avatarUrl: string | null
@@ -9,6 +10,13 @@ interface ProfileAvatarProps {
   onUpload: (file: File) => Promise<string | undefined>
   size?: 'sm' | 'md' | 'lg'
 }
+
+// Size to pixels mapping for image optimization
+const SIZE_PIXELS = {
+  sm: 64,
+  md: 96,
+  lg: 128,
+} as const
 
 export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: ProfileAvatarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -60,6 +68,14 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
     return name.slice(0, 2).toUpperCase()
   }
 
+  const pixels = SIZE_PIXELS[size]
+
+  // Memoize optimized URL to prevent re-construction on every render
+  const optimizedAvatarUrl = useMemo(
+    () => (avatarUrl ? getOptimizedUrl(avatarUrl, pixels) : null),
+    [avatarUrl, pixels]
+  )
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative group">
@@ -67,10 +83,13 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
         <div
           className={`${sizeClasses[size]} rounded-full overflow-hidden bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center border-4 border-white shadow-lg`}
         >
-          {avatarUrl ? (
+          {optimizedAvatarUrl ? (
             <img
-              src={avatarUrl}
+              src={optimizedAvatarUrl}
               alt={userName}
+              loading="lazy"
+              width={pixels}
+              height={pixels}
               className="w-full h-full object-cover"
             />
           ) : (

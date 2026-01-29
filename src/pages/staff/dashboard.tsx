@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { BookingSearchHeader, BookingListSection, StatsSection } from '@/components/staff/dashboard'
+import { PullToRefresh } from '@/components/staff/pull-to-refresh'
 
 export default function StaffDashboard() {
   const {
@@ -85,12 +86,17 @@ export default function StaffDashboard() {
     })
   }
 
+  // Pull-to-refresh handler (no toast - visual indicator is enough)
+  const handlePullRefresh = async () => {
+    await refresh()
+  }
+
   const handleStartProgress = async (bookingId: string) => {
     setStartingBookingId(bookingId)
     try {
       await Promise.all([
         startProgress(bookingId),
-        new Promise(resolve => setTimeout(resolve, 500))
+        new Promise(resolve => setTimeout(resolve, 300))
       ])
       toast({
         title: 'Started',
@@ -112,7 +118,7 @@ export default function StaffDashboard() {
     try {
       await Promise.all([
         markAsCompleted(bookingId),
-        new Promise(resolve => setTimeout(resolve, 500))
+        new Promise(resolve => setTimeout(resolve, 300))
       ])
       toast({
         title: 'Completed',
@@ -164,8 +170,12 @@ export default function StaffDashboard() {
         pastCount={filteredCompletedBookings.length}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 pb-24">
+      {/* Main Content with Pull-to-Refresh */}
+      <PullToRefresh
+        onRefresh={handlePullRefresh}
+        className="flex-1"
+        contentClassName="p-2 sm:p-4 md:p-6 lg:p-8 pb-24"
+      >
         {/* Notification Permission Prompt */}
         {isSupported && !hasPermission && (
           <div className="animate-in fade-in-50 slide-in-from-top-4 duration-500 mb-4">
@@ -228,7 +238,7 @@ export default function StaffDashboard() {
         {activeTab === 'stats' && (
           <StatsSection stats={stats} loading={loading} />
         )}
-      </div>
+      </PullToRefresh>
 
       {/* Floating Action Button */}
       <FloatingActionButton

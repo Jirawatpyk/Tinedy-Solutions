@@ -46,7 +46,7 @@ export interface UseStaffCalendarReturn {
   error: Error | null
 
   // Actions
-  refresh: () => void
+  refresh: () => Promise<void>
 }
 
 // ============================================================================
@@ -143,10 +143,12 @@ export function useStaffCalendar(): UseStaffCalendarReturn {
     }
   }, [userId, teamsLoaded, teamIds, membershipHash, queryClient])
 
-  // Refetch all queries
-  const refresh = () => {
-    teamMembershipQuery.refetch()
-    eventsQuery.refetch()
+  // Refetch all queries (async for pull-to-refresh support)
+  const refresh = async () => {
+    await Promise.all([
+      teamMembershipQuery.refetch(),
+      eventsQuery.refetch(),
+    ])
   }
 
   return {

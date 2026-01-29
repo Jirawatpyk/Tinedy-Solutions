@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,36 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
   isCompletingProgress = false
 }: SimplifiedBookingCardProps) {
   const { user } = useAuth()
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  // Track previous loading states to detect completion
+  const prevIsStartingRef = useRef(isStartingProgress)
+  const prevIsCompletingRef = useRef(isCompletingProgress)
+  const prevStatusRef = useRef(booking.status)
+
+  // Detect when action completes successfully (loading went from true to false AND status changed)
+  useEffect(() => {
+    const wasStarting = prevIsStartingRef.current
+    const wasCompleting = prevIsCompletingRef.current
+    const previousStatus = prevStatusRef.current
+
+    // Update refs for next render
+    prevIsStartingRef.current = isStartingProgress
+    prevIsCompletingRef.current = isCompletingProgress
+    prevStatusRef.current = booking.status
+
+    // Check for successful completion:
+    // - wasStarting && !isStarting && status changed to 'in_progress'
+    // - wasCompleting && !isCompleting && status changed to 'completed'
+    const startSucceeded = wasStarting && !isStartingProgress && previousStatus === 'confirmed' && booking.status === 'in_progress'
+    const completeSucceeded = wasCompleting && !isCompletingProgress && previousStatus === 'in_progress' && booking.status === 'completed'
+
+    if (startSucceeded || completeSucceeded) {
+      setShowSuccess(true)
+      const timeout = setTimeout(() => setShowSuccess(false), 1000)
+      return () => clearTimeout(timeout)
+    }
+  }, [isStartingProgress, isCompletingProgress, booking.status])
 
   const isTeamBooking = useMemo(
     () => booking.staff_id !== user?.id && booking.team_id,
@@ -53,7 +83,9 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
 
   return (
     <Card
-      className="group relative overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98] cursor-pointer"
+      className={`group relative overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98] cursor-pointer ${
+        showSuccess ? 'ring-4 ring-green-500 dark:ring-green-400 transition-all duration-700' : ''
+      }`}
       onClick={() => onViewDetails(booking)}
     >
       {/* Status accent line */}

@@ -1,7 +1,7 @@
 import { SimplifiedBookingCard } from '@/components/staff/simplified-booking-card'
 import { EmptyState } from '@/components/staff/empty-state'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { BookingCardSkeleton } from '@/components/staff/skeletons'
 import { Search } from 'lucide-react'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
@@ -48,7 +48,7 @@ export function BookingListSection({
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48 rounded-2xl" />
+            <BookingCardSkeleton key={i} />
           ))}
         </div>
       </div>
