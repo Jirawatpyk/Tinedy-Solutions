@@ -186,58 +186,63 @@ export default function StaffDashboard() {
           </div>
         )}
 
-        {/* Tab Content */}
-        {activeTab === 'today' && (
-          <BookingListSection
-            bookings={filteredTodayBookings}
-            loading={loading}
-            limit={todayLimit}
-            onLoadMore={() => setTodayLimit(prev => prev + 6)}
-            onViewDetails={setSelectedBooking}
-            onStartProgress={handleStartProgress}
-            onMarkCompleted={handleMarkCompleted}
-            searchInput={searchInput}
-            emptyType="today"
-            showDate={false}
-            startingBookingId={startingBookingId}
-            completingBookingId={completingBookingId}
-          />
-        )}
-        {activeTab === 'upcoming' && (
-          <BookingListSection
-            bookings={filteredUpcomingBookings}
-            loading={loading}
-            limit={upcomingLimit}
-            onLoadMore={() => setUpcomingLimit(prev => prev + 6)}
-            onViewDetails={setSelectedBooking}
-            onStartProgress={handleStartProgress}
-            onMarkCompleted={handleMarkCompleted}
-            searchInput={searchInput}
-            emptyType="upcoming"
-            showDate={true}
-            startingBookingId={startingBookingId}
-            completingBookingId={completingBookingId}
-          />
-        )}
-        {activeTab === 'past' && (
-          <BookingListSection
-            bookings={filteredCompletedBookings}
-            loading={loading}
-            limit={completedLimit}
-            onLoadMore={() => setCompletedLimit(prev => prev + 6)}
-            onViewDetails={setSelectedBooking}
-            onStartProgress={handleStartProgress}
-            onMarkCompleted={handleMarkCompleted}
-            searchInput={searchInput}
-            emptyType="past"
-            showDate={true}
-            startingBookingId={startingBookingId}
-            completingBookingId={completingBookingId}
-          />
-        )}
-        {activeTab === 'stats' && (
-          <StatsSection stats={stats} loading={loading} />
-        )}
+        {/* Tab Content with animation */}
+        <div
+          key={activeTab}
+          className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300 will-change-[opacity,transform]"
+        >
+          {activeTab === 'today' && (
+            <BookingListSection
+              bookings={filteredTodayBookings}
+              loading={loading}
+              limit={todayLimit}
+              onLoadMore={() => setTodayLimit(prev => prev + 6)}
+              onViewDetails={setSelectedBooking}
+              onStartProgress={handleStartProgress}
+              onMarkCompleted={handleMarkCompleted}
+              searchInput={searchInput}
+              emptyType="today"
+              showDate={false}
+              startingBookingId={startingBookingId}
+              completingBookingId={completingBookingId}
+            />
+          )}
+          {activeTab === 'upcoming' && (
+            <BookingListSection
+              bookings={filteredUpcomingBookings}
+              loading={loading}
+              limit={upcomingLimit}
+              onLoadMore={() => setUpcomingLimit(prev => prev + 6)}
+              onViewDetails={setSelectedBooking}
+              onStartProgress={handleStartProgress}
+              onMarkCompleted={handleMarkCompleted}
+              searchInput={searchInput}
+              emptyType="upcoming"
+              showDate={true}
+              startingBookingId={startingBookingId}
+              completingBookingId={completingBookingId}
+            />
+          )}
+          {activeTab === 'past' && (
+            <BookingListSection
+              bookings={filteredCompletedBookings}
+              loading={loading}
+              limit={completedLimit}
+              onLoadMore={() => setCompletedLimit(prev => prev + 6)}
+              onViewDetails={setSelectedBooking}
+              onStartProgress={handleStartProgress}
+              onMarkCompleted={handleMarkCompleted}
+              searchInput={searchInput}
+              emptyType="past"
+              showDate={true}
+              startingBookingId={startingBookingId}
+              completingBookingId={completingBookingId}
+            />
+          )}
+          {activeTab === 'stats' && (
+            <StatsSection stats={stats} loading={loading} />
+          )}
+        </div>
       </PullToRefresh>
 
       {/* Floating Action Button */}

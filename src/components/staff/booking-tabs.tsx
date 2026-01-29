@@ -48,9 +48,9 @@ export const BookingTabs = memo(function BookingTabs({
                   type="button"
                   onClick={() => onTabChange(tab.value)}
                   className={`
-                    group relative flex items-center gap-1 tablet-landscape:gap-2 sm:gap-2 px-2 tablet-landscape:px-4 sm:px-4 py-2 tablet-landscape:py-3 sm:py-3.5
+                    group relative flex items-center gap-1 tablet-landscape:gap-2 sm:gap-2 px-2 tablet-landscape:px-4 sm:px-4 py-2 tablet-landscape:py-3 sm:py-3.5 min-h-[44px] min-w-[44px]
                     font-medium text-xs tablet-landscape:text-sm sm:text-base whitespace-nowrap
-                    transition-all duration-200 active:scale-95
+                    transition-all duration-200 active:scale-[0.97]
                     ${isActive
                       ? 'text-primary'
                       : 'text-muted-foreground hover:text-foreground'

@@ -96,6 +96,15 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
         'bg-gradient-to-r from-gray-500 via-gray-400 to-transparent'
       }`} />
 
+      {/* Success overlay - appears after completion */}
+      {showSuccess && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div className="bg-tinedy-green/90 rounded-full p-3 animate-bounce-once">
+            <CheckCircle2 className="h-8 w-8 text-white" />
+          </div>
+        </div>
+      )}
+
       <CardContent className="relative p-2.5 sm:p-4">
         {/* Header - Time and Status */}
         <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
@@ -155,7 +164,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
             }}
             variant="outline"
             size="sm"
-            className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
+            className="flex-1 min-h-[44px] min-w-[44px] px-2"
             disabled={!booking.customers?.phone}
           >
             <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -173,7 +182,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
             }}
             variant="outline"
             size="sm"
-            className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
+            className="flex-1 min-h-[44px] min-w-[44px] px-2"
             disabled={!booking.address}
           >
             <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -191,7 +200,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               disabled={isStartingProgress}
               variant="default"
-              className="flex-1 min-h-[32px] sm:min-h-[44px] px-2"
+              className="flex-1 min-h-[44px] min-w-[44px] px-2"
               size="sm"
             >
               {isStartingProgress ? (
@@ -215,7 +224,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               disabled={isCompletingProgress}
               variant="default"
-              className="flex-1 min-h-[32px] sm:min-h-[44px] px-2 bg-green-600 hover:bg-green-700"
+              className="flex-1 min-h-[44px] px-2 bg-green-600 hover:bg-green-700"
               size="sm"
             >
               {isCompletingProgress ? (
