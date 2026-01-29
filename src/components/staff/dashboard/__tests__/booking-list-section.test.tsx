@@ -23,6 +23,19 @@ vi.mock('@/components/staff/empty-state', () => ({
   ),
 }))
 
+vi.mock('@/components/staff/skeletons', () => ({
+  BookingCardSkeleton: () => <div data-testid="booking-skeleton" className="skeleton-mock" />,
+}))
+
+// Mock framer-motion to avoid animation issues in tests
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  },
+  useReducedMotion: () => false,
+}))
+
 const createMockBooking = (id: string, name: string): StaffBooking => ({
   id,
   booking_date: '2025-01-20',
@@ -71,10 +84,10 @@ describe('BookingListSection', () => {
   })
 
   it('should render loading skeletons when loading', () => {
-    const { container } = render(<BookingListSection {...defaultProps} loading={true} />)
+    render(<BookingListSection {...defaultProps} loading={true} />)
 
     // Skeleton elements should be rendered
-    expect(container.querySelectorAll('.h-48').length).toBeGreaterThan(0)
+    expect(screen.getAllByTestId('booking-skeleton').length).toBeGreaterThan(0)
   })
 
   it('should render empty state when no bookings and no search', () => {

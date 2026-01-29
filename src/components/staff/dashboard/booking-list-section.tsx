@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/staff/empty-state'
 import { Button } from '@/components/ui/button'
 import { BookingCardSkeleton } from '@/components/staff/skeletons'
 import { Search } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 
 // Empty state when search returns no results
@@ -43,6 +44,7 @@ export function BookingListSection({
   startingBookingId,
   completingBookingId,
 }: BookingListSectionProps) {
+  const shouldReduceMotion = useReducedMotion()
   if (loading) {
     return (
       <div className="space-y-4">
@@ -68,23 +70,31 @@ export function BookingListSection({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-        {visibleBookings.map((booking, index) => (
-          <div
-            key={booking.id}
-            className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <SimplifiedBookingCard
-              booking={booking}
-              onViewDetails={onViewDetails}
-              onStartProgress={onStartProgress}
-              onMarkCompleted={onMarkCompleted}
-              showDate={showDate}
-              isStartingProgress={startingBookingId === booking.id}
-              isCompletingProgress={completingBookingId === booking.id}
-            />
-          </div>
-        ))}
+        <AnimatePresence mode="popLayout">
+          {visibleBookings.map((booking, index) => (
+            <motion.div
+              key={booking.id}
+              layout={!shouldReduceMotion}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95, transformOrigin: 'center top' }}
+              transition={shouldReduceMotion
+                ? { duration: 0.01 }
+                : { duration: 0.3, delay: Math.min(index * 0.05, 0.5), layout: { duration: 0.3 } }
+              }
+            >
+              <SimplifiedBookingCard
+                booking={booking}
+                onViewDetails={onViewDetails}
+                onStartProgress={onStartProgress}
+                onMarkCompleted={onMarkCompleted}
+                showDate={showDate}
+                isStartingProgress={startingBookingId === booking.id}
+                isCompletingProgress={completingBookingId === booking.id}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       {bookings.length > limit && (
         <div className="flex justify-center mt-6">
