@@ -81,7 +81,7 @@ export function StatsSection({ stats, loading }: StatsSectionProps) {
           <PerformanceChart
             stats={{
               totalJobs: stats.totalTasks6Months,
-              completedJobs: 0,
+              completedJobs: Math.round((stats.totalTasks6Months * stats.completionRate) / 100),
               completionRate: stats.completionRate,
               averageRating: stats.averageRating,
               totalRevenue: stats.totalEarnings,

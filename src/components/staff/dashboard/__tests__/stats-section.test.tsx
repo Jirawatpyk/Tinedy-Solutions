@@ -15,8 +15,8 @@ vi.mock('@/components/staff/stats-card', () => ({
 }))
 
 vi.mock('@/components/staff/performance-chart', () => ({
-  PerformanceChart: () => (
-    <div data-testid="performance-chart">Performance Chart</div>
+  PerformanceChart: ({ stats }: { stats: { completedJobs: number } }) => (
+    <div data-testid="performance-chart" data-completed-jobs={stats.completedJobs}>Performance Chart</div>
   ),
 }))
 
@@ -65,6 +65,14 @@ describe('StatsSection', () => {
     render(<StatsSection stats={mockStats} loading={false} />)
 
     expect(screen.getByTestId('performance-chart')).toBeInTheDocument()
+  })
+
+  it('should compute completedJobs from totalTasks6Months and completionRate', () => {
+    render(<StatsSection stats={mockStats} loading={false} />)
+
+    const chart = screen.getByTestId('performance-chart')
+    // 145 * 92 / 100 = 133.4 → rounded to 133
+    expect(chart.getAttribute('data-completed-jobs')).toBe('133')
   })
 
   it('should not render performance chart when no monthlyData', () => {
