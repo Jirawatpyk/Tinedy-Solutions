@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useEffect, useRef } from 'react'
+import { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime } from '@/lib/booking-utils'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { SwipeableCard } from './swipeable-card'
 
 interface SimplifiedBookingCardProps {
   booking: StaffBooking
@@ -31,6 +32,9 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
 }: SimplifiedBookingCardProps) {
   const { user } = useAuth()
   const [showSuccess, setShowSuccess] = useState(false)
+  const [wasJustSwiped, setWasJustSwiped] = useState(false)
+  const [isCardRevealed, setIsCardRevealed] = useState(false)
+  const swipeTimeoutRef = useRef<NodeJS.Timeout>()
 
   // Track previous loading states to detect completion
   const prevIsStartingRef = useRef(isStartingProgress)
@@ -76,18 +80,96 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
     [booking.status]
   )
 
+  // Swipe enabled only when actionable and not in loading/success states
+  const canSwipe = (canStartProgress || canMarkCompleted) && !isStartingProgress && !isCompletingProgress && !showSuccess
+
+  const handleCardClick = useCallback(() => {
+    // Don't open modal if we just finished swiping
+    if (wasJustSwiped) return
+    // Reset revealed state when opening modal
+    setIsCardRevealed(false)
+    onViewDetails(booking)
+  }, [wasJustSwiped, booking, onViewDetails])
+
+  const handleSwipeReveal = useCallback(() => {
+    setWasJustSwiped(true)
+    // Reset after a short delay
+    swipeTimeoutRef.current = setTimeout(() => setWasJustSwiped(false), 100)
+  }, [])
+
+  const handleSwipeReset = useCallback(() => {
+    setIsCardRevealed(false)
+  }, [])
+
+  const handleRevealChange = useCallback((revealed: boolean) => {
+    setIsCardRevealed(revealed)
+  }, [])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current)
+    }
+  }, [])
+
   const formattedDate = useMemo(
     () => showDate ? format(new Date(booking.booking_date), 'dd MMM yyyy') : null,
     [showDate, booking.booking_date]
   )
 
   return (
-    <Card
-      className={`group relative overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98] cursor-pointer ${
-        showSuccess ? 'ring-4 ring-green-500 dark:ring-green-400 transition-all duration-700' : ''
-      }`}
-      onClick={() => onViewDetails(booking)}
+    <SwipeableCard
+      disabled={!canSwipe}
+      onSwipeReveal={handleSwipeReveal}
+      onSwipeReset={handleSwipeReset}
+      isRevealed={isCardRevealed}
+      onRevealChange={handleRevealChange}
+      revealedContent={canSwipe ? (
+        <div className="flex gap-2 bg-muted/80 rounded-lg p-2">
+          {canStartProgress && onStartProgress && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-10 w-10"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartProgress(booking.id)
+              }}
+              disabled={isStartingProgress}
+            >
+              {isStartingProgress ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+            </Button>
+          )}
+          {canMarkCompleted && onMarkCompleted && (
+            <Button
+              size="icon"
+              className="h-10 w-10 bg-green-600 hover:bg-green-700"
+              onClick={(e) => {
+                e.stopPropagation()
+                onMarkCompleted(booking.id)
+              }}
+              disabled={isCompletingProgress}
+            >
+              {isCompletingProgress ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-5 w-5" />
+              )}
+            </Button>
+          )}
+        </div>
+      ) : undefined}
     >
+      <Card
+        className={`group relative overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98] cursor-pointer ${
+          showSuccess ? 'ring-4 ring-green-500 dark:ring-green-400 transition-all duration-700' : ''
+        }`}
+        onClick={handleCardClick}
+      >
       {/* Status accent line */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${
         booking.status === 'confirmed' ? 'bg-gradient-to-r from-blue-500 via-blue-400 to-transparent' :
@@ -224,7 +306,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               disabled={isCompletingProgress}
               variant="default"
-              className="flex-1 min-h-[44px] px-2 bg-green-600 hover:bg-green-700"
+              className="flex-1 min-h-[44px] min-w-[44px] px-2 bg-green-600 hover:bg-green-700"
               size="sm"
             >
               {isCompletingProgress ? (
@@ -240,5 +322,6 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
         </div>
       </CardContent>
     </Card>
+    </SwipeableCard>
   )
 })

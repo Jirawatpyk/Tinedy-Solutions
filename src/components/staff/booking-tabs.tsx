@@ -37,7 +37,7 @@ export const BookingTabs = memo(function BookingTabs({
   return (
     <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 z-10 shadow-sm">
       <div className="px-2 tablet-landscape:px-4 sm:px-4">
-        <div className="flex gap-0.5 tablet-landscape:gap-2 sm:gap-1 overflow-x-auto hide-scrollbar">
+        <div className="flex gap-0.5 tablet-landscape:gap-2 sm:gap-1 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.value
@@ -89,15 +89,6 @@ export const BookingTabs = memo(function BookingTabs({
         </div>
       </div>
 
-      <style>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   )
 })
