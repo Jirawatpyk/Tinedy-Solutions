@@ -4,18 +4,18 @@
  * Hook for Staff Profile page - manages profile data and actions.
  *
  * Features:
- * - Load staff profile from auth context
- * - Update profile (full_name, phone)
- * - Upload avatar
- * - Change password
+ * - Read staff profile from AuthContext (no duplicate state)
+ * - Change password via useMutation
+ * - Refresh profile via AuthContext refreshProfile()
  *
  * Note: Performance statistics moved to useStaffDashboard (My Bookings > Stats tab)
+ * Note: Profile update and avatar upload handled by ProfileUpdateForm (shared component)
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useMemo } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
-import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { changeStaffPassword } from '@/lib/queries/staff-profile-queries'
 
 export interface StaffProfile {
   id: string
@@ -30,136 +30,37 @@ export interface StaffProfile {
 }
 
 export function useStaffProfile() {
-  const { user, profile } = useAuth()
-  const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { profile, refreshProfile } = useAuth()
 
-  const loadProfile = useCallback(async () => {
-    if (!profile) return
+  // Map AuthContext profile to StaffProfile
+  const staffProfile = useMemo<StaffProfile | null>(() => {
+    if (!profile) return null
 
-    try {
-      setStaffProfile({
-        id: profile.id,
-        full_name: profile.full_name,
-        email: profile.email,
-        phone: profile.phone,
-        avatar_url: profile.avatar_url,
-        role: profile.role,
-        staff_number: profile.staff_number || null,
-        skills: profile.skills || null,
-        created_at: profile.created_at,
-      })
-    } catch (err) {
-      console.error('Error loading profile:', err)
-      const errorMsg = mapErrorToUserMessage(err, 'profile')
-      setError(errorMsg.description)
+    return {
+      id: profile.id,
+      full_name: profile.full_name,
+      email: profile.email,
+      phone: profile.phone,
+      avatar_url: profile.avatar_url,
+      role: profile.role,
+      staff_number: profile.staff_number || null,
+      skills: profile.skills || null,
+      created_at: profile.created_at,
     }
   }, [profile])
 
-  useEffect(() => {
-    if (!user || !profile) return
-    loadProfile()
-  }, [user, profile, loadProfile])
-
-  async function updateProfile(updates: {
-    full_name?: string
-    phone?: string
-  }) {
-    if (!user) return
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-
-      if (error) throw error
-
-      // Reload profile
-      await loadProfile()
-    } catch (err) {
-      console.error('Error updating profile:', err)
-      throw err
-    }
-  }
-
-  async function uploadAvatar(file: File) {
-    if (!user) return
-
-    try {
-      // Validate file
-      const maxSize = 2 * 1024 * 1024 // 2MB
-      if (file.size > maxSize) {
-        throw new Error('ไฟล์ใหญ่เกินไป (สูงสุด 2MB)')
-      }
-
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
-        throw new Error('รองรับเฉพาะไฟล์ JPG, PNG, WEBP')
-      }
-
-      // Delete old avatar if exists
-      if (staffProfile?.avatar_url) {
-        const oldPath = staffProfile.avatar_url.split('/').pop()
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([`${user.id}/${oldPath}`])
-        }
-      }
-
-      // Upload new avatar
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      const filePath = `${user.id}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        })
-
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: data.publicUrl })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
-
-      // Reload profile
-      await loadProfile()
-
-      return data.publicUrl
-    } catch (err) {
-      console.error('Error uploading avatar:', err)
-      throw err
-    }
-  }
-
-  async function changePassword(newPassword: string) {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-
-      if (error) throw error
-    } catch (err) {
-      console.error('Error changing password:', err)
-      throw err
-    }
-  }
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: changeStaffPassword,
+  })
 
   return {
     staffProfile,
-    error,
-    updateProfile,
-    uploadAvatar,
-    changePassword,
-    refresh: loadProfile,
+    error: changePasswordMutation.error?.message ?? null,
+    refresh: refreshProfile,
+    changePassword: async (newPassword: string) => {
+      await changePasswordMutation.mutateAsync(newPassword)
+    },
+    isChangingPassword: changePasswordMutation.isPending,
   }
 }

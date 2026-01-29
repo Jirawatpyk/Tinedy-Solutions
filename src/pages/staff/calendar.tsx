@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { format, startOfMonth, endOfMonth, startOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { useStaffCalendar } from '@/hooks/useStaffCalendar'
+import { useStaffCalendar } from '@/hooks/use-staff-calendar'
 import { type CalendarEvent } from '@/lib/queries/staff-calendar-queries'
 import { logger } from '@/lib/logger'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Calendar as CalendarIcon, Clock, User, Briefcase, Users, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useStaffDashboard } from '@/hooks/useStaffDashboard'
+import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
 import { formatTime } from '@/lib/booking-utils'
 import {
   calendarEventToStaffBooking,

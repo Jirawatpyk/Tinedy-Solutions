@@ -57,6 +57,7 @@ describe('useNotifications', () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       signUp: vi.fn(),
+      refreshProfile: vi.fn(),
       loading: false,
     })
 
@@ -154,6 +155,7 @@ describe('useNotifications', () => {
         signIn: vi.fn(),
         signOut: vi.fn(),
         signUp: vi.fn(),
+        refreshProfile: vi.fn(),
         loading: false,
       })
 

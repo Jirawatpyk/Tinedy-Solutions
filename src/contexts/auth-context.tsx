@@ -23,6 +23,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -118,6 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileSubscription.unsubscribe()
     }
   }, [user])
+
+  const refreshProfile = useCallback(async () => {
+    if (user) await fetchProfile(user.id)
+  }, [user, fetchProfile])
 
   const signIn = useCallback(async (email: string, password: string) => {
     // Sanitize and validate inputs
@@ -216,7 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-  }), [user, profile, loading, signIn, signUp, signOut])
+    refreshProfile,
+  }), [user, profile, loading, signIn, signUp, signOut, refreshProfile])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -17,7 +17,7 @@ type Profile = {
   email: string
   full_name: string
   avatar_url: string | null
-  role: 'admin' | 'staff'
+  role: 'admin' | 'manager' | 'staff'
   phone: string | null
   staff_number: string | null
   skills: string[] | null
@@ -32,6 +32,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 /**
@@ -85,6 +86,7 @@ export const createMockAuthContext = (
   signIn: vi.fn().mockResolvedValue(null),
   signUp: vi.fn().mockResolvedValue(undefined),
   signOut: vi.fn().mockResolvedValue(undefined),
+  refreshProfile: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 })
 

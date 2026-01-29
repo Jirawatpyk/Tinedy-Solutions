@@ -107,6 +107,7 @@ describe('useChat', () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       signUp: vi.fn(),
+      refreshProfile: vi.fn(),
       loading: false,
     })
 
@@ -139,6 +140,7 @@ describe('useChat', () => {
         signIn: vi.fn(),
         signOut: vi.fn(),
         signUp: vi.fn(),
+        refreshProfile: vi.fn(),
         loading: false,
       })
 
@@ -281,6 +283,7 @@ describe('useChat', () => {
         signIn: vi.fn(),
         signOut: vi.fn(),
         signUp: vi.fn(),
+        refreshProfile: vi.fn(),
         loading: false,
       })
 
@@ -438,6 +441,7 @@ describe('useChat', () => {
         signIn: vi.fn(),
         signOut: vi.fn(),
         signUp: vi.fn(),
+        refreshProfile: vi.fn(),
         loading: false,
       })
 

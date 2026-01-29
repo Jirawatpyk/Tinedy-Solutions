@@ -36,23 +36,7 @@ import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { BookingTimeline } from './booking-timeline'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { CollapsibleSection } from '@/components/common/CollapsibleSection'
-import { supabase } from '@/lib/supabase'
-
-interface Review {
-  id: string
-  booking_id: string
-  rating: number
-  created_at: string
-}
-
-interface TeamMember {
-  id: string
-  is_active: boolean
-  staff_id: string
-  full_name: string
-  joined_at: string | null
-  left_at: string | null
-}
+import { useBookingReview, useBookingTeamMembers } from '@/hooks/use-booking-details'
 
 interface BookingDetailsModalProps {
   booking: StaffBooking | null
@@ -76,10 +60,15 @@ export function BookingDetailsModal({
   const [isSaving, setIsSaving] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
-  const [review, setReview] = useState<Review | null>(null)
-  const [_loadingReview, setLoadingReview] = useState(false)
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const { toast } = useToast()
+
+  // Data fetching via extracted hooks
+  const { review } = useBookingReview(booking?.id, open)
+  const { teamMembers } = useBookingTeamMembers(
+    booking?.team_id,
+    booking?.created_at,
+    open
+  )
 
   // Update currentBooking when booking prop changes (from optimistic update or real-time)
   useEffect(() => {
@@ -94,90 +83,6 @@ export function BookingDetailsModal({
       setNotes(booking.notes || '')
     }
   }, [open, booking])
-
-  // Fetch review data when modal opens
-  useEffect(() => {
-    const fetchReview = async () => {
-      if (!open || !booking) return
-
-      try {
-        setLoadingReview(true)
-        const { data, error } = await supabase
-          .from('reviews')
-          .select('id, booking_id, rating, created_at')
-          .eq('booking_id', booking.id)
-          .maybeSingle()
-
-        if (error) throw error
-
-        setReview(data)
-      } catch (error) {
-        console.error('[BookingDetails] Error fetching review:', error)
-        setReview(null)
-      } finally {
-        setLoadingReview(false)
-      }
-    }
-
-    fetchReview()
-  }, [open, booking])
-
-  // Fetch team members who were active at booking creation time
-  // This shows the correct team composition when the booking was made
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      if (!open || !booking?.team_id) {
-        setTeamMembers([])
-        return
-      }
-
-      try {
-        // Use RPC function to get ALL team members (including former) with their join/leave dates
-        // This is separate from get_team_members_by_team_id which only returns active members
-        const { data, error } = await supabase
-          .rpc('get_all_team_members_with_dates', { p_team_id: booking.team_id })
-
-        if (error) throw error
-
-        // Filter members who were active at booking creation time
-        const bookingCreatedAt = new Date(booking.created_at)
-
-        const membersAtBookingTime: TeamMember[] = (data || [])
-          .filter((m: { joined_at: string | null; left_at: string | null }) => {
-            // Member had joined before or at booking creation
-            const joinedAt = m.joined_at ? new Date(m.joined_at) : null
-            if (joinedAt && joinedAt > bookingCreatedAt) {
-              return false // Joined after booking was created
-            }
-
-            // Member hadn't left yet at booking creation
-            // Use < (not <=) because if staff left at exactly the same time as booking creation,
-            // they were still a member at that moment
-            const leftAt = m.left_at ? new Date(m.left_at) : null
-            if (leftAt && leftAt < bookingCreatedAt) {
-              return false // Already left before booking was created
-            }
-
-            return true
-          })
-          .map((m: { id: string; is_active: boolean; staff_id: string; full_name: string; joined_at: string | null; left_at: string | null }) => ({
-            id: m.id,
-            is_active: m.is_active,
-            staff_id: m.staff_id,
-            full_name: m.full_name || 'Unknown',
-            joined_at: m.joined_at,
-            left_at: m.left_at,
-          }))
-
-        setTeamMembers(membersAtBookingTime)
-      } catch (error) {
-        console.error('[BookingDetails] Error fetching team members:', error)
-        setTeamMembers([])
-      }
-    }
-
-    fetchTeamMembers()
-  }, [open, booking?.team_id, booking?.created_at])
 
   if (!currentBooking) return null
 
