@@ -116,6 +116,15 @@ export const queryKeys = {
   },
 
   // ================================
+  // Staff Portal - My Teams
+  // ================================
+  staffTeams: {
+    all: ['staff-teams'] as const,
+    details: (userId: string) =>
+      [...queryKeys.staffTeams.all, 'details', userId] as const,
+  },
+
+  // ================================
   // Staff Portal - My Calendar
   // ================================
   staffCalendar: {

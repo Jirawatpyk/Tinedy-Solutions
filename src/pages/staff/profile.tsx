@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useStaffProfile } from '@/hooks/use-staff-profile'
 import { ProfileUpdateForm } from '@/components/profile/ProfileUpdateForm'
 import { NotificationSettingsCard } from '@/components/staff/notification-settings-card'
+import { TeamMembershipCard } from '@/components/staff/team-membership-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -124,6 +125,9 @@ export default function StaffProfile() {
             onSuccess={refresh}
           />
         )}
+
+        {/* Team Membership */}
+        <TeamMembershipCard />
 
         {/* Notification Settings */}
         <NotificationSettingsCard />

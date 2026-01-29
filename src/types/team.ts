@@ -152,3 +152,31 @@ export interface TeamListItem {
   name: string
   is_active?: boolean
 }
+
+// ============================================================================
+// Staff Portal - My Teams (Profile page)
+// ============================================================================
+
+/**
+ * Minimal member info for Staff Profile team card
+ */
+export interface StaffTeamMember {
+  id: string
+  full_name: string
+  avatar_url: string | null
+}
+
+/**
+ * Team detail for Staff Profile page
+ * Includes team info, role, team lead, and active members
+ */
+export interface StaffTeamDetail {
+  id: string
+  name: string
+  description: string | null
+  is_active: boolean
+  role: 'leader' | 'member'
+  joined_at: string
+  team_lead: StaffTeamMember | null
+  members: StaffTeamMember[]
+}
