@@ -19,6 +19,25 @@ vi.mock('../booking-timeline', () => ({
   BookingTimeline: () => <div data-testid="booking-timeline">Timeline</div>,
 }))
 
+// Mock the sub-components used by BookingDetailContent (hero layout)
+vi.mock('../booking-detail-hero', () => ({
+  BookingDetailHero: ({ status }: { status: string }) => (
+    <div data-testid="booking-detail-hero">Hero: {status}</div>
+  ),
+}))
+
+vi.mock('../booking-customer-card', () => ({
+  BookingCustomerCard: ({ customer }: { customer: { full_name: string } | null }) => (
+    <div data-testid="booking-customer-card">Customer: {customer?.full_name}</div>
+  ),
+}))
+
+vi.mock('../booking-service-summary', () => ({
+  BookingServiceSummary: ({ serviceName }: { serviceName?: string }) => (
+    <div data-testid="booking-service-summary">Service: {serviceName}</div>
+  ),
+}))
+
 const mockBooking = createMockBooking({
   area_sqm: 50,
   frequency: 2,
@@ -32,72 +51,59 @@ describe('BookingDetailContent', () => {
   })
 
   describe('Content Sections', () => {
-    it('renders Schedule section', () => {
+    it('renders hero section', () => {
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Schedule')).toBeInTheDocument()
+      expect(screen.getByTestId('booking-detail-hero')).toBeInTheDocument()
     })
 
-    it('renders Customer Information section', () => {
+    it('renders customer card', () => {
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Customer Information')).toBeInTheDocument()
+      expect(screen.getByTestId('booking-customer-card')).toBeInTheDocument()
     })
 
-    it('renders Service Information section', () => {
+    it('renders service summary', () => {
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Service Information')).toBeInTheDocument()
+      expect(screen.getByTestId('booking-service-summary')).toBeInTheDocument()
     })
 
-    it('renders customer name', () => {
+    it('renders More Details section for bookings with extra info', () => {
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Test Customer')).toBeInTheDocument()
+      expect(screen.getByText('More Details')).toBeInTheDocument()
     })
 
-    it('renders customer phone', () => {
+    it('shows area in expanded details', async () => {
+      const user = userEvent.setup()
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('0812345678')).toBeInTheDocument()
-    })
 
-    it('renders service name', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Deep Cleaning')).toBeInTheDocument()
-    })
+      // Expand More Details
+      await user.click(screen.getByText('More Details'))
 
-    it('renders formatted date', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('30 Jan 2026')).toBeInTheDocument()
-    })
-
-    it('renders formatted time without seconds', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('09:00 - 11:00')).toBeInTheDocument()
-    })
-
-    it('renders area size when present', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
       expect(screen.getByText('50 sqm')).toBeInTheDocument()
     })
 
-    it('renders frequency when present', () => {
+    it('shows frequency in expanded details', async () => {
+      const user = userEvent.setup()
       render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      // frequency: 2 with recurring 2/4 shows "2/4 (2 times)"
-      expect(screen.getByText(/2 times/i)).toBeInTheDocument()
-    })
 
-    it('renders Open Map button when address exists', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.getByRole('button', { name: /open map/i })).toBeInTheDocument()
+      // Expand More Details
+      await user.click(screen.getByText('More Details'))
+
+      // frequency: 2 with recurring 2/4 shows "2/4 (2 times)"
+      expect(screen.getByText(/2\/4/)).toBeInTheDocument()
     })
   })
 
   describe('Action Buttons', () => {
-    it('renders Close button', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
+    it('renders Close button when no primary action (completed booking)', () => {
+      const completedBooking = { ...mockBooking, status: 'completed' as const }
+      render(<BookingDetailContent booking={completedBooking} onClose={vi.fn()} />)
       expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument()
     })
 
     it('calls onClose when Close clicked', async () => {
+      const completedBooking = { ...mockBooking, status: 'completed' as const }
       const onClose = vi.fn()
-      render(<BookingDetailContent booking={mockBooking} onClose={onClose} />)
+      render(<BookingDetailContent booking={completedBooking} onClose={onClose} />)
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /close/i }))
@@ -229,12 +235,12 @@ describe('BookingDetailContent', () => {
       const textarea = screen.getByPlaceholderText('Add notes about this booking...')
       await user.type(textarea, 'New notes')
 
-      expect(screen.getByText('* You have unsaved changes')).toBeInTheDocument()
+      expect(screen.getByText('* Unsaved changes')).toBeInTheDocument()
     })
   })
 
   describe('Sticky Footer', () => {
-    it('renders sticky footer when stickyFooter is true', () => {
+    it('applies safe-area-inset when stickyFooter is true', () => {
       render(
         <BookingDetailContent
           booking={mockBooking}
@@ -243,10 +249,11 @@ describe('BookingDetailContent', () => {
         />
       )
       const actionsGroup = screen.getByRole('group', { name: /booking actions/i })
-      expect(actionsGroup).toHaveClass('sticky')
+      // stickyFooter adds pb-[max(1rem,env(safe-area-inset-bottom))] class
+      expect(actionsGroup.className).toContain('safe-area-inset-bottom')
     })
 
-    it('renders inline buttons when stickyFooter is false', () => {
+    it('does not apply safe-area-inset when stickyFooter is false', () => {
       render(
         <BookingDetailContent
           booking={mockBooking}
@@ -255,21 +262,27 @@ describe('BookingDetailContent', () => {
         />
       )
       const actionsGroup = screen.getByRole('group', { name: /booking actions/i })
-      expect(actionsGroup).not.toHaveClass('sticky')
+      expect(actionsGroup.className).not.toContain('safe-area-inset-bottom')
     })
   })
 
   describe('Team Bookings', () => {
-    it('renders Team Assignment section for team bookings', () => {
+    it('shows More Details section for team bookings', () => {
       const teamBooking = createMockTeamBooking()
       render(<BookingDetailContent booking={teamBooking} onClose={vi.fn()} />)
-      expect(screen.getByText('Team Assignment')).toBeInTheDocument()
-      expect(screen.getByText('Cleaning Team A')).toBeInTheDocument()
+      expect(screen.getByText('More Details')).toBeInTheDocument()
     })
 
-    it('does not render Team Assignment section for individual bookings', () => {
-      render(<BookingDetailContent booking={mockBooking} onClose={vi.fn()} />)
-      expect(screen.queryByText('Team Assignment')).not.toBeInTheDocument()
+    it('shows team details when More Details expanded', async () => {
+      const user = userEvent.setup()
+      const teamBooking = createMockTeamBooking()
+      render(<BookingDetailContent booking={teamBooking} onClose={vi.fn()} />)
+
+      // Expand More Details
+      await user.click(screen.getByText('More Details'))
+
+      expect(screen.getByText('Team Details')).toBeInTheDocument()
+      expect(screen.getByText('Cleaning Team A')).toBeInTheDocument()
     })
   })
 

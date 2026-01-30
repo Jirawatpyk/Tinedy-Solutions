@@ -3,10 +3,23 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { StaffLayout } from '../staff-layout'
 
-// Mock useMediaQuery to control desktop/mobile behavior
-const mockUseMediaQuery = vi.fn()
-vi.mock('@/hooks/use-media-query', () => ({
-  useMediaQuery: () => mockUseMediaQuery(),
+// Mock useAuth
+vi.mock('@/contexts/auth-context', () => ({
+  useAuth: () => ({
+    profile: {
+      full_name: 'Test Staff',
+      avatar_url: null,
+      role: 'staff',
+    },
+    signOut: vi.fn(),
+  }),
+}))
+
+// Mock useInAppNotifications
+vi.mock('@/hooks/use-in-app-notifications', () => ({
+  useInAppNotifications: () => ({
+    unreadCount: 0,
+  }),
 }))
 
 // Mock ErrorBoundary to simplify testing
@@ -19,9 +32,13 @@ vi.mock('@/components/staff/bottom-nav', () => ({
   BottomNav: () => <nav data-testid="bottom-nav">Bottom Nav</nav>,
 }))
 
-// Mock MainLayout for desktop
-vi.mock('@/components/layout/main-layout', () => ({
-  MainLayout: () => <div data-testid="main-layout">MainLayout with Sidebar</div>,
+// Mock StaffSidebar
+vi.mock('@/components/staff/staff-sidebar', () => ({
+  StaffSidebar: ({ className }: { className?: string }) => (
+    <aside data-testid="staff-sidebar" className={className}>
+      Staff Sidebar
+    </aside>
+  ),
 }))
 
 const renderLayout = (initialPath = '/staff') => {
@@ -44,24 +61,37 @@ describe('StaffLayout', () => {
     vi.clearAllMocks()
   })
 
-  describe('Mobile View (< 1024px)', () => {
-    beforeEach(() => {
-      mockUseMediaQuery.mockReturnValue(false) // isDesktop = false
-    })
-
-    it('renders bottom navigation on mobile', () => {
+  describe('Layout Structure', () => {
+    it('renders bottom navigation', () => {
       renderLayout()
       expect(screen.getByTestId('bottom-nav')).toBeInTheDocument()
     })
 
-    it('does not render MainLayout on mobile', () => {
+    it('renders staff sidebar', () => {
       renderLayout()
-      expect(screen.queryByTestId('main-layout')).not.toBeInTheDocument()
+      expect(screen.getByTestId('staff-sidebar')).toBeInTheDocument()
     })
 
     it('renders page content via Outlet', () => {
       renderLayout()
       expect(screen.getByTestId('dashboard-content')).toBeInTheDocument()
+    })
+
+    it('has min-h-screen container', () => {
+      renderLayout()
+      const container = document.querySelector('.min-h-screen')
+      expect(container).toBeInTheDocument()
+    })
+
+    it('has flex layout with column for mobile and row for desktop', () => {
+      renderLayout()
+      const container = document.querySelector('.flex-col')
+      expect(container).toBeInTheDocument()
+    })
+
+    it('renders main element for content', () => {
+      renderLayout()
+      expect(document.querySelector('main')).toBeInTheDocument()
     })
 
     it('applies bottom padding for nav on mobile', () => {
@@ -71,34 +101,17 @@ describe('StaffLayout', () => {
     })
   })
 
-  describe('Desktop View (>= 1024px)', () => {
-    beforeEach(() => {
-      mockUseMediaQuery.mockReturnValue(true) // isDesktop = true
-    })
-
-    it('renders MainLayout on desktop', () => {
+  describe('CSS Breakpoints', () => {
+    it('sidebar has hidden lg:flex classes for responsive behavior', () => {
       renderLayout()
-      expect(screen.getByTestId('main-layout')).toBeInTheDocument()
-    })
-
-    it('does not render bottom navigation on desktop', () => {
-      renderLayout()
-      expect(screen.queryByTestId('bottom-nav')).not.toBeInTheDocument()
-    })
-
-    it('does not render mobile layout container on desktop', () => {
-      renderLayout()
-      // Mobile layout has its own main element, MainLayout has different structure
-      const mobileContainer = document.querySelector('.min-h-screen.bg-background')
-      expect(mobileContainer).not.toBeInTheDocument()
+      const sidebar = screen.getByTestId('staff-sidebar')
+      // Check that the sidebar has the correct classes for responsive behavior
+      expect(sidebar).toHaveClass('hidden')
+      expect(sidebar).toHaveClass('lg:flex')
     })
   })
 
-  describe('Route Navigation (Mobile)', () => {
-    beforeEach(() => {
-      mockUseMediaQuery.mockReturnValue(false)
-    })
-
+  describe('Route Navigation', () => {
     it('renders dashboard content at /staff', () => {
       renderLayout('/staff')
       expect(screen.getByTestId('dashboard-content')).toBeInTheDocument()
@@ -117,29 +130,6 @@ describe('StaffLayout', () => {
     it('renders profile content at /staff/profile', () => {
       renderLayout('/staff/profile')
       expect(screen.getByTestId('profile-content')).toBeInTheDocument()
-    })
-  })
-
-  describe('Layout Structure (Mobile)', () => {
-    beforeEach(() => {
-      mockUseMediaQuery.mockReturnValue(false)
-    })
-
-    it('has min-h-screen container', () => {
-      renderLayout()
-      const container = document.querySelector('.min-h-screen')
-      expect(container).toBeInTheDocument()
-    })
-
-    it('has background color', () => {
-      renderLayout()
-      const container = document.querySelector('.bg-background')
-      expect(container).toBeInTheDocument()
-    })
-
-    it('renders main element for content', () => {
-      renderLayout()
-      expect(document.querySelector('main')).toBeInTheDocument()
     })
   })
 })
