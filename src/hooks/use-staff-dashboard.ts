@@ -57,6 +57,7 @@ export interface UseStaffDashboardReturn {
   startProgress: (bookingId: string) => Promise<void>
   markAsCompleted: (bookingId: string) => Promise<void>
   addNotes: (bookingId: string, notes: string) => Promise<void>
+  revertToInProgress: (bookingId: string) => Promise<void>
 
   // Actions
   refetch: () => Promise<void>
@@ -366,6 +367,56 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     },
   })
 
+  // Mutation: Revert to In Progress (for Undo)
+  // M2 note: RLS policies on bookings table control update access
+  // Staff can only update bookings assigned to them (staff_id) or their team (team_id)
+  // Same RLS applies as markAsCompleted - no additional check needed
+  const revertToInProgressMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'in_progress' })
+        .eq('id', bookingId)
+
+      if (error) throw error
+
+      logger.debug('Booking status reverted to in_progress', { bookingId }, { context: 'StaffDashboard' })
+    },
+    onMutate: async (bookingId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['staff-bookings'] })
+
+      // Snapshot all staff-bookings caches for rollback
+      const previousData = queryClient.getQueriesData<StaffBooking[]>({
+        queryKey: ['staff-bookings'],
+      })
+
+      // Optimistically update across ALL tabs
+      queryClient.setQueriesData<StaffBooking[]>(
+        {
+          queryKey: ['staff-bookings'],
+          predicate: (query) => Array.isArray(query.state.data),
+        },
+        (old) => old?.map((b) => (b.id === bookingId ? { ...b, status: 'in_progress' as const } : b))
+      )
+
+      logger.debug('Optimistically reverted booking status', { bookingId }, { context: 'StaffDashboard' })
+
+      return { previousData }
+    },
+    onError: (_error, _bookingId, context) => {
+      // Rollback ALL caches on error
+      context?.previousData?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data)
+      })
+      logger.debug('Rolled back revertToInProgress optimistic update', {}, { context: 'StaffDashboard' })
+    },
+    onSettled: async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      invalidateStaffBookings()
+    },
+  })
+
   // Mutation: Add Notes (with optimistic update for all staff-bookings caches)
   const addNotesMutation = useMutation({
     mutationFn: async ({ bookingId, notes }: { bookingId: string; notes: string }) => {
@@ -449,6 +500,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     startProgress: (bookingId: string) => startProgressMutation.mutateAsync(bookingId),
     markAsCompleted: (bookingId: string) => markAsCompletedMutation.mutateAsync(bookingId),
     addNotes: (bookingId: string, notes: string) => addNotesMutation.mutateAsync({ bookingId, notes }),
+    revertToInProgress: (bookingId: string) => revertToInProgressMutation.mutateAsync(bookingId),
 
     // Actions
     refetch,

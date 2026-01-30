@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -10,8 +10,10 @@ import { FloatingActionButton } from '@/components/staff/floating-action-button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { logger } from '@/lib/logger'
 import { BookingSearchHeader, BookingListSection, StatsSection } from '@/components/staff/dashboard'
 import { PullToRefresh } from '@/components/staff/pull-to-refresh'
+import { UndoToastAction, UNDO_DURATION_MS } from '@/components/staff/undo-toast'
 
 export default function StaffDashboard() {
   const {
@@ -24,6 +26,7 @@ export default function StaffDashboard() {
     startProgress,
     markAsCompleted,
     addNotes,
+    revertToInProgress,
     refetch: refresh,
   } = useStaffDashboard()
 
@@ -45,6 +48,9 @@ export default function StaffDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const searchQuery = useDebounce(searchInput, 300)
   const { toast } = useToast()
+
+  // Undo debounce tracking (prevents rapid double-tap on same booking)
+  const undoingRef = useRef<string | null>(null)
 
   // Filter bookings based on debounced search query
   const filterBookings = useCallback((bookings: StaffBooking[]): StaffBooking[] => {
@@ -120,9 +126,41 @@ export default function StaffDashboard() {
         markAsCompleted(bookingId),
         new Promise(resolve => setTimeout(resolve, 300))
       ])
-      toast({
+
+      // F2 fix: Capture bookingId in closure-safe way
+      const capturedBookingId = bookingId
+
+      // Show undo toast (WR4-2, WR4-3)
+      const { dismiss } = toast({
         title: 'Completed',
-        description: 'Task marked as completed successfully',
+        description: 'Marked as completed',
+        duration: UNDO_DURATION_MS, // F12 fix: Use shared constant
+        action: (
+          <UndoToastAction
+            onUndo={async () => {
+              // Debounce guard per booking
+              if (undoingRef.current === capturedBookingId) return
+              undoingRef.current = capturedBookingId
+              dismiss()
+              try {
+                await revertToInProgress(capturedBookingId)
+                toast({
+                  title: 'Reverted',
+                  description: 'Task moved back to In Progress',
+                })
+              } catch (error) {
+                logger.error('Failed to revert booking', { bookingId: capturedBookingId, error }, { context: 'StaffDashboard' })
+                toast({
+                  title: 'Error',
+                  description: 'Could not undo. Please try again.',
+                  variant: 'destructive',
+                })
+              } finally {
+                undoingRef.current = null
+              }
+            }}
+          />
+        ),
       })
     } catch {
       toast({
