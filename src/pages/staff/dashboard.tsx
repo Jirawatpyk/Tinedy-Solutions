@@ -5,7 +5,6 @@ import { useDebounce } from '@/hooks/use-debounce'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { NotificationPrompt } from '@/components/notifications/notification-prompt'
 import { BookingTabs, type TabValue } from '@/components/staff/booking-tabs'
-import { FloatingActionButton } from '@/components/staff/floating-action-button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -40,7 +39,6 @@ export default function StaffDashboard() {
 
   const [activeTab, setActiveTab] = useState<TabValue>('today')
   const [selectedBooking, setSelectedBooking] = useState<StaffBooking | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [startingBookingId, setStartingBookingId] = useState<string | null>(null)
   const [completingBookingId, setCompletingBookingId] = useState<string | null>(null)
   const [todayLimit, setTodayLimit] = useState(6)
@@ -91,16 +89,6 @@ export default function StaffDashboard() {
   const filteredTodayBookings = useMemo(() => filterBookings(todayBookings), [todayBookings, filterBookings])
   const filteredUpcomingBookings = useMemo(() => filterBookings(upcomingBookings), [upcomingBookings, filterBookings])
   const filteredCompletedBookings = useMemo(() => filterBookings(completedBookings), [completedBookings, filterBookings])
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await refresh()
-    setIsRefreshing(false)
-    toast({
-      title: 'Refreshed Successfully',
-      description: 'Data has been updated',
-    })
-  }
 
   // Pull-to-refresh handler (no toast - visual indicator is enough)
   const handlePullRefresh = async () => {
@@ -293,12 +281,6 @@ export default function StaffDashboard() {
           )}
         </div>
       </PullToRefresh>
-
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-      />
 
       {/* Booking Details - ResponsiveSheet (bottom on mobile, right on desktop) */}
       <ResponsiveSheet
