@@ -1,9 +1,8 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useDebounce } from '@/hooks/use-debounce'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
-import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
 import { NotificationPrompt } from '@/components/notifications/notification-prompt'
 import { BookingTabs, type TabValue } from '@/components/staff/booking-tabs'
 import { FloatingActionButton } from '@/components/staff/floating-action-button'
@@ -13,8 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { logger } from '@/lib/logger'
 import { BookingListSection } from '@/components/staff/dashboard'
 import { StaffHeader } from '@/components/staff/staff-header'
-import { useMediaQuery } from '@/hooks/use-media-query'
-import { BookingDetailsSheet } from '@/components/staff/booking-details-sheet'
+import { ResponsiveSheet } from '@/components/ui/responsive-sheet'
+import { BookingDetailContent } from '@/components/staff/booking-detail-content'
 import { PullToRefresh } from '@/components/staff/pull-to-refresh'
 import { UndoToastAction, UNDO_DURATION_MS } from '@/components/staff/undo-toast'
 
@@ -50,10 +49,18 @@ export default function StaffDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const searchQuery = useDebounce(searchInput, 300)
   const { toast } = useToast()
-  const isMobile = useMediaQuery('(max-width: 1023px)')
 
   // Undo debounce tracking (prevents rapid double-tap on same booking)
   const undoingRef = useRef<string | null>(null)
+  // Mounted ref to prevent state updates after unmount
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Filter bookings based on debounced search query
   const filterBookings = useCallback((bookings: StaffBooking[]): StaffBooking[] => {
@@ -141,23 +148,27 @@ export default function StaffDashboard() {
         action: (
           <UndoToastAction
             onUndo={async () => {
-              // Debounce guard per booking
-              if (undoingRef.current === capturedBookingId) return
+              // Guard: component unmounted or already processing this booking
+              if (!isMountedRef.current || undoingRef.current === capturedBookingId) return
               undoingRef.current = capturedBookingId
               dismiss()
               try {
                 await revertToInProgress(capturedBookingId)
-                toast({
-                  title: 'Reverted',
-                  description: 'Task moved back to In Progress',
-                })
+                if (isMountedRef.current) {
+                  toast({
+                    title: 'Reverted',
+                    description: 'Task moved back to In Progress',
+                  })
+                }
               } catch (error) {
                 logger.error('Failed to revert booking', { bookingId: capturedBookingId, error }, { context: 'StaffDashboard' })
-                toast({
-                  title: 'Error',
-                  description: 'Could not undo. Please try again.',
-                  variant: 'destructive',
-                })
+                if (isMountedRef.current) {
+                  toast({
+                    title: 'Error',
+                    description: 'Could not undo. Please try again.',
+                    variant: 'destructive',
+                  })
+                }
               } finally {
                 undoingRef.current = null
               }
@@ -215,7 +226,7 @@ export default function StaffDashboard() {
       <PullToRefresh
         onRefresh={handlePullRefresh}
         className="flex-1"
-        contentClassName="p-2 sm:p-4 md:p-6 lg:p-8 pb-24"
+        contentClassName="p-2 sm:p-4 md:p-6 lg:p-8 pb-24 lg:max-w-7xl lg:mx-auto lg:w-full"
       >
         {/* Notification Permission Prompt */}
         {isSupported && !hasPermission && (
@@ -289,26 +300,25 @@ export default function StaffDashboard() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Booking Details - Sheet on mobile, Dialog on desktop */}
-      {isMobile ? (
-        <BookingDetailsSheet
-          booking={currentBooking}
-          open={!!selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onStartProgress={handleStartProgress}
-          onMarkCompleted={handleMarkCompleted}
-          onAddNotes={addNotes}
-        />
-      ) : (
-        <BookingDetailsModal
-          booking={currentBooking}
-          open={!!selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onStartProgress={handleStartProgress}
-          onMarkCompleted={handleMarkCompleted}
-          onAddNotes={addNotes}
-        />
-      )}
+      {/* Booking Details - ResponsiveSheet (bottom on mobile, right on desktop) */}
+      <ResponsiveSheet
+        open={!!selectedBooking}
+        onOpenChange={(open) => !open && setSelectedBooking(null)}
+        mobileHeight="h-[95vh]"
+        desktopWidth="w-[540px]"
+        data-testid="booking-details-sheet"
+      >
+        {currentBooking && (
+          <BookingDetailContent
+            booking={currentBooking}
+            onClose={() => setSelectedBooking(null)}
+            onStartProgress={handleStartProgress}
+            onMarkCompleted={handleMarkCompleted}
+            onAddNotes={addNotes}
+            stickyFooter={true}
+          />
+        )}
+      </ResponsiveSheet>
     </div>
   )
 }

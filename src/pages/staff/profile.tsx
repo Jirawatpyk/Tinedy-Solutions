@@ -2,10 +2,10 @@
  * Staff Profile Page
  *
  * Mobile-optimized Profile page:
- * - PageHeader with Logout button
+ * - PageHeader with Logout button (hidden on desktop)
  * - Compact profile header card
  * - Inline compact stats
- * - Settings as list items with sheets
+ * - Settings as list items with responsive sheets
  */
 
 import { useState } from 'react'
@@ -23,12 +23,7 @@ import { SettingsListItem } from '@/components/staff/settings-list-item'
 import { ChangePasswordSheet } from '@/components/staff/change-password-sheet'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { ResponsiveSheet } from '@/components/ui/responsive-sheet'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   Lock,
@@ -36,6 +31,7 @@ import {
   Users,
   Bell,
   LogOut,
+  User,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { formatRole } from '@/lib/role-utils'
@@ -88,7 +84,7 @@ export default function StaffProfile() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Header with Logout */}
+      {/* Header with Logout - Hidden on desktop (lg:hidden by default in PageHeader) */}
       <PageHeader
         title="My Profile"
         actions={
@@ -113,7 +109,7 @@ export default function StaffProfile() {
         </div>
       )}
 
-      <div className="flex-1 p-4 space-y-4">
+      <div className="flex-1 p-4 space-y-4 lg:max-w-3xl lg:mx-auto lg:w-full lg:py-6">
         {/* Profile Header Card */}
         {staffProfile && (
           <ProfileHeaderCard
@@ -156,13 +152,19 @@ export default function StaffProfile() {
         </div>
       </div>
 
-      {/* Profile Edit Sheet */}
-      <Sheet open={showProfileEdit} onOpenChange={setShowProfileEdit}>
-        <SheetContent side="bottom" className="h-[90vh] rounded-t-xl overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle>Edit Profile</SheetTitle>
-          </SheetHeader>
-          {staffProfile && (
+      {/* Profile Edit Sheet - Responsive */}
+      <ResponsiveSheet
+        open={showProfileEdit}
+        onOpenChange={setShowProfileEdit}
+        title="Edit Profile"
+        description="Update your personal information"
+        icon={<User className="h-5 w-5" />}
+        mobileHeight="h-[90vh]"
+        desktopWidth="w-[540px]"
+        data-testid="profile-edit-sheet"
+      >
+        {staffProfile && (
+          <div className="overflow-y-auto flex-1 px-6 pb-6">
             <ProfileUpdateForm
               initialData={profileInitialData}
               profileId={staffProfile.id}
@@ -171,31 +173,39 @@ export default function StaffProfile() {
                 setShowProfileEdit(false)
               }}
             />
-          )}
-        </SheetContent>
-      </Sheet>
+          </div>
+        )}
+      </ResponsiveSheet>
 
-      {/* Team Membership Sheet */}
-      <Sheet open={showTeamSheet} onOpenChange={setShowTeamSheet}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle>Team Membership</SheetTitle>
-          </SheetHeader>
+      {/* Team Membership Sheet - Responsive */}
+      <ResponsiveSheet
+        open={showTeamSheet}
+        onOpenChange={setShowTeamSheet}
+        title="My Teams"
+        description="Teams you are a member of"
+        icon={<Users className="h-5 w-5" />}
+        data-testid="team-membership-sheet"
+      >
+        <div className="overflow-y-auto flex-1 px-6 pb-4">
           <TeamMembershipCard />
-        </SheetContent>
-      </Sheet>
+        </div>
+      </ResponsiveSheet>
 
-      {/* Notification Settings Sheet */}
-      <Sheet open={showNotificationSheet} onOpenChange={setShowNotificationSheet}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle>Notification Settings</SheetTitle>
-          </SheetHeader>
+      {/* Notification Settings Sheet - Responsive */}
+      <ResponsiveSheet
+        open={showNotificationSheet}
+        onOpenChange={setShowNotificationSheet}
+        title="Notification Settings"
+        description="Manage your notification preferences"
+        icon={<Bell className="h-5 w-5" />}
+        data-testid="notification-settings-sheet"
+      >
+        <div className="overflow-y-auto flex-1 px-6 pb-4">
           <NotificationSettingsCard />
-        </SheetContent>
-      </Sheet>
+        </div>
+      </ResponsiveSheet>
 
-      {/* Change Password Sheet */}
+      {/* Change Password Sheet - Uses its own responsive logic */}
       <ChangePasswordSheet
         open={showPasswordSheet}
         onOpenChange={setShowPasswordSheet}

@@ -7,23 +7,10 @@
 
 import { useStaffTeams } from '@/hooks/use-staff-teams'
 import type { StaffTeamDetail, StaffTeamMember } from '@/types/team'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Users, Crown, Loader2 } from 'lucide-react'
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+import { getInitials } from '@/lib/string-utils'
 
 // ============================================================================
 // SUB-COMPONENTS
@@ -103,54 +90,28 @@ export function TeamMembershipCard() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            My Teams
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
   if (teams.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            My Teams
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
-            You are not assigned to any team yet.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12">
+        <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+        <p className="text-sm text-muted-foreground">
+          You are not assigned to any team yet.
+        </p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          My Teams
-          <Badge variant="secondary" className="ml-auto">
-            {teams.length}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {teams.map(team => (
-          <TeamCard key={team.id} team={team} />
-        ))}
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      {teams.map(team => (
+        <TeamCard key={team.id} team={team} />
+      ))}
+    </div>
   )
 }

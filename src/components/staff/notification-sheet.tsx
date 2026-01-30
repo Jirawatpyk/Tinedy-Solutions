@@ -1,13 +1,15 @@
 /**
  * NotificationSheet Component
  *
- * Bottom sheet for viewing notifications on mobile:
+ * Responsive sheet for viewing notifications:
+ * - Mobile: Slides from bottom
+ * - Desktop: Slides from right
  * - List of notifications with mark-as-read
- * - Uses existing useInAppNotifications hook
- * - Slides from bottom on mobile
  */
 
+import { useEffect, useRef } from 'react'
 import { useInAppNotifications, type InAppNotification } from '@/hooks/use-in-app-notifications'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   Sheet,
   SheetContent,
@@ -124,9 +126,24 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
     clearAll,
   } = useInAppNotifications()
 
+  // Responsive side detection
+  const isMobile = useMediaQuery('(max-width: 1023px)')
+  const prevIsMobile = useRef(isMobile)
+
+  // Close sheet when crossing breakpoint
+  useEffect(() => {
+    if (open && prevIsMobile.current !== isMobile) {
+      onOpenChange(false)
+    }
+    prevIsMobile.current = isMobile
+  }, [isMobile, open, onOpenChange])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-xl">
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        className={isMobile ? 'h-[85vh] rounded-t-xl' : 'w-[400px]'}
+      >
         <SheetHeader className="pb-4 border-b">
           <div className="flex items-center justify-between">
             <div>
@@ -169,7 +186,7 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(85vh-120px)] mt-4">
+        <ScrollArea className={cn('mt-4', isMobile ? 'h-[calc(85vh-120px)]' : 'h-[calc(100vh-180px)]')}>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

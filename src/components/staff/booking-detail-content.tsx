@@ -1,41 +1,40 @@
 /**
  * BookingDetailContent Component
  *
- * Shared content component for booking details.
- * Used by both BookingDetailsModal (Dialog) and BookingDetailsSheet (Sheet).
+ * Redesigned booking details with hero layout:
+ * - Hero section: Time, Date, Status (always visible)
+ * - Customer card with quick actions (Call, Map, Navigate)
+ * - Service summary (compact)
+ * - More Details expandable (Team, Rating, Timeline)
+ * - Notes section
+ * - Sticky action footer
  */
 
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
 import {
-  Clock,
-  User,
-  Users,
-  Package,
-  Phone,
-  Calendar,
-  DollarSign,
-  StickyNote,
   CheckCircle2,
   Save,
-  MapPin,
   Play,
   Star,
   Crown,
+  Users,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
-import { formatFullAddress } from '@/lib/booking-utils'
+import { formatFullAddress, calculateDuration } from '@/lib/booking-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
-import { formatTime } from '@/lib/booking-utils'
-import { formatCurrency } from '@/lib/utils'
 import { BookingTimelineSkeleton } from '@/components/staff/skeletons'
-import { CollapsibleSection } from '@/components/common/CollapsibleSection'
 import { useBookingReview, useBookingTeamMembers } from '@/hooks/use-booking-details'
+import { BookingDetailHero } from './booking-detail-hero'
+import { BookingCustomerCard } from './booking-customer-card'
+import { BookingServiceSummary } from './booking-service-summary'
+import { cn } from '@/lib/utils'
 
 // Lazy load BookingTimeline to improve modal open performance
 const BookingTimelineLazy = lazy(() =>
@@ -73,9 +72,10 @@ export function BookingDetailContent({
   const [isSaving, setIsSaving] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const { toast } = useToast()
 
-  // F12 fix: Sync notes state when booking.notes changes (e.g., from realtime updates)
+  // Sync notes state when booking.notes changes (e.g., from realtime updates)
   useEffect(() => {
     setNotes(booking.notes || '')
   }, [booking.notes])
@@ -145,403 +145,248 @@ export function BookingDetailContent({
 
   const canStartProgress = booking.status === 'confirmed'
   const canMarkCompleted = booking.status === 'in_progress'
+  const hasNotesChanged = notes !== (booking.notes || '')
+
+  // Calculate duration string
+  const durationStr = calculateDuration(booking.start_time, booking.end_time)
+
+  // Check if there are more details to show
+  const hasTeamInfo = booking.team_id && booking.teams
+  const hasRating = review && booking.status === 'completed'
+  const hasAreaOrFrequency = booking.area_sqm || booking.frequency
+  const hasMoreDetails = hasTeamInfo || hasRating || hasAreaOrFrequency
 
   return (
-    <>
-      {/* Content sections */}
-      <div className="space-y-6">
-        {/* Date and Time */}
-        <CollapsibleSection
-          title={
-            <h3 className="font-semibold text-base flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Schedule
-            </h3>
-          }
-          className="space-y-3"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Date</span>
-              </div>
-              <p className="font-medium">
-                {format(new Date(booking.booking_date), 'dd MMM yyyy', {
-                  locale: enUS,
-                })}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Time</span>
-              </div>
-              <p className="font-medium">
-                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-              </p>
-            </div>
-          </div>
-        </CollapsibleSection>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4 min-h-0">
+        {/* Hero Section */}
+        <BookingDetailHero
+          startTime={booking.start_time}
+          endTime={booking.end_time}
+          date={booking.booking_date}
+          status={booking.status}
+        />
 
-        <Separator />
+        {/* Customer Card with Quick Actions */}
+        <BookingCustomerCard
+          customer={booking.customers}
+          address={formatFullAddress(booking)}
+        />
 
-        {/* Customer Information */}
-        <CollapsibleSection
-          title={
-            <h3 className="font-semibold flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Customer Information
-            </h3>
-          }
-          className="space-y-3"
-        >
-          <div className="space-y-2 ml-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Name</p>
-              <p className="font-medium">
-                {booking.customers?.full_name || 'Unknown Customer'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Phone</p>
-              <p className="font-medium flex items-center gap-2">
-                <Phone className="h-3 w-3" />
-                {booking.customers?.phone || 'No data'}
-              </p>
-            </div>
-            {booking.address && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Address</p>
-                <p className="font-medium flex items-start gap-2">
-                  <MapPin className="h-3 w-3 mt-1 flex-shrink-0" />
-                  <span>{formatFullAddress(booking)}</span>
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    const fullAddress = formatFullAddress(booking)
-                    window.open(
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
-                      '_blank'
-                    )
-                  }}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Open Map
-                </Button>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
+        {/* Service Summary */}
+        <BookingServiceSummary
+          serviceName={booking.service_packages?.name}
+          duration={durationStr}
+          price={booking.service_packages?.price}
+          teamName={booking.teams?.name}
+        />
 
-        <Separator />
-
-        {/* Service Information */}
-        <CollapsibleSection
-          title={
-            <h3 className="font-semibold flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Service Information
-            </h3>
-          }
-          className="space-y-3"
-        >
-          <div className="ml-6 space-y-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Service Name</p>
-                <p className="font-medium">
-                  {booking.service_packages?.name || 'Unknown Service'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="font-medium">
-                  {(() => {
-                    if (booking.start_time && booking.end_time) {
-                      const [startHours, startMinutes] = booking.start_time
-                        .split(':')
-                        .map(Number)
-                      const [endHours, endMinutes] = booking.end_time
-                        .split(':')
-                        .map(Number)
-                      const durationMinutes =
-                        endHours * 60 +
-                        endMinutes -
-                        (startHours * 60 + startMinutes)
-                      const hours = Math.floor(durationMinutes / 60)
-                      const minutes = durationMinutes % 60
-
-                      if (hours > 0 && minutes > 0) {
-                        return `${hours} hours ${minutes} minutes`
-                      } else if (hours > 0) {
-                        return `${hours} hours`
-                      } else {
-                        return `${minutes} minutes`
-                      }
-                    }
-                    return 'N/A'
-                  })()}
-                </p>
-              </div>
-            </div>
-            {(booking.area_sqm || booking.frequency) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {booking.area_sqm && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Area Size</p>
-                    <p className="font-medium">{booking.area_sqm} sqm</p>
-                  </div>
-                )}
-                {booking.frequency && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Frequency</p>
-                    <p className="font-medium">
-                      {(() => {
-                        const freq = booking.frequency!
-                        const seq = booking.recurring_sequence
-                        const total = booking.recurring_total
-                        const hasValidRecurring =
-                          seq && total && total > 1 && seq > 0 && seq <= total
-                        return hasValidRecurring
-                          ? `${seq}/${total} (${getFrequencyLabel(freq)})`
-                          : getFrequencyLabel(freq)
-                      })()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-            {(booking.service_packages?.price ?? 0) > 0 && (
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground">Price</p>
-                <p className="font-medium flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  {formatCurrency(booking.service_packages?.price ?? 0)}
-                </p>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-
-        {/* Team Assignment (only show for team bookings) */}
-        {booking.team_id && booking.teams && (
-          <>
-            <Separator />
-            <CollapsibleSection
-              title={
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Team Assignment
-                </h3>
-              }
-              className="space-y-3"
+        {/* More Details - Expandable */}
+        {hasMoreDetails && (
+          <div className="mx-4">
+            <button
+              type="button"
+              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+              className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
             >
-              <div className="ml-6 space-y-3">
-                <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
-                  <p className="text-sm text-muted-foreground">Team</p>
-                  <p className="font-medium">{booking.teams.name}</p>
-                </div>
-                {booking.teams.team_lead && (
-                  <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
-                    <p className="text-sm text-muted-foreground">Lead</p>
-                    <p className="font-medium flex items-center gap-1.5">
-                      <Crown className="h-3.5 w-3.5 text-amber-500" />
-                      {booking.teams.team_lead.full_name}
-                    </p>
+              <span className="text-sm font-medium text-muted-foreground">
+                More Details
+              </span>
+              {isDetailsOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            {isDetailsOpen && (
+              <div className="mt-2 space-y-4 px-3 py-3 bg-muted/20 rounded-lg">
+                {/* Area & Frequency */}
+                {hasAreaOrFrequency && (
+                  <div className="space-y-2 text-sm">
+                    {booking.area_sqm && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Area</span>
+                        <span className="font-medium">{booking.area_sqm} sqm</span>
+                      </div>
+                    )}
+                    {booking.frequency && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Frequency</span>
+                        <span className="font-medium">
+                          {(() => {
+                            const freq = booking.frequency
+                            if (!freq) return 'N/A'
+                            const seq = booking.recurring_sequence
+                            const total = booking.recurring_total
+                            const hasValidRecurring =
+                              seq && total && total > 1 && seq > 0 && seq <= total
+                            return hasValidRecurring
+                              ? `${seq}/${total} (${getFrequencyLabel(freq)})`
+                              : getFrequencyLabel(freq)
+                          })()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
-                {teamMembers.length > 0 && (
-                  <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
-                    <p className="text-sm text-muted-foreground">Members</p>
-                    <p className="font-medium">
-                      {teamMembers.map((m) => m.full_name).join(', ')}{' '}
-                      <span className="text-muted-foreground text-sm">
-                        ({teamMembers.length}{' '}
-                        {teamMembers.length === 1 ? 'member' : 'members'})
+
+                {/* Team Details */}
+                {hasTeamInfo && (
+                  <div className="space-y-2 text-sm border-t pt-3">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Users className="h-4 w-4" />
+                      <span>Team Details</span>
+                    </div>
+                    <div className="space-y-1.5 ml-6">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Team</span>
+                        <span className="font-medium">{booking.teams?.name}</span>
+                      </div>
+                      {booking.teams?.team_lead && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Lead</span>
+                          <span className="font-medium flex items-center gap-1">
+                            <Crown className="h-3 w-3 text-amber-500" />
+                            {booking.teams.team_lead.full_name}
+                          </span>
+                        </div>
+                      )}
+                      {teamMembers.length > 0 && (
+                        <div className="flex justify-between items-start">
+                          <span className="text-muted-foreground">Members</span>
+                          <span className="font-medium text-right">
+                            {teamMembers.length} {teamMembers.length === 1 ? 'person' : 'people'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rating */}
+                {hasRating && (
+                  <div className="space-y-2 text-sm border-t pt-3">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <span>Service Rating</span>
+                    </div>
+                    <div className="flex items-center gap-1 ml-6">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={cn(
+                            'h-4 w-4',
+                            star <= review.rating
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300'
+                          )}
+                        />
+                      ))}
+                      <span className="ml-1 text-sm font-medium">
+                        {review.rating}/5
                       </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground ml-6">
+                      Rated on{' '}
+                      {format(new Date(review.created_at), 'dd MMM yyyy', {
+                        locale: enUS,
+                      })}
                     </p>
                   </div>
                 )}
+
+                {/* Timeline */}
+                <div className="border-t pt-3">
+                  <Suspense fallback={<BookingTimelineSkeleton />}>
+                    <BookingTimelineLazy bookingId={booking.id} />
+                  </Suspense>
+                </div>
               </div>
-            </CollapsibleSection>
-          </>
+            )}
+          </div>
         )}
 
-        {/* Service Rating - Read Only */}
-        {review &&
-          (booking.staff_id || booking.team_id) &&
-          booking.status === 'completed' && (
-            <>
-              <Separator />
-              <CollapsibleSection
-                title={
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    Service Rating
-                  </h3>
-                }
-                className="space-y-3"
-              >
-                <div className="ml-6 space-y-2">
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-5 w-5 ${
-                          star <= review.rating
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                    <span className="ml-2 text-sm font-medium">
-                      {review.rating}/5
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Last updated:{' '}
-                    {format(new Date(review.created_at), 'dd MMM yyyy', {
-                      locale: enUS,
-                    })}
-                  </p>
-                </div>
-              </CollapsibleSection>
-            </>
-          )}
-
-        {/* Timeline */}
-        <Separator />
-        <Suspense fallback={<BookingTimelineSkeleton />}>
-          <BookingTimelineLazy bookingId={booking.id} />
-        </Suspense>
-
-        {/* Notes Section - Editable */}
+        {/* Notes Section */}
         {onAddNotes && booking.status !== 'cancelled' && (
-          <>
-            <Separator />
-            <CollapsibleSection
-              title={
-                <h3 className="font-semibold flex items-center gap-2">
-                  <StickyNote className="h-4 w-4" />
-                  Notes
-                </h3>
-              }
-              className="space-y-3"
+          <div className="mx-4 space-y-2">
+            <label
+              htmlFor="booking-notes"
+              className="text-sm font-medium text-muted-foreground"
             >
-              <div className="ml-6 space-y-2">
-                <Textarea
-                  id="notes"
-                  placeholder="Add notes about this booking..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="resize-none"
-                />
-                {notes !== (booking.notes || '') && (
-                  <p className="text-xs text-muted-foreground">
-                    * You have unsaved changes
-                  </p>
-                )}
-              </div>
-            </CollapsibleSection>
-          </>
+              Notes
+            </label>
+            <Textarea
+              id="booking-notes"
+              placeholder="Add notes about this booking..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+            {hasNotesChanged && (
+              <p className="text-xs text-amber-600">* Unsaved changes</p>
+            )}
+          </div>
         )}
       </div>
 
-      {/* S2+S3 fix: Actions with role="group" and actual button code */}
+      {/* Action Footer - flex-shrink-0 keeps it at bottom */}
       {showActions && (
         <div
           role="group"
           aria-label="Booking actions"
-          className={
-            stickyFooter
-              ? 'sticky bottom-0 bg-background border-t p-4 pb-[env(safe-area-inset-bottom)] mt-4'
-              : 'flex flex-col sm:flex-row gap-2 md:gap-3 pt-4'
-          }
-        >
-          {stickyFooter ? (
-            // Sticky footer layout for Sheet
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={onClose} variant="outline" className="flex-1">
-                Close
-              </Button>
-              {notes !== (booking.notes || '') && onAddNotes && (
-                <Button
-                  onClick={handleSaveNotes}
-                  disabled={isSaving}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Notes'}
-                </Button>
-              )}
-              {canStartProgress && onStartProgress && (
-                <Button
-                  onClick={handleStartProgress}
-                  disabled={isStarting}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  {isStarting ? 'Starting...' : 'Start Task'}
-                </Button>
-              )}
-              {canMarkCompleted && onMarkCompleted && (
-                <Button
-                  onClick={handleMarkCompleted}
-                  disabled={isMarking}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  {isMarking ? 'Saving...' : 'Mark as Completed'}
-                </Button>
-              )}
-            </div>
-          ) : (
-            // Inline layout for Dialog
-            <>
-              <Button onClick={onClose} variant="outline" className="flex-1">
-                Close
-              </Button>
-              {notes !== (booking.notes || '') && onAddNotes && (
-                <Button
-                  onClick={handleSaveNotes}
-                  disabled={isSaving}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Notes'}
-                </Button>
-              )}
-              {canStartProgress && onStartProgress && (
-                <Button
-                  onClick={handleStartProgress}
-                  disabled={isStarting}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  {isStarting ? 'Starting...' : 'Start Task'}
-                </Button>
-              )}
-              {canMarkCompleted && onMarkCompleted && (
-                <Button
-                  onClick={handleMarkCompleted}
-                  disabled={isMarking}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  {isMarking ? 'Saving...' : 'Mark as Completed'}
-                </Button>
-              )}
-            </>
+          className={cn(
+            'flex-shrink-0 bg-background border-t p-4',
+            stickyFooter && 'pb-[max(1rem,env(safe-area-inset-bottom))]'
           )}
+        >
+          <div className="flex flex-col gap-2">
+            {/* Primary action button */}
+            {canStartProgress && onStartProgress && (
+              <Button
+                onClick={handleStartProgress}
+                disabled={isStarting}
+                className="w-full h-12 text-base bg-purple-600 hover:bg-purple-700"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                {isStarting ? 'Starting...' : 'Start Task'}
+              </Button>
+            )}
+            {canMarkCompleted && onMarkCompleted && (
+              <Button
+                onClick={handleMarkCompleted}
+                disabled={isMarking}
+                className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                {isMarking ? 'Saving...' : 'Mark as Completed'}
+              </Button>
+            )}
+
+            {/* Secondary actions */}
+            {hasNotesChanged && onAddNotes && (
+              <Button
+                onClick={handleSaveNotes}
+                disabled={isSaving}
+                variant="outline"
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save Notes'}
+              </Button>
+            )}
+
+            {/* Close button - only show if no primary action */}
+            {!canStartProgress && !canMarkCompleted && (
+              <Button onClick={onClose} variant="outline" className="w-full">
+                Close
+              </Button>
+            )}
+          </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

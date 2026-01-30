@@ -10,6 +10,30 @@
 
 import { useState, useEffect } from 'react'
 
+/**
+ * Tailwind CSS breakpoints (in pixels)
+ * Keep in sync with tailwind.config.js
+ */
+export const BREAKPOINTS = {
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+  '2xl': 1536,
+} as const
+
+/**
+ * Pre-built media queries matching Tailwind breakpoints
+ */
+export const MEDIA_QUERIES = {
+  /** Mobile: < 1024px (below lg breakpoint) */
+  mobile: `(max-width: ${BREAKPOINTS.lg - 1}px)`,
+  /** Desktop: >= 1024px (lg breakpoint and above) */
+  desktop: `(min-width: ${BREAKPOINTS.lg}px)`,
+  /** Tablet: >= 768px and < 1024px */
+  tablet: `(min-width: ${BREAKPOINTS.md}px) and (max-width: ${BREAKPOINTS.lg - 1}px)`,
+} as const
+
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() => {
     // SSR safety check
@@ -52,4 +76,12 @@ export function useMediaQuery(query: string): boolean {
   }, [query])
 
   return matches
+}
+
+/**
+ * Convenience hook for mobile detection
+ * @returns true if viewport is below lg breakpoint (< 1024px)
+ */
+export function useIsMobile(): boolean {
+  return useMediaQuery(MEDIA_QUERIES.mobile)
 }

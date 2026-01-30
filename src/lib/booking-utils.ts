@@ -150,6 +150,39 @@ export function formatTime(time: string): string {
 }
 
 /**
+ * Calculate duration between start and end time
+ *
+ * @param startTime - Start time in HH:MM:SS format
+ * @param endTime - End time in HH:MM:SS format
+ * @returns Human-readable duration string (e.g., "2 hours", "1 hour 30 minutes")
+ *
+ * @example
+ * calculateDuration('09:00:00', '11:30:00')
+ * // Returns: "2 hours 30 minutes"
+ */
+export function calculateDuration(startTime: string, endTime: string): string {
+  if (!startTime || !endTime) return 'N/A'
+
+  const [startHours, startMinutes] = startTime.split(':').map(Number)
+  const [endHours, endMinutes] = endTime.split(':').map(Number)
+  const durationMinutes =
+    endHours * 60 + endMinutes - (startHours * 60 + startMinutes)
+
+  if (durationMinutes <= 0) return 'N/A'
+
+  const hours = Math.floor(durationMinutes / 60)
+  const minutes = durationMinutes % 60
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`
+  } else if (hours > 0) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+  } else {
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`
+  }
+}
+
+/**
  * Supabase query string for fetching teams with their team lead
  * This is used in Supabase select queries to fetch team data along with the team lead's profile
  */

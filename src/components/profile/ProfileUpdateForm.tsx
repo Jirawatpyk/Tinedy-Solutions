@@ -14,7 +14,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
@@ -185,20 +184,8 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Personal Information
-          </CardTitle>
-          <CardDescription>
-            Manage your profile information
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Avatar Upload - Centered */}
           <div className="flex flex-col items-center space-y-4 pb-6 border-b">
             {avatarUrl ? (
@@ -408,7 +395,6 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
             </Button>
           </div>
         </form>
-      </CardContent>
 
       {/* Confirm Delete Avatar Dialog */}
       <ConfirmDialog
@@ -421,6 +407,6 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
         cancelLabel="Cancel"
         onConfirm={handleRemoveAvatar}
       />
-    </Card>
+    </>
   )
 }

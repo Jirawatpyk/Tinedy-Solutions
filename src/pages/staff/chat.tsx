@@ -112,6 +112,7 @@ export function StaffChat() {
       <div className={selectedUser ? 'hidden lg:block' : 'block'}>
         <PageHeader
           title="Messages"
+          hideOnDesktop={false}
           actions={
             <Button
               onClick={handleNewChat}
@@ -126,8 +127,8 @@ export function StaffChat() {
         />
       </div>
 
-      {/* Chat Container - Mobile: Full width no padding, Desktop: With padding */}
-      <div className="flex-1 min-h-0 lg:p-4">
+      {/* Chat Container - Mobile: Full width no padding, Desktop: With padding and max-width */}
+      <div className="flex-1 min-h-0 lg:p-4 lg:max-w-6xl lg:mx-auto lg:w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-4 h-full">
           {/* User List - Hide on mobile when chat is selected */}
           <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>

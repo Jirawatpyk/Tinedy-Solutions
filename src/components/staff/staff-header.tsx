@@ -48,7 +48,10 @@ export function StaffHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      <header
+        className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b lg:hidden"
+        data-testid="staff-header"
+      >
         <div className="px-4 py-3">
           {isSearchOpen ? (
             <div className="flex items-center gap-2">

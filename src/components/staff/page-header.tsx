@@ -20,6 +20,8 @@ interface PageHeaderProps {
   actions?: ReactNode
   /** Additional className for container */
   className?: string
+  /** Hide on desktop - defaults to true (hidden on lg:) */
+  hideOnDesktop?: boolean
 }
 
 export function PageHeader({
@@ -27,11 +29,13 @@ export function PageHeader({
   subtitle,
   actions,
   className,
+  hideOnDesktop = true,
 }: PageHeaderProps) {
   return (
     <header
       className={cn(
         'sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b',
+        hideOnDesktop && 'lg:hidden',
         className
       )}
     >

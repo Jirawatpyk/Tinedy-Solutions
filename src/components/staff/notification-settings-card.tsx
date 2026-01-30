@@ -1,5 +1,4 @@
 import { Bell, BellOff } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -11,39 +10,18 @@ export function NotificationSettingsCard() {
 
   if (!isSupported) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BellOff className="h-5 w-5" />
-            Notification Settings
-          </CardTitle>
-          <CardDescription>
-            Manage your notification preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <AlertDescription>
-              Your browser does not support notifications
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertDescription>
+            Your browser does not support notifications
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Notification Settings
-        </CardTitle>
-        <CardDescription>
-          Manage your notification preferences
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         {/* Current Status */}
         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-2">
@@ -122,7 +100,6 @@ export function NotificationSettingsCard() {
             You can change notification permissions in your browser settings at any time.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
   )
 }

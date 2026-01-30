@@ -189,13 +189,15 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
 
         <CardContent className="p-3 sm:p-5">
           {/* Header Row: Time + Status */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-base sm:text-xl font-bold text-foreground">
-              {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="min-w-0">
+              <div className="text-base sm:text-xl font-bold text-foreground whitespace-nowrap">
+                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+              </div>
               {formattedDate && (
-                <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {formattedDate}
-                </span>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-1">
@@ -260,7 +262,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               variant="outline"
               size="sm"
-              className="w-[72px] h-11"
+              className="w-[72px] min-h-[44px]"
               disabled={!booking.customers?.phone}
             >
               <Phone className="h-4 w-4 mr-1" />
@@ -280,7 +282,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
               }}
               variant="outline"
               size="sm"
-              className="w-[72px] h-11"
+              className="w-[72px] min-h-[44px]"
               disabled={!fullAddress}
             >
               <MapPin className="h-4 w-4 mr-1" />
@@ -295,7 +297,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
                   onStartProgress(booking.id)
                 }}
                 disabled={isStartingProgress}
-                className="flex-1 h-11"
+                className="flex-1 min-h-[44px]"
                 size="sm"
               >
                 {isStartingProgress ? (
@@ -316,7 +318,7 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
                   onMarkCompleted(booking.id)
                 }}
                 disabled={isCompletingProgress}
-                className="flex-1 h-11 bg-green-600 hover:bg-green-700"
+                className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700"
                 size="sm"
               >
                 {isCompletingProgress ? (
