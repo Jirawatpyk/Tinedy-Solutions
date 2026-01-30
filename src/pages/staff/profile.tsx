@@ -1,34 +1,49 @@
 /**
  * Staff Profile Page
  *
- * หน้าโปรไฟล์ของ Staff:
- * - แสดงข้อมูลส่วนตัว
- * - แก้ไข profile (full_name, phone, avatar)
- * - เปลี่ยนรหัสผ่าน
- * - ตั้งค่า notification
- *
- * Note: Performance statistics ย้ายไปอยู่ที่ My Bookings > Stats tab
+ * Mobile-optimized Profile page:
+ * - PageHeader with Logout button
+ * - Compact profile header card
+ * - Inline compact stats
+ * - Settings as list items with sheets
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStaffProfile } from '@/hooks/use-staff-profile'
+import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
+import { useAuth } from '@/contexts/auth-context'
 import { ProfileUpdateForm } from '@/components/profile/ProfileUpdateForm'
 import { NotificationSettingsCard } from '@/components/staff/notification-settings-card'
 import { TeamMembershipCard } from '@/components/staff/team-membership-card'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { PageHeader } from '@/components/staff/page-header'
+import { ProfileHeaderCard } from '@/components/staff/profile-header-card'
+import { CompactStats } from '@/components/staff/compact-stats'
+import { SettingsListItem } from '@/components/staff/settings-list-item'
+import { ChangePasswordSheet } from '@/components/staff/change-password-sheet'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   Lock,
   AlertCircle,
+  Users,
+  Bell,
+  LogOut,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { formatRole } from '@/lib/role-utils'
 
 export default function StaffProfile() {
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
+  const { toast } = useToast()
   const {
     staffProfile,
     error,
@@ -36,56 +51,33 @@ export default function StaffProfile() {
     changePassword,
   } = useStaffProfile()
 
-  const [changingPassword, setChangingPassword] = useState(false)
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  // F6 fix: useStaffDashboard uses React Query - stats cached across pages
+  const { stats, isLoading: statsLoading } = useStaffDashboard()
 
-  const { toast } = useToast()
+  // Sheet states
+  const [showProfileEdit, setShowProfileEdit] = useState(false)
+  const [showTeamSheet, setShowTeamSheet] = useState(false)
+  const [showNotificationSheet, setShowNotificationSheet] = useState(false)
+  const [showPasswordSheet, setShowPasswordSheet] = useState(false)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Passwords Do Not Match',
-        description: 'Please enter the same password in both fields',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Password Too Short',
-        description: 'Password must be at least 6 characters long',
-        variant: 'destructive',
-      })
-      return
-    }
-
+  const handleLogout = async () => {
     try {
-      setChangingPassword(true)
-      await changePassword(newPassword)
+      await signOut()
+      navigate('/login')
+    } catch {
       toast({
-        title: 'Password Changed Successfully',
-        description: 'Your password has been updated',
-      })
-      setNewPassword('')
-      setConfirmPassword('')
-    } catch (error) {
-      const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
         variant: 'destructive',
       })
-    } finally {
-      setChangingPassword(false)
     }
   }
 
   // Prepare initial data for ProfileUpdateForm
   const profileInitialData = staffProfile ? {
     full_name: staffProfile.full_name,
-    phone: staffProfile.phone || undefined, // Convert null to undefined
+    phone: staffProfile.phone || undefined,
     email: staffProfile.email,
     avatar_url: staffProfile.avatar_url,
     role: formatRole(staffProfile.role),
@@ -95,20 +87,25 @@ export default function StaffProfile() {
   } : undefined
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="px-4 sm:px-6 py-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Manage your personal information
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="flex-1 flex flex-col">
+      {/* Header with Logout */}
+      <PageHeader
+        title="My Profile"
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowLogoutDialog(true)}
+            className="h-9 text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            Logout
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="p-4 sm:p-6">
+        <div className="p-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>Error: {error}</AlertDescription>
@@ -116,65 +113,106 @@ export default function StaffProfile() {
         </div>
       )}
 
-      <div className="p-4 sm:p-6 space-y-6 max-w-full mx-auto">
-        {/* Profile Update Form */}
+      <div className="flex-1 p-4 space-y-4">
+        {/* Profile Header Card */}
         {staffProfile && (
-          <ProfileUpdateForm
-            initialData={profileInitialData}
-            profileId={staffProfile.id}
-            onSuccess={refresh}
+          <ProfileHeaderCard
+            avatarUrl={staffProfile.avatar_url}
+            fullName={staffProfile.full_name}
+            staffNumber={staffProfile.staff_number}
+            email={staffProfile.email}
+            onEdit={() => setShowProfileEdit(true)}
           />
         )}
 
-        {/* Team Membership */}
-        <TeamMembershipCard />
+        {/* Compact Performance Stats */}
+        <div className="bg-card rounded-xl border">
+          <div className="px-4 py-3 border-b">
+            <h3 className="text-sm font-semibold">Performance</h3>
+          </div>
+          <CompactStats stats={stats} loading={statsLoading} />
+        </div>
 
-        {/* Notification Settings */}
-        <NotificationSettingsCard />
-
-        {/* Change Password - ไม่ต้องรอข้อมูล แสดงได้เลย */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Change Password
-            </CardTitle>
-            <CardDescription>Update your password for security</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                />
-              </div>
-            </div>
-            <Button
-              onClick={handleChangePassword}
-              disabled={!newPassword || !confirmPassword || changingPassword}
-              className="mt-4"
-            >
-              {changingPassword ? 'Changing Password...' : 'Change Password'}
-            </Button>
-          </CardContent>
-        </Card>
-
+        {/* Settings List */}
+        <div className="divide-y rounded-xl border bg-card overflow-hidden">
+          <SettingsListItem
+            icon={Users}
+            label="Team Membership"
+            description="View your teams"
+            onClick={() => setShowTeamSheet(true)}
+          />
+          <SettingsListItem
+            icon={Bell}
+            label="Notifications"
+            description="Manage notification settings"
+            onClick={() => setShowNotificationSheet(true)}
+          />
+          <SettingsListItem
+            icon={Lock}
+            label="Change Password"
+            description="Update your password"
+            onClick={() => setShowPasswordSheet(true)}
+          />
+        </div>
       </div>
+
+      {/* Profile Edit Sheet */}
+      <Sheet open={showProfileEdit} onOpenChange={setShowProfileEdit}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Edit Profile</SheetTitle>
+          </SheetHeader>
+          {staffProfile && (
+            <ProfileUpdateForm
+              initialData={profileInitialData}
+              profileId={staffProfile.id}
+              onSuccess={() => {
+                refresh()
+                setShowProfileEdit(false)
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Team Membership Sheet */}
+      <Sheet open={showTeamSheet} onOpenChange={setShowTeamSheet}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Team Membership</SheetTitle>
+          </SheetHeader>
+          <TeamMembershipCard />
+        </SheetContent>
+      </Sheet>
+
+      {/* Notification Settings Sheet */}
+      <Sheet open={showNotificationSheet} onOpenChange={setShowNotificationSheet}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Notification Settings</SheetTitle>
+          </SheetHeader>
+          <NotificationSettingsCard />
+        </SheetContent>
+      </Sheet>
+
+      {/* Change Password Sheet */}
+      <ChangePasswordSheet
+        open={showPasswordSheet}
+        onOpenChange={setShowPasswordSheet}
+        onChangePassword={changePassword}
+      />
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        title="Sign Out"
+        description="Are you sure you want to sign out of your account?"
+        variant="danger"
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        onConfirm={handleLogout}
+      />
     </div>
   )
 }

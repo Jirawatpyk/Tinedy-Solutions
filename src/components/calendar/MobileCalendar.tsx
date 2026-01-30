@@ -26,7 +26,6 @@ import {
 import { enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useSwipe } from '@/hooks/useSwipe'
@@ -165,19 +164,36 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
 
   return (
     <div className="flex flex-col h-full" {...swipeHandlers}>
-      {/* Header with Navigation */}
-      <Card className="rounded-none border-x-0 border-t-0">
-        <CardHeader className="py-3 px-4">
+      {/* Header with Navigation - Simplified, no Card wrapper */}
+      <div className="bg-background border-b">
+        <div className="py-3 px-4">
+          {/* Navigation Row - Inline arrows with title */}
           <div className="flex items-center justify-between">
-            {/* Month/Week Title */}
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5 text-tinedy-blue" />
-              <h2 className="font-display font-semibold text-lg">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={viewMode === 'week' ? goToPreviousWeek : goToPreviousMonth}
+                className="h-9 w-9"
+                aria-label={viewMode === 'week' ? 'Go to previous week' : 'Go to previous month'}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <h2 className="font-display font-semibold text-xl min-w-[140px] text-center">
                 {viewMode === 'week'
                   ? format(weekStart, 'MMM yyyy', { locale: enUS })
                   : format(currentDate, 'MMMM yyyy', { locale: enUS })
                 }
               </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={viewMode === 'week' ? goToNextWeek : goToNextMonth}
+                className="h-9 w-9"
+                aria-label={viewMode === 'week' ? 'Go to next week' : 'Go to next month'}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
             </div>
 
             {/* View Toggle & Today */}
@@ -200,7 +216,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                   aria-label="Switch to week view"
                   aria-pressed={viewMode === 'week'}
                 >
-                  Week
+                  Wk
                 </Button>
                 <Button
                   variant={viewMode === 'month' ? 'default' : 'ghost'}
@@ -210,41 +226,14 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                   aria-label="Switch to month view"
                   aria-pressed={viewMode === 'month'}
                 >
-                  Month
+                  Mo
                 </Button>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={viewMode === 'week' ? goToPreviousWeek : goToPreviousMonth}
-              className="h-8"
-              aria-label={viewMode === 'week' ? 'Go to previous week' : 'Go to previous month'}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {viewMode === 'week' ? 'Prev Week' : 'Prev'}
-            </Button>
-            <span className="text-xs text-muted-foreground" aria-live="polite">
-              Swipe to navigate
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={viewMode === 'week' ? goToNextWeek : goToNextMonth}
-              className="h-8"
-              aria-label={viewMode === 'week' ? 'Go to next week' : 'Go to next month'}
-            >
-              {viewMode === 'week' ? 'Next Week' : 'Next'}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="px-2 pb-3">
+        <div className="px-2 pb-3">
           {viewMode === 'week' ? (
             /* Week Strip View */
             <div className="flex gap-1" role="group" aria-label="Week days">
@@ -272,7 +261,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                     aria-label={`${dateLabel}, ${bookingCount} booking${bookingCount !== 1 ? 's' : ''}${hasConflict ? ', has conflicts' : ''}`}
                     aria-current={isSelected ? 'date' : undefined}
                   >
-                    <span className="text-[10px] font-medium opacity-70" aria-hidden="true">
+                    <span className="text-xs font-medium opacity-70" aria-hidden="true">
                       {format(day, 'EEE')}
                     </span>
                     <span className={cn(
@@ -285,7 +274,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                       <Badge
                         variant={isSelected ? 'secondary' : 'default'}
                         className={cn(
-                          'text-[9px] px-1.5 py-0 mt-1 h-4',
+                          'text-[10px] px-1.5 py-0 mt-1 h-4',
                           isSelected ? 'bg-white/20 text-white' : 'bg-tinedy-blue text-white'
                         )}
                         aria-hidden="true"
@@ -304,7 +293,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
               {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName, i) => (
                 <div
                   key={i}
-                  className="text-center text-[10px] font-medium text-muted-foreground py-1"
+                  className="text-center text-xs font-medium text-muted-foreground py-1"
                   aria-label={dayName}
                 >
                   {dayName.charAt(0)}
@@ -358,8 +347,8 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Selected Date Bookings */}
       <div className="flex-1 overflow-hidden">

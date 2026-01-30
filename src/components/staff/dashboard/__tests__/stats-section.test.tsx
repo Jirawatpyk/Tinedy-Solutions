@@ -14,7 +14,11 @@ vi.mock('@/components/staff/stats-card', () => ({
   ),
 }))
 
-vi.mock('@/components/staff/performance-chart', () => ({
+vi.mock('@/components/staff/skeletons', () => ({
+  StatsCardSkeleton: () => <div data-testid="stats-skeleton" />,
+}))
+
+vi.mock('@/components/charts', () => ({
   PerformanceChart: ({ stats }: { stats: { completedJobs: number } }) => (
     <div data-testid="performance-chart" data-completed-jobs={stats.completedJobs}>Performance Chart</div>
   ),
@@ -36,10 +40,11 @@ describe('StatsSection', () => {
   }
 
   it('should render loading skeletons when loading', () => {
-    const { container } = render(<StatsSection stats={undefined} loading={true} />)
+    render(<StatsSection stats={undefined} loading={true} />)
 
     // Should render 6 skeleton elements
-    expect(container.querySelectorAll('.h-28, .h-32').length).toBeGreaterThanOrEqual(6)
+    const skeletons = screen.getAllByTestId('stats-skeleton')
+    expect(skeletons.length).toBe(6)
   })
 
   it('should render all stat cards with correct values', () => {

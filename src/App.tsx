@@ -5,6 +5,7 @@ import { ThemeProvider } from './components/theme-provider'
 import { ProtectedRoute } from './components/auth/protected-route'
 import { RoleBasedRedirect } from './components/auth/role-based-redirect'
 import { MainLayout } from './components/layout/main-layout'
+import { StaffLayout } from './components/layout/staff-layout'
 import { Toaster } from './components/ui/toaster'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PUBLIC_ROUTES, ADMIN_ROUTES, STAFF_ROUTES } from './config/routes'
@@ -159,12 +160,12 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
             </Route>
 
-            {/* Protected Staff routes */}
+            {/* Protected Staff routes - Uses StaffLayout for mobile-first experience */}
             <Route
               path={STAFF_ROUTES.STAFF_DASHBOARD.path}
               element={
                 <ProtectedRoute allowedRoles={STAFF_ROUTES.STAFF_DASHBOARD.allowedRoles}>
-                  <MainLayout />
+                  <StaffLayout />
                 </ProtectedRoute>
               }
             >

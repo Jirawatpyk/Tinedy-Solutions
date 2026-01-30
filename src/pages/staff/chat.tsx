@@ -4,7 +4,10 @@ import { useAuth } from '@/contexts/auth-context'
 import { UserList } from '@/components/chat/user-list'
 import { ChatArea } from '@/components/chat/chat-area'
 import { NewChatModal } from '@/components/chat/new-chat-modal'
+import { PageHeader } from '@/components/staff/page-header'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { Plus } from 'lucide-react'
 import type { Profile } from '@/types/chat'
 
 export function StaffChat() {
@@ -105,19 +108,28 @@ export function StaffChat() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-gray-50">
-      {/* Header - Same style as My Profile and My Calendar */}
-      <div className={`bg-white border-b flex-shrink-0 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
-        <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <p className="text-sm text-muted-foreground">
-            Communicate with your team in real-time
-          </p>
-        </div>
+      {/* Header - Unified PageHeader with New Chat action */}
+      <div className={selectedUser ? 'hidden lg:block' : 'block'}>
+        <PageHeader
+          title="Messages"
+          actions={
+            <Button
+              onClick={handleNewChat}
+              size="sm"
+              className="h-9"
+              disabled={isLoadingUsers}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New
+            </Button>
+          }
+        />
       </div>
 
-      {/* Chat Container - Mobile: Stack, Desktop: Side by side */}
-      <div className="flex-1 p-4 sm:p-6 min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
-          {/* User List - Sidebar: Hide on mobile when chat is selected */}
+      {/* Chat Container - Mobile: Full width no padding, Desktop: With padding */}
+      <div className="flex-1 min-h-0 lg:p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-4 h-full">
+          {/* User List - Hide on mobile when chat is selected */}
           <div className={`lg:col-span-4 h-full overflow-hidden ${selectedUser ? 'hidden lg:block' : 'block'}`}>
             <UserList
               conversations={conversations}
@@ -126,10 +138,11 @@ export function StaffChat() {
               onDeleteConversation={handleDeleteConversation}
               onNewChat={handleNewChat}
               isLoading={isLoading}
+              hideNewChatButton
             />
           </div>
 
-          {/* Chat Area: Show fullscreen on mobile when selected, side-by-side on desktop */}
+          {/* Chat Area: Fullscreen on mobile, side-by-side on desktop */}
           <div className={`lg:col-span-8 h-full overflow-hidden ${selectedUser ? 'block' : 'hidden lg:block'}`}>
             <ChatArea
               selectedUser={selectedUser}

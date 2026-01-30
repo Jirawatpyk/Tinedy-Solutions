@@ -5,6 +5,8 @@ import { useStaffCalendar } from '@/hooks/use-staff-calendar'
 import { type CalendarEvent } from '@/lib/queries/staff-calendar-queries'
 import { logger } from '@/lib/logger'
 import { BookingDetailsModal } from '@/components/staff/booking-details-modal'
+import { BookingDetailsSheet } from '@/components/staff/booking-details-sheet'
+import { PageHeader } from '@/components/staff/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +20,7 @@ import {
   groupBookingsByDate,
   createEmptyConflictMap
 } from '@/lib/calendar-adapters'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import type { Booking } from '@/types/booking'
@@ -95,37 +97,47 @@ export default function StaffCalendar() {
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
-  // Render BookingDetailsModal once (shared by both mobile and desktop views)
-  const renderBookingDetailsModal = () => (
-    selectedEvent && (
+  // Render booking details - Sheet on mobile, Modal on desktop
+  const renderBookingDetails = () => {
+    if (!selectedEvent) return null
+
+    const booking = calendarEventToStaffBooking(selectedEvent)
+    const onClose = () => setSelectedEvent(null)
+
+    // Mobile: use bottom Sheet
+    if (isMobile) {
+      return (
+        <BookingDetailsSheet
+          booking={booking}
+          open={!!selectedEvent}
+          onClose={onClose}
+          onStartProgress={startProgress}
+          onMarkCompleted={markAsCompleted}
+          onAddNotes={addNotes}
+        />
+      )
+    }
+
+    // Desktop: use Dialog/Modal
+    return (
       <BookingDetailsModal
-        booking={calendarEventToStaffBooking(selectedEvent)}
+        booking={booking}
         open={!!selectedEvent}
-        onClose={() => setSelectedEvent(null)}
+        onClose={onClose}
         onStartProgress={startProgress}
         onMarkCompleted={markAsCompleted}
         onAddNotes={addNotes}
       />
     )
-  )
+  }
 
   // Mobile View
   if (isMobile) {
     return (
       <CalendarErrorBoundary>
         <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="bg-white border-b flex-shrink-0">
-            <div className="px-4 py-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">View your schedule (6 months back - 6 months ahead)</p>
-                <Button onClick={goToToday} variant="outline" size="sm">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Today
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* Header - Unified PageHeader */}
+          <PageHeader title="My Calendar" />
 
           {/* Content with Pull-to-Refresh */}
           <PullToRefresh onRefresh={refresh} className="flex-1 min-h-0">
@@ -164,7 +176,7 @@ export default function StaffCalendar() {
           </PullToRefresh>
 
           {/* Booking Details Modal */}
-          {renderBookingDetailsModal()}
+          {renderBookingDetails()}
         </div>
       </CalendarErrorBoundary>
     )
@@ -455,7 +467,7 @@ export default function StaffCalendar() {
         </div>
 
         {/* Booking Details Modal */}
-        {renderBookingDetailsModal()}
+        {renderBookingDetails()}
       </div>
     </CalendarErrorBoundary>
   )

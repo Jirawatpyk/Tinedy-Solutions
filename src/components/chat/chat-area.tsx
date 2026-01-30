@@ -62,7 +62,7 @@ export function ChatArea({
 
   if (!selectedUser) {
     return (
-      <Card className="h-full flex flex-col items-center justify-center">
+      <Card className="h-full flex flex-col items-center justify-center lg:rounded-lg rounded-none lg:border border-0">
         <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold text-tinedy-dark mb-2">
           No conversation selected
@@ -75,9 +75,9 @@ export function ChatArea({
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col lg:rounded-lg rounded-none lg:border border-0">
       {/* Chat Header */}
-      <CardHeader className="border-b pb-4">
+      <CardHeader className="border-b pb-4 flex-shrink-0">
         <div className="flex items-center gap-3">
           {/* Back Button - Show only on mobile */}
           {onBack && (
@@ -113,11 +113,11 @@ export function ChatArea({
         </div>
       </CardHeader>
 
-      {/* Messages Area - flex-col-reverse keeps scroll at bottom */}
+      {/* Messages Area - flex-col-reverse keeps scroll at bottom, extra padding on mobile for fixed input */}
       <CardContent
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col-reverse"
+        className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4 bg-gray-50 flex flex-col-reverse"
       >
         {isLoadingMessages ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -167,8 +167,11 @@ export function ChatArea({
         )}
       </CardContent>
 
-      {/* Message Input */}
-      <MessageInput ref={messageInputRef} onSendMessage={onSendMessage} disabled={isSending} />
+      {/* Message Input - Sticky on mobile, accounting for BottomNav (h-16 = 64px) + safe area */}
+      {/* H2 fix: Use calc() to match BottomNav height exactly: 64px + safe-area */}
+      <div className="flex-shrink-0 lg:relative fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 lg:bottom-auto lg:left-auto lg:right-auto bg-background border-t lg:border-t-0">
+        <MessageInput ref={messageInputRef} onSendMessage={onSendMessage} disabled={isSending} />
+      </div>
 
       {/* Image Lightbox */}
       <ImageLightbox

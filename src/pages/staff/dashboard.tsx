@@ -11,7 +11,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { logger } from '@/lib/logger'
-import { BookingSearchHeader, BookingListSection, StatsSection } from '@/components/staff/dashboard'
+import { BookingListSection } from '@/components/staff/dashboard'
+import { StaffHeader } from '@/components/staff/staff-header'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { BookingDetailsSheet } from '@/components/staff/booking-details-sheet'
 import { PullToRefresh } from '@/components/staff/pull-to-refresh'
 import { UndoToastAction, UNDO_DURATION_MS } from '@/components/staff/undo-toast'
 
@@ -20,7 +23,6 @@ export default function StaffDashboard() {
     todayBookings,
     upcomingBookings,
     completedBookings,
-    stats,
     isLoading: loading,
     error,
     startProgress,
@@ -48,6 +50,7 @@ export default function StaffDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const searchQuery = useDebounce(searchInput, 300)
   const { toast } = useToast()
+  const isMobile = useMediaQuery('(max-width: 1023px)')
 
   // Undo debounce tracking (prevents rapid double-tap on same booking)
   const undoingRef = useRef<string | null>(null)
@@ -191,12 +194,12 @@ export default function StaffDashboard() {
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-gray-50/50 to-primary/5">
-      {/* Modern Header */}
-      <BookingSearchHeader
-        searchInput={searchInput}
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gradient-to-br from-gray-50 via-gray-50/50 to-primary/5">
+      {/* Mobile-first Header */}
+      <StaffHeader
+        searchValue={searchInput}
         onSearchChange={setSearchInput}
-        onClear={() => setSearchInput('')}
+        todayCount={filteredTodayBookings.length}
       />
 
       {/* Tabs Navigation */}
@@ -277,9 +280,6 @@ export default function StaffDashboard() {
               completingBookingId={completingBookingId}
             />
           )}
-          {activeTab === 'stats' && (
-            <StatsSection stats={stats} loading={loading} />
-          )}
         </div>
       </PullToRefresh>
 
@@ -289,15 +289,26 @@ export default function StaffDashboard() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Booking Details Modal */}
-      <BookingDetailsModal
-        booking={currentBooking}
-        open={!!selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        onStartProgress={startProgress}
-        onMarkCompleted={markAsCompleted}
-        onAddNotes={addNotes}
-      />
+      {/* Booking Details - Sheet on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <BookingDetailsSheet
+          booking={currentBooking}
+          open={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onStartProgress={handleStartProgress}
+          onMarkCompleted={handleMarkCompleted}
+          onAddNotes={addNotes}
+        />
+      ) : (
+        <BookingDetailsModal
+          booking={currentBooking}
+          open={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onStartProgress={handleStartProgress}
+          onMarkCompleted={handleMarkCompleted}
+          onAddNotes={addNotes}
+        />
+      )}
     </div>
   )
 }

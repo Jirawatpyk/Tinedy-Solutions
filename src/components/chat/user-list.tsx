@@ -29,6 +29,8 @@ interface UserListProps {
   onDeleteConversation: (userId: string) => void
   onNewChat: () => void
   isLoading: boolean
+  /** Hide the new chat button (when it's in header instead) */
+  hideNewChatButton?: boolean
 }
 
 export function UserList({
@@ -37,7 +39,8 @@ export function UserList({
   onSelectUser,
   onDeleteConversation,
   onNewChat,
-  isLoading
+  isLoading,
+  hideNewChatButton = false,
 }: UserListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -87,17 +90,19 @@ export function UserList({
 
   return (
     <>
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col lg:rounded-lg rounded-none lg:border border-0 border-b">
         <CardHeader className="border-b pb-4 space-y-3">
-          {/* New Chat Button */}
-          <Button
-            onClick={onNewChat}
-            className="w-full"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Chat
-          </Button>
+          {/* New Chat Button - can be hidden when it's in page header */}
+          {!hideNewChatButton && (
+            <Button
+              onClick={onNewChat}
+              className="w-full"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
+            </Button>
+          )}
 
           {/* Search */}
           <div className="relative">
