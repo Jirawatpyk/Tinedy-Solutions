@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { useOptimisticDelete } from '@/hooks/optimistic'
+import { BookingStatus } from '@/types/booking'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -224,7 +225,7 @@ export function AdminTeamDetail() {
       if (bookingsError) throw bookingsError
 
       const totalBookings = bookings?.length || 0
-      const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
+      const completedBookings = bookings?.filter(b => b.status === BookingStatus.Completed).length || 0
       const totalRevenue = bookings?.filter(b => b.payment_status === 'paid').reduce((sum, b) => sum + Number(b.total_price), 0) || 0
 
       // Fetch ratings

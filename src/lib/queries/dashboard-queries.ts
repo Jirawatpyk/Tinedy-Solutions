@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { format } from 'date-fns'
 import { getBangkokToday, getDateDaysAgo } from '@/lib/dashboard-utils'
+import { BookingStatus as BookingStatusValue } from '@/types/booking'
 import type {
   Stats,
   StatsChange,
@@ -37,7 +38,7 @@ export async function fetchDashboardStats(): Promise<Stats> {
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending'),
+        .eq('status', BookingStatusValue.Pending),
     ])
 
   const totalRevenue =
@@ -84,7 +85,7 @@ export async function fetchTodayStats(): Promise<StatsChange> {
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
+        .eq('status', BookingStatusValue.Pending)
         .gte('created_at', `${todayStr}T00:00:00+07:00`)
         .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
     ])
@@ -239,7 +240,7 @@ export async function fetchMiniStats(): Promise<MiniStats> {
   const avgBookingValue = data && data.length > 0 ? totalBookingValue / data.length : 0
 
   // 3. Completion Rate
-  const completedCount = data?.filter((b) => b.status === 'completed').length || 0
+  const completedCount = data?.filter((b) => b.status === BookingStatusValue.Completed).length || 0
   const completionRate = data && data.length > 0 ? (completedCount / data.length) * 100 : 0
 
   return {

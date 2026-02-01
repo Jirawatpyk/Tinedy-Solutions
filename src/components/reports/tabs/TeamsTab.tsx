@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { TeamPerformanceTable, TeamPerformanceMobile, TeamWorkloadMobile } from '@/components/reports/team'
 import { CHART_COLORS } from '@/types/reports'
-import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { useChartAnimation } from '@/hooks/use-chart-animation'
 import type { TeamMetrics, TeamPerformance } from '@/lib/analytics'
 import {
   BarChart,

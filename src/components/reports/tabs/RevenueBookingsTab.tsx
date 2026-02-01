@@ -27,7 +27,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { useChartAnimation } from '@/hooks/use-chart-animation'
 import { PeakHoursHeatmap, PeakHoursMobile } from '@/components/reports/peak-hours'
 
 interface RevenueMetrics {

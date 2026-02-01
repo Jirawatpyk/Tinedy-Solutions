@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { formatTime } from '@/lib/booking-utils'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { SwipeableCard } from './swipeable-card'
+import { BookingStatus } from '@/types/booking'
 
 interface SimplifiedBookingCardProps {
   booking: StaffBooking
@@ -61,8 +62,8 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
     prevIsCompletingRef.current = isCompletingProgress
     prevStatusRef.current = booking.status
 
-    const startSucceeded = wasStarting && !isStartingProgress && previousStatus === 'confirmed' && booking.status === 'in_progress'
-    const completeSucceeded = wasCompleting && !isCompletingProgress && previousStatus === 'in_progress' && booking.status === 'completed'
+    const startSucceeded = wasStarting && !isStartingProgress && previousStatus === BookingStatus.Confirmed && booking.status === BookingStatus.InProgress
+    const completeSucceeded = wasCompleting && !isCompletingProgress && previousStatus === BookingStatus.InProgress && booking.status === BookingStatus.Completed
 
     if (startSucceeded || completeSucceeded) {
       setShowSuccess(true)
@@ -77,12 +78,12 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
   )
 
   const canStartProgress = useMemo(
-    () => booking.status === 'confirmed',
+    () => booking.status === BookingStatus.Confirmed,
     [booking.status]
   )
 
   const canMarkCompleted = useMemo(
-    () => booking.status === 'in_progress',
+    () => booking.status === BookingStatus.InProgress,
     [booking.status]
   )
 

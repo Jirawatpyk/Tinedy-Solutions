@@ -5,17 +5,17 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useBookingFilters } from '@/hooks/useBookingFilters'
-import { usePagination } from '@/hooks/useBookingPagination'
-import { useConflictDetection } from '@/hooks/useConflictDetection'
-import { useBookingForm, toBookingForm } from '@/hooks/useBookingForm'
-import { useBulkActions } from '@/hooks/useBulkActions'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
-import { useBookings } from '@/hooks/useBookings'
-import { useStaffList } from '@/hooks/useStaff'
+import { useBookingFilters } from '@/hooks/use-booking-filters'
+import { usePagination } from '@/hooks/use-booking-pagination'
+import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import { useBookingForm, toBookingForm } from '@/hooks/use-booking-form'
+import { useBulkActions } from '@/hooks/use-bulk-actions'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
+import { useBookings } from '@/hooks/use-bookings'
+import { useStaffList } from '@/hooks/use-staff'
 import { useToast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
-import { useServicePackages } from '@/hooks/useServicePackages'
+import { useServicePackages } from '@/hooks/use-service-packages'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus } from 'lucide-react'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -30,11 +30,12 @@ import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringEditScope, RecurringPattern, RecurringGroup, CombinedItem } from '@/types/recurring-booking'
 import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
-import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { usePaymentActions } from '@/hooks/use-payment-actions'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
 
@@ -1607,7 +1608,7 @@ export function AdminBookings() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
 

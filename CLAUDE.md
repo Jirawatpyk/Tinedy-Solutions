@@ -475,12 +475,12 @@ DO $$ ... $$;
 *Booking Management:*
 - `use-staff-bookings.ts` - Staff booking data with realtime updates
 - `use-staff-calendar.ts` - Calendar view for staff
-- `useBookingForm.ts` - Booking form state and validation
-- `useBookingFilters.ts` - Booking filtering logic
-- `useBookingPagination.ts` - Pagination for booking lists
-- `useBookingStatusManager.tsx` - Booking status updates
-- `useBulkActions.ts` - Bulk operations on bookings
-- `useConflictDetection.ts` - Booking conflict detection
+- `use-booking-form.ts` - Booking form state and validation
+- `use-booking-filters.ts` - Booking filtering logic
+- `use-booking-pagination.ts` - Pagination for booking lists
+- `use-booking-status-manager.tsx` - Booking status updates
+- `use-bulk-actions.ts` - Bulk operations on bookings
+- `use-conflict-detection.ts` - Booking conflict detection
 - `use-staff-availability-check.ts` - Staff availability validation
 
 *Communication & Notifications:*
@@ -489,10 +489,10 @@ DO $$ ... $$;
 - `use-in-app-notifications.ts` - In-app notification UI
 
 *Dashboard & Analytics:*
-- `useDashboardData.ts` - Dashboard data aggregation
-- `dashboard/useDashboardStats.ts` - Dashboard statistics
+- `use-dashboard-data.ts` - Dashboard data aggregation
+- `dashboard/use-dashboard-stats.ts` - Dashboard statistics
 - `dashboard/useDashboardCharts.ts` - Chart data processing
-- `useChartAnimation.ts` - Chart animation utilities
+- `use-chart-animation.ts` - Chart animation utilities
 
 *Settings & Utilities:*
 - `use-settings.ts` - Application settings management
@@ -666,9 +666,9 @@ Dashboard ได้ถูก refactor เป็น modular components:
   - `RecentActivity.tsx` - Recent activities timeline
 
 **Hooks:**
-- `src/hooks/dashboard/useDashboardStats.ts` - Dashboard statistics
+- `src/hooks/dashboard/use-dashboard-stats.ts` - Dashboard statistics
 - `src/hooks/dashboard/useDashboardCharts.ts` - Chart data processing
-- `src/hooks/useChartAnimation.ts` - Chart animation utilities
+- `src/hooks/use-chart-animation.ts` - Chart animation utilities
 
 **Performance:**
 - Charts use React.memo for optimization

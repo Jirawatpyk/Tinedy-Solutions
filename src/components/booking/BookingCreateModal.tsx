@@ -27,7 +27,7 @@ import { mapErrorToUserMessage, getValidationErrorMessage, getRecurringBookingEr
 import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, sendRecurringBookingConfirmation, type PaymentEmailData, type RecurringBookingEmailData } from '@/lib/email'
 import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { RecurringScheduleSelector } from './RecurringScheduleSelector'
 import { RecurringPattern as Pattern } from '@/types/recurring-booking'
@@ -39,6 +39,7 @@ import {
   bookingCreateSchema,
   type BookingCreateFormData,
 } from '@/schemas'
+import { BookingStatus } from '@/types/booking'
 
 interface StaffMember {
   id: string
@@ -77,7 +78,7 @@ interface BookingWithRelations {
   }
 }
 
-// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
+// BookingForm and BookingFormState interfaces imported from @/hooks/use-booking-form
 
 interface BookingCreateModalProps {
   isOpen: boolean
@@ -476,7 +477,7 @@ export function BookingCreateModal({
         state: data.state || null,
         zip_code: data.zip_code || null,
         notes: data.notes || null,
-        status: 'pending' as const,
+        status: BookingStatus.Pending,
         payment_status: 'unpaid' as const,
         staff_id: assignmentType === 'staff' ? (data.staff_id || null) : null,
         team_id: assignmentType === 'team' ? (data.team_id || null) : null,

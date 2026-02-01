@@ -8,11 +8,12 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
 import { formatDate, formatCurrency, formatBookingId } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
-import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
+import { useBookingDetailModal } from '@/hooks/use-booking-detail-modal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 import { supabase } from '@/lib/supabase'
+import { BookingStatus } from '@/types/booking'
 
 const logger = createLogger('StaffRecentBookings')
 
@@ -377,7 +378,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={modal.confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(modal.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(modal.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </Card>

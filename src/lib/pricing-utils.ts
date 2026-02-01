@@ -517,24 +517,6 @@ export function getPriceForFrequency(
 // ============================================================================
 
 /**
- * Format price in Thai Baht
- *
- * @param price - Price in THB (or null/undefined)
- * @returns Formatted price string
- *
- * @example
- * ```typescript
- * formatPrice(14900)  // "14,900 ฿"
- * formatPrice(1950)   // "1,950 ฿"
- * formatPrice(null)   // "-"
- * ```
- */
-export function formatPrice(price: number | null | undefined): string {
-  if (price === null || price === undefined) return '-'
-  return `${price.toLocaleString('th-TH')} ฿`
-}
-
-/**
  * Format area in Thai
  *
  * @param areaSqm - Area in square meters

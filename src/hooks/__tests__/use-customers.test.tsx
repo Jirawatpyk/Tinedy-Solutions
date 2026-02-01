@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useCustomers } from '../useCustomers'
+import { useCustomers } from '../use-customers'
 import { supabase } from '@/lib/supabase'
 import type { CustomerRecord } from '@/types/customer'
 import type { ReactNode } from 'react'

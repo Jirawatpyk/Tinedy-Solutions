@@ -8,6 +8,7 @@ import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucid
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
+import { getInitials } from '@/lib/string-utils'
 
 interface TeamMember {
   id: string
@@ -42,14 +43,6 @@ interface TeamCardProps {
   onRemoveMember: (teamId: string, staffId: string) => void
 }
 
-// Helper function moved outside component
-const getInitials = (name: string) => {
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-}
 
 export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember }: TeamCardProps) {
   const navigate = useNavigate()

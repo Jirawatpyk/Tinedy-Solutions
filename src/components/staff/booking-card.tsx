@@ -9,6 +9,7 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
+import { BookingStatus } from '@/types/booking'
 
 interface BookingCardProps {
   booking: StaffBooking
@@ -38,12 +39,12 @@ export const BookingCard = memo(function BookingCard({
   )
 
   const canStartProgress = useMemo(
-    () => booking.status === 'confirmed',
+    () => booking.status === BookingStatus.Confirmed,
     [booking.status]
   )
 
   const canMarkCompleted = useMemo(
-    () => booking.status === 'in_progress',
+    () => booking.status === BookingStatus.InProgress,
     [booking.status]
   )
 

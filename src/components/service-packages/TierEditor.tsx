@@ -19,8 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, AlertCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { formatPrice } from '@/lib/pricing-utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 /**
  * Tier data for form (without package_id and timestamps)
@@ -412,23 +411,23 @@ export function TierEditor({
                   <p className="text-sm font-medium mb-2">Price Summary:</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>1 time:</div>
-                    <div className="font-semibold">{formatPrice(tier.price_1_time)}</div>
+                    <div className="font-semibold">{formatCurrency(tier.price_1_time)}</div>
                     {tier.price_2_times != null && tier.price_2_times > 0 && (
                       <>
                         <div>2 times:</div>
-                        <div className="font-semibold">{formatPrice(tier.price_2_times)}</div>
+                        <div className="font-semibold">{formatCurrency(tier.price_2_times)}</div>
                       </>
                     )}
                     {tier.price_4_times != null && tier.price_4_times > 0 && (
                       <>
                         <div>4 times:</div>
-                        <div className="font-semibold">{formatPrice(tier.price_4_times)}</div>
+                        <div className="font-semibold">{formatCurrency(tier.price_4_times)}</div>
                       </>
                     )}
                     {tier.price_8_times != null && tier.price_8_times > 0 && (
                       <>
                         <div>8 times:</div>
-                        <div className="font-semibold">{formatPrice(tier.price_8_times)}</div>
+                        <div className="font-semibold">{formatCurrency(tier.price_8_times)}</div>
                       </>
                     )}
                   </div>

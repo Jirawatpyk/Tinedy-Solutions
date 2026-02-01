@@ -8,6 +8,7 @@ import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'luc
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
 import type { CombinedItem } from '@/types/recurring-booking'
@@ -265,7 +266,7 @@ function BookingListComponent({
                           ) : (
                             <>
                               {/* Hide status dropdown for final states (completed, cancelled, no_show) */}
-                              {!['completed', 'cancelled', 'no_show'].includes(booking.status) && (
+                              {!([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status) && (
                                 <Select
                                   value={booking.status}
                                   onValueChange={(value) =>

@@ -5,7 +5,7 @@ import { BookingCreateModal } from '../BookingCreateModal'
 import { BookingEditModal } from '../BookingEditModal'
 import { supabase } from '@/lib/supabase'
 import type { Booking } from '@/types/booking'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 
 // Mock dependencies
 vi.mock('@/lib/supabase', () => ({
@@ -39,7 +39,7 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }))
 
-vi.mock('@/hooks/useConflictDetection', () => ({
+vi.mock('@/hooks/use-conflict-detection', () => ({
   useConflictDetection: () => ({
     checkConflicts: vi.fn().mockResolvedValue([]),
     clearConflicts: vi.fn(),

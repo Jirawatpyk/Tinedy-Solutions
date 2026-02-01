@@ -34,7 +34,7 @@ import { Package, Plus, Layers, TrendingUp, DollarSign } from 'lucide-react'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
 import { PricingModel } from '@/types'
-import { useServicePackages } from '@/hooks/useServicePackages'
+import { useServicePackages } from '@/hooks/use-service-packages'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
 
 export function AdminServicePackagesV2() {

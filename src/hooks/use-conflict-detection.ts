@@ -5,7 +5,7 @@
  * for staff members and teams. It is critical business logic that prevents
  * double-booking scenarios.
  *
- * @module hooks/useConflictDetection
+ * @module hooks/use-conflict-detection
  */
 
 import { useState, useCallback, useEffect } from 'react'

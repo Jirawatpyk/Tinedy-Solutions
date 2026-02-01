@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Info, User, Users } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import type { BookingConflict } from '@/hooks/useConflictDetection'
+import type { BookingConflict } from '@/hooks/use-conflict-detection'
 
 interface BookingConflictDialogProps {
   isOpen: boolean

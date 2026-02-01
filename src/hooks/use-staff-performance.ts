@@ -7,7 +7,7 @@ import {
   getUniqueTeamIds,
 } from '@/lib/team-revenue-utils'
 import { fetchStaffReviewStats, type MembershipPeriod } from '@/lib/review-utils'
-import type { Booking } from '@/types'
+import { BookingStatus, type Booking } from '@/types'
 
 export interface StaffPerformanceStats {
   totalBookings: number
@@ -272,8 +272,8 @@ export function useStaffPerformance(staffId: string | undefined) {
 
   const calculateStats = async (bookingsData: Booking[], membershipPeriods: MembershipPeriod[] = []) => {
     const total = bookingsData.length
-    const completed = bookingsData.filter((b) => b.status === 'completed').length
-    const pending = bookingsData.filter((b) => b.status === 'pending').length
+    const completed = bookingsData.filter((b) => b.status === BookingStatus.Completed).length
+    const pending = bookingsData.filter((b) => b.status === BookingStatus.Pending).length
 
     // Get unique team IDs that need member counts (OPTIMIZE: Single query for all teams)
     const paidBookings = bookingsData.filter(b => b.payment_status === 'paid')
@@ -349,7 +349,7 @@ export function useStaffPerformance(staffId: string | undefined) {
         current.revenue += calculateBookingRevenue(booking, teamMemberCounts)
       }
 
-      if (booking.status === 'completed') {
+      if (booking.status === BookingStatus.Completed) {
         current.completed += 1
       }
     }

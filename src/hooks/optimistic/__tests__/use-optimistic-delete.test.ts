@@ -13,7 +13,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useOptimisticDelete } from '../useOptimisticDelete'
+import { useOptimisticDelete } from '../use-optimistic-delete'
 import React, { type ReactNode } from 'react'
 
 // Mock useToast

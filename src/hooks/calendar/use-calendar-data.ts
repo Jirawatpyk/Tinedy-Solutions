@@ -13,18 +13,18 @@
  * - useConflictDetection - Booking conflict detection
  * - useCalendarActions - CRUD operations
  *
- * @module hooks/calendar/useCalendarData
+ * @module hooks/calendar/use-calendar-data
  */
 
 import { useMemo } from 'react'
-import { useCalendarDate } from './useCalendarDate'
-import { useBookingModal } from '@/hooks/dashboard/useBookingModal'
-import { useBookingForm } from '@/hooks/useBookingForm'
-import { useCalendarFilters } from '@/hooks/useCalendarFilters'
-import { useBookingsByDateRange } from '@/hooks/useBookings'
-import { useConflictDetection } from '@/hooks/useConflictDetection'
-import { useCalendarActions } from './useCalendarActions'
-import type { Booking } from '@/types/booking'
+import { useCalendarDate } from './use-calendar-date'
+import { useBookingModal } from '@/hooks/dashboard/use-booking-modal'
+import { useBookingForm } from '@/hooks/use-booking-form'
+import { useCalendarFilters } from '@/hooks/use-calendar-filters'
+import { useBookingsByDateRange } from '@/hooks/use-bookings'
+import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import { useCalendarActions } from './use-calendar-actions'
+import { BookingStatus, type Booking } from '@/types/booking'
 import { isSameDay } from 'date-fns'
 
 /**
@@ -221,7 +221,7 @@ export function useCalendarData() {
         const booking1 = dateBookings[i]
 
         // Skip cancelled/no-show bookings
-        if (booking1.status === 'cancelled' || booking1.status === 'no_show') {
+        if (booking1.status === BookingStatus.Cancelled || booking1.status === BookingStatus.NoShow) {
           continue
         }
 
@@ -229,7 +229,7 @@ export function useCalendarData() {
           const booking2 = dateBookings[j]
 
           // Skip cancelled/no-show bookings
-          if (booking2.status === 'cancelled' || booking2.status === 'no_show') {
+          if (booking2.status === BookingStatus.Cancelled || booking2.status === BookingStatus.NoShow) {
             continue
           }
 

@@ -4,9 +4,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
-import { useStaffList } from '@/hooks/useStaff'
-import { useBookingsByCustomer } from '@/hooks/useBookings'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
+import { useStaffList } from '@/hooks/use-staff'
+import { useBookingsByCustomer } from '@/hooks/use-bookings'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Button } from '@/components/ui/button'
@@ -18,9 +18,9 @@ import { useOptimisticPayment, useOptimisticDelete } from '@/hooks/optimistic'
 import { mapErrorToUserMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import { type BookingFormState } from '@/hooks/useBookingForm'
+import { type BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
-import { useServicePackages } from '@/hooks/useServicePackages'
+import { useServicePackages } from '@/hooks/use-service-packages'
 import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import type { RecurringGroup, RecurringPattern } from '@/types/recurring-booking'
@@ -78,6 +78,7 @@ import {
 } from '@/components/ui/dialog'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
@@ -100,7 +101,7 @@ interface CustomerBooking {
   booking_date: string
   start_time: string
   end_time: string
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+  status: BookingStatus
   notes: string | null
   total_price: number
   address: string
@@ -149,7 +150,7 @@ interface Team {
   name: string
 }
 
-// BookingFormState imported from @/hooks/useBookingForm
+// BookingFormState imported from @/hooks/use-booking-form
 
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -775,9 +776,9 @@ export function AdminCustomerDetail() {
 
         const monthData = monthsMap.get(monthKey)!
         monthData.total++
-        if (booking.status === 'completed') monthData.completed++
-        else if (booking.status === 'cancelled') monthData.cancelled++
-        else if (booking.status === 'pending') monthData.pending++
+        if (booking.status === BookingStatus.Completed) monthData.completed++
+        else if (booking.status === BookingStatus.Cancelled) monthData.cancelled++
+        else if (booking.status === BookingStatus.Pending) monthData.pending++
       }
     })
 
@@ -1839,7 +1840,7 @@ export function AdminCustomerDetail() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </div>

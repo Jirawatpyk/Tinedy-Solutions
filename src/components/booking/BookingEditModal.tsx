@@ -1,7 +1,7 @@
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { useConflictDetection } from '@/hooks/useConflictDetection'
+import { useConflictDetection } from '@/hooks/use-conflict-detection'
 import { formatTime } from '@/lib/booking-utils'
 import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react'
@@ -26,11 +26,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Sparkles } from 'lucide-react'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
 import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
-import type { BookingForm } from '@/hooks/useBookingForm'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { BookingForm } from '@/hooks/use-booking-form'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 import type { ServicePackageV2WithTiers } from '@/types'
 import {
   bookingUpdateSchema,
@@ -49,7 +50,7 @@ interface Team {
   name: string
 }
 
-// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
+// BookingForm and BookingFormState interfaces imported from @/hooks/use-booking-form
 
 interface BookingEditModalProps {
   isOpen: boolean
@@ -122,7 +123,7 @@ export function BookingEditModal({
       staff_id: '',
       team_id: '',
       notes: '',
-      status: 'pending',
+      status: BookingStatus.Pending,
     },
   })
 
@@ -162,7 +163,7 @@ export function BookingEditModal({
           staff_id: booking.staff_id || '',
           team_id: booking.team_id || '',
           notes: booking.notes || '',
-          status: (booking.status || 'pending') as 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed' | 'no_show',
+          status: (booking.status || BookingStatus.Pending) as BookingStatus,
         })
         lastInitializedBookingId.current = booking.id
       }
@@ -269,7 +270,7 @@ export function BookingEditModal({
         staff_id: data.staff_id && data.staff_id.trim() ? data.staff_id : null,
         team_id: newTeamId,
         team_member_count: teamMemberCount,
-        status: data.status || 'pending',
+        status: data.status || BookingStatus.Pending,
       }
 
       // Add package-specific fields based on package type
@@ -504,12 +505,12 @@ export function BookingEditModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="no_show">No Show</SelectItem>
+                      <SelectItem value={BookingStatus.Pending}>Pending</SelectItem>
+                      <SelectItem value={BookingStatus.Confirmed}>Confirmed</SelectItem>
+                      <SelectItem value={BookingStatus.InProgress}>In Progress</SelectItem>
+                      <SelectItem value={BookingStatus.Completed}>Completed</SelectItem>
+                      <SelectItem value={BookingStatus.Cancelled}>Cancelled</SelectItem>
+                      <SelectItem value={BookingStatus.NoShow}>No Show</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

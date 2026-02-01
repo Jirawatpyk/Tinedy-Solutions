@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
-import { usePaymentActions } from '@/hooks/usePaymentActions'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
+import { usePaymentActions } from '@/hooks/use-payment-actions'
 import type { Booking } from '@/types/booking'
 
 export interface UseBookingDetailModalProps {

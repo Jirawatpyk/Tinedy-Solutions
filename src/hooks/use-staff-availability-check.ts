@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSupabaseErrorMessage } from '@/lib/error-utils'
 import { createLogger } from '@/lib/logger'
+import { BookingStatus } from '@/types/booking'
 
 const logger = createLogger('StaffAvailabilityCheck')
 
@@ -217,7 +218,7 @@ export function useStaffAvailabilityCheck({
             `)
             .eq('staff_id', staff.id)
             .eq('booking_date', date)
-            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
 
           // Exclude current booking when editing (recurring group if applicable)
           if (excludeBookingIds.length > 0) {
@@ -244,7 +245,7 @@ export function useStaffAvailabilityCheck({
               `)
               .in('team_id', teamIds)
               .eq('booking_date', date)
-              .in('status', ['pending', 'confirmed', 'in_progress'])
+              .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
 
             // Exclude current booking when editing (recurring group if applicable)
             if (excludeBookingIds.length > 0) {
@@ -330,7 +331,7 @@ export function useStaffAvailabilityCheck({
             .from('bookings')
             .select('id')
             .eq('booking_date', date)
-            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
             .or(`staff_id.eq.${staff.id},team_id.in.(${teamIds.join(',')})`)
 
           const jobsToday = dateBookings?.length || 0
@@ -478,7 +479,7 @@ export function useStaffAvailabilityCheck({
             `)
             .eq('team_id', team.id)
             .eq('booking_date', date)
-            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
 
           // Exclude current booking when editing (recurring group if applicable)
           if (excludeBookingIds.length > 0) {
@@ -527,7 +528,7 @@ export function useStaffAvailabilityCheck({
                   customers (full_name)
                 `)
                 .eq('booking_date', date)
-                .in('status', ['pending', 'confirmed', 'in_progress'])
+                .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
 
               // Exclude current booking when editing (recurring group if applicable)
               if (excludeBookingIds.length > 0) {
@@ -588,7 +589,7 @@ export function useStaffAvailabilityCheck({
                 .from('bookings')
                 .select('id')
                 .eq('booking_date', date)
-                .in('status', ['pending', 'confirmed', 'in_progress'])
+                .in('status', [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.InProgress])
                 .or(`staff_id.eq.${staff.id},team_id.in.(${teamIds.join(',')})`)
 
               const memberJobsToday = memberDateBookings?.length || 0

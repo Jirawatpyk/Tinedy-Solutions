@@ -1,7 +1,7 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCustomers } from '@/hooks/useCustomers'
+import { useCustomers } from '@/hooks/use-customers'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

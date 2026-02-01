@@ -5,7 +5,7 @@
  * This hook consolidates all form-related logic extracted from bookings.tsx,
  * providing a reusable interface for create/edit booking forms.
  *
- * @module hooks/useBookingForm
+ * @module hooks/use-booking-form
  *
  * @example
  * ```tsx

@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useSwipe } from '../useSwipe'
+import { useSwipe } from '../use-swipe'
 
 // Helper function to create mock touch event
 const createTouchEvent = (clientX: number, clientY: number): React.TouchEvent => ({

@@ -1,2 +1,2 @@
-export { useBulkActions } from './useBulkActions'
-export { useBookingStatusManager } from './useBookingStatusManager'
+export { useBulkActions } from './use-bulk-actions'
+export { useBookingStatusManager } from './use-booking-status-manager'
