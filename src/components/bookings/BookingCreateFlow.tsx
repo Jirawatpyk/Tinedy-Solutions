@@ -13,8 +13,7 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import type { BookingForm } from '@/hooks/useBookingForm'
 import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
 import type { PackageSelectionData } from '@/components/service-packages'
-import type { RecurringPattern } from '@/types/recurring-booking'
-import { RecurringPattern as Pattern } from '@/types/recurring-booking'
+import { RecurringPattern } from '@/types/recurring-booking'
 
 /**
  * Staff member interface
@@ -141,7 +140,7 @@ function BookingCreateFlowComponent({
     setCreatePackageSelection(null)
     createForm.reset()
     setCreateRecurringDates([])
-    setCreateRecurringPattern(Pattern.AutoMonthly)
+    setCreateRecurringPattern(RecurringPattern.AutoMonthly)
   }, [
     onCloseDialog,
     setCreatePackageSelection,
@@ -159,7 +158,7 @@ function BookingCreateFlowComponent({
     setCreatePackageSelection(null)
     createForm.reset()
     setCreateRecurringDates([])
-    setCreateRecurringPattern(Pattern.AutoMonthly)
+    setCreateRecurringPattern(RecurringPattern.AutoMonthly)
   }, [
     onSuccess,
     setCreatePackageSelection,

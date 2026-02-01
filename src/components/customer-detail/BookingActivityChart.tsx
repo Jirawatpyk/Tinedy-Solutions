@@ -126,4 +126,6 @@ const BookingActivityChart = memo(function BookingActivityChart({
   )
 })
 
+BookingActivityChart.displayName = 'BookingActivityChart'
+
 export default BookingActivityChart

@@ -7,11 +7,9 @@
  * @module components/bookings
  */
 
-// Create/Edit/Detail flow components
+// Create/Edit flow components
 export { BookingCreateFlow } from './BookingCreateFlow'
 export { BookingEditFlow } from './BookingEditFlow'
-export { BookingDetailFlow } from './BookingDetailFlow'
-export type { BookingDetailFlowProps } from './BookingDetailFlow'
 
 // List and container components
 export { BookingListContainer } from './BookingListContainer'

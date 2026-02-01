@@ -1,7 +1,7 @@
-import React from 'react'
+import { memo } from 'react'
 import { DollarSign, FileText, Clock, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 
 export interface CustomerStats {
   total_bookings: number
@@ -22,7 +22,7 @@ interface CustomerMetricsSectionProps {
   customerCreatedAt: string
 }
 
-const CustomerMetricsSection = React.memo(function CustomerMetricsSection({
+const CustomerMetricsSection = memo(function CustomerMetricsSection({
   stats,
   customerCreatedAt,
 }: CustomerMetricsSectionProps) {
@@ -35,10 +35,10 @@ const CustomerMetricsSection = React.memo(function CustomerMetricsSection({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-tinedy-dark">
-            ฿{stats?.lifetime_value?.toLocaleString() || 0}
+            {formatCurrency(stats?.lifetime_value || 0)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Avg: ฿{stats?.avg_booking_value?.toLocaleString() || 0} per booking
+            Avg: {formatCurrency(stats?.avg_booking_value || 0)} per booking
           </p>
         </CardContent>
       </Card>
@@ -98,5 +98,7 @@ const CustomerMetricsSection = React.memo(function CustomerMetricsSection({
     </div>
   )
 })
+
+CustomerMetricsSection.displayName = 'CustomerMetricsSection'
 
 export default CustomerMetricsSection

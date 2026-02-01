@@ -1,10 +1,12 @@
 import { memo } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, Dispatch, SetStateAction } from 'react'
 import type { CustomerRecord } from '@/types'
 import type { Booking } from '@/types/booking'
+import type { StaffListItem } from '@/types/staff'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringPattern } from '@/types/recurring-booking'
+import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
 import { BookingEditModal, BookingCreateModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
@@ -26,8 +28,8 @@ interface BookingModalsContainerProps {
   customer: CustomerRecord
 
   // Service data
-  servicePackages: Array<{ id: string; name: string; base_price?: number; duration_minutes?: number; [key: string]: unknown }>
-  staffList: Array<{ id: string; full_name: string; [key: string]: unknown }>
+  servicePackages: UnifiedServicePackage[]
+  staffList: StaffListItem[]
   teams: Array<{ id: string; name: string }>
 
   // Create booking modal
@@ -42,9 +44,9 @@ interface BookingModalsContainerProps {
   selectedCreateStaffId: string
   selectedCreateTeamId: string
   createRecurringDates: string[]
-  setCreateRecurringDates: (dates: string[]) => void
+  setCreateRecurringDates: Dispatch<SetStateAction<string[]>>
   createRecurringPattern: RecurringPattern
-  setCreateRecurringPattern: (pattern: RecurringPattern) => void
+  setCreateRecurringPattern: Dispatch<SetStateAction<RecurringPattern>>
 
   // Create availability modal
   isCreateAvailabilityModalOpen: boolean
@@ -71,7 +73,7 @@ interface BookingModalsContainerProps {
   // Booking detail modal
   isBookingDetailModalOpen: boolean
   selectedBookingId: string | null
-  bookings: Array<{ id: string; [key: string]: unknown }>
+  bookings: Booking[]
   onCloseDetailModal: () => void
   onEditBooking: (booking: unknown) => void
   onArchiveBooking: (bookingId: string) => Promise<void>
@@ -83,7 +85,7 @@ interface BookingModalsContainerProps {
   onCompleteRefund: (bookingId: string) => void
   onCancelRefund: (bookingId: string) => void
   getStatusBadge: (status: string) => ReactNode
-  getPaymentStatusBadge: (status: string) => ReactNode
+  getPaymentStatusBadge: (status?: string) => ReactNode
   getAvailableStatuses: (currentStatus: string) => string[]
   getStatusLabel: (status: string) => string
 
@@ -320,7 +322,7 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
       {/* Booking Detail Modal */}
       {selectedBookingId && (
         <BookingDetailModal
-          booking={bookings.find(b => b.id === selectedBookingId) as Booking | null ?? null}
+          booking={bookings.find(b => b.id === selectedBookingId) ?? null}
           isOpen={isBookingDetailModalOpen}
           onClose={onCloseDetailModal}
           onEdit={onEditBooking as (booking: Booking) => void}

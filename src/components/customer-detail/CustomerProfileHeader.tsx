@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import {
   Mail,
   Phone,
@@ -61,7 +61,7 @@ interface CustomerProfileHeaderProps {
 // Component
 // ---------------------------------------------------------------------------
 
-const CustomerProfileHeader = React.memo(function CustomerProfileHeader({
+const CustomerProfileHeader = memo(function CustomerProfileHeader({
   customer,
   onCreateBooking,
   onAddNote,
@@ -305,5 +305,7 @@ const CustomerProfileHeader = React.memo(function CustomerProfileHeader({
     </Card>
   )
 })
+
+CustomerProfileHeader.displayName = 'CustomerProfileHeader'
 
 export default CustomerProfileHeader

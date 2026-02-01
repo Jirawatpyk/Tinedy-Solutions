@@ -13,7 +13,7 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
 import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
-import type { BookingForm, UseBookingFormReturn } from '@/hooks/useBookingForm'
+import type { UseBookingFormReturn } from '@/hooks/useBookingForm'
 import { toBookingForm } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
 
@@ -225,7 +225,7 @@ function BookingEditFlowComponent({
           onSelectStaff={handleSelectStaff}
           onSelectTeam={handleSelectTeam}
           date={editForm.formData.booking_date}
-          startTime={editForm.formData.start_time}
+          startTime={editForm.formData.start_time || ''}
           endTime={editForm.formData.end_time || ''}
           servicePackageId={
             editForm.formData.service_package_id ||
