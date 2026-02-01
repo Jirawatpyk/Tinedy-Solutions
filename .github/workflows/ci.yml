@@ -1,3 +1,22 @@
+# =============================================================================
+# Tinedy CRM - CI/CD Quality Pipeline
+# =============================================================================
+# Two-tier testing: Vitest (unit/component) + Playwright (E2E)
+#
+# Pipeline stages:
+#   1. quality     - Lint + TypeScript check (fast feedback)
+#   2. unit-tests  - Vitest with 75% coverage enforcement
+#   3. build       - Production build validation
+#   4. e2e-tests   - Playwright E2E (Chromium, 2 shards)
+#   5. burn-in     - Flaky test detection (PR only, changed specs × 5)
+#   6. cross-browser - Full browser matrix (weekly schedule only)
+#
+# Triggers:
+#   - push to main        → quality + unit + build + e2e
+#   - pull_request to main → quality + unit + build + e2e + burn-in
+#   - weekly schedule      → quality + unit + build + cross-browser
+# =============================================================================
+
 name: CI
 
 on:
@@ -5,28 +24,289 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Weekly Monday 6:00 AM UTC — cross-browser regression
+    - cron: '0 6 * * 1'
+
+env:
+  NODE_VERSION: '20'
+
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ===========================================================================
+  # Job 1: Code Quality (Lint + TypeScript)
+  # Target: < 2 minutes
+  # ===========================================================================
   quality:
+    name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linting
+      - name: Run ESLint
         run: npm run lint
 
-      - name: Run tests with coverage
+      - name: TypeScript type check
+        run: npm run type-check
+
+  # ===========================================================================
+  # Job 2: Unit & Component Tests (Vitest)
+  # Target: < 5 minutes
+  # Coverage threshold: 75% (lines, functions, branches, statements)
+  # ===========================================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest with coverage
         run: npm run test:run -- --coverage
-        continue-on-error: true  # TODO: Remove after fixing pre-existing test failures (Epic 3)
-        # Vitest config enforces 75% threshold (lines, functions, branches, statements)
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: coverage/
+          retention-days: 14
+
+  # ===========================================================================
+  # Job 3: Production Build
+  # Target: < 3 minutes
+  # Validates TypeScript compilation + Vite build
+  # ===========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build application
         run: npm run build
+
+  # ===========================================================================
+  # Job 4: E2E Tests (Playwright — Chromium, sharded)
+  # Target: < 10 minutes per shard
+  # Runs on push and PR (not schedule — cross-browser handles that)
+  # ===========================================================================
+  e2e-tests:
+    name: E2E Tests (Shard ${{ matrix.shard }}/2)
+    if: github.event_name != 'schedule'
+    needs: [quality, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run E2E tests (shard ${{ matrix.shard }}/2)
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/2
+        env:
+          CI: true
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+          retention-days: 30
+
+  # ===========================================================================
+  # Job 5: Burn-In — Flaky Test Detection (PR only)
+  # Target: < 15 minutes
+  # Runs changed specs 5× to catch non-deterministic failures
+  # ===========================================================================
+  burn-in:
+    name: Flaky Test Detection
+    if: github.event_name == 'pull_request'
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Detect changed test files
+        id: changed-tests
+        run: |
+          CHANGED_E2E=$(git diff --name-only origin/main...HEAD -- 'tests/e2e/' | grep -E '\.(spec|test)\.(ts|js)$' || echo "")
+          CHANGED_UNIT=$(git diff --name-only origin/main...HEAD -- 'src/' | grep -E '\.(spec|test)\.(ts|tsx)$' || echo "")
+          echo "changed_e2e=${CHANGED_E2E}" >> $GITHUB_OUTPUT
+          echo "changed_unit=${CHANGED_UNIT}" >> $GITHUB_OUTPUT
+          echo "--- Changed E2E specs ---"
+          echo "${CHANGED_E2E:-none}"
+          echo "--- Changed Unit specs ---"
+          echo "${CHANGED_UNIT:-none}"
+
+      - name: Burn-in changed E2E specs (5 iterations)
+        if: steps.changed-tests.outputs.changed_e2e != ''
+        run: |
+          SPECS="${{ steps.changed-tests.outputs.changed_e2e }}"
+          echo "Running burn-in on changed E2E specs..."
+          for i in {1..5}; do
+            echo "--- Burn-in iteration $i/5 ---"
+            npx playwright test --project=chromium $SPECS || {
+              echo "Burn-in FAILED on iteration $i"
+              exit 1
+            }
+          done
+          echo "Burn-in PASSED — 5/5 iterations stable"
+
+      - name: Burn-in changed unit specs (5 iterations)
+        if: steps.changed-tests.outputs.changed_unit != ''
+        run: |
+          SPECS="${{ steps.changed-tests.outputs.changed_unit }}"
+          echo "Running burn-in on changed unit specs..."
+          for i in {1..5}; do
+            echo "--- Burn-in iteration $i/5 ---"
+            npx vitest run $SPECS || {
+              echo "Burn-in FAILED on iteration $i"
+              exit 1
+            }
+          done
+          echo "Burn-in PASSED — 5/5 iterations stable"
+
+      - name: Upload burn-in failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failures
+          path: test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # Job 6: Cross-Browser E2E (weekly schedule only)
+  # Target: < 30 minutes
+  # Validates Chromium, Firefox, WebKit
+  # ===========================================================================
+  cross-browser:
+    name: Cross-Browser (${{ matrix.project }})
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests (${{ matrix.project }})
+        run: npx playwright test --project=${{ matrix.project }}
+        env:
+          CI: true
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-browser-${{ matrix.project }}
+          path: test-results/
+          retention-days: 30
