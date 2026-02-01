@@ -7,8 +7,31 @@
  * Data follows the customers table schema with realistic Thai customer patterns.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Customer = any
+/**
+ * Mock customer record matching the raw DB row shape used in tests.
+ * Uses simplified field names (e.g., `name` instead of `full_name`)
+ * to mirror the Supabase PostgREST response format used in mock handlers.
+ */
+export interface MockCustomerRecord {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  tags: string[]
+  notes: string | null
+  total_bookings: number
+  total_spent: number
+  last_booking_date: string | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+  deleted_by: string | null
+}
 
 /**
  * Mock customer records with realistic Thai data
@@ -21,7 +44,7 @@ type Customer = any
  * - Analytics fields: total_bookings, total_spent, last_booking_date
  * - Soft delete fields: deleted_at, deleted_by
  */
-export const mockCustomers: Customer[] = [
+export const mockCustomers: MockCustomerRecord[] = [
   // VIP Customer
   {
     id: 'customer-001',
@@ -137,8 +160,8 @@ export const mockCustomers: Customer[] = [
  * const customer = createMockCustomer({ name: 'ทดสอบ ทดสอบ', tags: ['VIP'] })
  * ```
  */
-export function createMockCustomer(overrides?: Partial<Customer>): Customer {
-  const defaultCustomer: Customer = {
+export function createMockCustomer(overrides?: Partial<MockCustomerRecord>): MockCustomerRecord {
+  const defaultCustomer: MockCustomerRecord = {
     id: `customer-${Date.now()}`,
     name: 'ลูกค้าทดสอบ',
     phone: '081-111-1111',
@@ -172,8 +195,8 @@ export function createMockCustomer(overrides?: Partial<Customer>): Customer {
  */
 export function createMockCustomers(
   count: number,
-  overrides?: Partial<Customer>
-): Customer[] {
+  overrides?: Partial<MockCustomerRecord>
+): MockCustomerRecord[] {
   return Array.from({ length: count }, (_, i) =>
     createMockCustomer({ id: `customer-${Date.now()}-${i}`, ...overrides })
   )
@@ -182,35 +205,35 @@ export function createMockCustomers(
 /**
  * Get active (non-deleted) customers
  */
-export function getActiveCustomers(): Customer[] {
+export function getActiveCustomers(): MockCustomerRecord[] {
   return mockCustomers.filter((c) => c.deleted_at === null)
 }
 
 /**
  * Get customers by tag
  */
-export function getCustomersByTag(tag: string): Customer[] {
+export function getCustomersByTag(tag: string): MockCustomerRecord[] {
   return getActiveCustomers().filter((c) => c.tags?.includes(tag))
 }
 
 /**
  * Get VIP customers (total_spent >= 10000)
  */
-export function getVIPCustomers(): Customer[] {
+export function getVIPCustomers(): MockCustomerRecord[] {
   return getActiveCustomers().filter((c) => c.total_spent >= 10000)
 }
 
 /**
  * Get customers by city
  */
-export function getCustomersByCity(city: string): Customer[] {
+export function getCustomersByCity(city: string): MockCustomerRecord[] {
   return getActiveCustomers().filter((c) => c.city === city)
 }
 
 /**
  * Search customers by name or phone
  */
-export function searchCustomers(query: string): Customer[] {
+export function searchCustomers(query: string): MockCustomerRecord[] {
   const lowerQuery = query.toLowerCase()
   return getActiveCustomers().filter(
     (c) =>

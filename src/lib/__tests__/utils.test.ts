@@ -5,13 +5,13 @@ import {
   formatDateTime,
   formatCurrency,
   getBangkokDateString,
-  getInitials,
   getAvatarColor,
   getRankBadgeColor,
   formatBookingId,
   AVATAR_COLORS,
   RANK_BADGE_COLORS,
 } from '../utils'
+import { getInitials } from '../string-utils'
 
 describe('utils', () => {
   describe('cn', () => {
@@ -237,54 +237,6 @@ describe('utils', () => {
       vi.setSystemTime(new Date('2024-12-31T20:00:00Z'))
       const result = getBangkokDateString()
       expect(result).toMatch(/^202[45]-/)
-    })
-  })
-
-  describe('getInitials', () => {
-    it('should return initials from full name', () => {
-      expect(getInitials('John Doe')).toBe('JD')
-    })
-
-    it('should return first two letters for single name', () => {
-      expect(getInitials('Alice')).toBe('AL')
-    })
-
-    it('should handle three-word names', () => {
-      expect(getInitials('John Michael Doe')).toBe('JM')
-    })
-
-    it('should handle empty string', () => {
-      expect(getInitials('')).toBe('?')
-    })
-
-    it('should handle whitespace-only string', () => {
-      expect(getInitials('   ')).toBe('?')
-    })
-
-    it('should handle null/undefined input', () => {
-      expect(getInitials(null as any)).toBe('?')
-      expect(getInitials(undefined as any)).toBe('?')
-    })
-
-    it('should handle non-string input', () => {
-      expect(getInitials(123 as any)).toBe('?')
-      expect(getInitials({} as any)).toBe('?')
-    })
-
-    it('should trim whitespace', () => {
-      expect(getInitials('  John   Doe  ')).toBe('JD')
-    })
-
-    it('should handle single character name', () => {
-      expect(getInitials('A')).toBe('A')
-    })
-
-    it('should uppercase initials', () => {
-      expect(getInitials('john doe')).toBe('JD')
-    })
-
-    it('should handle names with multiple spaces', () => {
-      expect(getInitials('John    Doe')).toBe('JD')
     })
   })
 

@@ -11,7 +11,6 @@ import {
   validateArea,
   getAvailableFrequencies,
   getPriceForFrequency,
-  formatPrice,
   formatArea,
   formatStaffCount
 } from '../pricing-utils'
@@ -796,32 +795,6 @@ describe('pricing-utils', () => {
   // ============================================================================
   // FORMATTING
   // ============================================================================
-
-  describe('formatPrice', () => {
-    it('should format positive price with Thai locale', () => {
-      expect(formatPrice(14900)).toBe('14,900 ฿')
-    })
-
-    it('should format price with thousands separator', () => {
-      expect(formatPrice(1950)).toBe('1,950 ฿')
-    })
-
-    it('should format large price correctly', () => {
-      expect(formatPrice(123456)).toBe('123,456 ฿')
-    })
-
-    it('should return "-" for null', () => {
-      expect(formatPrice(null)).toBe('-')
-    })
-
-    it('should return "-" for undefined', () => {
-      expect(formatPrice(undefined)).toBe('-')
-    })
-
-    it('should format zero price', () => {
-      expect(formatPrice(0)).toBe('0 ฿')
-    })
-  })
 
   describe('formatArea', () => {
     it('should format area with sqm unit', () => {
