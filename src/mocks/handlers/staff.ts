@@ -11,10 +11,8 @@ import { http, HttpResponse } from 'msw'
 import {
   mockProfiles,
   createMockProfile,
+  type MockProfileRecord,
 } from '../data/staff'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Profile = any
 
 // In-memory storage for test mutations
 let profilesStore = [...mockProfiles]
@@ -45,32 +43,32 @@ function parseSupabaseQuery(url: URL) {
 /**
  * Apply Supabase filters to profiles array
  */
-function applyFilters(profiles: Profile[], filters: Record<string, string>): Profile[] {
+function applyFilters(profiles: MockProfileRecord[], filters: Record<string, string>): MockProfileRecord[] {
   let result = [...profiles]
 
   Object.entries(filters).forEach(([key, value]) => {
     // Handle eq. operator
     if (value.startsWith('eq.')) {
       const filterValue = value.substring(3)
-      result = result.filter((p) => String(p[key as keyof Profile]) === filterValue)
+      result = result.filter((p) => String(p[key as keyof MockProfileRecord]) === filterValue)
     }
     // Handle in. operator
     else if (value.startsWith('in.(') && value.endsWith(')')) {
       const values = value.substring(4, value.length - 1).split(',')
-      result = result.filter((p) => values.includes(String(p[key as keyof Profile])))
+      result = result.filter((p) => values.includes(String(p[key as keyof MockProfileRecord])))
     }
     // Handle is. operator
     else if (value.startsWith('is.')) {
       const isNull = value === 'is.null'
       result = result.filter((p) =>
-        isNull ? p[key as keyof Profile] === null : p[key as keyof Profile] !== null
+        isNull ? p[key as keyof MockProfileRecord] === null : p[key as keyof MockProfileRecord] !== null
       )
     }
     // Handle gte. operator (for rating >= threshold)
     else if (value.startsWith('gte.')) {
       const filterValue = parseFloat(value.substring(4))
       result = result.filter((p) => {
-        const fieldValue = p[key as keyof Profile]
+        const fieldValue = p[key as keyof MockProfileRecord]
         return fieldValue !== null && Number(fieldValue) >= filterValue
       })
     }
@@ -78,7 +76,7 @@ function applyFilters(profiles: Profile[], filters: Record<string, string>): Pro
     else if (value.startsWith('lte.')) {
       const filterValue = parseFloat(value.substring(4))
       result = result.filter((p) => {
-        const fieldValue = p[key as keyof Profile]
+        const fieldValue = p[key as keyof MockProfileRecord]
         return fieldValue !== null && Number(fieldValue) <= filterValue
       })
     }
@@ -86,7 +84,7 @@ function applyFilters(profiles: Profile[], filters: Record<string, string>): Pro
     else if (value.startsWith('ilike.')) {
       const searchValue = value.substring(6).replace(/%/g, '').toLowerCase()
       result = result.filter((p) => {
-        const fieldValue = String(p[key as keyof Profile] || '').toLowerCase()
+        const fieldValue = String(p[key as keyof MockProfileRecord] || '').toLowerCase()
         return fieldValue.includes(searchValue)
       })
     }
@@ -125,8 +123,8 @@ export const getProfilesHandler = http.get('*/rest/v1/profiles', ({ request }) =
     const [field, direction] = order.split('.')
     const sortDirection = direction === 'desc' ? -1 : 1
     results = [...results].sort((a, b) => {
-      const aVal = a[field as keyof Profile]
-      const bVal = b[field as keyof Profile]
+      const aVal = a[field as keyof MockProfileRecord]
+      const bVal = b[field as keyof MockProfileRecord]
       if (aVal === null && bVal === null) return 0
       if (aVal === null) return 1
       if (bVal === null) return -1
@@ -155,7 +153,7 @@ export const getProfilesHandler = http.get('*/rest/v1/profiles', ({ request }) =
  * Create a new profile
  */
 export const createProfileHandler = http.post('*/rest/v1/profiles', async ({ request }) => {
-  const body = (await request.json()) as Partial<Profile>
+  const body = (await request.json()) as Partial<MockProfileRecord>
 
   // Validate required fields
   if (!body.email || !body.full_name) {
@@ -208,7 +206,7 @@ export const createProfileHandler = http.post('*/rest/v1/profiles', async ({ req
 export const updateProfileHandler = http.patch('*/rest/v1/profiles', async ({ request }) => {
   const url = new URL(request.url)
   const { filters } = parseSupabaseQuery(url)
-  const updates = (await request.json()) as Partial<Profile>
+  const updates = (await request.json()) as Partial<MockProfileRecord>
 
   // Find profiles to update
   const toUpdate = applyFilters(profilesStore, filters)

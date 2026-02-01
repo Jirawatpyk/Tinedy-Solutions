@@ -26,11 +26,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, MapPin } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import {
   getActivePackagesV2,
   calculatePricing,
-  formatPrice,
   formatArea,
 } from '@/lib/pricing-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
@@ -133,7 +132,7 @@ const PricingResultDisplay = ({ pricingResult, areaSqm, frequency }: PricingResu
     <div className="border-t pt-3 mt-3">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Total Price:</span>
-        <span className="text-2xl font-bold text-tinedy-blue">{formatPrice(pricingResult.price)}</span>
+        <span className="text-2xl font-bold text-tinedy-blue">{formatCurrency(pricingResult.price)}</span>
       </div>
       <div className="flex items-center justify-between text-sm mt-2">
         <span className="text-muted-foreground">Area:</span>
@@ -583,7 +582,7 @@ export function PackageSelector({
                         <span>{pkg.name}</span>
                         {pkg.base_price && (
                           <span className="text-muted-foreground text-sm">
-                            ({formatPrice(pkg.base_price)})
+                            ({formatCurrency(pkg.base_price)})
                           </span>
                         )}
                       </div>
@@ -699,7 +698,7 @@ export function PackageSelector({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Total Price:</span>
                     <span className="text-2xl font-bold text-tinedy-blue">
-                      {disabled && value ? formatPrice(value.price) : formatPrice(selectedPackage?.base_price || 0)}
+                      {disabled && value ? formatCurrency(value.price) : formatCurrency(selectedPackage?.base_price || 0)}
                     </span>
                   </div>
                   {selectedPackage?.duration_minutes && (

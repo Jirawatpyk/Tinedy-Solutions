@@ -7,8 +7,24 @@
  * Data follows the profiles table schema with realistic role-based patterns.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Profile = any
+/**
+ * Mock profile record matching the raw DB row shape used in tests.
+ */
+export interface MockProfileRecord {
+  id: string
+  email: string
+  full_name: string
+  phone: string
+  role: string
+  staff_number: string
+  skills: string[]
+  rating: number | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+  deleted_by: string | null
+}
 
 /**
  * Mock profile records with realistic staff data
@@ -21,7 +37,7 @@ type Profile = any
  * - Rating: 0-5 (nullable for new staff)
  * - Soft delete fields: deleted_at, deleted_by
  */
-export const mockProfiles: Profile[] = [
+export const mockProfiles: MockProfileRecord[] = [
   // Admin user
   {
     id: 'admin-001',
@@ -128,9 +144,9 @@ export const mockProfiles: Profile[] = [
  * const staff = createMockProfile({ role: 'staff', full_name: 'ทดสอบ' })
  * ```
  */
-export function createMockProfile(overrides?: Partial<Profile>): Profile {
+export function createMockProfile(overrides?: Partial<MockProfileRecord>): MockProfileRecord {
   const timestamp = Date.now()
-  const defaultProfile: Profile = {
+  const defaultProfile: MockProfileRecord = {
     id: `profile-${timestamp}`,
     email: `user-${timestamp}@tinedy.com`,
     full_name: 'ผู้ใช้ทดสอบ',
@@ -159,8 +175,8 @@ export function createMockProfile(overrides?: Partial<Profile>): Profile {
  */
 export function createMockProfiles(
   count: number,
-  overrides?: Partial<Profile>
-): Profile[] {
+  overrides?: Partial<MockProfileRecord>
+): MockProfileRecord[] {
   return Array.from({ length: count }, (_, i) =>
     createMockProfile({
       id: `profile-${Date.now()}-${i}`,
@@ -173,28 +189,28 @@ export function createMockProfiles(
 /**
  * Get active (non-deleted) profiles
  */
-export function getActiveProfiles(): Profile[] {
+export function getActiveProfiles(): MockProfileRecord[] {
   return mockProfiles.filter((p) => p.deleted_at === null)
 }
 
 /**
  * Get profiles by role
  */
-export function getProfilesByRole(role: Profile['role']): Profile[] {
+export function getProfilesByRole(role: MockProfileRecord['role']): MockProfileRecord[] {
   return getActiveProfiles().filter((p) => p.role === role)
 }
 
 /**
  * Get staff members only (excludes admin/manager)
  */
-export function getStaffMembers(): Profile[] {
+export function getStaffMembers(): MockProfileRecord[] {
   return getProfilesByRole('staff')
 }
 
 /**
  * Get profiles with rating above threshold
  */
-export function getTopRatedStaff(minRating: number = 4.5): Profile[] {
+export function getTopRatedStaff(minRating: number = 4.5): MockProfileRecord[] {
   return getActiveProfiles().filter(
     (p) => p.role === 'staff' && p.rating !== null && p.rating >= minRating
   )
@@ -203,14 +219,14 @@ export function getTopRatedStaff(minRating: number = 4.5): Profile[] {
 /**
  * Get profiles by skill
  */
-export function getProfilesBySkill(skill: string): Profile[] {
+export function getProfilesBySkill(skill: string): MockProfileRecord[] {
   return getActiveProfiles().filter((p) => p.skills?.includes(skill))
 }
 
 /**
  * Search profiles by name or email
  */
-export function searchProfiles(query: string): Profile[] {
+export function searchProfiles(query: string): MockProfileRecord[] {
   const lowerQuery = query.toLowerCase()
   return getActiveProfiles().filter(
     (p) =>
