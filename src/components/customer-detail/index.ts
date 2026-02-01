@@ -1,0 +1,7 @@
+export { default as CustomerProfileHeader } from './CustomerProfileHeader'
+export { default as CustomerMetricsSection } from './CustomerMetricsSection'
+export type { CustomerStats } from './CustomerMetricsSection'
+export { default as BookingActivityChart } from './BookingActivityChart'
+export { BookingHistorySection } from './BookingHistorySection'
+export type { CustomerBooking, CombinedItem, BookingHistorySectionProps } from './BookingHistorySection'
+export { BookingModalsContainer } from './BookingModalsContainer'
