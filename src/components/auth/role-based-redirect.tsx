@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
 import { logger } from '@/lib/logger'
+import { UserRole } from '@/types/common'
 
 /**
  * RoleBasedRedirect component
@@ -39,10 +40,10 @@ export function RoleBasedRedirect() {
 
   // Redirect based on role
   // Note: Admin and Manager now share the same dashboard at /admin
-  if (profile.role === 'admin' || profile.role === 'manager') {
+  if (profile.role === UserRole.Admin || profile.role === UserRole.Manager) {
     logger.debug(`${profile.role} user, redirecting to /admin`, undefined, { context: 'RoleBasedRedirect' })
     return <Navigate to="/admin" replace />
-  } else if (profile.role === 'staff') {
+  } else if (profile.role === UserRole.Staff) {
     logger.debug('Staff user, redirecting to /staff', undefined, { context: 'RoleBasedRedirect' })
     return <Navigate to="/staff" replace />
   }

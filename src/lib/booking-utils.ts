@@ -6,6 +6,7 @@
  */
 
 import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
+import { BookingStatus } from '@/types/booking'
 
 // ============================================================================
 // STATUS TRANSITIONS - Single Source of Truth
@@ -18,12 +19,12 @@ import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
  * Note: Status transitions are forward-only (no reverting cancelled → pending)
  */
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ['pending', 'confirmed', 'cancelled'],
-  confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-  in_progress: ['in_progress', 'completed', 'cancelled'],
-  completed: ['completed'],
-  cancelled: ['cancelled'],
-  no_show: ['no_show'],
+  [BookingStatus.Pending]: [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.Cancelled],
+  [BookingStatus.Confirmed]: [BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Cancelled, BookingStatus.NoShow],
+  [BookingStatus.InProgress]: [BookingStatus.InProgress, BookingStatus.Completed, BookingStatus.Cancelled],
+  [BookingStatus.Completed]: [BookingStatus.Completed],
+  [BookingStatus.Cancelled]: [BookingStatus.Cancelled],
+  [BookingStatus.NoShow]: [BookingStatus.NoShow],
 }
 
 /**

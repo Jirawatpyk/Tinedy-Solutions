@@ -1,4 +1,5 @@
 import type { Booking } from '@/types'
+import { BookingStatus } from '@/types/booking'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTeamsList } from '@/hooks/useTeams'
@@ -590,8 +591,8 @@ export function AdminWeeklySchedule() {
   // OPTIMIZATION 1: Memoize weekStats calculation to avoid re-computing every render
   const weekStats = useMemo(() => {
     const totalBookings = bookings.length
-    const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length
-    const completedBookings = bookings.filter(b => b.status === 'completed').length
+    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.Confirmed || b.status === BookingStatus.InProgress).length
+    const completedBookings = bookings.filter(b => b.status === BookingStatus.Completed).length
 
     // Find busiest day using helper function
     const bookingsByDay = DAYS_OF_WEEK.map((_, index) => ({

@@ -13,7 +13,7 @@ import {
   type RouteKey,
   type RouteConfig,
 } from '@/config/routes'
-import type { UserRole } from '@/types/common'
+import { UserRole } from '@/types/common'
 
 /**
  * Page Metadata
@@ -363,7 +363,7 @@ export function getNavigationRoutes(role: UserRole | null): RouteConfig[] {
   if (!role) return []
 
   // Get routes based on role
-  const routes = role === 'staff' ? Object.values(STAFF_ROUTES) : Object.values(ADMIN_ROUTES)
+  const routes = role === UserRole.Staff ? Object.values(STAFF_ROUTES) : Object.values(ADMIN_ROUTES)
 
   // Filter only navigation routes
   return routes.filter(route => route.showInNav)

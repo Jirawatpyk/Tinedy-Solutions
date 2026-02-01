@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+import { BookingStatus } from '@/types/booking'
 
 interface Stats {
   totalBookings: number
@@ -17,7 +18,7 @@ interface StatsChange {
   pendingChange: number
 }
 
-interface BookingStatus {
+interface BookingStatusData {
   status: string
   count: number
   color: string
@@ -69,7 +70,7 @@ interface DailyRevenue {
 interface DashboardData {
   stats: Stats
   statsChange: StatsChange
-  bookingsByStatus: BookingStatus[]
+  bookingsByStatus: BookingStatusData[]
   todayBookings: TodayBooking[]
   dailyRevenue: DailyRevenue[]
   loading: boolean
@@ -101,7 +102,7 @@ export function useDashboardData(): DashboardData {
     customersChange: 0,
     pendingChange: 0,
   })
-  const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatus[]>([])
+  const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatusData[]>([])
   const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([])
   const [loading, setLoading] = useState(true)
@@ -145,15 +146,15 @@ export function useDashboardData(): DashboardData {
       ] = await Promise.all([
         // Total stats
         supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('total_price').eq('status', 'completed'),
+        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed),
         supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending),
 
         // Today's new data
         supabase.from('bookings').select('*', { count: 'exact' }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('total_price').eq('status', 'completed').gte('updated_at', todayStart).lte('updated_at', todayEnd),
+        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed).gte('updated_at', todayStart).lte('updated_at', todayEnd),
         supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending').gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending).gte('created_at', todayStart).lte('created_at', todayEnd),
 
         // Bookings by status
         supabase.from('bookings').select('status'),
@@ -168,7 +169,7 @@ export function useDashboardData(): DashboardData {
         `).eq('booking_date', today).order('start_time', { ascending: true }),
 
         // Revenue data for last 7 days
-        supabase.from('bookings').select('booking_date, total_price').eq('status', 'completed').gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
+        supabase.from('bookings').select('booking_date, total_price').eq('status', BookingStatus.Completed).gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
       ])
 
       // Calculate total revenue
@@ -204,7 +205,7 @@ export function useDashboardData(): DashboardData {
         statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1
       })
 
-      const statusData: BookingStatus[] = Object.entries(statusCounts).map(([status, count]) => ({
+      const statusData: BookingStatusData[] = Object.entries(statusCounts).map(([status, count]) => ({
         status: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
         count,
         color: statusColors[status] || '#6b7280',

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { createLogger } from '@/lib/logger'
+import { BookingStatus } from '@/types/booking'
 import type {
   MultiDateStaffResult,
   MultiDateTeamResult,
@@ -208,7 +209,7 @@ export function useMultiDateAvailabilityCheck({
         .in('booking_date', dates)  // ← เช็คทุกวันพร้อมกัน!
         .lt('start_time', endTime)
         .gt('end_time', startTime)
-        .neq('status', 'cancelled')
+        .neq('status', BookingStatus.Cancelled)
 
       if (excludeBookingIds.length > 0) {
         conflictQuery = conflictQuery.not('id', 'in', `(${excludeBookingIds.join(',')})`)

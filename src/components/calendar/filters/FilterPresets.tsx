@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { cn } from '@/lib/utils'
 import type { CalendarFilterPreset } from '@/types/calendar-filters'
+import { BookingStatus } from '@/types/booking'
 
 interface PresetConfig {
   value: CalendarFilterPreset
@@ -56,13 +57,13 @@ const PRESET_CONFIGS: PresetConfig[] = [
     description: 'Next 30 days',
   },
   {
-    value: 'pending',
+    value: BookingStatus.Pending,
     label: 'Pending',
     icon: <AlertCircle className="h-4 w-4" />,
     description: 'Pending status only',
   },
   {
-    value: 'confirmed',
+    value: BookingStatus.Confirmed,
     label: 'Confirmed',
     icon: <CheckCircle2 className="h-4 w-4" />,
     description: 'Confirmed status only',

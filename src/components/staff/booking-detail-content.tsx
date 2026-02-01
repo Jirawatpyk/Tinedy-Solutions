@@ -35,6 +35,7 @@ import { BookingDetailHero } from './booking-detail-hero'
 import { BookingCustomerCard } from './booking-customer-card'
 import { BookingServiceSummary } from './booking-service-summary'
 import { cn } from '@/lib/utils'
+import { BookingStatus } from '@/types/booking'
 
 // Lazy load BookingTimeline to improve modal open performance
 const BookingTimelineLazy = lazy(() =>
@@ -143,8 +144,8 @@ export function BookingDetailContent({
     }
   }
 
-  const canStartProgress = booking.status === 'confirmed'
-  const canMarkCompleted = booking.status === 'in_progress'
+  const canStartProgress = booking.status === BookingStatus.Confirmed
+  const canMarkCompleted = booking.status === BookingStatus.InProgress
   const hasNotesChanged = notes !== (booking.notes || '')
 
   // Calculate duration string
@@ -152,7 +153,7 @@ export function BookingDetailContent({
 
   // Check if there are more details to show
   const hasTeamInfo = booking.team_id && booking.teams
-  const hasRating = review && booking.status === 'completed'
+  const hasRating = review && booking.status === BookingStatus.Completed
   const hasAreaOrFrequency = booking.area_sqm || booking.frequency
   const hasMoreDetails = hasTeamInfo || hasRating || hasAreaOrFrequency
 
@@ -309,7 +310,7 @@ export function BookingDetailContent({
         )}
 
         {/* Notes Section */}
-        {onAddNotes && booking.status !== 'cancelled' && (
+        {onAddNotes && booking.status !== BookingStatus.Cancelled && (
           <div className="mx-4 space-y-2">
             <label
               htmlFor="booking-notes"

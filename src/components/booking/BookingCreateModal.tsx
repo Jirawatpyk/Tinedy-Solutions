@@ -39,6 +39,7 @@ import {
   bookingCreateSchema,
   type BookingCreateFormData,
 } from '@/schemas'
+import { BookingStatus } from '@/types/booking'
 
 interface StaffMember {
   id: string
@@ -476,7 +477,7 @@ export function BookingCreateModal({
         state: data.state || null,
         zip_code: data.zip_code || null,
         notes: data.notes || null,
-        status: 'pending' as const,
+        status: BookingStatus.Pending,
         payment_status: 'unpaid' as const,
         staff_id: assignmentType === 'staff' ? (data.staff_id || null) : null,
         team_id: assignmentType === 'team' ? (data.team_id || null) : null,

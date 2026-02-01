@@ -1,4 +1,5 @@
 import type { Booking } from '@/types'
+import { BookingStatus } from '@/types/booking'
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -540,7 +541,7 @@ export function BookingDetailModal({
           )}
 
           {/* Rating Section */}
-          {(booking.staff_id || booking.team_id) && booking.status === 'completed' && (
+          {(booking.staff_id || booking.team_id) && booking.status === BookingStatus.Completed && (
             <CollapsibleSection
               title={
                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -775,7 +776,7 @@ export function BookingDetailModal({
                     variant="outline"
                     size="icon"
                     onClick={() => onEdit(booking)}
-                    disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
+                    disabled={([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -835,8 +836,8 @@ export function BookingDetailModal({
                 <Button
                   variant="outline"
                   onClick={() => onEdit(booking)}
-                  disabled={['completed', 'cancelled', 'no_show'].includes(booking.status)}
-                  title={['completed', 'cancelled', 'no_show'].includes(booking.status) ? 'Cannot edit completed, cancelled, or no-show bookings' : undefined}
+                  disabled={([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status)}
+                  title={([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status) ? 'Cannot edit completed, cancelled, or no-show bookings' : undefined}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit

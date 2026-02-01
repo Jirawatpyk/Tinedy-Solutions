@@ -30,6 +30,7 @@ import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringEditScope, RecurringPattern, RecurringGroup, CombinedItem } from '@/types/recurring-booking'
@@ -1607,7 +1608,7 @@ export function AdminBookings() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
 

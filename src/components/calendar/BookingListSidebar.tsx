@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { BookingCard } from './BookingCard'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 
 // Wrapper component to memoize conflict and status calculations per booking
@@ -103,19 +104,19 @@ const BookingListSidebarComponent: React.FC<BookingListSidebarProps> = ({
     for (const booking of bookings) {
       // Count by status
       switch (booking.status) {
-        case 'pending':
+        case BookingStatus.Pending:
           result.pending++
           break
-        case 'confirmed':
+        case BookingStatus.Confirmed:
           result.confirmed++
           break
-        case 'in_progress':
+        case BookingStatus.InProgress:
           result.inProgress++
           break
-        case 'completed':
+        case BookingStatus.Completed:
           result.completed++
           break
-        case 'cancelled':
+        case BookingStatus.Cancelled:
           result.cancelled++
           break
       }

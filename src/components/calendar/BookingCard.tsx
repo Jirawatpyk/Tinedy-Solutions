@@ -12,6 +12,7 @@ import React from 'react'
 import { Clock, User, Briefcase, Users, AlertTriangle, Calendar, DollarSign, CreditCard } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import { formatBookingId } from '@/lib/utils'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { StatusBadgeEditor } from './StatusBadgeEditor'
@@ -43,7 +44,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
   }
 
   // Check if current status is a final state (cannot be edited)
-  const isFinalState = ['completed', 'cancelled', 'no_show'].includes(booking.status)
+  const isFinalState = ([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status)
 
   // Generate accessible description for booking card
   const bookingDescription = React.useMemo(() => {
