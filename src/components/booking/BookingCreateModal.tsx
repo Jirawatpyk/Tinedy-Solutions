@@ -78,7 +78,7 @@ interface BookingWithRelations {
   }
 }
 
-// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
+// BookingForm and BookingFormState interfaces imported from @/hooks/use-booking-form
 
 interface BookingCreateModalProps {
   isOpen: boolean

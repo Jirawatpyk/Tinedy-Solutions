@@ -13,7 +13,7 @@
  * - useConflictDetection - Booking conflict detection
  * - useCalendarActions - CRUD operations
  *
- * @module hooks/calendar/useCalendarData
+ * @module hooks/calendar/use-calendar-data
  */
 
 import { useMemo } from 'react'

@@ -6,7 +6,7 @@
  * - Payment operations (mark as paid, verify payment)
  * - Delete operations (soft delete)
  *
- * @module hooks/calendar/useCalendarActions
+ * @module hooks/calendar/use-calendar-actions
  */
 
 import { useState, useCallback } from 'react'

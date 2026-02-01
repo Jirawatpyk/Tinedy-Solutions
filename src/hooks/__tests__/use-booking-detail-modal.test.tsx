@@ -28,7 +28,7 @@ vi.mock('@/hooks/use-soft-delete', () => ({
   }),
 }))
 
-vi.mock('@/hooks/useBookingStatusManager', () => ({
+vi.mock('@/hooks/use-booking-status-manager', () => ({
   useBookingStatusManager: () => ({
     showStatusConfirmDialog: false,
     pendingStatusChange: null,
@@ -44,7 +44,7 @@ vi.mock('@/hooks/useBookingStatusManager', () => ({
   }),
 }))
 
-vi.mock('@/hooks/usePaymentActions', () => ({
+vi.mock('@/hooks/use-payment-actions', () => ({
   usePaymentActions: () => ({
     verifyPayment: vi.fn(),
     requestRefund: vi.fn(),

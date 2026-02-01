@@ -150,7 +150,7 @@ interface Team {
   name: string
 }
 
-// BookingFormState imported from @/hooks/useBookingForm
+// BookingFormState imported from @/hooks/use-booking-form
 
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()

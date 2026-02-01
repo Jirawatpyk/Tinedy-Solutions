@@ -50,7 +50,7 @@ interface Team {
   name: string
 }
 
-// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
+// BookingForm and BookingFormState interfaces imported from @/hooks/use-booking-form
 
 interface BookingEditModalProps {
   isOpen: boolean

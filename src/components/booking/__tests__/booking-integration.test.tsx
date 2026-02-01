@@ -39,7 +39,7 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }))
 
-vi.mock('@/hooks/useConflictDetection', () => ({
+vi.mock('@/hooks/use-conflict-detection', () => ({
   useConflictDetection: () => ({
     checkConflicts: vi.fn().mockResolvedValue([]),
     clearConflicts: vi.fn(),
