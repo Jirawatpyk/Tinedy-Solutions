@@ -572,6 +572,47 @@ DO $$ ... $$;
 
 ### Git Workflow
 
+**PR Flow (MANDATORY):**
+All changes go through Pull Requests — never push directly to `main`.
+
+```bash
+# 1. Create feature branch
+git checkout -b feat/short-description   # or fix/, refactor/, test/, ci/
+
+# 2. Develop and commit
+git add <files>
+git commit -m "feat: description"
+
+# 3. Push and create PR
+git push -u origin feat/short-description
+# Then tell Claude: "เปิด PR ด้วย" — uses gh pr create
+
+# 4. CI runs automatically (5 required checks must pass)
+# 5. Merge via GitHub
+```
+
+**Branch Naming Convention:**
+| Prefix | Usage | Example |
+|--------|-------|---------|
+| `feat/` | New feature | `feat/recurring-bookings` |
+| `fix/` | Bug fix | `fix/currency-display` |
+| `refactor/` | Code restructure | `refactor/booking-hooks` |
+| `test/` | Test changes | `test/permission-coverage` |
+| `ci/` | CI/CD changes | `ci/add-e2e-sharding` |
+
+**Branch Protection on `main`:**
+- Required CI checks: `Code Quality`, `Unit Tests`, `Build`, `E2E Tests (Shard 1/2)`, `E2E Tests (Shard 2/2)`
+- Force push: blocked
+- Direct push: blocked (must use PR)
+
+**Creating PRs with Claude Code:**
+```bash
+# GitHub CLI is installed and authenticated
+# To create a PR, use:
+gh pr create --title "feat: description" --body "summary"
+```
+A PR template (`.github/pull_request_template.md`) auto-populates with project-specific checklist.
+
 **Commit Messages:**
 Use conventional format with co-author:
 ```
@@ -585,11 +626,34 @@ Brief summary of changes
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-**Before Push:**
+**Commit Prefixes:** `feat:`, `fix:`, `refactor:`, `test:`, `ci:`, `docs:`, `style:`
+
+**Before Creating PR:**
 1. Run `npm run build` to verify no TypeScript errors
-2. Test affected features in dev mode
-3. Commit with descriptive message
-4. Push to remote
+2. Run `npm run test:run` to verify unit tests pass
+3. Test affected features in dev mode
+4. Commit with descriptive message using conventional prefix
+
+### CI/CD Pipeline
+
+**GitHub Actions** (`.github/workflows/ci.yml`):
+
+| Job | Trigger | What it does |
+|-----|---------|-------------|
+| `Code Quality` | All | ESLint + `tsc --noEmit` |
+| `Unit Tests` | All | Vitest with 75% coverage enforcement |
+| `Build` | All | Production build validation |
+| `E2E Tests` (2 shards) | Push + PR | Playwright Chromium, sharded |
+| `Flaky Test Detection` | PR only | Changed specs × 5 burn-in |
+| `Cross-Browser` | Weekly | Chromium + Firefox + WebKit |
+
+**Helper Scripts:**
+```bash
+bash scripts/ci-local.sh              # Mirror CI locally
+bash scripts/ci-local.sh --skip-e2e   # Skip Playwright
+bash scripts/burn-in.sh               # Burn-in changed specs
+bash scripts/burn-in.sh --all         # Burn-in entire suite
+```
 
 ### Dashboard Architecture
 
