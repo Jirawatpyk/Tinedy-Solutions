@@ -9,11 +9,11 @@
  * @module hooks/calendar
  */
 
-export { useCalendarDate } from './useCalendarDate'
-export type { UseCalendarDateReturn } from './useCalendarDate'
+export { useCalendarDate } from './use-calendar-date'
+export type { UseCalendarDateReturn } from './use-calendar-date'
 
-export { useCalendarActions } from './useCalendarActions'
-export type { UseCalendarActionsParams, UseCalendarActionsReturn } from './useCalendarActions'
+export { useCalendarActions } from './use-calendar-actions'
+export type { UseCalendarActionsParams, UseCalendarActionsReturn } from './use-calendar-actions'
 
-export { useCalendarData } from './useCalendarData'
-export type { CalendarData } from './useCalendarData'
+export { useCalendarData } from './use-calendar-data'
+export type { CalendarData } from './use-calendar-data'

@@ -14,7 +14,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useOptimisticPayment } from '../useOptimisticPayment'
+import { useOptimisticPayment } from '../use-optimistic-payment'
 import React, { type ReactNode } from 'react'
 import type { Booking } from '@/types/booking'
 

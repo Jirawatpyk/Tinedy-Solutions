@@ -27,7 +27,7 @@ import { mapErrorToUserMessage, getValidationErrorMessage, getRecurringBookingEr
 import type { CustomerRecord } from '@/types/customer'
 import { sendBookingConfirmation, sendBookingReminder, sendRecurringBookingConfirmation, type PaymentEmailData, type RecurringBookingEmailData } from '@/lib/email'
 import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { RecurringScheduleSelector } from './RecurringScheduleSelector'
 import { RecurringPattern as Pattern } from '@/types/recurring-booking'

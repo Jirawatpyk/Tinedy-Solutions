@@ -35,7 +35,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/common'
-import { useStaffWithRatings } from '@/hooks/useStaff'
+import { useStaffWithRatings } from '@/hooks/use-staff'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {

@@ -3,7 +3,7 @@ import { DollarSign } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { memo } from 'react'
-import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { useChartAnimation } from '@/hooks/use-chart-animation'
 
 interface RevenueData {
   date: string

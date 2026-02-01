@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency, formatBookingId } from '@/lib/utils'
 import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
-import { useBookingDetailModal } from '@/hooks/useBookingDetailModal'
+import { useBookingDetailModal } from '@/hooks/use-booking-detail-modal'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'

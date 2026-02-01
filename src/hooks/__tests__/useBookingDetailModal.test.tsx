@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useBookingDetailModal } from '../useBookingDetailModal'
+import { useBookingDetailModal } from '../use-booking-detail-modal'
 import type { Booking } from '@/types/booking'
 import type { ReactNode } from 'react'
 

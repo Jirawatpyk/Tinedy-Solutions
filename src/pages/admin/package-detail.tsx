@@ -10,7 +10,7 @@ import { PermissionGuard } from '@/components/auth/permission-guard'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import type { ServicePackageV2WithTiers, PackagePricingTier } from '@/types'
 import { PricingModel, BookingStatus } from '@/types'
 

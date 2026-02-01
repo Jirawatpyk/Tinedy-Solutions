@@ -12,7 +12,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useBulkActions } from '../useBulkActions'
+import { useBulkActions } from '../use-bulk-actions'
 import React, { type ReactNode } from 'react'
 import type { Booking } from '@/types/booking'
 

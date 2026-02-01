@@ -16,7 +16,7 @@ import {
   WorkloadDistributionMobile,
 } from '@/components/reports/staff'
 import { CHART_COLORS } from '@/types/reports'
-import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { useChartAnimation } from '@/hooks/use-chart-animation'
 import {
   BarChart,
   Bar,

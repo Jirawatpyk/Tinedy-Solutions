@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useBookingForm } from '../useBookingForm'
-import type { BookingFormState } from '../useBookingForm'
+import { useBookingForm } from '../use-booking-form'
+import type { BookingFormState } from '../use-booking-form'
 
 describe('useBookingForm', () => {
   beforeEach(() => {

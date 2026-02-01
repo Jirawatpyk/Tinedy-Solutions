@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { useServicePackages } from '@/hooks/useServicePackages'
-import { useStaffList } from '@/hooks/useStaff'
-import { useTeamsList } from '@/hooks/useTeams'
+import { useServicePackages } from '@/hooks/use-service-packages'
+import { useStaffList } from '@/hooks/use-staff'
+import { useTeamsList } from '@/hooks/use-teams'
 import { calculateEndTime } from '@/lib/dashboard-utils'
 
 // Hooks
@@ -18,7 +18,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 // Types
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { BookingFormState } from '@/hooks/useBookingForm'
+import type { BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
 
 export function AdminDashboard() {

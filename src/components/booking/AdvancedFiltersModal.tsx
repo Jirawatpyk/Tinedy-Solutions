@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { BookingFilterState } from '@/hooks/useBookingFilters'
+import type { BookingFilterState } from '@/hooks/use-booking-filters'
 
 interface AdvancedFiltersModalProps {
   open: boolean
