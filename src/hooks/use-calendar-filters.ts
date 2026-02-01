@@ -12,6 +12,7 @@ import type {
   CalendarFilterPreset,
 } from '@/types/calendar-filters'
 import { INITIAL_CALENDAR_FILTERS } from '@/types/calendar-filters'
+import { BookingStatus } from '@/types/booking'
 
 // LocalStorage key
 const STORAGE_KEY = 'calendar-filters'
@@ -39,7 +40,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
 
     case 'pending':
       return {
-        statuses: ['pending'],
+        statuses: [BookingStatus.Pending],
         paymentStatuses: [],
         staffIds: [],
         teamIds: [],
@@ -49,7 +50,7 @@ function applyPreset(preset: CalendarFilterPreset): Partial<CalendarFilters> {
 
     case 'confirmed':
       return {
-        statuses: ['confirmed'],
+        statuses: [BookingStatus.Confirmed],
         paymentStatuses: [],
         staffIds: [],
         teamIds: [],

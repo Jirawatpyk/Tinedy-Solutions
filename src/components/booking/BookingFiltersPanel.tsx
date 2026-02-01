@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Search, X, Calendar, SlidersHorizontal } from 'lucide-react'
 import { AdvancedFiltersModal } from './AdvancedFiltersModal'
 import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/constants/booking-status'
-import type { BookingFilterState } from '@/hooks/useBookingFilters'
+import type { BookingFilterState } from '@/hooks/use-booking-filters'
 
 interface BookingFiltersPanelProps {
   filters: BookingFilterState

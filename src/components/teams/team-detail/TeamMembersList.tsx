@@ -7,6 +7,7 @@ import { DeleteButton } from '@/components/common/DeleteButton'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
+import { getInitials } from '@/lib/string-utils'
 
 interface TeamMember {
   id: string
@@ -30,13 +31,6 @@ interface TeamMembersListProps {
   onAddMember: () => void
 }
 
-const getInitials = (name: string) => {
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-}
 
 export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersListProps) {
   const { toast } = useToast()

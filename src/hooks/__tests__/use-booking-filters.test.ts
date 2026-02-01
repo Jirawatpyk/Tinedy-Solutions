@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useBookingFilters } from '../useBookingFilters'
+import { useBookingFilters } from '../use-booking-filters'
 
 // Mock the useDebounce hook
 vi.mock('../use-debounce', () => ({

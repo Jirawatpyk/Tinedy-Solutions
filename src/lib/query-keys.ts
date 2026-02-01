@@ -14,6 +14,8 @@
  * ```
  */
 
+import { BookingStatus } from '@/types/booking'
+
 export const queryKeys = {
   // ================================
   // Dashboard
@@ -110,7 +112,7 @@ export const queryKeys = {
     upcoming: (userId: string, teamIds: string[], membershipHash?: string) =>
       [...queryKeys.staffBookings.all, 'upcoming', userId, teamIds, membershipHash] as const,
     completed: (userId: string, teamIds: string[], membershipHash?: string) =>
-      [...queryKeys.staffBookings.all, 'completed', userId, teamIds, membershipHash] as const,
+      [...queryKeys.staffBookings.all, BookingStatus.Completed, userId, teamIds, membershipHash] as const,
     stats: (userId: string, teamIds: string[], membershipHash?: string) =>
       [...queryKeys.staffBookings.all, 'stats', userId, teamIds, membershipHash] as const,
   },

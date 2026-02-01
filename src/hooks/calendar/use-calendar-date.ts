@@ -21,6 +21,7 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns'
+import { BookingStatus } from '@/types/booking'
 
 export interface UseCalendarDateReturn {
   // State
@@ -122,8 +123,8 @@ export function useCalendarDate(): UseCalendarDateReturn {
         break
       }
 
-      case 'pending':
-      case 'confirmed':
+      case BookingStatus.Pending:
+      case BookingStatus.Confirmed:
         // Status presets: no date selection, show all matching
         setSelectedDate(null)
         setSelectedDateRange(null)

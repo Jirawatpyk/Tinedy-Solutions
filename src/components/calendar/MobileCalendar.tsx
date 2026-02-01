@@ -28,7 +28,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucid
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useSwipe } from '@/hooks/useSwipe'
+import { useSwipe } from '@/hooks/use-swipe'
 import type { Booking } from '@/types/booking'
 import { MobileBookingCard } from './MobileBookingCard'
 import { cn } from '@/lib/utils'

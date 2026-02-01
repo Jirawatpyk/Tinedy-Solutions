@@ -97,7 +97,7 @@ const getDateRangePreset = (preset: string): { start: Date; end: Date } => {
 export const exportRevenueAllToExcel = (
   bookings: BookingForExport[],
   dateRange: string,
-  role: 'admin' | 'manager' | 'staff' | null = null
+  role: UserRole | null = null
 ): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
   const { start, end } = getDateRangePreset(dateRange)
@@ -305,7 +305,7 @@ export const exportCustomersToExcel = (
  */
 export const exportStaffToExcel = (
   staffPerformance: StaffPerformanceForExport[],
-  role: 'admin' | 'manager' | 'staff' | null = null
+  role: UserRole | null = null
 ): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 
@@ -350,7 +350,7 @@ export const exportStaffToExcel = (
  */
 export const exportTeamsToExcel = (
   teamsData: TeamForExport[],
-  role: 'admin' | 'manager' | 'staff' | null = null
+  role: UserRole | null = null
 ): boolean => {
   const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss')
 

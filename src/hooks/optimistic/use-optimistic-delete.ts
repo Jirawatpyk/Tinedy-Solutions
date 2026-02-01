@@ -10,7 +10,7 @@
  * - permanentDelete: Hard delete from database
  */
 
-import { useOptimisticMutation } from './useOptimisticMutation'
+import { useOptimisticMutation } from './use-optimistic-mutation'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { supabase } from '@/lib/supabase'

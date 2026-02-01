@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { StaffAvailabilityModal } from './staff-availability-modal'
 import { RecurringScheduleSelector } from './RecurringScheduleSelector'
-import { useServicePackages, type UnifiedServicePackage } from '@/hooks/useServicePackages'
+import { useServicePackages, type UnifiedServicePackage } from '@/hooks/use-service-packages'
 import { calculatePricing } from '@/lib/pricing-utils'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'

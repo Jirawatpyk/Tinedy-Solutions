@@ -12,11 +12,12 @@ import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
 import type { PackageSelectionData } from '@/components/service-packages'
 import type { RecurringPattern } from '@/types/recurring-booking'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { BookingFormState } from '@/hooks/useBookingForm'
-import { useServicePackages } from '@/hooks/useServicePackages'
-import { useStaffList } from '@/hooks/useStaff'
-import { useTeamsList } from '@/hooks/useTeams'
+import type { BookingFormState } from '@/hooks/use-booking-form'
+import { useServicePackages } from '@/hooks/use-service-packages'
+import { useStaffList } from '@/hooks/use-staff'
+import { useTeamsList } from '@/hooks/use-teams'
 import { useCalendarData } from '@/hooks/calendar'
 import { useToast } from '@/hooks/use-toast'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
@@ -696,7 +697,7 @@ export function AdminCalendar() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={calendar.actions.confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(calendar.actions.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(calendar.actions.pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </div>

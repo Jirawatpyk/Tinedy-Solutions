@@ -36,6 +36,7 @@ import { BookingDetailHero } from './booking-detail-hero'
 import { BookingCustomerCard } from './booking-customer-card'
 import { BookingServiceSummary } from './booking-service-summary'
 import { cn } from '@/lib/utils'
+import { BookingStatus } from '@/types/booking'
 
 // Lazy load BookingTimeline to improve modal open performance
 const BookingTimelineLazy = lazy(() =>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useBookingStatusManager } from '../useBookingStatusManager'
+import { useBookingStatusManager } from '../use-booking-status-manager'
 import { supabase } from '@/lib/supabase'
 import type { BookingBase } from '@/types/booking'
 import type { ReactNode } from 'react'

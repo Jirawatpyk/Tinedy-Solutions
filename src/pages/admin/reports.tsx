@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, Fragment } from 'react'
 import { isWithinInterval } from 'date-fns'
 import { usePermissions } from '@/hooks/use-permissions'
-import { useReportStats } from '@/hooks/useReportStats'
+import { useReportStats } from '@/hooks/use-report-stats'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Select,

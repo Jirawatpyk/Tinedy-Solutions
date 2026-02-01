@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Crown, Calendar } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getInitials } from '@/lib/string-utils'
 
 interface TeamMember {
   id: string
@@ -28,13 +29,6 @@ interface TeamDetailHeaderProps {
   team: Team
 }
 
-const getInitials = (name: string) => {
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-}
 
 export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
   return (
