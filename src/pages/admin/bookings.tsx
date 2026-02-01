@@ -18,17 +18,10 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/useServicePackages'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus } from 'lucide-react'
-import { BookingDetailModal } from './booking-detail-modal'
 import { getLoadErrorMessage, getBookingConflictError, getRecurringBookingError, getDeleteErrorMessage, getArchiveErrorMessage } from '@/lib/error-messages'
-import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
-import { BulkActionsToolbar } from '@/components/booking/BulkActionsToolbar'
-import { BookingList } from '@/components/booking/BookingList'
+import { BookingDetailModal } from './booking-detail-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
-import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
-import { BookingEditModal } from '@/components/booking/BookingEditModal'
-import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { calculateEndTime, formatTime, TEAMS_WITH_LEAD_QUERY, transformTeamsData } from '@/lib/booking-utils'
 import type { Booking } from '@/types/booking'
 import type { PackageSelectionData } from '@/components/service-packages'
@@ -37,6 +30,14 @@ import { deleteRecurringBookings } from '@/lib/recurring-booking-service'
 import { usePaymentActions } from '@/hooks/usePaymentActions'
 import { groupBookingsByRecurringGroup, sortRecurringGroup, countBookingsByStatus, isRecurringBooking } from '@/lib/recurring-utils'
 import { logger } from '@/lib/logger'
+// Extracted sub-components for reduced complexity
+import {
+  BookingCreateFlow,
+  BookingEditFlow,
+  BookingDetailFlow,
+  BookingListContainer,
+  RecurringBookingManager,
+} from '@/components/bookings'
 
 interface Team {
   id: string
@@ -1359,157 +1360,31 @@ export function AdminBookings() {
           </Button>
         </div>
 
-        <BookingCreateModal
-          isOpen={isDialogOpen}
-          onClose={() => {
-            setIsDialogOpen(false)
-            setCreatePackageSelection(null)
-            // Clear form data and recurring state
-            createForm.reset()
-            setCreateRecurringDates([])
-            setCreateRecurringPattern('auto-monthly' as RecurringPattern)
-          }}
-          onSuccess={() => {
-            // Realtime subscription will update the list automatically
-            setIsDialogOpen(false)
-            setCreatePackageSelection(null)
-            // Clear form data and recurring state
-            createForm.reset()
-            setCreateRecurringDates([])
-            setCreateRecurringPattern('auto-monthly' as RecurringPattern)
-          }}
+        {/* Create Booking Flow (Modal + Availability) */}
+        <BookingCreateFlow
+          isDialogOpen={isDialogOpen}
+          onCloseDialog={() => setIsDialogOpen(false)}
+          onSuccess={refresh}
           servicePackages={servicePackages}
-          staffMembers={staffList}
+          staffList={staffList}
           teams={teams}
-          onOpenAvailabilityModal={() => {
-            setIsDialogOpen(false)
-            setIsAvailabilityModalOpen(true)
-          }}
-          onBeforeOpenAvailability={(formData) => {
-            // Calculate end_time if not set (fallback)
-            let endTime = formData.end_time || ''
-            if (!endTime && formData.start_time && createPackageSelection?.estimatedHours) {
-              const durationMinutes = Math.round(createPackageSelection.estimatedHours * 60)
-              endTime = calculateEndTime(formData.start_time, durationMinutes)
-            }
-
-            // Sync form data from BookingCreateModal to createForm before opening availability modal
-            createForm.setValues({
-              booking_date: formData.booking_date || '',
-              start_time: formData.start_time || '',
-              end_time: endTime,
-              service_package_id: formData.service_package_id || '',
-              package_v2_id: formData.package_v2_id || '',
-              staff_id: formData.staff_id || '',
-              team_id: formData.team_id || '',
-              total_price: formData.total_price || 0,
-              area_sqm: formData.area_sqm || null,
-              frequency: formData.frequency || null,
-            })
-          }}
-          assignmentType={createAssignmentType}
-          setAssignmentType={setCreateAssignmentType}
+          createForm={toBookingForm(createForm)}
+          createAssignmentType={createAssignmentType}
+          setCreateAssignmentType={setCreateAssignmentType}
+          createPackageSelection={createPackageSelection}
+          setCreatePackageSelection={setCreatePackageSelection}
+          createRecurringDates={createRecurringDates}
+          setCreateRecurringDates={setCreateRecurringDates}
+          createRecurringPattern={createRecurringPattern}
+          setCreateRecurringPattern={setCreateRecurringPattern}
+          isAvailabilityModalOpen={isAvailabilityModalOpen}
+          onCloseAvailability={() => setIsAvailabilityModalOpen(false)}
+          onOpenAvailability={() => setIsAvailabilityModalOpen(true)}
+          onReopenDialog={() => setIsDialogOpen(true)}
           calculateEndTime={calculateEndTime}
-          packageSelection={createPackageSelection}
-          setPackageSelection={setCreatePackageSelection}
-          defaultDate={createForm.formData.booking_date}
-          defaultStartTime={createForm.formData.start_time}
-          defaultEndTime={createForm.formData.end_time}
-          defaultStaffId={createForm.formData.staff_id}
-          defaultTeamId={createForm.formData.team_id}
-          recurringDates={createRecurringDates}
-          setRecurringDates={setCreateRecurringDates}
-          recurringPattern={createRecurringPattern}
-          setRecurringPattern={setCreateRecurringPattern}
+          toast={toast}
         />
 
-        {/* Staff Availability Modal - Create Form */}
-        {(createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
-          // ต้องมีวันที่ (recurring หรือ single booking) และเวลาเริ่มต้น
-          (createRecurringDates.length > 0 || createForm.formData.booking_date) &&
-          createForm.formData.start_time && (
-          <StaffAvailabilityModal
-            isOpen={isAvailabilityModalOpen}
-            onClose={() => {
-              setIsAvailabilityModalOpen(false)
-              setIsDialogOpen(true)
-            }}
-            assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
-            onSelectStaff={(staffId) => {
-              createForm.handleChange('staff_id', staffId)
-              createForm.handleChange('team_id', '') // Clear team when staff is selected
-              setIsAvailabilityModalOpen(false)
-              setIsDialogOpen(true)
-              toast({
-                title: 'Staff Selected',
-                description: 'Staff member has been assigned to the booking',
-              })
-            }}
-            onSelectTeam={(teamId) => {
-              createForm.handleChange('team_id', teamId)
-              createForm.handleChange('staff_id', '') // Clear staff when team is selected
-              setIsAvailabilityModalOpen(false)
-              setIsDialogOpen(true)
-              toast({
-                title: 'Team Selected',
-                description: 'Team has been assigned to the booking',
-              })
-            }}
-            // Recurring: ส่ง dates array, Non-recurring: ส่ง date เดี่ยว
-            date={createRecurringDates.length === 0 ? createForm.formData.booking_date : undefined}
-            dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
-            startTime={createForm.formData.start_time}
-            endTime={createForm.formData.end_time || ''}
-            servicePackageId={createForm.formData.service_package_id || createForm.formData.package_v2_id || ''}
-            servicePackageName={
-              createForm.formData.service_package_id
-                ? servicePackages.find(pkg => pkg.id === createForm.formData.service_package_id)?.name
-                : 'Service Package'
-            }
-          />
-        )}
-
-        {/* Staff Availability Modal - Edit Form */}
-        {(editForm.formData.service_package_id || editForm.formData.package_v2_id) && editForm.formData.booking_date && editForm.formData.start_time && (
-          <StaffAvailabilityModal
-            isOpen={isEditAvailabilityModalOpen}
-            onClose={() => {
-              setIsEditAvailabilityModalOpen(false)
-              setIsEditOpen(true)
-            }}
-            assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
-            onSelectStaff={(staffId) => {
-              editForm.handleChange('staff_id', staffId)
-              setIsEditAvailabilityModalOpen(false)
-              setIsEditOpen(true)
-              toast({
-                title: 'Staff Selected',
-                description: 'Staff member has been assigned to the booking',
-              })
-            }}
-            onSelectTeam={(teamId) => {
-              editForm.handleChange('team_id', teamId)
-              setIsEditAvailabilityModalOpen(false)
-              setIsEditOpen(true)
-              toast({
-                title: 'Team Selected',
-                description: 'Team has been assigned to the booking',
-              })
-            }}
-            date={editForm.formData.booking_date}
-            startTime={editForm.formData.start_time}
-            endTime={editForm.formData.end_time || ''}
-            servicePackageId={editForm.formData.service_package_id || editForm.formData.package_v2_id || ''}
-            servicePackageName={
-              editForm.formData.service_package_id
-                ? servicePackages.find(pkg => pkg.id === editForm.formData.service_package_id)?.name
-                : 'Service Package'
-            }
-            currentAssignedStaffId={editForm.formData.staff_id}
-            currentAssignedTeamId={editForm.formData.team_id}
-            excludeBookingId={selectedBooking?.id}
-          />
-        )}
       </div>
 
       {/* Filters */}
@@ -1549,49 +1424,31 @@ export function AdminBookings() {
         }}
       />
 
-      {/* Edit Booking Modal */}
-      <BookingEditModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        booking={selectedBooking}
+      {/* Edit Booking Flow (Modal + Availability) */}
+      <BookingEditFlow
+        isEditOpen={isEditOpen}
+        onCloseEdit={() => setIsEditOpen(false)}
         onSuccess={refresh}
+        selectedBooking={selectedBooking}
         servicePackages={servicePackages}
-        staffMembers={staffList}
+        staffList={staffList}
         teams={teams}
-        onOpenAvailabilityModal={() => {
+        editForm={editForm}
+        editAssignmentType={editAssignmentType}
+        setEditAssignmentType={setEditAssignmentType}
+        editPackageSelection={editPackageSelection}
+        setEditPackageSelection={setEditPackageSelection}
+        isEditAvailabilityModalOpen={isEditAvailabilityModalOpen}
+        onCloseEditAvailability={() => {
+          setIsEditAvailabilityModalOpen(false)
+          setIsEditOpen(true)
+        }}
+        onOpenEditAvailability={() => {
           setIsEditOpen(false)
           setIsEditAvailabilityModalOpen(true)
         }}
-        onBeforeOpenAvailability={(formData) => {
-          // Calculate end_time if not set (fallback)
-          let endTime = formData.end_time || ''
-          if (!endTime && formData.start_time && editPackageSelection?.estimatedHours) {
-            const durationMinutes = Math.round(editPackageSelection.estimatedHours * 60)
-            endTime = calculateEndTime(formData.start_time, durationMinutes)
-          }
-
-          // Sync form data from BookingEditModal to editForm before opening availability modal
-          editForm.setValues({
-            booking_date: formData.booking_date || '',
-            start_time: formData.start_time || '',
-            end_time: endTime,
-            service_package_id: formData.service_package_id || '',
-            package_v2_id: formData.package_v2_id || '',
-            staff_id: formData.staff_id || '',
-            team_id: formData.team_id || '',
-            total_price: formData.total_price || 0,
-            area_sqm: formData.area_sqm || null,
-            frequency: formData.frequency || null,
-          })
-        }}
-        editForm={toBookingForm(editForm)}
-        assignmentType={editAssignmentType}
-        onAssignmentTypeChange={setEditAssignmentType}
         calculateEndTime={calculateEndTime}
-        packageSelection={editPackageSelection}
-        setPackageSelection={setEditPackageSelection}
-        defaultStaffId={editForm.formData.staff_id}
-        defaultTeamId={editForm.formData.team_id}
+        toast={toast}
       />
 
       {/* Status Change Confirmation Dialog */}
@@ -1611,92 +1468,69 @@ export function AdminBookings() {
         />
       )}
 
-      {/* Conflict Warning Dialog */}
-      <BookingConflictDialog
-        isOpen={showConflictDialog}
-        onClose={cancelConflictOverride}
-        onProceed={proceedWithConflictOverride}
+      {/* Recurring/Conflict/Bulk Delete Dialogs */}
+      <RecurringBookingManager
+        showRecurringEditDialog={showRecurringEditDialog}
+        setShowRecurringEditDialog={setShowRecurringEditDialog}
+        recurringEditAction={recurringEditAction}
+        pendingRecurringBooking={pendingRecurringBooking}
+        handleRecurringArchive={handleRecurringArchive}
+        handleRecurringDelete={handleRecurringDelete}
+        showConflictDialog={showConflictDialog}
+        cancelConflictOverride={cancelConflictOverride}
+        proceedWithConflictOverride={proceedWithConflictOverride}
         conflicts={conflicts}
+        showDeleteConfirm={showDeleteConfirm}
+        setShowDeleteConfirm={setShowDeleteConfirm}
+        confirmBulkDelete={confirmBulkDelete}
+        isDeleting={isDeleting}
+        selectedBookingsCount={selectedBookings.length}
         getStatusBadge={getStatusBadge}
         formatTime={formatTime}
       />
 
-      {/* Bulk Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-        title="Delete Bookings"
-        description={`Are you sure you want to delete ${selectedBookings.length} booking(s)? This action cannot be undone.`}
-        variant="danger"
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        onConfirm={confirmBulkDelete}
-        isLoading={isDeleting}
+      {/* Bookings list */}
+      <BookingListContainer
+        combinedItems={paginatedCombinedItems}
+        filteredBookings={filteredBookings}
+        selectedBookings={selectedBookings}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        itemsPerPage={itemsPerPage}
+        metadata={metadata}
+        onItemsPerPageChange={(value) => {
+          setItemsPerPage(value)
+          goToPage(1)
+        }}
+        goToFirst={goToFirst}
+        prevPage={prevPage}
+        nextPage={nextPage}
+        goToLast={goToLast}
+        bulkStatus={bulkStatus}
+        setBulkStatus={setBulkStatus}
+        toggleSelectAll={toggleSelectAll}
+        toggleSelectBooking={toggleSelectBooking}
+        handleBulkStatusUpdate={handleBulkStatusUpdate}
+        handleBulkExport={handleBulkExport}
+        handleBulkDelete={handleBulkDelete}
+        openBookingDetail={openBookingDetail}
+        deleteBooking={deleteBooking}
+        archiveBooking={archiveBooking}
+        restoreBooking={restoreBooking}
+        deleteRecurringGroup={deleteRecurringGroup}
+        archiveRecurringGroup={archiveRecurringGroup}
+        restoreRecurringGroup={restoreRecurringGroup}
+        handleVerifyPayment={handleVerifyPayment}
+        handleVerifyRecurringGroup={handleVerifyRecurringGroup}
+        showArchived={showArchived}
+        handleStatusChange={handleStatusChange}
+        getStatusBadge={getStatusBadge}
+        getPaymentStatusBadge={getPaymentStatusBadge}
+        getAvailableStatuses={getAvailableStatuses}
+        getStatusLabel={getStatusLabel}
+        formatTime={formatTime}
       />
 
-      {/* Bookings list */}
-      <Card>
-        <CardHeader className="px-4 sm:px-6">
-          <BulkActionsToolbar
-            selectedBookings={selectedBookings}
-            totalBookings={filteredBookings.length}
-            bulkStatus={bulkStatus}
-            onBulkStatusChange={setBulkStatus}
-            onToggleSelectAll={toggleSelectAll}
-            onBulkStatusUpdate={handleBulkStatusUpdate}
-            onBulkExport={handleBulkExport}
-            onBulkDelete={handleBulkDelete}
-          />
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6 pt-0">
-          <BookingList
-            combinedItems={paginatedCombinedItems}
-            allBookings={filteredBookings}
-            selectedBookings={selectedBookings}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            itemsPerPage={itemsPerPage}
-            metadata={metadata}
-            onToggleSelect={toggleSelectBooking}
-            onBookingClick={openBookingDetail}
-            onItemsPerPageChange={(value) => {
-              setItemsPerPage(value)
-              goToPage(1)
-            }}
-            onFirstPage={goToFirst}
-            onPreviousPage={prevPage}
-            onNextPage={nextPage}
-            onLastPage={goToLast}
-            onDeleteBooking={deleteBooking}
-            onDeleteRecurringGroup={deleteRecurringGroup}
-            onArchiveRecurringGroup={archiveRecurringGroup}
-            onArchiveBooking={archiveBooking}
-            onRestoreBooking={restoreBooking}
-            onRestoreRecurringGroup={restoreRecurringGroup}
-            onVerifyPayment={handleVerifyPayment}
-            onVerifyRecurringGroup={handleVerifyRecurringGroup}
-            showArchived={showArchived}
-            onStatusChange={handleStatusChange}
-            formatTime={formatTime}
-            getStatusBadge={getStatusBadge}
-            getPaymentStatusBadge={getPaymentStatusBadge}
-            getAvailableStatuses={getAvailableStatuses}
-            getStatusLabel={getStatusLabel}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Recurring Edit/Delete Dialog */}
-      {pendingRecurringBooking && (
-        <RecurringEditDialog
-          open={showRecurringEditDialog}
-          onOpenChange={setShowRecurringEditDialog}
-          onConfirm={recurringEditAction === 'archive' ? handleRecurringArchive : handleRecurringDelete}
-          action={recurringEditAction}
-          recurringSequence={pendingRecurringBooking.recurring_sequence || 1}
-          recurringTotal={pendingRecurringBooking.recurring_total || 1}
-        />
-      )}
     </div>
   )
 }
