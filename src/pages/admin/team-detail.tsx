@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { BookingStatus } from '@/types/booking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -224,7 +225,7 @@ export function AdminTeamDetail() {
       if (bookingsError) throw bookingsError
 
       const totalBookings = bookings?.length || 0
-      const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
+      const completedBookings = bookings?.filter(b => b.status === BookingStatus.Completed).length || 0
       const totalRevenue = bookings?.filter(b => b.payment_status === 'paid').reduce((sum, b) => sum + Number(b.total_price), 0) || 0
 
       // Fetch ratings

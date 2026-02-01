@@ -24,6 +24,7 @@ import { useCalendarFilters } from '@/hooks/useCalendarFilters'
 import { useBookingsByDateRange } from '@/hooks/useBookings'
 import { useConflictDetection } from '@/hooks/useConflictDetection'
 import { useCalendarActions } from './useCalendarActions'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { isSameDay } from 'date-fns'
 
@@ -221,7 +222,7 @@ export function useCalendarData() {
         const booking1 = dateBookings[i]
 
         // Skip cancelled/no-show bookings
-        if (booking1.status === 'cancelled' || booking1.status === 'no_show') {
+        if (booking1.status === BookingStatus.Cancelled || booking1.status === BookingStatus.NoShow) {
           continue
         }
 
@@ -229,7 +230,7 @@ export function useCalendarData() {
           const booking2 = dateBookings[j]
 
           // Skip cancelled/no-show bookings
-          if (booking2.status === 'cancelled' || booking2.status === 'no_show') {
+          if (booking2.status === BookingStatus.Cancelled || booking2.status === BookingStatus.NoShow) {
             continue
           }
 

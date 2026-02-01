@@ -6,6 +6,7 @@
  */
 
 import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
+import { BookingStatus } from '@/types/booking'
 
 // ============================================================================
 // STATUS TRANSITIONS - Single Source of Truth
@@ -17,13 +18,13 @@ import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
  *
  * Note: Status transitions are forward-only (no reverting cancelled → pending)
  */
-export const STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ['pending', 'confirmed', 'cancelled'],
-  confirmed: ['confirmed', 'in_progress', 'cancelled', 'no_show'],
-  in_progress: ['in_progress', 'completed', 'cancelled'],
-  completed: ['completed'],
-  cancelled: ['cancelled'],
-  no_show: ['no_show'],
+export const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  [BookingStatus.Pending]: [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.Cancelled],
+  [BookingStatus.Confirmed]: [BookingStatus.Confirmed, BookingStatus.InProgress, BookingStatus.Cancelled, BookingStatus.NoShow],
+  [BookingStatus.InProgress]: [BookingStatus.InProgress, BookingStatus.Completed, BookingStatus.Cancelled],
+  [BookingStatus.Completed]: [BookingStatus.Completed],
+  [BookingStatus.Cancelled]: [BookingStatus.Cancelled],
+  [BookingStatus.NoShow]: [BookingStatus.NoShow],
 }
 
 /**
@@ -65,7 +66,7 @@ export function getAllStatusOptions(): [string, string][] {
  * // Returns: ['pending', 'confirmed', 'cancelled']
  */
 export function getAvailableStatuses(currentStatus: string): string[] {
-  return STATUS_TRANSITIONS[currentStatus] || [currentStatus]
+  return STATUS_TRANSITIONS[currentStatus as BookingStatus] || [currentStatus]
 }
 
 /**
@@ -79,8 +80,8 @@ export function getAvailableStatuses(currentStatus: string): string[] {
  * // Returns: ['confirmed', 'cancelled']
  */
 export function getValidTransitions(currentStatus: string): string[] {
-  const all = STATUS_TRANSITIONS[currentStatus] || []
-  return all.filter(s => s !== currentStatus)
+  const all = STATUS_TRANSITIONS[currentStatus as BookingStatus] || []
+  return all.filter((s: BookingStatus) => s !== currentStatus)
 }
 
 /**

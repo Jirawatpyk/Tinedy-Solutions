@@ -43,7 +43,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/permission-guard'
-import { formatPrice } from '@/lib/pricing-utils'
+import { formatCurrency } from '@/lib/utils'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PricingModel } from '@/types'
 
@@ -283,7 +283,7 @@ export function PackageCard({
                 Price
               </div>
               <span className="font-semibold text-lg text-tinedy-blue">
-                {formatPrice(pkg.base_price)}
+                {formatCurrency(pkg.base_price)}
               </span>
             </div>
 
@@ -319,7 +319,7 @@ export function PackageCard({
                   Price Range
                 </div>
                 <span className="text-sm font-medium">
-                  {formatPrice(pkg.min_price)} - {formatPrice(pkg.max_price)}
+                  {formatCurrency(pkg.min_price)} - {formatCurrency(pkg.max_price)}
                 </span>
               </div>
             )}

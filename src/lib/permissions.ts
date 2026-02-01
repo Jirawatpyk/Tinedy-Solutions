@@ -5,7 +5,7 @@
  * for role-based access control (RBAC)
  */
 
-import type { UserRole, PermissionAction, PermissionResource, PermissionMap } from '@/types/common'
+import { UserRole, type PermissionAction, type PermissionResource, type PermissionMap } from '@/types/common'
 
 // ============================================================================
 // PERMISSION MATRIX
@@ -18,7 +18,7 @@ import type { UserRole, PermissionAction, PermissionResource, PermissionMap } fr
  * Keep this in sync with database role_permissions table.
  */
 export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
-  admin: {
+  [UserRole.Admin]: {
     bookings: { create: true, read: true, update: true, delete: true, export: true },
     customers: { create: true, read: true, update: true, delete: true, export: true },
     staff: { create: true, read: true, update: true, delete: true, export: true },
@@ -28,7 +28,7 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
     users: { create: true, read: true, update: true, delete: true, export: false },
     service_packages: { create: true, read: true, update: true, delete: true, export: true },
   },
-  manager: {
+  [UserRole.Manager]: {
     bookings: { create: true, read: true, update: true, delete: false, export: true },
     customers: { create: true, read: true, update: true, delete: false, export: true },
     staff: { create: false, read: true, update: true, delete: false, export: false },
@@ -38,7 +38,7 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
     users: { create: false, read: false, update: false, delete: false, export: false },
     service_packages: { create: false, read: true, update: false, delete: false, export: false },
   },
-  staff: {
+  [UserRole.Staff]: {
     bookings: { create: false, read: true, update: true, delete: false, export: false },
     customers: { create: false, read: true, update: false, delete: false, export: false },
     staff: { create: false, read: true, update: true, delete: false, export: false }, // Own profile only
@@ -48,7 +48,7 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
     users: { create: false, read: false, update: false, delete: false, export: false },
     service_packages: { create: false, read: true, update: false, delete: false, export: false },
   },
-  customer: {
+  [UserRole.Customer]: {
     // Customer portal not yet implemented
     bookings: { create: false, read: true, update: false, delete: false, export: false },
     customers: { create: false, read: true, update: true, delete: false, export: false }, // Own profile
@@ -71,24 +71,24 @@ export const PERMISSION_MATRIX: Record<UserRole, Partial<PermissionMap>> = {
  */
 export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   // Admin routes (shared with manager - both use /admin paths)
-  '/admin': ['admin', 'manager'],
-  '/admin/bookings': ['admin', 'manager'],
-  '/admin/customers': ['admin', 'manager'],
-  '/admin/staff': ['admin', 'manager'],
-  '/admin/teams': ['admin', 'manager'],
-  '/admin/reports': ['admin', 'manager'],
-  '/admin/calendar': ['admin', 'manager'],
-  '/admin/weekly-schedule': ['admin', 'manager'],
-  '/admin/chat': ['admin', 'manager'],
-  '/admin/packages': ['admin', 'manager'],
-  '/admin/settings': ['admin'],
-  '/admin/profile': ['admin', 'manager'],
+  '/admin': [UserRole.Admin, UserRole.Manager],
+  '/admin/bookings': [UserRole.Admin, UserRole.Manager],
+  '/admin/customers': [UserRole.Admin, UserRole.Manager],
+  '/admin/staff': [UserRole.Admin, UserRole.Manager],
+  '/admin/teams': [UserRole.Admin, UserRole.Manager],
+  '/admin/reports': [UserRole.Admin, UserRole.Manager],
+  '/admin/calendar': [UserRole.Admin, UserRole.Manager],
+  '/admin/weekly-schedule': [UserRole.Admin, UserRole.Manager],
+  '/admin/chat': [UserRole.Admin, UserRole.Manager],
+  '/admin/packages': [UserRole.Admin, UserRole.Manager],
+  '/admin/settings': [UserRole.Admin],
+  '/admin/profile': [UserRole.Admin, UserRole.Manager],
 
   // Staff routes
-  '/staff': ['admin', 'manager', 'staff'],
-  '/staff/calendar': ['admin', 'manager', 'staff'],
-  '/staff/chat': ['admin', 'manager', 'staff'],
-  '/staff/profile': ['admin', 'manager', 'staff'],
+  '/staff': [UserRole.Admin, UserRole.Manager, UserRole.Staff],
+  '/staff/calendar': [UserRole.Admin, UserRole.Manager, UserRole.Staff],
+  '/staff/chat': [UserRole.Admin, UserRole.Manager, UserRole.Staff],
+  '/staff/profile': [UserRole.Admin, UserRole.Manager, UserRole.Staff],
 }
 
 // ============================================================================
@@ -179,7 +179,7 @@ export function getPermissionsForRole(
  * @returns True if role is admin
  */
 export function isAdmin(role: UserRole | undefined | null): boolean {
-  return role === 'admin'
+  return role === UserRole.Admin
 }
 
 /**
@@ -189,7 +189,7 @@ export function isAdmin(role: UserRole | undefined | null): boolean {
  * @returns True if role is manager or admin
  */
 export function isManagerOrAdmin(role: UserRole | undefined | null): boolean {
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -199,7 +199,7 @@ export function isManagerOrAdmin(role: UserRole | undefined | null): boolean {
  * @returns True if role is staff
  */
 export function isStaff(role: UserRole | undefined | null): boolean {
-  return role === 'staff'
+  return role === UserRole.Staff
 }
 
 // ============================================================================
@@ -242,7 +242,7 @@ export function canSoftDelete(
   if (!supportsSoftDelete(resource)) return false
 
   // Admin and Manager can soft delete
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -253,7 +253,7 @@ export function canSoftDelete(
  */
 export function canRestore(role: UserRole | undefined | null): boolean {
   if (!role) return false
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -264,7 +264,7 @@ export function canRestore(role: UserRole | undefined | null): boolean {
  * @returns True if permanent delete permission granted
  */
 export function canPermanentlyDelete(role: UserRole | undefined | null): boolean {
-  return role === 'admin'
+  return role === UserRole.Admin
 }
 
 // ============================================================================
@@ -276,17 +276,17 @@ export function canPermanentlyDelete(role: UserRole | undefined | null): boolean
  * Used for feature gating
  */
 export const FEATURE_FLAGS: Record<string, UserRole[]> = {
-  view_financial_reports: ['admin'],
-  manage_user_roles: ['admin'],
-  view_audit_logs: ['admin'],
-  export_data: ['admin', 'manager'],
-  manage_settings: ['admin'],
-  create_staff: ['admin'],
-  delete_records: ['admin'],
-  view_all_data: ['admin', 'manager'],
-  manage_teams: ['admin', 'manager'],
-  assign_staff: ['admin', 'manager'],
-  view_archived: ['admin'], // Only admin can view archived/soft-deleted records
+  view_financial_reports: [UserRole.Admin],
+  manage_user_roles: [UserRole.Admin],
+  view_audit_logs: [UserRole.Admin],
+  export_data: [UserRole.Admin, UserRole.Manager],
+  manage_settings: [UserRole.Admin],
+  create_staff: [UserRole.Admin],
+  delete_records: [UserRole.Admin],
+  view_all_data: [UserRole.Admin, UserRole.Manager],
+  manage_teams: [UserRole.Admin, UserRole.Manager],
+  assign_staff: [UserRole.Admin, UserRole.Manager],
+  view_archived: [UserRole.Admin], // Only admin can view archived/soft-deleted records
 }
 
 /**

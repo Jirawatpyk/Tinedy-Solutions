@@ -1,10 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
 import { logger } from '@/lib/logger'
+import { UserRole } from '@/types/common'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: ('admin' | 'manager' | 'staff')[]
+  allowedRoles?: UserRole[]
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {

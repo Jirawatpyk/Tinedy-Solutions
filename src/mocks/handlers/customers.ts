@@ -11,10 +11,8 @@ import { http, HttpResponse } from 'msw'
 import {
   mockCustomers,
   createMockCustomer,
+  type MockCustomer,
 } from '../data/customers'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Customer = any
 
 // In-memory storage for test mutations
 let customersStore = [...mockCustomers]
@@ -45,42 +43,42 @@ function parseSupabaseQuery(url: URL) {
 /**
  * Apply Supabase filters to customers array
  */
-function applyFilters(customers: Customer[], filters: Record<string, string>): Customer[] {
+function applyFilters(customers: MockCustomer[], filters: Record<string, string>): MockCustomer[] {
   let result = [...customers]
 
   Object.entries(filters).forEach(([key, value]) => {
     // Handle eq. operator
     if (value.startsWith('eq.')) {
       const filterValue = value.substring(3)
-      result = result.filter((c) => String(c[key as keyof Customer]) === filterValue)
+      result = result.filter((c) => String(c[key as keyof MockCustomer]) === filterValue)
     }
     // Handle in. operator
     else if (value.startsWith('in.(') && value.endsWith(')')) {
       const values = value.substring(4, value.length - 1).split(',')
-      result = result.filter((c) => values.includes(String(c[key as keyof Customer])))
+      result = result.filter((c) => values.includes(String(c[key as keyof MockCustomer])))
     }
     // Handle is. operator
     else if (value.startsWith('is.')) {
       const isNull = value === 'is.null'
       result = result.filter((c) =>
-        isNull ? c[key as keyof Customer] === null : c[key as keyof Customer] !== null
+        isNull ? c[key as keyof MockCustomer] === null : c[key as keyof MockCustomer] !== null
       )
     }
     // Handle gte. operator
     else if (value.startsWith('gte.')) {
       const filterValue = value.substring(4)
-      result = result.filter((c) => String(c[key as keyof Customer]) >= filterValue)
+      result = result.filter((c) => String(c[key as keyof MockCustomer]) >= filterValue)
     }
     // Handle lte. operator
     else if (value.startsWith('lte.')) {
       const filterValue = value.substring(4)
-      result = result.filter((c) => String(c[key as keyof Customer]) <= filterValue)
+      result = result.filter((c) => String(c[key as keyof MockCustomer]) <= filterValue)
     }
     // Handle ilike. operator (case-insensitive search)
     else if (value.startsWith('ilike.')) {
       const searchValue = value.substring(6).replace(/%/g, '').toLowerCase()
       result = result.filter((c) => {
-        const fieldValue = String(c[key as keyof Customer]).toLowerCase()
+        const fieldValue = String(c[key as keyof MockCustomer]).toLowerCase()
         return fieldValue.includes(searchValue)
       })
     }
@@ -119,8 +117,8 @@ export const getCustomersHandler = http.get('*/rest/v1/customers', ({ request })
     const [field, direction] = order.split('.')
     const sortDirection = direction === 'desc' ? -1 : 1
     results = [...results].sort((a, b) => {
-      const aVal = a[field as keyof Customer]
-      const bVal = b[field as keyof Customer]
+      const aVal = a[field] as string | number | null
+      const bVal = b[field] as string | number | null
       if (aVal === null && bVal === null) return 0
       if (aVal === null) return 1
       if (bVal === null) return -1
@@ -149,7 +147,7 @@ export const getCustomersHandler = http.get('*/rest/v1/customers', ({ request })
  * Create a new customer
  */
 export const createCustomerHandler = http.post('*/rest/v1/customers', async ({ request }) => {
-  const body = (await request.json()) as Partial<Customer>
+  const body = (await request.json()) as Partial<MockCustomer>
 
   // Validate required fields
   if (!body.name || !body.phone) {
@@ -190,7 +188,7 @@ export const createCustomerHandler = http.post('*/rest/v1/customers', async ({ r
 export const updateCustomerHandler = http.patch('*/rest/v1/customers', async ({ request }) => {
   const url = new URL(request.url)
   const { filters } = parseSupabaseQuery(url)
-  const updates = (await request.json()) as Partial<Customer>
+  const updates = (await request.json()) as Partial<MockCustomer>
 
   // Find customers to update
   const toUpdate = applyFilters(customersStore, filters)

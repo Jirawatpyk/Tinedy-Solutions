@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { BookingStatus } from '@/types/booking'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { TrendingUp } from 'lucide-react'
 import {
@@ -64,9 +65,9 @@ const BookingActivityChart = memo(function BookingActivityChart({
 
         const monthData = monthsMap.get(monthKey)!
         monthData.total++
-        if (booking.status === 'completed') monthData.completed++
-        else if (booking.status === 'cancelled') monthData.cancelled++
-        else if (booking.status === 'pending') monthData.pending++
+        if (booking.status === BookingStatus.Completed) monthData.completed++
+        else if (booking.status === BookingStatus.Cancelled) monthData.cancelled++
+        else if (booking.status === BookingStatus.Pending) monthData.pending++
       }
     })
 

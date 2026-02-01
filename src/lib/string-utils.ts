@@ -14,8 +14,10 @@
  * getInitials(null) // '?'
  */
 export function getInitials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name
+  if (!name || typeof name !== 'string') return '?'
+  const trimmed = name.trim()
+  if (!trimmed) return '?'
+  return trimmed
     .split(' ')
     .map((part) => part[0])
     .filter(Boolean)

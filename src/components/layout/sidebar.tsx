@@ -21,6 +21,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { supabase } from '@/lib/supabase'
 import { getNavigationRoutes } from '@/lib/route-utils'
 import { formatRole } from '@/lib/role-utils'
+import { UserRole } from '@/types/common'
 
 interface SidebarProps {
   isOpen: boolean
@@ -217,7 +218,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => {
-                  navigate(profile?.role === 'staff' ? '/staff/profile' : '/admin/profile')
+                  navigate(profile?.role === UserRole.Staff ? '/staff/profile' : '/admin/profile')
                   onClose()
                 }}>
                   <User className="mr-2 h-4 w-4" />

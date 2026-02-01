@@ -11,10 +11,8 @@ import { http, HttpResponse } from 'msw'
 import {
   mockBookings,
   createMockBooking,
+  type MockBooking,
 } from '../data/bookings'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Booking = any
 
 // In-memory storage for test mutations
 let bookingsStore = [...mockBookings]
@@ -46,36 +44,36 @@ function parseSupabaseQuery(url: URL) {
 /**
  * Apply Supabase filters to bookings array
  */
-function applyFilters(bookings: Booking[], filters: Record<string, string>): Booking[] {
+function applyFilters(bookings: MockBooking[], filters: Record<string, string>): MockBooking[] {
   let result = [...bookings]
 
   Object.entries(filters).forEach(([key, value]) => {
     // Handle eq. operator (e.g., status=eq.pending)
     if (value.startsWith('eq.')) {
       const filterValue = value.substring(3)
-      result = result.filter((b) => String(b[key as keyof Booking]) === filterValue)
+      result = result.filter((b) => String(b[key as keyof MockBooking]) === filterValue)
     }
     // Handle in. operator (e.g., status=in.(pending,confirmed))
     else if (value.startsWith('in.(') && value.endsWith(')')) {
       const values = value.substring(4, value.length - 1).split(',')
-      result = result.filter((b) => values.includes(String(b[key as keyof Booking])))
+      result = result.filter((b) => values.includes(String(b[key as keyof MockBooking])))
     }
     // Handle is. operator (e.g., deleted_at=is.null)
     else if (value.startsWith('is.')) {
       const isNull = value === 'is.null'
       result = result.filter((b) =>
-        isNull ? b[key as keyof Booking] === null : b[key as keyof Booking] !== null
+        isNull ? b[key as keyof MockBooking] === null : b[key as keyof MockBooking] !== null
       )
     }
     // Handle gte. operator (e.g., booking_date=gte.2025-01-01)
     else if (value.startsWith('gte.')) {
       const filterValue = value.substring(4)
-      result = result.filter((b) => String(b[key as keyof Booking]) >= filterValue)
+      result = result.filter((b) => String(b[key as keyof MockBooking]) >= filterValue)
     }
     // Handle lte. operator (e.g., booking_date=lte.2025-12-31)
     else if (value.startsWith('lte.')) {
       const filterValue = value.substring(4)
-      result = result.filter((b) => String(b[key as keyof Booking]) <= filterValue)
+      result = result.filter((b) => String(b[key as keyof MockBooking]) <= filterValue)
     }
     // Handle or operator (e.g., or=(staff_id.eq.123,team_id.in.(456,789)))
     else if (key === 'or') {
@@ -87,10 +85,10 @@ function applyFilters(bookings: Booking[], filters: Record<string, string>): Boo
           if (!match) return false
           const [, field, operator, val] = match
           if (operator === 'eq') {
-            return String(b[field as keyof Booking]) === val
+            return String(b[field as keyof MockBooking]) === val
           } else if (operator === 'in') {
             const values = val.replace(/[()]/g, '').split(',')
-            return values.includes(String(b[field as keyof Booking]))
+            return values.includes(String(b[field as keyof MockBooking]))
           }
           return false
         })
@@ -104,15 +102,15 @@ function applyFilters(bookings: Booking[], filters: Record<string, string>): Boo
 /**
  * Apply sorting to bookings array
  */
-function applySorting(bookings: Booking[], order: string | null): Booking[] {
+function applySorting(bookings: MockBooking[], order: string | null): MockBooking[] {
   if (!order) return bookings
 
   const [field, direction] = order.split('.')
   const sortDirection = direction === 'desc' ? -1 : 1
 
   return [...bookings].sort((a, b) => {
-    const aVal = a[field as keyof Booking]
-    const bVal = b[field as keyof Booking]
+    const aVal = a[field] as string | number | null
+    const bVal = b[field] as string | number | null
 
     if (aVal === null && bVal === null) return 0
     if (aVal === null) return 1
@@ -127,7 +125,7 @@ function applySorting(bookings: Booking[], order: string | null): Booking[] {
 /**
  * Apply pagination to bookings array
  */
-function applyPagination(bookings: Booking[], limit: string | null, offset: string | null): Booking[] {
+function applyPagination(bookings: MockBooking[], limit: string | null, offset: string | null): MockBooking[] {
   const limitNum = limit ? parseInt(limit) : undefined
   const offsetNum = offset ? parseInt(offset) : 0
 
@@ -175,7 +173,7 @@ export const getBookingsHandler = http.get('*/rest/v1/bookings', ({ request }) =
  * Create a new booking
  */
 export const createBookingHandler = http.post('*/rest/v1/bookings', async ({ request }) => {
-  const body = (await request.json()) as Partial<Booking>
+  const body = (await request.json()) as Partial<MockBooking>
 
   // Validate required fields
   if (!body.customer_id || !body.service_package_id || !body.booking_date) {
@@ -213,7 +211,7 @@ export const createBookingHandler = http.post('*/rest/v1/bookings', async ({ req
 export const updateBookingHandler = http.patch('*/rest/v1/bookings', async ({ request }) => {
   const url = new URL(request.url)
   const { filters } = parseSupabaseQuery(url)
-  const updates = (await request.json()) as Partial<Booking>
+  const updates = (await request.json()) as Partial<MockBooking>
 
   // Find bookings to update
   const toUpdate = applyFilters(bookingsStore, filters)

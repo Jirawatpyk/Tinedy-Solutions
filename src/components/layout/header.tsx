@@ -6,6 +6,7 @@ import { NotificationBell } from '@/components/notifications/notification-bell'
 import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useAuth } from '@/contexts/auth-context'
+import { UserRole } from '@/types/common'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { formatBookingId } from '@/lib/utils'
@@ -40,7 +41,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // Open search with Cmd+K or Ctrl+K (Admin & Manager)
   useEffect(() => {
-    if (profile?.role !== 'admin' && profile?.role !== 'manager') return
+    if (profile?.role !== UserRole.Admin && profile?.role !== UserRole.Manager) return
 
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -63,7 +64,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     setLoading(true)
     const searchResults: SearchResult[] = []
     // Both admin and manager use /admin routes
-    const basePath = (profile?.role === 'admin' || profile?.role === 'manager') ? '/admin' : '/staff'
+    const basePath = (profile?.role === UserRole.Admin || profile?.role === UserRole.Manager) ? '/admin' : '/staff'
 
     try {
       // Remove # prefix and BK- prefix if present (users often copy ID with #BK- from UI)
@@ -289,7 +290,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </SimpleTooltip>
 
           {/* Search bar - Admin & Manager */}
-          {(profile?.role === 'admin' || profile?.role === 'manager') && (
+          {(profile?.role === UserRole.Admin || profile?.role === UserRole.Manager) && (
             <>
               {/* Mobile: icon only with tooltip */}
               <SimpleTooltip content="Search (⌘K)">
@@ -318,7 +319,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           )}
 
           {/* Quick Availability Check - Admin & Manager, show on all screens */}
-          {(profile?.role === 'admin' || profile?.role === 'manager') && (
+          {(profile?.role === UserRole.Admin || profile?.role === UserRole.Manager) && (
             <QuickAvailabilityCheck />
           )}
         </div>

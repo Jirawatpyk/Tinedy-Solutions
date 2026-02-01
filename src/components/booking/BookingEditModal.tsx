@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Sparkles } from 'lucide-react'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
 import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
@@ -122,7 +123,7 @@ export function BookingEditModal({
       staff_id: '',
       team_id: '',
       notes: '',
-      status: 'pending',
+      status: BookingStatus.Pending,
     },
   })
 
@@ -162,7 +163,7 @@ export function BookingEditModal({
           staff_id: booking.staff_id || '',
           team_id: booking.team_id || '',
           notes: booking.notes || '',
-          status: (booking.status || 'pending') as 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed' | 'no_show',
+          status: (booking.status || BookingStatus.Pending) as 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed' | 'no_show',
         })
         lastInitializedBookingId.current = booking.id
       }
@@ -269,7 +270,7 @@ export function BookingEditModal({
         staff_id: data.staff_id && data.staff_id.trim() ? data.staff_id : null,
         team_id: newTeamId,
         team_member_count: teamMemberCount,
-        status: data.status || 'pending',
+        status: data.status || BookingStatus.Pending,
       }
 
       // Add package-specific fields based on package type

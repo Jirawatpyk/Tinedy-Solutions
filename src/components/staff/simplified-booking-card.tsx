@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Phone, MapPin, Play, CheckCircle2, Loader2, Users, User, Briefcase } from 'lucide-react'
 import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
+import { BookingStatus } from '@/types/booking'
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime } from '@/lib/booking-utils'
@@ -61,8 +62,8 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
     prevIsCompletingRef.current = isCompletingProgress
     prevStatusRef.current = booking.status
 
-    const startSucceeded = wasStarting && !isStartingProgress && previousStatus === 'confirmed' && booking.status === 'in_progress'
-    const completeSucceeded = wasCompleting && !isCompletingProgress && previousStatus === 'in_progress' && booking.status === 'completed'
+    const startSucceeded = wasStarting && !isStartingProgress && previousStatus === BookingStatus.Confirmed && booking.status === BookingStatus.InProgress
+    const completeSucceeded = wasCompleting && !isCompletingProgress && previousStatus === BookingStatus.InProgress && booking.status === BookingStatus.Completed
 
     if (startSucceeded || completeSucceeded) {
       setShowSuccess(true)
@@ -77,12 +78,12 @@ export const SimplifiedBookingCard = memo(function SimplifiedBookingCard({
   )
 
   const canStartProgress = useMemo(
-    () => booking.status === 'confirmed',
+    () => booking.status === BookingStatus.Confirmed,
     [booking.status]
   )
 
   const canMarkCompleted = useMemo(
-    () => booking.status === 'in_progress',
+    () => booking.status === BookingStatus.InProgress,
     [booking.status]
   )
 

@@ -1,5 +1,7 @@
 import { format, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, subYears } from 'date-fns'
 import * as XLSX from 'xlsx'
+import { BookingStatus } from '@/types/booking'
+import { UserRole } from '@/types/common'
 
 // Type definitions
 interface BookingForExport {
@@ -128,7 +130,7 @@ export const exportRevenueAllToExcel = (
         'Status': b.status,
       }
       // Admin and Manager can see revenue
-      if (role === 'admin' || role === 'manager') {
+      if (role === UserRole.Admin || role === UserRole.Manager) {
         baseData['Revenue (฿)'] = Number(b.total_price).toFixed(2)
       }
       return baseData
@@ -149,7 +151,7 @@ export const exportRevenueAllToExcel = (
       'Created': format(new Date(b.created_at), 'dd/MM/yyyy HH:mm'),
     }
     // Admin and Manager can see revenue
-    if (role === 'admin' || role === 'manager') {
+    if (role === UserRole.Admin || role === UserRole.Manager) {
       baseData['Price (฿)'] = Number(b.total_price).toFixed(2)
     }
     return baseData
@@ -174,7 +176,7 @@ export const exportRevenueAllToExcel = (
       'Total Bookings': data.count,
     }
     // Admin and Manager can see revenue
-    if (role === 'admin' || role === 'manager') {
+    if (role === UserRole.Admin || role === UserRole.Manager) {
       baseData['Total Revenue (฿)'] = data.revenue.toFixed(2)
       baseData['Average Price (฿)'] = (data.revenue / data.count).toFixed(2)
     }
@@ -231,7 +233,7 @@ export const exportRevenueAllToExcel = (
         'Total Bookings': data.count,
       }
       // Admin and Manager can see revenue
-      if (role === 'admin' || role === 'manager') {
+      if (role === UserRole.Admin || role === UserRole.Manager) {
         baseData['Completed Revenue (฿)'] = data.revenue.toFixed(2)
         baseData['Avg Price (฿)'] = data.count > 0 ? (data.revenue / data.count).toFixed(2) : '0.00'
       }
@@ -327,7 +329,7 @@ export const exportStaffToExcel = (
     }
 
     // Admin and Manager can see revenue
-    if (role === 'admin' || role === 'manager') {
+    if (role === UserRole.Admin || role === UserRole.Manager) {
       baseData['Revenue (฿)'] = s.revenue.toFixed(2)
       baseData['Avg Job Value (฿)'] = s.avgJobValue.toFixed(2)
     }
@@ -361,9 +363,9 @@ export const exportTeamsToExcel = (
   // Calculate team performance with correct revenue (paid bookings only - same as analytics.ts)
   const teamsWithPerformance = teamsData.map((team) => {
     const totalJobs = team.bookings.length
-    const completed = team.bookings.filter((b) => b.status === 'completed').length
-    const inProgress = team.bookings.filter((b) => b.status === 'in_progress').length
-    const pending = team.bookings.filter((b) => b.status === 'pending').length
+    const completed = team.bookings.filter((b) => b.status === BookingStatus.Completed).length
+    const inProgress = team.bookings.filter((b) => b.status === BookingStatus.InProgress).length
+    const pending = team.bookings.filter((b) => b.status === BookingStatus.Pending).length
     // Revenue from paid bookings only (consistent with web display)
     const paidBookings = team.bookings.filter((b) => b.payment_status === 'paid')
     const revenue = paidBookings.reduce((sum: number, b) => sum + Number(b.total_price), 0)
@@ -389,7 +391,7 @@ export const exportTeamsToExcel = (
     }
 
     // Admin and Manager can see revenue
-    if (role === 'admin' || role === 'manager') {
+    if (role === UserRole.Admin || role === UserRole.Manager) {
       baseData['Revenue (฿)'] = data.revenue.toFixed(2)
     }
 

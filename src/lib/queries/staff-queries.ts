@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { isWithinMembershipPeriod, type MembershipPeriod } from '@/lib/review-utils'
 import type { StaffWithRating, StaffListItem } from '@/types/staff'
+import { UserRole } from '@/types/common'
 
 /**
  * Helper: Validate rating value
@@ -92,7 +93,7 @@ export async function fetchStaffWithRatings(): Promise<StaffWithRating[]> {
   const { data: staffData, error } = await supabase
     .from('profiles')
     .select('id, email, full_name, avatar_url, role, phone, staff_number, skills, created_at, updated_at')
-    .in('role', ['admin', 'manager', 'staff'])
+    .in('role', [UserRole.Admin, UserRole.Manager, UserRole.Staff])
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Failed to fetch staff: ${error.message}`)
@@ -267,9 +268,9 @@ export async function fetchStaffList(role: 'staff' | 'all' = 'all'): Promise<Sta
 
   // Filter by role
   if (role === 'staff') {
-    query = query.eq('role', 'staff')
+    query = query.eq('role', UserRole.Staff)
   } else {
-    query = query.in('role', ['admin', 'manager', 'staff'])
+    query = query.in('role', [UserRole.Admin, UserRole.Manager, UserRole.Staff])
   }
 
   const { data, error } = await query.order('full_name', { ascending: true })
