@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { AlertTriangle } from 'lucide-react'
 import { getStatusLabel } from '@/lib/booking-utils'
+import { BookingStatus } from '@/types/booking'
 
 interface StatusChangeConfirmDialogProps {
   isOpen: boolean
@@ -29,7 +30,7 @@ interface StatusChangeConfirmDialogProps {
 
 // Get appropriate message and warning for status transition
 const getTransitionMessage = (currentStatus: string, newStatus: string) => {
-  const isFinalState = ['cancelled', 'no_show', 'completed'].includes(newStatus)
+  const isFinalState = ([BookingStatus.Cancelled, BookingStatus.NoShow, BookingStatus.Completed] as string[]).includes(newStatus)
 
   const messages: Record<string, Record<string, { title: string; description: string; warning?: string }>> = {
     pending: {

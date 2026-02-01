@@ -34,6 +34,7 @@ import { PermissionAwareDeleteButton } from '@/components/common/PermissionAware
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { useAuth } from '@/contexts/auth-context'
+import { UserRole } from '@/types/common'
 import { useStaffWithRatings } from '@/hooks/useStaff'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -267,9 +268,9 @@ export function AdminStaff() {
 
   const getStaffStats = () => {
     const totalStaff = staff.length
-    const admins = staff.filter(s => s.role === 'admin').length
-    const managers = staff.filter(s => s.role === 'manager').length
-    const staffMembers = staff.filter(s => s.role === 'staff').length
+    const admins = staff.filter(s => s.role === UserRole.Admin).length
+    const managers = staff.filter(s => s.role === UserRole.Manager).length
+    const staffMembers = staff.filter(s => s.role === UserRole.Staff).length
     return { totalStaff, admins, managers, staffMembers }
   }
 
@@ -644,10 +645,10 @@ export function AdminStaff() {
                         </CardTitle>
                         <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                           <Badge
-                            variant={member.role === 'admin' ? 'default' : member.role === 'manager' ? 'default' : 'secondary'}
-                            className={`text-[10px] sm:text-xs ${member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+                            variant={member.role === UserRole.Admin ? 'default' : member.role === UserRole.Manager ? 'default' : 'secondary'}
+                            className={`text-[10px] sm:text-xs ${member.role === UserRole.Manager ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                           >
-                            {member.role === 'admin' ? '👑 Super admin' : member.role === 'manager' ? '👔 Admin' : 'Staff'}
+                            {member.role === UserRole.Admin ? '👑 Super admin' : member.role === UserRole.Manager ? '👔 Admin' : 'Staff'}
                           </Badge>
                           {member.average_rating !== undefined && (
                             <div className="flex items-center gap-1 text-yellow-500">
@@ -662,9 +663,9 @@ export function AdminStaff() {
                     </div>
                     <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       {/* Admin: แก้ไขได้ทุกคน | Manager: แก้ไขได้ตัวเอง + Staff | Staff: แก้ไขได้ตัวเอง */}
-                      {(profile?.role === 'admin' ||
+                      {(profile?.role === UserRole.Admin ||
                         member.id === user?.id ||
-                        (profile?.role === 'manager' && member.role === 'staff')) && (
+                        (profile?.role === UserRole.Manager && member.role === UserRole.Staff)) && (
                         <SimpleTooltip content="Edit staff">
                           <Button
                             variant="ghost"

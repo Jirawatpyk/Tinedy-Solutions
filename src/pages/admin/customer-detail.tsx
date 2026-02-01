@@ -78,6 +78,7 @@ import {
 } from '@/components/ui/dialog'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
@@ -100,7 +101,7 @@ interface CustomerBooking {
   booking_date: string
   start_time: string
   end_time: string
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+  status: BookingStatus
   notes: string | null
   total_price: number
   address: string
@@ -775,9 +776,9 @@ export function AdminCustomerDetail() {
 
         const monthData = monthsMap.get(monthKey)!
         monthData.total++
-        if (booking.status === 'completed') monthData.completed++
-        else if (booking.status === 'cancelled') monthData.cancelled++
-        else if (booking.status === 'pending') monthData.pending++
+        if (booking.status === BookingStatus.Completed) monthData.completed++
+        else if (booking.status === BookingStatus.Cancelled) monthData.cancelled++
+        else if (booking.status === BookingStatus.Pending) monthData.pending++
       }
     })
 
@@ -1839,7 +1840,7 @@ export function AdminCustomerDetail() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(pendingStatusChange.newStatus) ? 'destructive' : 'default'}
         />
       )}
     </div>

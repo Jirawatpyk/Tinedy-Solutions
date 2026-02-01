@@ -39,6 +39,7 @@ import type { RecurringGroup } from '@/types/recurring-booking'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
+import { BookingStatus } from '@/types/booking'
 
 interface RecurringBookingCardProps {
   group: RecurringGroup
@@ -59,7 +60,7 @@ interface RecurringBookingCardProps {
 
 // Helper function to check if status is final
 const isFinalStatus = (status: string): boolean => {
-  return ['completed', 'cancelled', 'no_show'].includes(status)
+  return ([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(status)
 }
 
 export function RecurringBookingCard({
@@ -348,9 +349,9 @@ export function RecurringBookingCard({
               const isArchived = !!booking.deleted_at
               const bgColor = isArchived
                 ? 'bg-gray-100 hover:bg-gray-200 opacity-60 border-dashed'
-                : booking.status === 'completed'
+                : booking.status === BookingStatus.Completed
                 ? 'bg-green-50 hover:bg-green-100'
-                : booking.status === 'cancelled'
+                : booking.status === BookingStatus.Cancelled
                 ? 'bg-red-50 hover:bg-red-100'
                 : 'hover:bg-accent'
 

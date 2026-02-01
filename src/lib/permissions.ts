@@ -5,7 +5,8 @@
  * for role-based access control (RBAC)
  */
 
-import type { UserRole, PermissionAction, PermissionResource, PermissionMap } from '@/types/common'
+import { UserRole } from '@/types/common'
+import type { PermissionAction, PermissionResource, PermissionMap } from '@/types/common'
 
 // ============================================================================
 // PERMISSION MATRIX
@@ -179,7 +180,7 @@ export function getPermissionsForRole(
  * @returns True if role is admin
  */
 export function isAdmin(role: UserRole | undefined | null): boolean {
-  return role === 'admin'
+  return role === UserRole.Admin
 }
 
 /**
@@ -189,7 +190,7 @@ export function isAdmin(role: UserRole | undefined | null): boolean {
  * @returns True if role is manager or admin
  */
 export function isManagerOrAdmin(role: UserRole | undefined | null): boolean {
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -199,7 +200,7 @@ export function isManagerOrAdmin(role: UserRole | undefined | null): boolean {
  * @returns True if role is staff
  */
 export function isStaff(role: UserRole | undefined | null): boolean {
-  return role === 'staff'
+  return role === UserRole.Staff
 }
 
 // ============================================================================
@@ -242,7 +243,7 @@ export function canSoftDelete(
   if (!supportsSoftDelete(resource)) return false
 
   // Admin and Manager can soft delete
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -253,7 +254,7 @@ export function canSoftDelete(
  */
 export function canRestore(role: UserRole | undefined | null): boolean {
   if (!role) return false
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -264,7 +265,7 @@ export function canRestore(role: UserRole | undefined | null): boolean {
  * @returns True if permanent delete permission granted
  */
 export function canPermanentlyDelete(role: UserRole | undefined | null): boolean {
-  return role === 'admin'
+  return role === UserRole.Admin
 }
 
 // ============================================================================

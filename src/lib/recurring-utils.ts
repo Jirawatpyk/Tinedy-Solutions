@@ -10,6 +10,7 @@ import type {
   RecurringBookingBase
 } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
+import { BookingStatus } from '@/types/booking'
 
 /**
  * แปลง RecurringPattern เป็น label ภาษาไทย
@@ -239,17 +240,17 @@ export function countBookingsByStatus<T extends RecurringBookingBase>(bookings: 
   total: number
 } {
   return {
-    completed: bookings.filter(b => b.status === 'completed').length,
-    confirmed: bookings.filter(b => b.status === 'confirmed').length,
-    inProgress: bookings.filter(b => b.status === 'in_progress').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length,
-    noShow: bookings.filter(b => b.status === 'no_show').length,
+    completed: bookings.filter(b => b.status === BookingStatus.Completed).length,
+    confirmed: bookings.filter(b => b.status === BookingStatus.Confirmed).length,
+    inProgress: bookings.filter(b => b.status === BookingStatus.InProgress).length,
+    cancelled: bookings.filter(b => b.status === BookingStatus.Cancelled).length,
+    noShow: bookings.filter(b => b.status === BookingStatus.NoShow).length,
     upcoming: bookings.filter(b =>
-      b.status !== 'completed' &&
-      b.status !== 'cancelled' &&
-      b.status !== 'confirmed' &&
-      b.status !== 'in_progress' &&
-      b.status !== 'no_show'
+      b.status !== BookingStatus.Completed &&
+      b.status !== BookingStatus.Cancelled &&
+      b.status !== BookingStatus.Confirmed &&
+      b.status !== BookingStatus.InProgress &&
+      b.status !== BookingStatus.NoShow
     ).length,
     total: bookings.length
   }

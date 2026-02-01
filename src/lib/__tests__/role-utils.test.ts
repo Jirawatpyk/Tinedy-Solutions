@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { formatRole, isAdmin, isManagerOrAbove, getRolePriority } from '../role-utils'
-import type { UserRole } from '../role-utils'
+import type { UserRole } from '@/types/common'
 
 describe('role-utils', () => {
   describe('formatRole', () => {

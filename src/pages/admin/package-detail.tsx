@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
 import type { ServicePackageV2WithTiers, PackagePricingTier } from '@/types'
-import { PricingModel } from '@/types'
+import { PricingModel, BookingStatus } from '@/types'
 
 // UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -248,11 +248,11 @@ export default function AdminPackageDetail() {
 
       // Calculate statistics
       const total = bookingsData.length
-      const completed = bookingsData.filter(b => b.status === 'completed').length
-      const pending = bookingsData.filter(b => b.status === 'pending').length
-      const cancelled = bookingsData.filter(b => b.status === 'cancelled').length
+      const completed = bookingsData.filter(b => b.status === BookingStatus.Completed).length
+      const pending = bookingsData.filter(b => b.status === BookingStatus.Pending).length
+      const cancelled = bookingsData.filter(b => b.status === BookingStatus.Cancelled).length
       const revenue = bookingsData
-        .filter(b => b.status === 'completed')
+        .filter(b => b.status === BookingStatus.Completed)
         .reduce((sum, b) => sum + Number(b.total_price), 0)
 
       // Find last booking date

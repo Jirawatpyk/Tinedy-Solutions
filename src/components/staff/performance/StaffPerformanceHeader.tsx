@@ -5,7 +5,8 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { ArrowLeft, Edit } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { useAuth } from '@/contexts/auth-context'
-import { formatRole, type UserRole } from '@/lib/role-utils'
+import { formatRole } from '@/lib/role-utils'
+import { UserRole } from '@/types/common'
 
 interface Staff {
   id: string
@@ -36,9 +37,9 @@ export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({
 
   // Check if current user can edit/delete this staff
   // Admin can edit all, Manager can edit staff only, Staff can edit self only
-  const canEdit = profile?.role === 'admin' ||
+  const canEdit = profile?.role === UserRole.Admin ||
     staff.id === user?.id ||
-    (profile?.role === 'manager' && staff.role === 'staff')
+    (profile?.role === UserRole.Manager && staff.role === UserRole.Staff)
 
   // Don't show delete for own profile
   const canDelete = user?.id !== staff.id

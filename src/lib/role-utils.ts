@@ -5,7 +5,7 @@
  * ใช้ตาม Best Practice เพื่อ Maintainability และ Consistency
  */
 
-export type UserRole = 'admin' | 'manager' | 'staff'
+import { UserRole } from '@/types/common'
 
 /**
  * แปลง role code เป็นชื่อที่แสดงผล (Display Name)
@@ -35,7 +35,7 @@ export function formatRole(role: string | null | undefined): string {
  * @returns true ถ้าเป็น admin
  */
 export function isAdmin(role: UserRole): boolean {
-  return role === 'admin'
+  return role === UserRole.Admin
 }
 
 /**
@@ -45,7 +45,7 @@ export function isAdmin(role: UserRole): boolean {
  * @returns true ถ้าเป็น admin หรือ manager
  */
 export function isManagerOrAbove(role: UserRole): boolean {
-  return role === 'admin' || role === 'manager'
+  return role === UserRole.Admin || role === UserRole.Manager
 }
 
 /**
@@ -59,6 +59,7 @@ export function getRolePriority(role: UserRole): number {
     admin: 1,
     manager: 2,
     staff: 3,
+    customer: 4,
   }
 
   return priorityMap[role] || 999

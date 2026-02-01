@@ -1,5 +1,7 @@
 import type { CustomerRecord, Booking } from '@/types'
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subMonths, subWeeks, subDays, subYears, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
+import { BookingStatus } from '@/types/booking'
+import { UserRole } from '@/types/common'
 
 // Type alias for analytics - accepts either full Booking or partial data
 export type BookingForAnalytics = Booking | {
@@ -136,9 +138,9 @@ export const calculateBookingMetrics = (bookings: BookingForAnalytics[]): Bookin
   const lastMonthEnd = endOfMonth(subMonths(now, 1))
 
   const total = bookings.length
-  const completed = bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
-  const pending = bookings.filter((b: BookingForAnalytics) => b.status === 'pending').length
-  const cancelled = bookings.filter((b: BookingForAnalytics) => b.status === 'cancelled').length
+  const completed = bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Completed).length
+  const pending = bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Pending).length
+  const cancelled = bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Cancelled).length
 
   const thisMonth = bookings.filter((b) =>
     isWithinInterval(new Date(b.booking_date), { start: thisMonthStart, end: thisMonthEnd })
@@ -646,7 +648,7 @@ export const calculateStaffMetrics = (
 export const getStaffPerformance = (staffMembers: StaffWithBookings[]): StaffPerformance[] => {
   return staffMembers.map((staff) => {
     const totalJobs = staff.bookings.length
-    const completedJobs = staff.bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
+    const completedJobs = staff.bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Completed).length
 
     // Calculate revenue from paid bookings (revenue already divided for team bookings)
     const paidBookings = staff.bookings.filter((b: BookingForAnalytics) => {
@@ -766,9 +768,9 @@ export const calculateTeamMetrics = (
 export const getTeamPerformance = (teamsWithBookings: TeamWithBookings[]): TeamPerformance[] => {
   return teamsWithBookings.map((team) => {
     const totalJobs = team.bookings.length
-    const completed = team.bookings.filter((b: BookingForAnalytics) => b.status === 'completed').length
-    const inProgress = team.bookings.filter((b: BookingForAnalytics) => b.status === 'in_progress').length
-    const pending = team.bookings.filter((b: BookingForAnalytics) => b.status === 'pending').length
+    const completed = team.bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Completed).length
+    const inProgress = team.bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.InProgress).length
+    const pending = team.bookings.filter((b: BookingForAnalytics) => b.status === BookingStatus.Pending).length
 
     // Calculate revenue from paid bookings only
     const paidBookings = team.bookings.filter((b: BookingForAnalytics) => {
@@ -814,7 +816,7 @@ export function filterFinancialDataForRole<T extends Record<string, unknown>>(
   sensitiveFields: (keyof T)[] = []
 ): Partial<T> {
   // Admin sees everything
-  if (role === 'admin') {
+  if (role === UserRole.Admin) {
     return data
   }
 

@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { isWithinMembershipPeriod, type MembershipPeriod } from '@/lib/review-utils'
 import type { StaffWithRating, StaffListItem } from '@/types/staff'
+import { UserRole } from '@/types/common'
 
 /**
  * Helper: Validate rating value
@@ -266,7 +267,7 @@ export async function fetchStaffList(role: 'staff' | 'all' = 'all'): Promise<Sta
     .select('id, full_name, email, role, avatar_url')
 
   // Filter by role
-  if (role === 'staff') {
+  if (role === UserRole.Staff) {
     query = query.eq('role', 'staff')
   } else {
     query = query.in('role', ['admin', 'manager', 'staff'])

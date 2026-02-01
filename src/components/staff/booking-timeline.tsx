@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
 import { getBookingStatusLabel } from '@/components/common/StatusBadge'
-import { BOOKING_STATUS_CARD_COLORS, type BookingStatus } from '@/constants/booking-status'
+import { BOOKING_STATUS_CARD_COLORS, type BookingStatus as BookingStatusType } from '@/constants/booking-status'
+import { BookingStatus } from '@/types/booking'
 
 const logger = createLogger('BookingTimeline')
 
@@ -115,15 +116,15 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
+      case BookingStatus.Completed:
         return <CheckCircle2 className="h-5 w-5 text-green-600" />
-      case 'confirmed':
+      case BookingStatus.Confirmed:
         return <CheckCircle2 className="h-5 w-5 text-blue-600" />
-      case 'in_progress':
+      case BookingStatus.InProgress:
         return <Play className="h-5 w-5 text-purple-600" />
-      case 'pending':
+      case BookingStatus.Pending:
         return <Clock className="h-5 w-5 text-yellow-600" />
-      case 'cancelled':
+      case BookingStatus.Cancelled:
         return <XCircle className="h-5 w-5 text-red-600" />
       default:
         return <AlertCircle className="h-5 w-5 text-gray-600" />
@@ -176,7 +177,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
               <div className="flex-1 pb-4">
                 <div className={cn(
                   "inline-block px-3 py-1.5 rounded-md text-sm font-medium border",
-                  BOOKING_STATUS_CARD_COLORS[item.new_status as BookingStatus] || 'bg-gray-50 border-gray-200'
+                  BOOKING_STATUS_CARD_COLORS[item.new_status as BookingStatusType] || 'bg-gray-50 border-gray-200'
                 )}>
                   {item.old_status ? (
                     <>

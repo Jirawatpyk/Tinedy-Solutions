@@ -16,6 +16,7 @@ import { StaffAvailabilityModal } from '@/components/booking/staff-availability-
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Types
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import type { BookingFormState } from '@/hooks/useBookingForm'
 import type { PackageSelectionData } from '@/components/service-packages'
@@ -382,7 +383,7 @@ export function AdminDashboard() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={actions.confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(actions.statusChangeConfirm.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(actions.statusChangeConfirm.newStatus) ? 'destructive' : 'default'}
           isLoading={actions.actionLoading.statusChange}
         />
       )}
