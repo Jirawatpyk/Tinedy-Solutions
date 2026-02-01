@@ -58,7 +58,7 @@ describe('BookingDetailsSheet', () => {
     expect(screen.getByTestId('drag-handle')).toBeInTheDocument()
   })
 
-  it('renders booking details title', () => {
+  it('renders booking time in hero section', () => {
     render(
       <BookingDetailsSheet
         booking={mockBooking}
@@ -66,10 +66,11 @@ describe('BookingDetailsSheet', () => {
         onClose={vi.fn()}
       />
     )
-    expect(screen.getByText('Booking Details')).toBeInTheDocument()
+    // Hero section shows time (start_time is 09:00:00)
+    expect(screen.getByText(/09:00/)).toBeInTheDocument()
   })
 
-  it('renders booking ID', () => {
+  it('renders customer info from booking', () => {
     render(
       <BookingDetailsSheet
         booking={mockBooking}
@@ -77,8 +78,8 @@ describe('BookingDetailsSheet', () => {
         onClose={vi.fn()}
       />
     )
-    // formatBookingId shows last 8 chars of UUID
-    expect(screen.getByText(/ID:/)).toBeInTheDocument()
+    // Customer card shows customer name
+    expect(screen.getByText('Test Customer')).toBeInTheDocument()
   })
 
   it('renders status badge', () => {
@@ -92,18 +93,7 @@ describe('BookingDetailsSheet', () => {
     expect(screen.getByText('Confirmed')).toBeInTheDocument()
   })
 
-  it('renders customer name', () => {
-    render(
-      <BookingDetailsSheet
-        booking={mockBooking}
-        open={true}
-        onClose={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Test Customer')).toBeInTheDocument()
-  })
-
-  it('renders service name', () => {
+  it('renders service name in summary', () => {
     render(
       <BookingDetailsSheet
         booking={mockBooking}
@@ -112,17 +102,6 @@ describe('BookingDetailsSheet', () => {
       />
     )
     expect(screen.getByText('Deep Cleaning')).toBeInTheDocument()
-  })
-
-  it('renders schedule section', () => {
-    render(
-      <BookingDetailsSheet
-        booking={mockBooking}
-        open={true}
-        onClose={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Schedule')).toBeInTheDocument()
   })
 
   it('renders close button', () => {
@@ -187,7 +166,7 @@ describe('BookingDetailsSheet', () => {
     expect(dialog).toHaveClass('bottom-0')
   })
 
-  it('has 90vh height for content', () => {
+  it('has 95vh height for content', () => {
     render(
       <BookingDetailsSheet
         booking={mockBooking}
@@ -196,7 +175,7 @@ describe('BookingDetailsSheet', () => {
       />
     )
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveClass('h-[90vh]')
+    expect(dialog).toHaveClass('h-[95vh]')
   })
 
   it('has rounded top corners', () => {

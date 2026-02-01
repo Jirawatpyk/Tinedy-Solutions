@@ -123,12 +123,13 @@ describe('MobileCalendar', () => {
       expect(screen.getByRole('button', { name: /go to next week/i })).toBeInTheDocument()
     })
 
-    it('should render swipe hint text', () => {
+    it('should render view mode toggle buttons', () => {
       // Arrange & Act
       render(<MobileCalendar {...defaultProps} />)
 
-      // Assert
-      expect(screen.getByText('Swipe to navigate')).toBeInTheDocument()
+      // Assert - swipe hint was removed in redesign, check for view toggles instead
+      expect(screen.getByRole('button', { name: /switch to week view/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /switch to month view/i })).toBeInTheDocument()
     })
   })
 
@@ -227,13 +228,13 @@ describe('MobileCalendar', () => {
       expect(nextButton).toBeInTheDocument()
     })
 
-    it('should show "Prev Week" and "Next Week" buttons in week view', () => {
+    it('should show navigation buttons with arrow icons in week view', () => {
       // Arrange & Act
       render(<MobileCalendar {...defaultProps} />)
 
-      // Assert
-      expect(screen.getByText('Prev Week')).toBeInTheDocument()
-      expect(screen.getByText('Next Week')).toBeInTheDocument()
+      // Assert - redesigned to use icon buttons instead of text buttons
+      expect(screen.getByRole('button', { name: /go to previous week/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /go to next week/i })).toBeInTheDocument()
     })
   })
 
@@ -274,7 +275,7 @@ describe('MobileCalendar', () => {
       expect(calledDate.getFullYear()).toBe(2025)
     })
 
-    it('should show "Prev" and "Next" buttons in month view', async () => {
+    it('should show navigation buttons with arrow icons in month view', async () => {
       // Arrange
       const user = userEvent.setup()
       render(<MobileCalendar {...defaultProps} />)
@@ -282,9 +283,9 @@ describe('MobileCalendar', () => {
       // Act
       await user.click(screen.getByRole('button', { name: /switch to month view/i }))
 
-      // Assert
-      expect(screen.getByText('Prev')).toBeInTheDocument()
-      expect(screen.getByText('Next')).toBeInTheDocument()
+      // Assert - redesigned to use icon buttons instead of text buttons
+      expect(screen.getByRole('button', { name: /go to previous month/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /go to next month/i })).toBeInTheDocument()
     })
   })
 
@@ -624,13 +625,13 @@ describe('MobileCalendar', () => {
       expect(dateButtons.length).toBeGreaterThan(0)
     })
 
-    it('should have aria-live region for navigation hint', () => {
+    it('should have proper view mode toggle group', () => {
       // Arrange & Act
       render(<MobileCalendar {...defaultProps} />)
 
-      // Assert
-      const hint = screen.getByText('Swipe to navigate')
-      expect(hint).toHaveAttribute('aria-live', 'polite')
+      // Assert - redesigned without swipe hint, checking view toggle group instead
+      const viewModeGroup = screen.getByRole('group', { name: /calendar view mode/i })
+      expect(viewModeGroup).toBeInTheDocument()
     })
   })
 
