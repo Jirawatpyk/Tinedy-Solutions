@@ -13,6 +13,7 @@ import {
   createMockProfile,
   type MockProfileRecord,
 } from '../data/staff'
+import { UserRole } from '@/types/common'
 
 // In-memory storage for test mutations
 let profilesStore = [...mockProfiles]
@@ -177,7 +178,7 @@ export const createProfileHandler = http.post('*/rest/v1/profiles', async ({ req
   // Auto-generate staff_number if not provided
   let staffNumber = body.staff_number
   if (!staffNumber) {
-    const rolePrefix = body.role === 'admin' ? 'ADM' : body.role === 'manager' ? 'MGR' : 'STF'
+    const rolePrefix = body.role === UserRole.Admin ? 'ADM' : body.role === UserRole.Manager ? 'MGR' : 'STF'
     const maxNumber = profilesStore
       .filter((p) => p.staff_number?.startsWith(rolePrefix))
       .map((p) => parseInt(p.staff_number?.substring(3) || '0'))

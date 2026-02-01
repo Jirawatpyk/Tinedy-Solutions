@@ -18,7 +18,7 @@ interface StatsChange {
   pendingChange: number
 }
 
-interface BookingStatusData {
+interface BookingStatusChartData {
   status: string
   count: number
   color: string
@@ -70,7 +70,7 @@ interface DailyRevenue {
 interface DashboardData {
   stats: Stats
   statsChange: StatsChange
-  bookingsByStatus: BookingStatusData[]
+  bookingsByStatus: BookingStatusChartData[]
   todayBookings: TodayBooking[]
   dailyRevenue: DailyRevenue[]
   loading: boolean
@@ -102,7 +102,7 @@ export function useDashboardData(): DashboardData {
     customersChange: 0,
     pendingChange: 0,
   })
-  const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatusData[]>([])
+  const [bookingsByStatus, setBookingsByStatus] = useState<BookingStatusChartData[]>([])
   const [todayBookings, setTodayBookings] = useState<TodayBooking[]>([])
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([])
   const [loading, setLoading] = useState(true)
@@ -205,7 +205,7 @@ export function useDashboardData(): DashboardData {
         statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1
       })
 
-      const statusData: BookingStatusData[] = Object.entries(statusCounts).map(([status, count]) => ({
+      const statusData: BookingStatusChartData[] = Object.entries(statusCounts).map(([status, count]) => ({
         status: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
         count,
         color: statusColors[status] || '#6b7280',

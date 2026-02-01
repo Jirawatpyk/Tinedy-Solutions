@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Camera, Upload, User } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { getOptimizedUrl } from '@/lib/image-utils'
+import { getInitials } from '@/lib/string-utils'
 
 interface ProfileAvatarProps {
   avatarUrl: string | null
@@ -58,14 +59,6 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
         fileInputRef.current.value = ''
       }
     }
-  }
-
-  const getInitials = (name: string) => {
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return name.slice(0, 2).toUpperCase()
   }
 
   const pixels = SIZE_PIXELS[size]
