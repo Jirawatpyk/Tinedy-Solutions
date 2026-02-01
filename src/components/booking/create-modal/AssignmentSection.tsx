@@ -190,5 +190,7 @@ const AssignmentSection = React.memo(function AssignmentSection({
   )
 })
 
+AssignmentSection.displayName = 'AssignmentSection'
+
 export { AssignmentSection }
 export type { AssignmentSectionProps, StaffMember, Team }

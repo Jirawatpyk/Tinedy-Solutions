@@ -108,5 +108,7 @@ const CustomerInfoSection = React.memo(function CustomerInfoSection({
   )
 })
 
+CustomerInfoSection.displayName = 'CustomerInfoSection'
+
 export { CustomerInfoSection }
 export type { CustomerInfoSectionProps }

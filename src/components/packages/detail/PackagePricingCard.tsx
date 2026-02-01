@@ -170,3 +170,5 @@ function PackagePricingCardComponent({ packageData }: PackagePricingCardProps) {
 }
 
 export const PackagePricingCard = memo(PackagePricingCardComponent)
+
+PackagePricingCard.displayName = 'PackagePricingCard'

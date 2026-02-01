@@ -94,4 +94,6 @@ const AddressSection = React.memo(function AddressSection({
   )
 })
 
+AddressSection.displayName = 'AddressSection'
+
 export default AddressSection

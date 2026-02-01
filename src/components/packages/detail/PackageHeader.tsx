@@ -179,3 +179,5 @@ const PackageHeaderComponent = function PackageHeader({
 }
 
 export const PackageHeader = React.memo(PackageHeaderComponent)
+
+PackageHeader.displayName = 'PackageHeader'

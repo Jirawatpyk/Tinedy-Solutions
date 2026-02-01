@@ -237,5 +237,7 @@ const BookingScheduleSection = React.memo(function BookingScheduleSection({
   )
 })
 
+BookingScheduleSection.displayName = 'BookingScheduleSection'
+
 export { BookingScheduleSection }
 export type { BookingScheduleSectionProps }

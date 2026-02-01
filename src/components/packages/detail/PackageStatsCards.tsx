@@ -111,5 +111,7 @@ const PackageStatsCards = React.memo(function PackageStatsCards({
   )
 })
 
+PackageStatsCards.displayName = 'PackageStatsCards'
+
 export { PackageStatsCards }
 export type { PackageStatsCardsProps }

@@ -77,5 +77,7 @@ const PackageInfoCard = React.memo(function PackageInfoCard({
   )
 })
 
+PackageInfoCard.displayName = 'PackageInfoCard'
+
 export { PackageInfoCard }
 export type { PackageInfoCardProps }

@@ -179,4 +179,7 @@ function PackageFormV1({
  */
 export const PackageFormV1Memoized = React.memo(PackageFormV1)
 
-export default PackageFormV1
+PackageFormV1Memoized.displayName = 'PackageFormV1'
+
+// Export memoized version as default for consistency with other components
+export default PackageFormV1Memoized

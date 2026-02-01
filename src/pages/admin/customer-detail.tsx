@@ -270,7 +270,7 @@ export function AdminCustomerDetail() {
           dispatch({ type: 'SET_SELECTED_BOOKING_ID', payload: null })
           refetchBookings()
         }}
-        onEditBooking={(booking) => handleEditBooking(booking as any)}
+        onEditBooking={(booking) => handleEditBooking(booking as Booking)}
         onArchiveBooking={archiveBooking}
         onDeleteBooking={deleteBookingById}
         onStatusChange={handleStatusChange}

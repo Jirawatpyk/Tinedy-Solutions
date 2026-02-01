@@ -406,3 +406,5 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
 }
 
 export const BookingModalsContainer = memo(BookingModalsContainerComponent)
+
+BookingModalsContainer.displayName = 'BookingModalsContainer'

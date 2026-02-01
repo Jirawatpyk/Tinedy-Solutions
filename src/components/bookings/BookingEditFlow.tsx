@@ -245,5 +245,7 @@ function BookingEditFlowComponent({
 // Export memoized component for performance optimization
 export const BookingEditFlow = memo(BookingEditFlowComponent)
 
+BookingEditFlow.displayName = 'BookingEditFlow'
+
 // Also export for named import
 export default BookingEditFlow
