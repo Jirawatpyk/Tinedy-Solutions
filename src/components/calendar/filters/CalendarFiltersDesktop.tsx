@@ -28,7 +28,7 @@ import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/common'
-import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
+import type { UseCalendarFiltersReturn } from '@/hooks/use-calendar-filters'
 
 interface CalendarFiltersDesktopProps {
   /** Filter state and actions from useCalendarFilters hook */

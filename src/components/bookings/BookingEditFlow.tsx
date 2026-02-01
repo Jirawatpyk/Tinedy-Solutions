@@ -12,9 +12,9 @@ import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import type { Booking } from '@/types/booking'
 import type { ServicePackage } from '@/types'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
-import type { UseBookingFormReturn } from '@/hooks/useBookingForm'
-import { toBookingForm } from '@/hooks/useBookingForm'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
+import type { UseBookingFormReturn } from '@/hooks/use-booking-form'
+import { toBookingForm } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
 
 /**

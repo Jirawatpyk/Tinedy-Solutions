@@ -10,7 +10,6 @@ import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
-import { BookingStatus } from '@/types/booking'
 
 interface BookingCardProps {
   booking: StaffBooking

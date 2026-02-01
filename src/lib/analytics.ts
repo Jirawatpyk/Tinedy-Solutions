@@ -2,8 +2,6 @@ import type { CustomerRecord, Booking } from '@/types'
 import { BookingStatus } from '@/types/booking'
 import { UserRole } from '@/types/common'
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subMonths, subWeeks, subDays, subYears, isWithinInterval, format, eachDayOfInterval } from 'date-fns'
-import { BookingStatus } from '@/types/booking'
-import { UserRole } from '@/types/common'
 
 // Type alias for analytics - accepts either full Booking or partial data
 export type BookingForAnalytics = Booking | {

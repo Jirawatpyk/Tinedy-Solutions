@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { PackageSelectionData } from '@/components/service-packages'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 import type { RecurringPattern } from '@/types/recurring-booking'
 import { useBookingCreate } from '@/hooks/use-booking-create'
 

@@ -21,7 +21,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { formatTime } from '@/lib/booking-utils'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/components/common/StatusBadge'
 import { SwipeableCard } from './swipeable-card'
-import { BookingStatus } from '@/types/booking'
 
 interface SimplifiedBookingCardProps {
   booking: StaffBooking

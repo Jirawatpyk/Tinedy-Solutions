@@ -14,7 +14,7 @@ import { RecurringEditDialog } from '@/components/booking/RecurringEditDialog'
 import { BookingConflictDialog } from '@/components/booking/BookingConflictDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import type { RecurringEditScope } from '@/types/recurring-booking'
-import type { BookingConflict } from '@/hooks/useConflictDetection'
+import type { BookingConflict } from '@/hooks/use-conflict-detection'
 
 /**
  * Booking with recurring fields required for RecurringEditDialog

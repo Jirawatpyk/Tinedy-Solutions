@@ -26,7 +26,6 @@ import { UserRole } from '@/types/common'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { UserRole } from '@/types/common'
 import {
   StaffUpdateSchema,
   StaffUpdateWithSkillsSchema,

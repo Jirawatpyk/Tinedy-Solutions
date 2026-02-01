@@ -11,7 +11,6 @@ import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { formatBookingId } from '@/lib/utils'
 import { formatRole } from '@/lib/role-utils'
-import { UserRole } from '@/types/common'
 import {
   CommandDialog,
   CommandEmpty,

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { usePackageDetail } from '@/hooks/use-package-detail'
 
 // UI Components

@@ -10,8 +10,8 @@
 import { memo, useCallback } from 'react'
 import { BookingCreateModal } from '@/components/booking/BookingCreateModal'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
-import type { BookingForm } from '@/hooks/useBookingForm'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { BookingForm } from '@/hooks/use-booking-form'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { RecurringPattern } from '@/types/recurring-booking'
 
