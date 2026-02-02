@@ -10,6 +10,7 @@ import { useDashboardStats, useDashboardActions, useBookingModal } from '@/hooks
 
 // Components
 import { DashboardStats, QuickInsights, DashboardCharts, TodayAppointmentsList } from '@/components/dashboard/admin'
+import { PageHeader } from '@/components/common/PageHeader'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
@@ -168,13 +169,10 @@ export function AdminDashboard() {
   if (dashboardData.error) {
     return (
       <div className="space-y-6">
-        {/* Page Header */}
-        <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome back! Here's what's happening today.
-          </p>
-        </div>
+        <PageHeader
+          title="Dashboard"
+          subtitle="Welcome back! Here's what's happening today."
+        />
 
         {/* Error Card */}
         <div className="rounded-lg border border-red-200 bg-red-50 p-6">
@@ -206,13 +204,10 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-tinedy-dark">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's what's happening today.
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Welcome back! Here's what's happening today."
+      />
 
       {/* Stats Cards */}
       <DashboardStats

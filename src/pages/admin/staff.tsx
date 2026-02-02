@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -44,6 +43,7 @@ import {
   type StaffCreateFormData,
 } from '@/schemas'
 import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import { PageHeader } from '@/components/common/PageHeader'
 import type { StaffWithRating } from '@/types/staff'
 
 export function AdminStaff() {
@@ -279,16 +279,16 @@ export function AdminStaff() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage your team members
-          </p>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Staff
-          </Button>
-        </div>
+        <PageHeader
+          title="Staff"
+          subtitle="Manage your team members"
+          actions={
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Staff
+            </Button>
+          }
+        />
 
         {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -345,22 +345,24 @@ export function AdminStaff() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage your team members
-        </p>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Staff
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <PageHeader
+        title="Staff"
+        subtitle="Manage your team members"
+        actions={
+          <Button
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Staff
+          </Button>
+        }
+      />
+
+      {/* Create Staff Dialog - Using controlled open/onOpenChange pattern instead of DialogTrigger
+          to allow Button to be placed in PageHeader actions slot while Dialog renders as sibling */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Add New Staff Member</DialogTitle>
               <DialogDescription>Create a new staff account</DialogDescription>
@@ -540,9 +542,8 @@ export function AdminStaff() {
                   </Button>
                 </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

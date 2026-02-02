@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { AdminOnly } from '@/components/auth/permission-guard'
+import { PageHeader } from '@/components/common/PageHeader'
 import { Plus } from 'lucide-react'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
 import { BookingDetailModal } from './booking-detail-modal'
@@ -68,19 +69,16 @@ export function AdminBookings() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">Manage all service bookings</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-40" />
-            </div>
-            <Skeleton className="h-10 w-36" />
-          </div>
-        </div>
+        <PageHeader
+          title="Bookings"
+          subtitle="Manage all service bookings"
+          actions={
+            <>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-36" />
+            </>
+          }
+        />
 
         {/* Filters skeleton */}
         <Card>
@@ -186,58 +184,58 @@ export function AdminBookings() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <div>
-          <p className="text-xs sm:text-sm text-muted-foreground">Manage all service bookings</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <AdminOnly>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="show-archived-bookings"
-                checked={state.showArchived}
-                onCheckedChange={(checked) => dispatch({ type: 'SET_SHOW_ARCHIVED', payload: checked as boolean })}
-              />
-              <label
-                htmlFor="show-archived-bookings"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Show archived
-              </label>
-            </div>
-          </AdminOnly>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
-        </div>
+      <PageHeader
+        title="Bookings"
+        subtitle="Manage all service bookings"
+        actions={
+          <>
+            <AdminOnly>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-archived-bookings"
+                  checked={state.showArchived}
+                  onCheckedChange={(checked) => dispatch({ type: 'SET_SHOW_ARCHIVED', payload: checked as boolean })}
+                />
+                <label
+                  htmlFor="show-archived-bookings"
+                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Show archived
+                </label>
+              </div>
+            </AdminOnly>
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Booking
+            </Button>
+          </>
+        }
+      />
 
-        {/* Create Booking Flow */}
-        <BookingCreateFlow
-          isDialogOpen={state.isDialogOpen}
-          onCloseDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: false })}
-          onSuccess={refresh}
-          servicePackages={servicePackages}
-          staffList={staffList}
-          teams={teams}
-          createForm={createForm}
-          createAssignmentType={state.createAssignmentType}
-          setCreateAssignmentType={(t) => dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: t })}
-          createPackageSelection={state.createPackageSelection}
-          setCreatePackageSelection={(s) => dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: s })}
-          createRecurringDates={state.createRecurringDates}
-          setCreateRecurringDates={setCreateRecurringDates}
-          createRecurringPattern={state.createRecurringPattern}
-          setCreateRecurringPattern={setCreateRecurringPattern}
-          isAvailabilityModalOpen={state.isAvailabilityModalOpen}
-          onCloseAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: false })}
-          onOpenAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: true })}
-          onReopenDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}
-          calculateEndTime={calculateEndTime}
-          toast={toast}
-        />
-      </div>
+      {/* Create Booking Flow */}
+      <BookingCreateFlow
+        isDialogOpen={state.isDialogOpen}
+        onCloseDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: false })}
+        onSuccess={refresh}
+        servicePackages={servicePackages}
+        staffList={staffList}
+        teams={teams}
+        createForm={createForm}
+        createAssignmentType={state.createAssignmentType}
+        setCreateAssignmentType={(t) => dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: t })}
+        createPackageSelection={state.createPackageSelection}
+        setCreatePackageSelection={(s) => dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: s })}
+        createRecurringDates={state.createRecurringDates}
+        setCreateRecurringDates={setCreateRecurringDates}
+        createRecurringPattern={state.createRecurringPattern}
+        setCreateRecurringPattern={setCreateRecurringPattern}
+        isAvailabilityModalOpen={state.isAvailabilityModalOpen}
+        onCloseAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: false })}
+        onOpenAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: true })}
+        onReopenDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}
+        calculateEndTime={calculateEndTime}
+        toast={toast}
+      />
 
       {/* Filters */}
       <BookingFiltersPanel
