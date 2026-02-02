@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
@@ -575,15 +575,15 @@ export function AdminTeams() {
           <>
             {/* Show archived toggle - Admin only */}
             <AdminOnly>
-              <div className="flex items-center space-x-2">
-                <Checkbox
+              <div className="flex items-center gap-2">
+                <Switch
                   id="show-archived"
                   checked={showArchived}
-                  onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+                  onCheckedChange={setShowArchived}
                 />
                 <label
                   htmlFor="show-archived"
-                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>

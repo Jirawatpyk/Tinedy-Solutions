@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { getLoadErrorMessage } from '@/lib/error-messages'
 import { useToast } from '@/hooks/use-toast'
@@ -223,15 +223,15 @@ export function AdminCustomers() {
         actions={
           <>
             <AdminOnly>
-              <div className="flex items-center space-x-2">
-                <Checkbox
+              <div className="flex items-center gap-2">
+                <Switch
                   id="show-archived-customers"
                   checked={showArchived}
-                  onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+                  onCheckedChange={setShowArchived}
                 />
                 <label
                   htmlFor="show-archived-customers"
-                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>

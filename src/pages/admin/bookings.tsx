@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Plus } from 'lucide-react'
@@ -190,15 +190,15 @@ export function AdminBookings() {
         actions={
           <>
             <AdminOnly>
-              <div className="flex items-center space-x-2">
-                <Checkbox
+              <div className="flex items-center gap-2">
+                <Switch
                   id="show-archived-bookings"
                   checked={state.showArchived}
-                  onCheckedChange={(checked) => dispatch({ type: 'SET_SHOW_ARCHIVED', payload: checked as boolean })}
+                  onCheckedChange={(checked) => dispatch({ type: 'SET_SHOW_ARCHIVED', payload: checked })}
                 />
                 <label
                   htmlFor="show-archived-bookings"
-                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>

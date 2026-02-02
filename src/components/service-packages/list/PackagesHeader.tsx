@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { PermissionGuard } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 
@@ -27,14 +27,14 @@ function PackagesHeaderComponent({
           {/* Show Archived - Admin only */}
           <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
             <div className="flex items-center gap-2">
-              <Checkbox
+              <Switch
                 id="showArchived"
                 checked={showArchived}
-                onCheckedChange={(checked) => onShowArchivedChange(checked === true)}
+                onCheckedChange={onShowArchivedChange}
               />
               <label
                 htmlFor="showArchived"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="text-sm font-medium cursor-pointer"
               >
                 Show archived
               </label>
