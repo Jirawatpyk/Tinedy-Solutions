@@ -1,10 +1,11 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Edit } from 'lucide-react'
+import { Edit } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { PageHeader } from '@/components/common/PageHeader'
 import { useCustomerDetail } from '@/hooks/use-customer-detail'
 import { useToast } from '@/hooks/use-toast'
 import type { Booking } from '@/types/booking'
@@ -92,56 +93,49 @@ export function AdminCustomerDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <SimpleTooltip content="Back">
-            <Link to={`${basePath}/customers`}>
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
+      <PageHeader
+        title={customer.full_name}
+        subtitle="View and manage customer details"
+        backHref={`${basePath}/customers`}
+        actions={
+          <>
+            <SimpleTooltip content="Edit">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'edit' })}
+                className="h-8 w-8 sm:hidden"
+              >
+                <Edit className="h-4 w-4" />
               </Button>
-            </Link>
-          </SimpleTooltip>
-          <div>
-            <p className="text-sm text-muted-foreground">View and manage customer details</p>
-          </div>
-        </div>
-        <div className="flex gap-1 sm:gap-2">
-          <SimpleTooltip content="Edit">
+            </SimpleTooltip>
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'edit' })}
-              className="h-8 w-8 sm:hidden"
+              className="hidden sm:flex h-9"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
-          </SimpleTooltip>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'edit' })}
-            className="hidden sm:flex h-9"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
 
-          <PermissionAwareDeleteButton
-            resource="customers"
-            itemName={customer.full_name}
-            onDelete={deleteCustomer}
-            onCancel={archiveCustomer}
-            cancelText="Archive"
-            buttonVariant="outline"
-            responsive
-            warningMessage={
-              stats?.total_bookings && stats.total_bookings > 0
-                ? `This customer has ${stats.total_bookings} booking(s) that will also be deleted.`
-                : undefined
-            }
-          />
-        </div>
-      </div>
+            <PermissionAwareDeleteButton
+              resource="customers"
+              itemName={customer.full_name}
+              onDelete={deleteCustomer}
+              onCancel={archiveCustomer}
+              cancelText="Archive"
+              buttonVariant="outline"
+              responsive
+              warningMessage={
+                stats?.total_bookings && stats.total_bookings > 0
+                  ? `This customer has ${stats.total_bookings} booking(s) that will also be deleted.`
+                  : undefined
+              }
+            />
+          </>
+        }
+      />
 
       {/* Customer Profile Header */}
       <CustomerProfileHeader

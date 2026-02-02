@@ -13,11 +13,13 @@
  */
 
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { PermissionGuard } from '@/components/auth/permission-guard'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ArrowLeft, Edit, CheckCircle, XCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { ServicePackageV2WithTiers } from '@/types'
 
 // ============================================================================
@@ -33,8 +35,8 @@ interface PackageHeaderProps {
   stats: { total_bookings: number }
   /** Whether toggle action is in progress */
   toggling: boolean
-  /** Callback when back button is clicked */
-  onBack: () => void
+  /** Link to go back to (defaults to /admin/packages) */
+  backHref?: string
   /** Callback when toggle active button is clicked */
   onToggleActive: () => void
   /** Callback when edit button is clicked */
@@ -59,7 +61,7 @@ interface PackageHeaderProps {
  *   packageSource="v2"
  *   stats={{ total_bookings: 5 }}
  *   toggling={false}
- *   onBack={() => navigate(-1)}
+ *   backHref="/admin/packages"
  *   onToggleActive={handleToggleActive}
  *   onEdit={() => setIsEditDialogOpen(true)}
  *   onDelete={handleDelete}
@@ -72,37 +74,33 @@ const PackageHeaderComponent = function PackageHeader({
   packageSource: _packageSource,
   stats,
   toggling,
-  onBack,
+  backHref = '/admin/packages',
   onToggleActive,
   onEdit,
   onDelete,
   onArchive,
 }: PackageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-        <SimpleTooltip content="Back">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8 sm:h-10 sm:w-10"
-            aria-label="Go back to packages list"
-          >
-            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
-        </SimpleTooltip>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center gap-4 min-w-0">
+        <Link
+          to={backHref}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "flex-shrink-0")}
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-tinedy-dark truncate">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-tinedy-dark truncate">
             {packageData.name}
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground truncate">Package Details</p>
+          <p className="text-muted-foreground mt-1 line-clamp-2">Package Details</p>
         </div>
       </div>
 
       {/* Action Buttons - Based on permissions.ts */}
       <PermissionGuard requires={{ mode: 'action', action: 'update', resource: 'service_packages' }}>
-        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Toggle Active - Mobile: icon with tooltip, Desktop: full button */}
           <SimpleTooltip content={packageData.is_active ? 'Deactivate' : 'Activate'}>
             <Button

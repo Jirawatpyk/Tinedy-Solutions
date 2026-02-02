@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { format } from 'date-fns'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminCalendar() {
   // ========== Calendar Data Hook (replaces 20+ useState calls) ==========
@@ -203,11 +204,10 @@ export function AdminCalendar() {
     return (
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Calendar"
+          subtitle="View and manage your bookings"
+        />
 
         {/* Error Card */}
         <div className="rounded-lg border border-red-200 bg-red-50 p-6">
@@ -241,11 +241,10 @@ export function AdminCalendar() {
     return (
       <div className="space-y-6">
         {/* Page Header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Calendar"
+          subtitle="View and manage your bookings"
+        />
 
         {/* Filters skeleton */}
         <Card>
@@ -313,7 +312,7 @@ export function AdminCalendar() {
       <div className="block md:hidden h-[calc(100vh-120px)]">
         {/* Mobile Header with Title and Filter */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-muted-foreground">View and manage your bookings</p>
+          <h1 className="text-lg font-display font-bold text-tinedy-dark">Calendar</h1>
           <CalendarFilters
             filterControls={calendar.filterControls}
             onPresetDateChange={calendar.dateControls.handlePresetDateChange}
@@ -339,11 +338,10 @@ export function AdminCalendar() {
       {/* Desktop View - ซ่อนบน mobile */}
       <div className="hidden md:block space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your bookings</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Calendar"
+          subtitle="View and manage your bookings"
+        />
 
         {/* New Filter System (Sprint 2 - UX Improvements) */}
         <CalendarFilters

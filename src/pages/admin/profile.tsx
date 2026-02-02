@@ -21,6 +21,7 @@ import { Lock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { formatRole } from '@/lib/role-utils'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export default function AdminProfile() {
   const {
@@ -90,16 +91,13 @@ export default function AdminProfile() {
 
   if (loading || !adminProfile) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-4">
-            <Skeleton className="h-8 w-48" />
-          </div>
-        </div>
-        <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-96" />
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="My Profile"
+          subtitle="Manage your personal information"
+        />
+        <Skeleton className="h-64" />
+        <Skeleton className="h-96" />
       </div>
     )
   }
@@ -115,17 +113,12 @@ export default function AdminProfile() {
   } : undefined
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="px-4 sm:px-6 py-6">
-          <p className="text-sm text-muted-foreground">
-            Manage your personal information
-          </p>
-        </div>
-      </div>
-
-      <div className="p-4 sm:p-6 space-y-6 max-w-full mx-auto">
+      <PageHeader
+        title="My Profile"
+        subtitle="Manage your personal information"
+      />
         {/* Profile Update Form */}
         {adminProfile && (
           <ProfileUpdateForm
@@ -176,7 +169,6 @@ export default function AdminProfile() {
             </Button>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }

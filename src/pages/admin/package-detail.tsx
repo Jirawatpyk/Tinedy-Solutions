@@ -101,7 +101,7 @@ export default function AdminPackageDetail() {
         packageSource={packageSource}
         stats={{ total_bookings: stats.total_bookings }}
         toggling={toggling}
-        onBack={() => window.history.back()}
+        backHref="/admin/packages"
         onToggleActive={handleToggleActive}
         onEdit={() => dispatch({ type: 'OPEN_EDIT_MODAL' })}
         onDelete={handleDelete}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
+import { PageHeader } from '@/components/common/PageHeader'
 
 /**
  * Props for PackagesLoadingSkeleton component
@@ -40,17 +41,18 @@ function PackagesLoadingSkeletonComponent({
   return (
     <div className="space-y-6">
       {/* Page header - Always show */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage cleaning and training service packages
-        </p>
-        {canCreate && (
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Package
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Service Packages"
+        subtitle="Manage cleaning and training service packages"
+        actions={
+          canCreate ? (
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Package
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Stats cards skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
