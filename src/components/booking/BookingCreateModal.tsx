@@ -165,18 +165,20 @@ export function BookingCreateModal({
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Schedule Section - Package, Recurring, Date/Time, Price */}
-            <BookingScheduleSection
-              form={form}
-              servicePackages={servicePackages}
-              packageSelection={packageSelection}
-              setPackageSelection={setPackageSelection}
-              recurringDates={recurringDates}
-              setRecurringDates={setRecurringDates}
-              recurringPattern={recurringPattern}
-              setRecurringPattern={setRecurringPattern}
-              calculateEndTime={calculateEndTime}
-            />
+            {/* Schedule Section - Package, Recurring, Date/Time, Price - Full width */}
+            <div className="sm:col-span-2">
+              <BookingScheduleSection
+                form={form}
+                servicePackages={servicePackages}
+                packageSelection={packageSelection}
+                setPackageSelection={setPackageSelection}
+                recurringDates={recurringDates}
+                setRecurringDates={setRecurringDates}
+                recurringPattern={recurringPattern}
+                setRecurringPattern={setRecurringPattern}
+                calculateEndTime={calculateEndTime}
+              />
+            </div>
 
             {/* Assignment Section - Staff/Team Selection, Check Availability */}
             <AssignmentSection
