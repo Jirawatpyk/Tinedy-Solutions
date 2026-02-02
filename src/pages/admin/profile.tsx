@@ -160,13 +160,14 @@ export default function AdminProfile() {
                 />
               </div>
             </div>
-            <Button
-              onClick={handleChangePassword}
-              disabled={!newPassword || !confirmPassword || changingPassword}
-              className="mt-4"
-            >
-              {changingPassword ? 'Changing Password...' : 'Change Password'}
-            </Button>
+            <div className="flex justify-end pt-4 border-t mt-4">
+              <Button
+                onClick={handleChangePassword}
+                disabled={!newPassword || !confirmPassword || changingPassword}
+              >
+                {changingPassword ? 'Changing Password...' : 'Change Password'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
     </div>
