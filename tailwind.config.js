@@ -92,5 +92,20 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addComponents, theme }) {
+      addComponents({
+        '.card-interactive': {
+          cursor: 'pointer',
+          transitionProperty: 'box-shadow, border-color',
+          transitionDuration: '200ms',
+          '&:hover': {
+            boxShadow: theme('boxShadow.md'),
+            borderColor: `${theme('colors.tinedy-blue')}4D`, // 30% opacity = 4D in hex
+          }
+        }
+      })
+    }
+  ],
 }
