@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -641,20 +642,17 @@ export function AdminTeams() {
       {/* Teams Grid */}
       {filteredTeams.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? 'No teams found' : 'No teams yet'}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery ? 'Try a different search term' : 'Create your first team to get started'}
-            </p>
-            {!searchQuery && (
-              <Button onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Team
-              </Button>
-            )}
+          <CardContent>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? 'No teams found' : 'No teams yet'}
+              description={searchQuery ? 'Try a different search term' : 'Create your first team to get started'}
+              action={!searchQuery ? {
+                label: 'New Team',
+                onClick: openCreateDialog,
+                icon: Plus
+              } : undefined}
+            />
           </CardContent>
         </Card>
       ) : (

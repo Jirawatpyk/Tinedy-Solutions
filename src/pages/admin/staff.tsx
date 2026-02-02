@@ -24,7 +24,8 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
-import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
+import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users, UserPlus } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { TagInput } from '@/components/ui/tag-input'
 import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { formatDate } from '@/lib/utils'
@@ -611,10 +612,17 @@ export function AdminStaff() {
       {/* Staff list */}
       {filteredStaff.length === 0 ? (
         <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">
-              No staff members found
-            </p>
+          <CardContent>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? 'No staff found' : 'No staff members yet'}
+              description={searchQuery ? 'Try a different search term' : 'Add your first staff member to get started'}
+              action={!searchQuery ? {
+                label: 'Add Staff',
+                onClick: () => { resetForm(); setIsDialogOpen(true); },
+                icon: UserPlus
+              } : undefined}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -623,7 +631,7 @@ export function AdminStaff() {
             {filteredStaff.slice(0, displayCount).map((member) => (
               <Card
                 key={member.id}
-                className="hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer"
+                className="card-interactive"
                 onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
                 <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">

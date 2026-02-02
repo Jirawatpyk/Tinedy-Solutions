@@ -386,7 +386,7 @@ export function AdminCustomers() {
             return (
               <Card
                 key={customer.id}
-                className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}
+                className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}
                 onClick={() => navigate(`${basePath}/customers/${customer.id}`)}
               >
                 <CardHeader className="pb-3 px-4 sm:px-6">

@@ -144,7 +144,7 @@ export function PackageCard({
 
   return (
     <Card
-      className={`relative hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${!isActive ? 'opacity-60' : ''} ${isArchived ? 'opacity-50 border-dashed border-orange-300' : ''}`}
+      className={`relative card-interactive ${!isActive ? 'opacity-60' : ''} ${isArchived ? 'opacity-50 border-dashed border-orange-300' : ''}`}
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">

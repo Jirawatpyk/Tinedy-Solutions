@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -16,7 +17,7 @@ export interface PageHeaderProps {
   className?: string
 }
 
-export function PageHeader({ title, subtitle, backHref, actions, className }: PageHeaderProps) {
+function PageHeaderComponent({ title, subtitle, backHref, actions, className }: PageHeaderProps) {
   return (
     <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4", className)}>
       <div className="flex items-center gap-4 min-w-0">
@@ -38,3 +39,7 @@ export function PageHeader({ title, subtitle, backHref, actions, className }: Pa
     </div>
   )
 }
+
+export const PageHeader = memo(PageHeaderComponent)
+
+PageHeader.displayName = 'PageHeader'

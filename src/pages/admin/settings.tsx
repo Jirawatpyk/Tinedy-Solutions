@@ -16,6 +16,7 @@ import { useSettings } from '@/hooks/use-settings'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm'
 import { PaymentSettingsForm } from '@/components/settings/PaymentSettingsForm'
+import { PageHeader } from '@/components/common/PageHeader'
 import { AlertCircle, Building2, CreditCard } from 'lucide-react'
 
 export default function AdminSettings() {
@@ -25,19 +26,13 @@ export default function AdminSettings() {
   // Show loading skeleton while settings load
   if (loading || !settings) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Page Header */}
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-6">
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Manage your business information and payment settings
-            </p>
-          </div>
-        </div>
-        <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your business information and payment settings"
+        />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-96 w-full" />
       </div>
     )
   }
@@ -45,23 +40,17 @@ export default function AdminSettings() {
   // Show error if settings fail to load
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Page Header */}
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-6">
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Manage your business information and payment settings
-            </p>
-          </div>
-        </div>
-        <div className="p-4 sm:p-6">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Error loading settings: {error}. Please try refreshing the page.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your business information and payment settings"
+        />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Error loading settings: {error}. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
@@ -89,47 +78,41 @@ export default function AdminSettings() {
       fallback="alert"
       fallbackMessage="You do not have permission to access system settings. Only Super Admin can manage settings."
     >
-      <div className="min-h-screen bg-gray-50">
-        {/* Page Header */}
-        <div className="bg-white border-b">
-          <div className="px-4 sm:px-6 py-6">
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Manage your business information and payment settings
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your business information and payment settings"
+        />
 
         {/* Settings Content with Tabs */}
-        <div className="p-4 sm:p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-2 mb-6">
-              <TabsTrigger value="general" className="flex items-center justify-center gap-2">
-                <Building2 className="h-4 w-4" />
-                General
-              </TabsTrigger>
-              <TabsTrigger value="payment" className="flex items-center justify-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Payment
-              </TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-2 mb-6">
+            <TabsTrigger value="general" className="flex items-center justify-center gap-2">
+              <Building2 className="h-4 w-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="flex items-center justify-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Payment
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="general">
-              <GeneralSettingsForm
-                initialData={generalInitialData}
-                settingsId={settings.id}
-                onSuccess={refresh}
-              />
-            </TabsContent>
+          <TabsContent value="general">
+            <GeneralSettingsForm
+              initialData={generalInitialData}
+              settingsId={settings.id}
+              onSuccess={refresh}
+            />
+          </TabsContent>
 
-            <TabsContent value="payment">
-              <PaymentSettingsForm
-                initialData={paymentInitialData}
-                settingsId={settings.id}
-                onSuccess={refresh}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="payment">
+            <PaymentSettingsForm
+              initialData={paymentInitialData}
+              settingsId={settings.id}
+              onSuccess={refresh}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminOnly>
   )
