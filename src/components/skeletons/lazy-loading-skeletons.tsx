@@ -17,27 +17,27 @@ export function PaymentMethodSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <Skeleton className="h-6 w-32" />
+        <Skeleton shimmer={false} className="h-6 w-32" />
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Amount Display */}
         <div className="text-center py-4 bg-gray-50 rounded-lg">
-          <Skeleton className="h-4 w-24 mx-auto mb-2" />
-          <Skeleton className="h-8 w-32 mx-auto" />
+          <Skeleton shimmer={false} className="h-4 w-24 mx-auto mb-2" />
+          <Skeleton shimmer={false} className="h-8 w-32 mx-auto" />
         </div>
 
         {/* QR Code / Upload Area */}
         <div className="flex justify-center">
-          <Skeleton className="h-[300px] w-[300px] rounded-lg" />
+          <Skeleton shimmer={false} className="h-[300px] w-[300px] rounded-lg" />
         </div>
 
         {/* Instructions */}
         <div className="space-y-2">
-          <Skeleton className="h-4 w-32" />
+          <Skeleton shimmer={false} className="h-4 w-32" />
           <div className="space-y-1">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-3/4" />
+            <Skeleton shimmer={false} className="h-3 w-full" />
+            <Skeleton shimmer={false} className="h-3 w-full" />
+            <Skeleton shimmer={false} className="h-3 w-3/4" />
           </div>
         </div>
       </CardContent>
@@ -56,22 +56,22 @@ export function ModalSkeleton() {
       <div className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-full max-w-2xl">
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-64 mt-2" />
+            <Skeleton shimmer={false} className="h-6 w-48" />
+            <Skeleton shimmer={false} className="h-4 w-64 mt-2" />
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Form fields */}
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton shimmer={false} className="h-4 w-24" />
+                <Skeleton shimmer={false} className="h-10 w-full" />
               </div>
             ))}
 
             {/* Buttons */}
             <div className="flex gap-2 justify-end pt-4">
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-24" />
+              <Skeleton shimmer={false} className="h-10 w-24" />
+              <Skeleton shimmer={false} className="h-10 w-24" />
             </div>
           </CardContent>
         </Card>
@@ -89,18 +89,18 @@ export function AppointmentsSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <Skeleton className="h-6 w-48" />
+        <Skeleton shimmer={false} className="h-6 w-48" />
       </CardHeader>
       <CardContent className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="p-4 border rounded-lg space-y-3">
             <div className="flex items-start justify-between">
               <div className="space-y-2 flex-1">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-56" />
-                <Skeleton className="h-4 w-32" />
+                <Skeleton shimmer={false} className="h-5 w-40" />
+                <Skeleton shimmer={false} className="h-4 w-56" />
+                <Skeleton shimmer={false} className="h-4 w-32" />
               </div>
-              <Skeleton className="h-6 w-20" />
+              <Skeleton shimmer={false} className="h-6 w-20" />
             </div>
           </div>
         ))}
@@ -119,43 +119,43 @@ export function BookingFormSkeleton() {
     <div className="space-y-6">
       {/* Customer Section */}
       <div className="space-y-4">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-10 w-full" />
+        <Skeleton shimmer={false} className="h-5 w-32" />
+        <Skeleton shimmer={false} className="h-10 w-full" />
       </div>
 
       {/* Service Package Section */}
       <div className="space-y-4">
-        <Skeleton className="h-5 w-32" />
+        <Skeleton shimmer={false} className="h-5 w-32" />
         <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton shimmer={false} className="h-24 w-full rounded-lg" />
+          <Skeleton shimmer={false} className="h-24 w-full rounded-lg" />
+          <Skeleton shimmer={false} className="h-24 w-full rounded-lg" />
+          <Skeleton shimmer={false} className="h-24 w-full rounded-lg" />
         </div>
       </div>
 
       {/* Date/Time Section */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton shimmer={false} className="h-4 w-24" />
+          <Skeleton shimmer={false} className="h-10 w-full" />
         </div>
         <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton shimmer={false} className="h-4 w-24" />
+          <Skeleton shimmer={false} className="h-10 w-full" />
         </div>
       </div>
 
       {/* Staff/Team Section */}
       <div className="space-y-4">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-10 w-full" />
+        <Skeleton shimmer={false} className="h-5 w-32" />
+        <Skeleton shimmer={false} className="h-10 w-full" />
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2 justify-end pt-4 border-t">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-32" />
+        <Skeleton shimmer={false} className="h-10 w-24" />
+        <Skeleton shimmer={false} className="h-10 w-32" />
       </div>
     </div>
   )

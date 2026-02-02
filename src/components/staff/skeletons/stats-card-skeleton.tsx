@@ -26,16 +26,16 @@ export function StatsCardSkeleton({ className }: StatsCardSkeletonProps) {
           {/* Left column - title, value, description */}
           <div className="flex-1 min-w-0 space-y-1 sm:space-y-2">
             {/* Title */}
-            <Skeleton className="h-2 tablet-landscape:h-1.5 sm:h-3 w-16 sm:w-20" />
+            <Skeleton shimmer={false} className="h-2 tablet-landscape:h-1.5 sm:h-3 w-16 sm:w-20" />
             {/* Value */}
-            <Skeleton className="h-6 tablet-landscape:h-4 sm:h-8 w-20 sm:w-24" />
+            <Skeleton shimmer={false} className="h-6 tablet-landscape:h-4 sm:h-8 w-20 sm:w-24" />
             {/* Description - hidden on tablet-landscape */}
-            <Skeleton className="h-2 tablet-landscape:hidden sm:h-3 w-12 sm:w-16" />
+            <Skeleton shimmer={false} className="h-2 tablet-landscape:hidden sm:h-3 w-12 sm:w-16" />
           </div>
 
           {/* Right - icon area */}
           <div className="shrink-0">
-            <Skeleton className="h-8 w-8 tablet-landscape:h-6 tablet-landscape:w-6 sm:h-10 sm:w-10 rounded-lg sm:rounded-2xl" />
+            <Skeleton shimmer={false} className="h-8 w-8 tablet-landscape:h-6 tablet-landscape:w-6 sm:h-10 sm:w-10 rounded-lg sm:rounded-2xl" />
           </div>
         </div>
       </div>
