@@ -298,7 +298,7 @@ const BookingHistorySection = memo(function BookingHistorySection({
               return (
                 <Card
                   key={`booking-${booking.id}`}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="card-interactive"
                   onClick={() => onBookingClick(booking.id)}
                 >
                   <CardContent className="p-3 sm:p-4">

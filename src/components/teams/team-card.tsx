@@ -75,7 +75,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
   )
 
   return (
-    <Card className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
+    <Card className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
       <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
