@@ -32,21 +32,25 @@ describe('dashboard-queries', () => {
 
       // Mock chains for Promise.all queries
       const mockTotalBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: 10 }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 10 }),
       }
 
       const mockCompletedBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: mockBookings.slice(0, 2), error: null }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings.slice(0, 2), error: null }),
       }
 
       const mockTotalCustomersChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: 25 }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 25 }),
       }
 
       const mockPendingBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: null, error: null, count: 3 }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 3 }),
       }
 
       vi.mocked(supabase.from)
@@ -69,21 +73,25 @@ describe('dashboard-queries', () => {
 
     it('should handle null revenue data', async () => {
       const mockTotalBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: 5 }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 5 }),
       }
 
       const mockCompletedBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null }),
       }
 
       const mockTotalCustomersChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: 10 }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 10 }),
       }
 
       const mockPendingBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: null, error: null, count: 2 }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: 2 }),
       }
 
       vi.mocked(supabase.from)
@@ -99,21 +107,25 @@ describe('dashboard-queries', () => {
 
     it('should handle null counts gracefully', async () => {
       const mockTotalBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
       }
 
       const mockCompletedBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTotalCustomersChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
       }
 
       const mockPendingBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null, count: null }),
       }
 
       vi.mocked(supabase.from)
@@ -137,6 +149,7 @@ describe('dashboard-queries', () => {
     it('should fetch today statistics successfully', async () => {
       const mockTodayBookingsChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 5 }),
       }
@@ -146,9 +159,11 @@ describe('dashboard-queries', () => {
         eq: vi.fn((key) => {
           if (key === 'payment_status') {
             return {
-              eq: vi.fn().mockResolvedValue({
-                data: [{ total_price: 2000 }, { total_price: 3000 }],
-                error: null,
+              eq: vi.fn().mockReturnValue({
+                is: vi.fn().mockResolvedValue({
+                  data: [{ total_price: 2000 }, { total_price: 3000 }],
+                  error: null,
+                }),
               }),
             }
           }
@@ -158,6 +173,7 @@ describe('dashboard-queries', () => {
 
       const mockTodayCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 2 }),
       }
@@ -165,6 +181,7 @@ describe('dashboard-queries', () => {
       const mockTodayPendingChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 1 }),
       }
@@ -188,6 +205,7 @@ describe('dashboard-queries', () => {
     it('should handle null revenue data for today', async () => {
       const mockTodayBookingsChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 3 }),
       }
@@ -197,7 +215,9 @@ describe('dashboard-queries', () => {
         eq: vi.fn((key) => {
           if (key === 'payment_status') {
             return {
-              eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+              eq: vi.fn().mockReturnValue({
+                is: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
             }
           }
           return mockTodayRevenueChain
@@ -206,6 +226,7 @@ describe('dashboard-queries', () => {
 
       const mockTodayCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 1 }),
       }
@@ -213,6 +234,7 @@ describe('dashboard-queries', () => {
       const mockTodayPendingChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockResolvedValue({ data: null, error: null, count: 0 }),
       }
@@ -241,7 +263,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -261,7 +284,8 @@ describe('dashboard-queries', () => {
 
     it('should return empty array when no bookings', async () => {
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -273,7 +297,8 @@ describe('dashboard-queries', () => {
 
     it('should handle errors by throwing', async () => {
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -308,6 +333,7 @@ describe('dashboard-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
@@ -324,6 +350,7 @@ describe('dashboard-queries', () => {
     it('should return empty array when no bookings today', async () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: null }),
       }
@@ -338,6 +365,7 @@ describe('dashboard-queries', () => {
     it('should handle errors by throwing', async () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
       }
@@ -353,6 +381,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -370,6 +399,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -387,6 +417,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -404,6 +435,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
@@ -445,7 +477,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -474,7 +507,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -487,7 +521,8 @@ describe('dashboard-queries', () => {
 
     it('should handle empty bookings', async () => {
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -501,7 +536,8 @@ describe('dashboard-queries', () => {
 
     it('should handle null data', async () => {
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -530,7 +566,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -544,7 +581,8 @@ describe('dashboard-queries', () => {
 
     it('should handle errors by throwing', async () => {
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -575,7 +613,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
@@ -597,7 +636,8 @@ describe('dashboard-queries', () => {
       ]
 
       const mockChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
