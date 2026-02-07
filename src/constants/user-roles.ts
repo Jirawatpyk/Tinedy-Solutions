@@ -10,7 +10,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   admin: 'bg-red-100 text-red-800 border-red-300',
   manager: 'bg-blue-100 text-blue-800 border-blue-300',
   staff: 'bg-green-100 text-green-800 border-green-300',
-  customer: 'bg-gray-100 text-gray-800 border-gray-300',
+  customer: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
 } as const
 
 /** Short labels for role display (matches formatRole() output) */

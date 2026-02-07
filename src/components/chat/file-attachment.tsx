@@ -20,7 +20,7 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
       <div className="mt-2">
         <button
           onClick={() => onImageClick?.(attachment.url)}
-          className="group relative overflow-hidden rounded-lg border border-gray-200 hover:border-tinedy-blue transition-colors"
+          className="group relative overflow-hidden rounded-lg border border-tinedy-dark/10 hover:border-tinedy-blue transition-colors"
         >
           <img
             src={attachment.url}
@@ -53,7 +53,7 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
           'flex items-center gap-3 p-3 rounded-lg border transition-colors',
           isOwnMessage
             ? 'border-white/20 hover:bg-white/10'
-            : 'border-gray-200 hover:bg-gray-50'
+            : 'border-tinedy-dark/10 hover:bg-tinedy-off-white/50'
         )}
       >
         {/* File icon */}
@@ -92,7 +92,7 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
             'h-8 w-8 flex items-center justify-center rounded-md transition-colors cursor-pointer',
             isOwnMessage
               ? 'hover:bg-white/20 text-white'
-              : 'hover:bg-gray-100 text-tinedy-blue'
+              : 'hover:bg-tinedy-off-white text-tinedy-blue'
           )}
         >
           <Download className="h-4 w-4" />

@@ -401,7 +401,7 @@ function RevenueBookingsTabComponent({
                   {bookingMetrics.completed}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+              <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
                 <div
                   className="bg-green-500 h-1.5 sm:h-2 rounded-full"
                   style={{ width: `${bookingMetrics.completionRate}%` }}
@@ -419,7 +419,7 @@ function RevenueBookingsTabComponent({
                   {bookingMetrics.cancelled}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+              <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
                 <div
                   className="bg-red-500 h-1.5 sm:h-2 rounded-full"
                   style={{ width: `${bookingMetrics.cancellationRate}%` }}

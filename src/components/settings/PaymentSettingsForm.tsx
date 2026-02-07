@@ -88,7 +88,7 @@ export function PaymentSettingsForm({ initialData, settingsId, onSuccess }: Paym
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* PromptPay Section */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">PromptPay</h3>
+            <h3 className="text-sm font-semibold text-tinedy-dark border-b pb-2">PromptPay</h3>
             <div className="space-y-2">
               <Label htmlFor="promptpay_id">PromptPay ID *</Label>
               <Controller
@@ -115,7 +115,7 @@ export function PaymentSettingsForm({ initialData, settingsId, onSuccess }: Paym
 
           {/* Bank Transfer Section */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Bank Transfer</h3>
+            <h3 className="text-sm font-semibold text-tinedy-dark border-b pb-2">Bank Transfer</h3>
 
             {/* Bank Name */}
             <div className="space-y-2">

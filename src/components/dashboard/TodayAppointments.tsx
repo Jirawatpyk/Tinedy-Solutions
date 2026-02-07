@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { EmptyState } from '@/components/common/EmptyState'
 import { memo, useState } from 'react'
 
 interface TodayBooking {
@@ -76,9 +77,11 @@ function TodayAppointmentsComponent({ bookings, onBookingClick, getStatusBadge }
       <CardContent>
         <div className="space-y-4">
           {bookings.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No appointments for today
-            </p>
+            <EmptyState
+              icon={Calendar}
+              title="No appointments for today"
+              className="py-8"
+            />
           ) : (
             <>
               {paginatedBookings.map((booking) => (

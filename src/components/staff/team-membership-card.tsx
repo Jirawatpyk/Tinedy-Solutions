@@ -18,7 +18,7 @@ import { getInitials } from '@/lib/string-utils'
 
 function MemberChip({ member }: { member: StaffTeamMember }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-gray-50 pl-1 pr-2.5 py-0.5">
+    <div className="flex items-center gap-1.5 rounded-full bg-tinedy-off-white/50 pl-1 pr-2.5 py-0.5">
       <Avatar className="h-5 w-5">
         <AvatarImage src={member.avatar_url || undefined} alt={member.full_name} />
         <AvatarFallback className="text-[10px]">

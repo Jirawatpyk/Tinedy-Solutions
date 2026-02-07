@@ -367,7 +367,7 @@ export function AdminCustomers() {
 
             // Relationship level badge config
             const relationshipConfig = {
-              new: { label: '🆕 New', className: 'bg-gray-100 text-gray-700 border-gray-300' },
+              new: { label: '🆕 New', className: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20' },
               regular: { label: '💚 Regular', className: 'bg-green-100 text-green-700 border-green-300' },
               vip: { label: '👑 VIP', className: 'bg-amber-100 text-amber-700 border-amber-300' },
               inactive: { label: '💤 Inactive', className: 'bg-red-100 text-red-700 border-red-300' },
@@ -392,7 +392,7 @@ export function AdminCustomers() {
                 <CardHeader className="pb-3 px-4 sm:px-6">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${isArchived ? 'bg-gray-400' : 'bg-tinedy-blue'} flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0`}>
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${isArchived ? 'bg-tinedy-dark/40' : 'bg-tinedy-blue'} flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0`}>
                         {customer.full_name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -448,7 +448,7 @@ export function AdminCustomers() {
                               </Badge>
                             ))}
                             {customer.tags.length > 2 && (
-                              <Badge variant="outline" className="text-[10px] sm:text-xs bg-gray-100 text-gray-700">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs bg-tinedy-off-white text-tinedy-dark">
                                 +{customer.tags.length - 2}
                               </Badge>
                             )}

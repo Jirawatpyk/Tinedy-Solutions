@@ -79,17 +79,17 @@ export function getAvatarColor(index: number): string {
  */
 export const RANK_BADGE_COLORS = {
   gold: 'bg-yellow-500 text-white',
-  silver: 'bg-gray-400 text-white',
+  silver: 'bg-tinedy-dark/40 text-white',
   bronze: 'bg-amber-600 text-white',
-  default: 'bg-gray-300 text-gray-700',
+  default: 'bg-tinedy-dark/30 text-tinedy-dark',
 } as const
 
 /**
  * Get rank badge color class based on position (0-indexed)
  * @example getRankBadgeColor(0) => 'bg-yellow-500 text-white' (gold)
- * @example getRankBadgeColor(1) => 'bg-gray-400 text-white' (silver)
+ * @example getRankBadgeColor(1) => 'bg-tinedy-dark/40 text-white' (silver)
  * @example getRankBadgeColor(2) => 'bg-amber-600 text-white' (bronze)
- * @example getRankBadgeColor(5) => 'bg-gray-300 text-gray-700' (default)
+ * @example getRankBadgeColor(5) => 'bg-tinedy-dark/30 text-tinedy-dark' (default)
  */
 export function getRankBadgeColor(index: number): string {
   if (typeof index !== 'number' || index < 0) return RANK_BADGE_COLORS.default

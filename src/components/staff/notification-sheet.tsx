@@ -22,6 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Bell, BellOff, Check, CheckCheck, Trash2, Loader2, Calendar, Users, Briefcase } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/common/EmptyState'
 
 interface NotificationSheetProps {
   open: boolean
@@ -192,15 +193,11 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <BellOff className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">
-                No notifications yet
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                You'll see booking updates and reminders here
-              </p>
-            </div>
+            <EmptyState
+              icon={BellOff}
+              title="No notifications yet"
+              description="You'll see booking updates and reminders here"
+            />
           ) : (
             <div className="space-y-2 pr-4">
               {notifications.map((notification) => (

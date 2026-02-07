@@ -60,7 +60,7 @@ export function TagInput({
             <Badge
               key={tag}
               variant="outline"
-              className={`${getTagColor?.(tag) || 'bg-gray-100'} text-xs px-2 py-1`}
+              className={`${getTagColor?.(tag) || 'bg-tinedy-off-white'} text-xs px-2 py-1`}
             >
               {tag}
               <button
@@ -107,17 +107,17 @@ export function TagInput({
 
         {/* Suggestions dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+          <div className="absolute z-10 w-full mt-1 bg-white border border-tinedy-dark/10 rounded-md shadow-lg max-h-48 overflow-y-auto">
             {filteredSuggestions.map((suggestion) => (
               <button
                 key={suggestion}
                 type="button"
                 onClick={() => addTag(suggestion)}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                className="w-full text-left px-3 py-2 hover:bg-tinedy-off-white text-sm flex items-center gap-2"
               >
                 <Badge
                   variant="outline"
-                  className={`${getTagColor?.(suggestion) || 'bg-gray-100'} text-xs`}
+                  className={`${getTagColor?.(suggestion) || 'bg-tinedy-off-white'} text-xs`}
                 >
                   {suggestion}
                 </Badge>

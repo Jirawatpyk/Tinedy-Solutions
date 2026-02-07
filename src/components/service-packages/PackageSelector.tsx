@@ -97,26 +97,26 @@ const PricingResultSkeleton = () => {
   return (
     <div className="space-y-3 animate-pulse">
       {/* Price skeleton - Hero Element */}
-      <div className="bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg p-4">
+      <div className="bg-gradient-to-r from-tinedy-off-white to-tinedy-off-white/50 rounded-lg p-4">
         <div className="text-center space-y-2">
-          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
-          <div className="h-10 w-40 bg-gray-200 rounded mx-auto"></div>
+          <div className="h-4 w-16 bg-muted rounded mx-auto"></div>
+          <div className="h-10 w-40 bg-muted rounded mx-auto"></div>
         </div>
       </div>
 
       {/* Details skeleton - 3 columns */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-          <div className="h-3 w-12 bg-gray-200 rounded mx-auto"></div>
-          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
+        <div className="bg-tinedy-off-white/50 rounded-lg p-3 space-y-2">
+          <div className="h-3 w-12 bg-muted rounded mx-auto"></div>
+          <div className="h-4 w-16 bg-muted rounded mx-auto"></div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-          <div className="h-3 w-12 bg-gray-200 rounded mx-auto"></div>
-          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
+        <div className="bg-tinedy-off-white/50 rounded-lg p-3 space-y-2">
+          <div className="h-3 w-12 bg-muted rounded mx-auto"></div>
+          <div className="h-4 w-16 bg-muted rounded mx-auto"></div>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-          <div className="h-3 w-16 bg-gray-200 rounded mx-auto"></div>
-          <div className="h-4 w-12 bg-gray-200 rounded mx-auto"></div>
+        <div className="bg-tinedy-off-white/50 rounded-lg p-3 space-y-2">
+          <div className="h-3 w-16 bg-muted rounded mx-auto"></div>
+          <div className="h-4 w-12 bg-muted rounded mx-auto"></div>
         </div>
       </div>
     </div>
@@ -686,7 +686,7 @@ export function PackageSelector({
             <Card
               className={cn(
                 'border-2',
-                isComplete() ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                isComplete() ? 'border-green-500 bg-green-50' : 'border-tinedy-dark/20'
               )}
             >
               <CardContent className="pt-6">

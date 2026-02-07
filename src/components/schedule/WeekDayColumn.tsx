@@ -52,12 +52,12 @@ const WeekDayColumnComponent: React.FC<WeekDayColumnProps> = ({
       </div>
 
       {/* Timeline area */}
-      <div className={`relative border-r ${isToday ? 'bg-tinedy-blue/5' : 'bg-gray-50/50'}`} style={{ height: '500px' }}>
+      <div className={`relative border-r ${isToday ? 'bg-tinedy-blue/5' : 'bg-tinedy-off-white/30'}`} style={{ height: '500px' }}>
         {/* Hour lines */}
         {TIME_SLOTS.map((_, index) => (
           <div
             key={index}
-            className="absolute w-full border-t border-gray-200"
+            className="absolute w-full border-t border-tinedy-dark/10"
             style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
           />
         ))}

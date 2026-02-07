@@ -15,7 +15,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export function StaffLayout() {
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-tinedy-off-white/50">
       {/* Sidebar - Desktop only */}
       <StaffSidebar className="hidden lg:flex" />
 

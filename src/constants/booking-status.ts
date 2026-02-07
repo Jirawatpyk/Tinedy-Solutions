@@ -16,7 +16,7 @@ export const BOOKING_STATUS_COLORS = {
   in_progress: 'bg-purple-100 text-purple-800 border-purple-300',
   completed: 'bg-green-100 text-green-800 border-green-300',
   cancelled: 'bg-red-100 text-red-800 border-red-300',
-  no_show: 'bg-gray-100 text-gray-800 border-gray-300',
+  no_show: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
 } as const
 
 // For Card backgrounds (lighter/softer)
@@ -26,7 +26,7 @@ export const BOOKING_STATUS_CARD_COLORS = {
   in_progress: 'bg-purple-50 border-purple-200',
   completed: 'bg-green-50 border-green-200',
   cancelled: 'bg-red-50 border-red-200',
-  no_show: 'bg-gray-50 border-gray-200',
+  no_show: 'bg-tinedy-off-white/50 border-tinedy-dark/20',
 } as const
 
 export const BOOKING_STATUS_DOTS = {
@@ -35,7 +35,7 @@ export const BOOKING_STATUS_DOTS = {
   in_progress: 'bg-purple-500',
   completed: 'bg-green-500',
   cancelled: 'bg-red-500',
-  no_show: 'bg-gray-500',
+  no_show: 'bg-tinedy-dark/60',
 } as const
 
 export const BOOKING_STATUS_COLORS_TIMELINE = {
@@ -44,7 +44,7 @@ export const BOOKING_STATUS_COLORS_TIMELINE = {
   in_progress: 'bg-purple-500 hover:bg-purple-600',
   completed: 'bg-green-500 hover:bg-green-600',
   cancelled: 'bg-red-500 hover:bg-red-600',
-  no_show: 'bg-gray-500 hover:bg-gray-600',
+  no_show: 'bg-tinedy-dark/60 hover:bg-tinedy-dark/70',
 } as const
 
 // For Calendar Event Component (solid background with border-left)
@@ -54,7 +54,7 @@ export const BOOKING_STATUS_COLORS_CALENDAR = {
   in_progress: 'bg-purple-500 border-purple-600',
   completed: 'bg-green-500 border-green-600',
   cancelled: 'bg-red-500 border-red-600',
-  no_show: 'bg-gray-500 border-gray-600',
+  no_show: 'bg-tinedy-dark/60 border-tinedy-dark/80',
 } as const
 
 export const BOOKING_STATUS_LABELS = {
@@ -75,7 +75,7 @@ export const PAYMENT_STATUS_COLORS = {
   pending_verification: 'bg-amber-100 text-amber-800 border-amber-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
   refund_pending: 'bg-purple-100 text-purple-800 border-purple-300',
-  refunded: 'bg-gray-100 text-gray-800 border-gray-300',
+  refunded: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
 } as const
 
 export const PAYMENT_STATUS_DOTS = {
@@ -83,7 +83,7 @@ export const PAYMENT_STATUS_DOTS = {
   pending_verification: 'bg-amber-500',
   paid: 'bg-emerald-500',
   refund_pending: 'bg-purple-500',
-  refunded: 'bg-gray-500',
+  refunded: 'bg-tinedy-dark/60',
 } as const
 
 export const PAYMENT_STATUS_LABELS = {
@@ -115,7 +115,7 @@ export const STATUS_COLORS_TIMELINE = {
   pending_verification: 'bg-amber-500 hover:bg-amber-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
   refund_pending: 'bg-purple-500 hover:bg-purple-600',
-  refunded: 'bg-gray-500 hover:bg-gray-600',
+  refunded: 'bg-tinedy-dark/60 hover:bg-tinedy-dark/70',
 } as const
 
 export const STATUS_LABELS = {
@@ -137,7 +137,7 @@ const BOOKING_STATUS_TEXT_COLORS: Record<BookingStatus, string> = {
   in_progress: 'text-purple-800',
   completed: 'text-green-800',
   cancelled: 'text-red-800',
-  no_show: 'text-gray-800',
+  no_show: 'text-tinedy-dark',
 }
 
 const PAYMENT_STATUS_TEXT_COLORS: Record<PaymentStatus, string> = {
@@ -145,7 +145,7 @@ const PAYMENT_STATUS_TEXT_COLORS: Record<PaymentStatus, string> = {
   pending_verification: 'text-amber-800',
   paid: 'text-emerald-800',
   refund_pending: 'text-purple-800',
-  refunded: 'text-gray-800',
+  refunded: 'text-tinedy-dark',
 }
 
 /** Filter options for booking status (used in calendar filters, dropdowns) */

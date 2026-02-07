@@ -443,7 +443,7 @@ export function AdminCalendar() {
                     <span>Cancelled</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                    <div className="w-3 h-3 rounded-full bg-tinedy-dark/60" />
                     <span>No Show</span>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown } from 'lucide-react'
 import { formatCurrency, formatBookingId } from '@/lib/utils'
+import { EmptyState } from '@/components/common/EmptyState'
 import { getStatusBadge, getPaymentStatusBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import type { TodayBooking } from '@/types/dashboard'
@@ -71,9 +72,9 @@ export const TodayAppointmentsList = ({
                 key={i}
                 className="p-4 border rounded-lg space-y-3 animate-pulse"
               >
-                <div className="h-5 bg-gray-200 rounded w-40" />
-                <div className="h-4 bg-gray-200 rounded w-56" />
-                <div className="h-4 bg-gray-200 rounded w-32" />
+                <div className="h-5 bg-muted rounded w-40" />
+                <div className="h-4 bg-muted rounded w-56" />
+                <div className="h-4 bg-muted rounded w-32" />
               </div>
             ))}
           </div>
@@ -120,9 +121,11 @@ export const TodayAppointmentsList = ({
       <CardContent>
         <div className="space-y-4">
           {filteredBookings.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No appointments for today
-            </p>
+            <EmptyState
+              icon={Calendar}
+              title="No appointments for today"
+              className="py-8"
+            />
           ) : (
             <>
               {paginatedBookings.map((booking) => (

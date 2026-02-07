@@ -30,7 +30,7 @@ const relationshipConfig: Record<
 > = {
   new: {
     label: '🆕 New',
-    className: 'bg-gray-100 text-gray-700 border-gray-300',
+    className: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
   },
   regular: {
     label: '💚 Regular',
@@ -178,7 +178,7 @@ const CustomerProfileHeader = memo(function CustomerProfileHeader({
 
               {customer.tax_id && (
                 <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="h-4 w-4 text-slate-600" />
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
                   <span className="text-tinedy-dark">{customer.tax_id}</span>
                 </div>
               )}

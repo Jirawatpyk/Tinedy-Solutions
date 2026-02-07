@@ -24,7 +24,7 @@ const STATUS_TEXT_COLORS: Record<BookingStatus, string> = {
   in_progress: 'text-purple-800',
   completed: 'text-green-800',
   cancelled: 'text-red-800',
-  no_show: 'text-gray-800',
+  no_show: 'text-tinedy-dark',
 }
 
 // Build status options from constants
@@ -101,7 +101,7 @@ export const StatusBadgeEditor: React.FC<StatusBadgeEditorProps> = ({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${BOOKING_STATUS_COLORS[currentStatus as keyof typeof BOOKING_STATUS_COLORS] || 'bg-gray-100 text-gray-800 border-gray-300'}`}
+            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${BOOKING_STATUS_COLORS[currentStatus as keyof typeof BOOKING_STATUS_COLORS] || 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'}`}
             title="Click to change status"
           >
             {currentStatus.replace('_', ' ')}

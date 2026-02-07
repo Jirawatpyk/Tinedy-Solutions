@@ -534,7 +534,7 @@ function StaffCard({
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${
-      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
+      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-tinedy-off-white/50' : 'hover:border-tinedy-blue hover:shadow-md'
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
@@ -661,7 +661,7 @@ function TeamCard({
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${
-      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-gray-50' : 'hover:border-tinedy-blue hover:shadow-md'
+      isCurrentlyAssigned ? 'border-tinedy-blue bg-tinedy-blue/5' : isUnavailable ? 'bg-tinedy-off-white/50' : 'hover:border-tinedy-blue hover:shadow-md'
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">

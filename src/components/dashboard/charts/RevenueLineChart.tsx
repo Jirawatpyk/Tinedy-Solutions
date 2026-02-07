@@ -3,6 +3,7 @@ import { DollarSign } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { memo } from 'react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { useChartAnimation } from '@/hooks/use-chart-animation'
 
 interface RevenueData {
@@ -41,8 +42,11 @@ function RevenueLineChartComponent({
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <div className="flex items-center justify-center text-muted-foreground" style={{ height }}>
-            No revenue data available
+          <div style={{ minHeight: height }}>
+            <EmptyState
+              icon={DollarSign}
+              title="No revenue data available"
+            />
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>

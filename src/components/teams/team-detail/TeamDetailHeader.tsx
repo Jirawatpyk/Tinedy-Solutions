@@ -58,7 +58,7 @@ export function TeamDetailHeader({ team }: TeamDetailHeaderProps) {
 
           {/* Divider - ซ่อนบนมือถือ */}
           {team.team_lead && (
-            <div className="hidden sm:block self-stretch border-l border-gray-300 mx-4"></div>
+            <div className="hidden sm:block self-stretch border-l border-tinedy-dark/20 mx-4"></div>
           )}
 
           {/* Team Lead - stack บนมือถือ, ข้างขวาบนเดสก์ท็อป */}

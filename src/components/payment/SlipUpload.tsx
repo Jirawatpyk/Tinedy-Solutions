@@ -195,7 +195,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-tinedy-dark mb-2">
               Payment Slip Uploaded!
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -248,13 +248,13 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
           {!preview ? (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+              className="border-2 border-dashed border-tinedy-dark/20 rounded-lg p-8 text-center cursor-pointer hover:border-tinedy-dark/30 transition-colors"
             >
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                   <Upload className="h-8 w-8 text-blue-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
+                <p className="text-sm font-medium text-tinedy-dark mb-1">
                   Click to upload payment slip
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -271,7 +271,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
               />
             </div>
           ) : (
-            <div className="relative border-2 border-gray-200 rounded-lg p-4">
+            <div className="relative border-2 border-tinedy-dark/10 rounded-lg p-4">
               <button
                 type="button"
                 onClick={handleRemoveFile}
@@ -285,7 +285,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
                 alt="Payment slip preview"
                 className="w-full rounded-lg"
               />
-              <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <ImageIcon className="h-4 w-4" />
                 <span className="truncate">{file?.name}</span>
               </div>

@@ -7,7 +7,7 @@ const statusBadgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-gray-100 text-gray-800 border-gray-300',
+        default: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
         success: 'bg-green-100 text-green-700 border-green-300',
         warning: 'bg-yellow-100 text-yellow-700 border-yellow-300',
         danger: 'bg-red-50 text-red-700 border-red-300',

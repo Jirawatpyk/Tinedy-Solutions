@@ -166,7 +166,7 @@ const getTrendColor = (direction: 'up' | 'down' | 'neutral'): string => {
       return 'text-red-500'
     case 'neutral':
     default:
-      return 'text-gray-600'
+      return 'text-muted-foreground'
   }
 }
 

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { memo } from 'react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { useChartAnimation } from '@/hooks/use-chart-animation'
 
 interface BookingStatusData {
@@ -41,8 +42,11 @@ function BookingStatusPieChartComponent({
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <div className="flex items-center justify-center text-muted-foreground" style={{ height }}>
-            No bookings data available
+          <div style={{ minHeight: height }}>
+            <EmptyState
+              icon={Calendar}
+              title="No bookings data available"
+            />
           </div>
         ) : (
           <div className="space-y-4">

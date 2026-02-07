@@ -569,7 +569,7 @@ export function BookingDetailModal({
                           className={`h-6 w-6 ${
                             star <= (hoverRating || rating)
                               ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-300'
+                              : 'text-tinedy-dark/40'
                           }`}
                         />
                       </button>
@@ -740,7 +740,7 @@ export function BookingDetailModal({
                   type="text"
                   readOnly
                   value={`${window.location.origin}/payment/${booking.parent_booking_id || booking.id}`}
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm bg-gray-50 font-mono"
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm bg-tinedy-off-white/50 font-mono"
                   onClick={(e) => e.currentTarget.select()}
                   aria-label="Payment link URL"
                 />

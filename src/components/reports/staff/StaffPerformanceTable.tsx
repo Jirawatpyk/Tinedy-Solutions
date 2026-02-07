@@ -73,7 +73,7 @@ export function StaffPerformanceTable({ staffPerformance }: StaffPerformanceProp
                 </td>
                 <td className="py-3 text-sm text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="w-16 bg-muted rounded-full h-2">
                       <div
                         className="bg-green-500 h-2 rounded-full transition-all"
                         style={{ width: `${Math.min(staff.completionRate, 100)}%` }}
@@ -89,7 +89,7 @@ export function StaffPerformanceTable({ staffPerformance }: StaffPerformanceProp
                 </td>
                 <td className="py-3 text-sm text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="w-16 bg-muted rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all ${utilization.color}`}
                         style={{ width: `${Math.min(staff.utilizationRate, 100)}%` }}
