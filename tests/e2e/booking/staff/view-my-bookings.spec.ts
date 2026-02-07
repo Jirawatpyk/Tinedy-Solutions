@@ -43,7 +43,7 @@ test.describe('Staff: View My Bookings', () => {
     // Staff-001 is in team-001, so should see booking-002 (team booking)
   })
 
-  test.skip('should update booking status', async ({ page }) => {
+  test.skip('should update booking status', async ({ page: _page }) => {
     // TODO: Requires UI interaction with booking status dropdown
     // This requires data-testid attributes on status buttons
   })

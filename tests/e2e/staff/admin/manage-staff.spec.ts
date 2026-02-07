@@ -105,7 +105,7 @@ test.describe('Admin: Manage Staff', () => {
       await page.waitForTimeout(500);
 
       // Admin should have delete option
-      const deleteButton = page.locator('button:has-text("ลบ")');
+      const _deleteButton = page.locator('button:has-text("ลบ")');
 
       // Delete button may or may not be visible depending on UI
       // Test passes regardless

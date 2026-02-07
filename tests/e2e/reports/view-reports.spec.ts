@@ -9,11 +9,11 @@ import { test, expect } from '@playwright/test';
 import { testUsers } from '../../fixtures/users';
 
 test.describe('Reports & Analytics', () => {
-  test.skip('should view dashboard statistics', async ({ page }) => {
+  test.skip('should view dashboard statistics', async ({ page: _page }) => {
     // TODO: Requires booking/customer data - skip until MSW data handlers added
   });
 
-  test.skip('should export reports to CSV', async ({ page }) => {
+  test.skip('should export reports to CSV', async ({ page: _page }) => {
     // TODO: Requires data-testid attributes - skip for now
   });
 
