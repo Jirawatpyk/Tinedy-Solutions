@@ -54,7 +54,7 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
     }
   }, [])
 
-  const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'
+  const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-tinedy-off-white text-tinedy-dark'
   const statusLabel = STATUS_LABELS[booking.status as keyof typeof STATUS_LABELS] || booking.status
 
   // Memoize callbacks to prevent re-creation on every render

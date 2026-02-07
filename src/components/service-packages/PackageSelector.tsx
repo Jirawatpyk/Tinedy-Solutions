@@ -686,7 +686,7 @@ export function PackageSelector({
             <Card
               className={cn(
                 'border-2',
-                isComplete() ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                isComplete() ? 'border-green-500 bg-green-50' : 'border-tinedy-dark/20'
               )}
             >
               <CardContent className="pt-6">

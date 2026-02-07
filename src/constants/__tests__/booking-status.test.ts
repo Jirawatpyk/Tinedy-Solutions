@@ -90,11 +90,11 @@ describe('booking-status constants', () => {
     })
 
     it('should contain Tailwind CSS color classes', () => {
-      // Assert - colors should be Tailwind classes
+      // Assert - colors should be Tailwind classes (standard or brand palette)
       Object.values(BOOKING_STATUS_COLORS).forEach((colorClass) => {
-        expect(colorClass).toMatch(/bg-\w+-\d+/)
-        expect(colorClass).toMatch(/text-\w+-\d+/)
-        expect(colorClass).toMatch(/border-\w+-\d+/)
+        expect(colorClass).toMatch(/bg-[\w-]+/)
+        expect(colorClass).toMatch(/text-[\w-]+/)
+        expect(colorClass).toMatch(/border-[\w-]+/)
       })
     })
 
@@ -116,9 +116,9 @@ describe('booking-status constants', () => {
     })
 
     it('should contain Tailwind background color classes', () => {
-      // Assert - dots should be Tailwind background classes
+      // Assert - dots should be Tailwind background classes (standard or brand palette with opacity)
       Object.values(BOOKING_STATUS_DOTS).forEach((dotClass) => {
-        expect(dotClass).toMatch(/^bg-\w+-\d+$/)
+        expect(dotClass).toMatch(/^bg-[\w-]+(\/\d+)?$/)
       })
     })
   })
@@ -149,11 +149,11 @@ describe('booking-status constants', () => {
     })
 
     it('should contain Tailwind CSS color classes', () => {
-      // Assert - colors should be Tailwind classes
+      // Assert - colors should be Tailwind classes (standard or brand palette)
       Object.values(PAYMENT_STATUS_COLORS).forEach((colorClass) => {
-        expect(colorClass).toMatch(/bg-\w+-\d+/)
-        expect(colorClass).toMatch(/text-\w+-\d+/)
-        expect(colorClass).toMatch(/border-\w+-\d+/)
+        expect(colorClass).toMatch(/bg-[\w-]+/)
+        expect(colorClass).toMatch(/text-[\w-]+/)
+        expect(colorClass).toMatch(/border-[\w-]+/)
       })
     })
 
@@ -175,9 +175,9 @@ describe('booking-status constants', () => {
     })
 
     it('should contain Tailwind background color classes', () => {
-      // Assert - dots should be Tailwind background classes
+      // Assert - dots should be Tailwind background classes (standard or brand palette with opacity)
       Object.values(PAYMENT_STATUS_DOTS).forEach((dotClass) => {
-        expect(dotClass).toMatch(/^bg-\w+-\d+$/)
+        expect(dotClass).toMatch(/^bg-[\w-]+(\/\d+)?$/)
       })
     })
   })

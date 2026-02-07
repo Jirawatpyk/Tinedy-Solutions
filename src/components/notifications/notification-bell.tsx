@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useInAppNotifications } from '@/hooks/use-in-app-notifications'
+import { EmptyState } from '@/components/common/EmptyState'
 import { formatDistanceToNow } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { cn, formatBookingId } from '@/lib/utils'
@@ -94,12 +95,11 @@ export function NotificationBell() {
               <div className="text-sm text-muted-foreground">Loading...</div>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 px-4">
-              <Bell className="h-12 w-12 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground text-center">
-                No notifications
-              </p>
-            </div>
+            <EmptyState
+              icon={Bell}
+              title="No notifications"
+              className="py-8"
+            />
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => (

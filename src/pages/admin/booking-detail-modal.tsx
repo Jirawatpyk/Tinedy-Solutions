@@ -569,7 +569,7 @@ export function BookingDetailModal({
                           className={`h-6 w-6 ${
                             star <= (hoverRating || rating)
                               ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-300'
+                              : 'text-tinedy-dark/20'
                           }`}
                         />
                       </button>

@@ -37,7 +37,7 @@ export function NotificationSettingsCard() {
               </>
             )}
           </div>
-          <div className={`h-2 w-2 rounded-full ${hasPermission ? 'bg-green-600' : 'bg-gray-400'}`} />
+          <div className={`h-2 w-2 rounded-full ${hasPermission ? 'bg-green-600' : 'bg-tinedy-dark/40'}`} />
         </div>
 
         {/* Browser Notifications Toggle */}

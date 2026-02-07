@@ -27,7 +27,7 @@ describe('StatusBadge', () => {
 
       // Assert
       expect(screen.getByText('Default Status')).toBeInTheDocument()
-      const badge = container.querySelector('.bg-gray-100')
+      const badge = container.querySelector('.bg-tinedy-off-white')
       expect(badge).toBeInTheDocument()
     })
 
@@ -104,15 +104,15 @@ describe('StatusBadge', () => {
       expect(badge).toHaveClass('border-purple-300')
     })
 
-    it('should render default variant with gray styling', () => {
+    it('should render default variant with brand styling', () => {
       // Arrange & Act
       const { container } = render(<StatusBadge variant="default">Unknown</StatusBadge>)
 
       // Assert
-      const badge = container.querySelector('.bg-gray-100')
+      const badge = container.querySelector('.bg-tinedy-off-white')
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('text-gray-800')
-      expect(badge).toHaveClass('border-gray-300')
+      expect(badge).toHaveClass('text-tinedy-dark')
+      expect(badge).toHaveClass('border-tinedy-dark/20')
     })
   })
 

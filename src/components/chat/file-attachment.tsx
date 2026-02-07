@@ -53,7 +53,7 @@ export function FileAttachment({ attachment, isOwnMessage, onImageClick }: FileA
           'flex items-center gap-3 p-3 rounded-lg border transition-colors',
           isOwnMessage
             ? 'border-white/20 hover:bg-white/10'
-            : 'border-gray-200 hover:bg-gray-50'
+            : 'border-tinedy-dark/10 hover:bg-tinedy-off-white/50'
         )}
       >
         {/* File icon */}

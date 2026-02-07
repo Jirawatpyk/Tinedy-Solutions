@@ -91,7 +91,7 @@ function getCategoryBadge(category: string | null) {
     house: { label: 'House', color: 'bg-teal-500' },
   }
 
-  const config = categoryMap[category] || { label: category, color: 'bg-gray-500' }
+  const config = categoryMap[category] || { label: category, color: 'bg-tinedy-dark/60' }
 
   return <Badge className={config.color}>{config.label}</Badge>
 }

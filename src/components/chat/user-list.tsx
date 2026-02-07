@@ -10,6 +10,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import type { Conversation } from '@/types/chat'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/common/EmptyState'
 import { formatRole } from '@/lib/role-utils'
 import {
   AlertDialog,
@@ -118,12 +119,11 @@ export function UserList({
         </CardHeader>
       <CardContent className="p-0 max-h-[calc(100vh-280px)] overflow-y-auto">
         {filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <User className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">
-              {searchQuery ? 'No users found' : 'No conversations yet'}
-            </p>
-          </div>
+          <EmptyState
+            icon={User}
+            title={searchQuery ? 'No users found' : 'No conversations yet'}
+            className="p-8"
+          />
         ) : (
           <div className="divide-y">
             {filteredConversations.map((conversation) => (

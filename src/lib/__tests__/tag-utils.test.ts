@@ -36,14 +36,14 @@ describe('tag-utils', () => {
         expect(color).toBe('bg-indigo-100 text-indigo-700 border-indigo-300')
       })
 
-      it('should return slate color for "individual" tag', () => {
+      it('should return brand color for "individual" tag', () => {
         const color = getTagColor('individual')
-        expect(color).toBe('bg-slate-100 text-slate-700 border-slate-300')
+        expect(color).toBe('bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20')
       })
 
-      it('should return slate color for "walk-in" tag', () => {
+      it('should return brand color for "walk-in" tag', () => {
         const color = getTagColor('walk-in')
-        expect(color).toBe('bg-slate-100 text-slate-700 border-slate-300')
+        expect(color).toBe('bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20')
       })
     })
 
@@ -99,14 +99,14 @@ describe('tag-utils', () => {
     })
 
     describe('Default and edge cases', () => {
-      it('should return gray color for unknown tag', () => {
+      it('should return brand color for unknown tag', () => {
         const color = getTagColor('unknown-tag')
-        expect(color).toBe('bg-gray-100 text-gray-700 border-gray-300')
+        expect(color).toBe('bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20')
       })
 
-      it('should return gray color for empty string', () => {
+      it('should return brand color for empty string', () => {
         const color = getTagColor('')
-        expect(color).toBe('bg-gray-100 text-gray-700 border-gray-300')
+        expect(color).toBe('bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20')
       })
 
       it('should handle mixed case tags correctly', () => {

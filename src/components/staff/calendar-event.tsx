@@ -7,7 +7,7 @@ interface CalendarEventComponentProps {
 }
 
 export function CalendarEventComponent({ event }: CalendarEventComponentProps) {
-  const statusColor = BOOKING_STATUS_COLORS_CALENDAR[event.status as BookingStatus] || 'bg-gray-500 border-gray-600'
+  const statusColor = BOOKING_STATUS_COLORS_CALENDAR[event.status as BookingStatus] || 'bg-tinedy-dark/60 border-tinedy-dark/80'
   const statusLabel = BOOKING_STATUS_LABELS[event.status as BookingStatus] || event.status
 
   return (

@@ -9,7 +9,7 @@ export const getTagColor = (tag: string): string => {
 
   // Type tags
   if (['corporate'].includes(tagLower)) return 'bg-indigo-100 text-indigo-700 border-indigo-300'
-  if (['individual', 'walk-in'].includes(tagLower)) return 'bg-slate-100 text-slate-700 border-slate-300'
+  if (['individual', 'walk-in'].includes(tagLower)) return 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'
 
   // Marketing tags
   if (['newsletter', 'promotion', 'birthday-reminder'].includes(tagLower)) return 'bg-purple-100 text-purple-700 border-purple-300'
@@ -24,5 +24,5 @@ export const getTagColor = (tag: string): string => {
   if (['low-value'].includes(tagLower)) return 'bg-orange-100 text-orange-700 border-orange-300'
 
   // Default
-  return 'bg-gray-100 text-gray-700 border-gray-300'
+  return 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'
 }

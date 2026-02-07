@@ -70,7 +70,7 @@ export const MobileBookingList: React.FC<MobileBookingListProps> = ({
                   ? 'bg-tinedy-blue text-white shadow-md'
                   : today
                     ? 'bg-tinedy-blue/10 border border-tinedy-blue'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-tinedy-off-white hover:bg-tinedy-off-white/80'
               )}
             >
               <span className="text-[10px] font-medium opacity-80">
@@ -163,7 +163,7 @@ export const MobileBookingList: React.FC<MobileBookingListProps> = ({
                         variant="outline"
                         className={cn(
                           'text-[10px] px-1.5 py-0',
-                          BOOKING_STATUS_COLORS[booking.status as BookingStatus] || 'bg-gray-100 text-gray-800 border-gray-300'
+                          BOOKING_STATUS_COLORS[booking.status as BookingStatus] || 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'
                         )}
                       >
                         {BOOKING_STATUS_LABELS[booking.status as BookingStatus] || booking.status}

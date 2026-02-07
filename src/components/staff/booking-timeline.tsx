@@ -177,7 +177,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
               <div className="flex-1 pb-4">
                 <div className={cn(
                   "inline-block px-3 py-1.5 rounded-md text-sm font-medium border",
-                  BOOKING_STATUS_CARD_COLORS[item.new_status as BookingStatusType] || 'bg-gray-50 border-gray-200'
+                  BOOKING_STATUS_CARD_COLORS[item.new_status as BookingStatusType] || 'bg-tinedy-off-white/50 border-tinedy-dark/10'
                 )}>
                   {item.old_status ? (
                     <>

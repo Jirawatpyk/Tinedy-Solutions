@@ -79,9 +79,9 @@ export function getAvatarColor(index: number): string {
  */
 export const RANK_BADGE_COLORS = {
   gold: 'bg-yellow-500 text-white',
-  silver: 'bg-gray-400 text-white',
+  silver: 'bg-tinedy-dark/40 text-white',
   bronze: 'bg-amber-600 text-white',
-  default: 'bg-gray-300 text-gray-700',
+  default: 'bg-tinedy-dark/30 text-tinedy-dark',
 } as const
 
 /**

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { memo, useState, useEffect } from 'react'
+import { EmptyState } from '@/components/common/EmptyState'
 
 interface BookingStatus {
   status: string
@@ -36,9 +37,11 @@ function BookingStatusChartComponent({ data }: BookingStatusChartProps) {
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            No bookings yet
-          </p>
+          <EmptyState
+            icon={Calendar}
+            title="No bookings yet"
+            className="py-8"
+          />
         ) : (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={300}>

@@ -105,7 +105,7 @@ export function RecurringBookingCard({
   return (
     <Card className={cn(
       "hover:shadow-md transition-shadow",
-      allBookingsArchived && "bg-gray-50 opacity-60 border-dashed"
+      allBookingsArchived && "bg-tinedy-off-white/50 opacity-60 border-dashed"
     )}>
       <CardHeader
         className="p-3 sm:p-4 cursor-pointer hover:bg-accent/50 transition-colors"
@@ -349,7 +349,7 @@ export function RecurringBookingCard({
             {group.bookings.map((booking) => {
               const isArchived = !!booking.deleted_at
               const bgColor = isArchived
-                ? 'bg-gray-100 hover:bg-gray-200 opacity-60 border-dashed'
+                ? 'bg-tinedy-off-white hover:bg-tinedy-off-white/80 opacity-60 border-dashed'
                 : booking.status === BookingStatus.Completed
                 ? 'bg-green-50 hover:bg-green-100'
                 : booking.status === BookingStatus.Cancelled

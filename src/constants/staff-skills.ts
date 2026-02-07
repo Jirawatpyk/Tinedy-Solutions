@@ -58,5 +58,5 @@ export function getSkillColor(skill: string): string {
   }
 
   // Default - gray
-  return 'bg-gray-100 text-gray-800 border-gray-200'
+  return 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'
 }

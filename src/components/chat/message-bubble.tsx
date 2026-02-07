@@ -25,7 +25,7 @@ export function MessageBubble({ message, isOwnMessage, onImageClick }: MessageBu
           'max-w-[80%] sm:max-w-[70%] rounded-lg px-4 py-2 break-words overflow-hidden',
           isOwnMessage
             ? 'bg-tinedy-blue text-white rounded-br-none'
-            : 'bg-gray-100 text-gray-900 rounded-bl-none'
+            : 'bg-tinedy-off-white text-tinedy-dark rounded-bl-none'
         )}
       >
         {/* Message text */}
@@ -51,7 +51,7 @@ export function MessageBubble({ message, isOwnMessage, onImageClick }: MessageBu
         <div
           className={cn(
             'flex items-center justify-end gap-1 mt-1 text-xs',
-            isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+            isOwnMessage ? 'text-blue-100' : 'text-muted-foreground'
           )}
         >
           <span>{format(new Date(message.created_at), 'HH:mm')}</span>

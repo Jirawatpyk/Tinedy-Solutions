@@ -291,7 +291,7 @@ export function PaymentPage() {
                   className={`w-full p-4 border-2 rounded-lg transition-all ${
                     paymentMethod === 'promptpay'
                       ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-tinedy-dark/10 hover:border-tinedy-dark/20'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -314,7 +314,7 @@ export function PaymentPage() {
                   className={`w-full p-4 border-2 rounded-lg transition-all ${
                     paymentMethod === 'slip'
                       ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-tinedy-dark/10 hover:border-tinedy-dark/20'
                   }`}
                 >
                   <div className="flex items-center gap-4">

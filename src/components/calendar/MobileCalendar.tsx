@@ -255,7 +255,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                         ? 'bg-tinedy-blue text-white shadow-md'
                         : isTodayDate
                           ? 'bg-tinedy-yellow/20 border-2 border-tinedy-yellow'
-                          : 'bg-gray-50 hover:bg-gray-100',
+                          : 'bg-tinedy-off-white/50 hover:bg-tinedy-off-white',
                       hasConflict && !isSelected && 'ring-2 ring-red-400'
                     )}
                     aria-label={`${dateLabel}, ${bookingCount} booking${bookingCount !== 1 ? 's' : ''}${hasConflict ? ', has conflicts' : ''}`}
@@ -321,7 +321,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
                         ? 'bg-tinedy-blue text-white'
                         : isTodayDate
                           ? 'bg-tinedy-yellow/30 font-bold'
-                          : 'hover:bg-gray-100',
+                          : 'hover:bg-tinedy-off-white',
                       hasConflict && !isSelected && 'ring-1 ring-red-400'
                     )}
                     aria-label={`${dateLabel}, ${bookingCount} booking${bookingCount !== 1 ? 's' : ''}${hasConflict ? ', has conflicts' : ''}${!isCurrentMonth ? ', outside current month' : ''}`}

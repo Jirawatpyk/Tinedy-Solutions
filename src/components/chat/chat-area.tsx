@@ -8,6 +8,7 @@ import { MessageInput, type MessageInputHandle } from './message-input'
 import { ImageLightbox } from './image-lightbox'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { formatRole } from '@/lib/role-utils'
+import { EmptyState } from '@/components/common/EmptyState'
 import type { Message, Profile } from '@/types/chat'
 
 interface ChatAreaProps {
@@ -63,13 +64,11 @@ export function ChatArea({
   if (!selectedUser) {
     return (
       <Card className="h-full flex flex-col items-center justify-center lg:rounded-lg rounded-none lg:border border-0">
-        <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold text-tinedy-dark mb-2">
-          No conversation selected
-        </h3>
-        <p className="text-muted-foreground text-center max-w-md">
-          Select a user from the list to start chatting
-        </p>
+        <EmptyState
+          icon={MessageCircle}
+          title="No conversation selected"
+          description="Select a user from the list to start chatting"
+        />
       </Card>
     )
   }
@@ -117,7 +116,7 @@ export function ChatArea({
       <CardContent
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4 bg-gray-50 flex flex-col-reverse"
+        className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4 bg-tinedy-off-white/50 flex flex-col-reverse"
       >
         {isLoadingMessages ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -125,11 +124,11 @@ export function ChatArea({
             <p className="text-muted-foreground">Loading messages...</p>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No messages yet</p>
-            <p className="text-sm text-muted-foreground">Send a message to start the conversation</p>
-          </div>
+          <EmptyState
+            icon={MessageCircle}
+            title="No messages yet"
+            description="Send a message to start the conversation"
+          />
         ) : (
           <div className="space-y-2 space-y-reverse">
             {/* Load More Button - In DOM first, but appears at top visually due to flex-col-reverse */}

@@ -30,7 +30,7 @@ const relationshipConfig: Record<
 > = {
   new: {
     label: '🆕 New',
-    className: 'bg-gray-100 text-gray-700 border-gray-300',
+    className: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
   },
   regular: {
     label: '💚 Regular',

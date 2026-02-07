@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
+import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionGuard } from '@/components/auth/permission-guard'
 import {
   Dialog,
@@ -426,15 +427,17 @@ export function AdminServicePackagesV2() {
       {/* Packages Grid */}
       {filteredPackagesV2.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-4">
-              No packages found. Create your first package to get started.
-            </p>
-            <Button variant="outline" onClick={handleCreatePackage}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Package
-            </Button>
+          <CardContent>
+            <EmptyState
+              icon={Package}
+              title="No packages found"
+              description="Create your first package to get started."
+              action={{
+                label: 'Create Package',
+                onClick: handleCreatePackage,
+                icon: Plus,
+              }}
+            />
           </CardContent>
         </Card>
       ) : (

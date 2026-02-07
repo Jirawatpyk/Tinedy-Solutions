@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { AlertCircle, Calendar as CalendarIcon, Clock, User, Briefcase, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
 import { formatTime } from '@/lib/booking-utils'
+import { EmptyState } from '@/components/common/EmptyState'
 import {
   calendarEventToStaffBooking,
   calendarEventsToBookings,
@@ -349,17 +350,15 @@ export default function StaffCalendar() {
                   </CardHeader>
                   <CardContent className="flex-1 min-h-0 overflow-y-auto">
                     {!selectedDate ? (
-                      <div className="text-center py-12">
-                        <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-muted-foreground">
-                          Click on a day to view tasks
-                        </p>
-                      </div>
+                      <EmptyState
+                        icon={CalendarIcon}
+                        title="Click on a day to view tasks"
+                      />
                     ) : selectedDateEvents.length === 0 ? (
-                      <div className="text-center py-12">
-                        <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-muted-foreground">No tasks on this day</p>
-                      </div>
+                      <EmptyState
+                        icon={CalendarIcon}
+                        title="No tasks on this day"
+                      />
                     ) : (
                       <div className="space-y-3">
                         {selectedDateEvents.map((event) => (

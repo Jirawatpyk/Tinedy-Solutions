@@ -153,7 +153,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
               key={booking.id}
               className={cn(
                 'flex items-center gap-1.5 text-[10px] py-0.5 px-1.5 rounded-md truncate',
-                'bg-gray-50 hover:bg-gray-100 transition-colors'
+                'bg-tinedy-off-white/50 hover:bg-tinedy-off-white transition-colors'
               )}
               title={`${booking.start_time} - ${booking.customers?.full_name || 'No Customer'}`}
             >
