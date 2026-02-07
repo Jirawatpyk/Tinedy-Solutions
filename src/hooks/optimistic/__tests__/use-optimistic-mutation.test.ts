@@ -67,10 +67,11 @@ describe('useOptimisticMutation', () => {
     })
 
     it('should set loading state during mutation', async () => {
+      let resolveMutation: () => void
       const mutationFn = vi.fn().mockImplementation(
         () =>
-          new Promise((resolve) => {
-            setTimeout(resolve, 50)
+          new Promise<void>((resolve) => {
+            resolveMutation = resolve
           })
       )
 
@@ -82,6 +83,7 @@ describe('useOptimisticMutation', () => {
         { wrapper }
       )
 
+      // Start mutation (don't await — it should stay pending)
       const mutatePromise = result.current.mutate({ id: '1' })
 
       // Wait for loading state to be set
@@ -89,6 +91,8 @@ describe('useOptimisticMutation', () => {
         expect(result.current.isLoading).toBe(true)
       })
 
+      // Now resolve the mutation
+      resolveMutation!()
       await mutatePromise
 
       await waitFor(() => {

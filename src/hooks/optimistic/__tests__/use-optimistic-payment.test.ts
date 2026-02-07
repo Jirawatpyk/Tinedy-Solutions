@@ -565,10 +565,11 @@ describe('useOptimisticPayment', () => {
 
   describe('Loading States', () => {
     it('should set loading state during mutation', async () => {
+      let resolveMutation: (value: { success: boolean; count: number }) => void
       mockMarkAsPaidService.mockImplementation(
         () =>
           new Promise((resolve) => {
-            setTimeout(() => resolve({ success: true, count: 1 }), 50)
+            resolveMutation = resolve
           })
       )
 
@@ -592,6 +593,8 @@ describe('useOptimisticPayment', () => {
         expect(result.current.markAsPaid.isLoading).toBe(true)
       })
 
+      // Now resolve the mutation
+      resolveMutation!({ success: true, count: 1 })
       await mutatePromise
 
       // Check loading cleared
