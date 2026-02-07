@@ -111,6 +111,7 @@ describe('Reports Query Functions', () => {
 
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -139,6 +140,7 @@ describe('Reports Query Functions', () => {
 
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -160,6 +162,7 @@ describe('Reports Query Functions', () => {
 
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -185,6 +188,7 @@ describe('Reports Query Functions', () => {
 
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -202,6 +206,7 @@ describe('Reports Query Functions', () => {
       // Arrange
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
       }
 
@@ -215,6 +220,7 @@ describe('Reports Query Functions', () => {
       // Arrange
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
@@ -238,6 +244,7 @@ describe('Reports Query Functions', () => {
 
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -267,11 +274,13 @@ describe('Reports Query Functions', () => {
 
       const mockCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockCustomers, error: null }),
       }
 
       const mockBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -296,11 +305,13 @@ describe('Reports Query Functions', () => {
 
       const mockCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockCustomers, error: null }),
       }
 
       const mockBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -318,6 +329,7 @@ describe('Reports Query Functions', () => {
       // Arrange
       const mockCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Customer error' } }),
       }
 
@@ -333,11 +345,13 @@ describe('Reports Query Functions', () => {
 
       const mockCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockCustomers, error: null }),
       }
 
       const mockBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: null, error: { message: 'Booking error' } }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'Booking error' } }),
       }
 
       vi.mocked(supabase.from)
@@ -352,11 +366,13 @@ describe('Reports Query Functions', () => {
       // Arrange
       const mockCustomersChain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockBookingsChain = {
-        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -388,7 +404,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: mockStaffBookings, error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockStaffBookings, error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -397,7 +414,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -442,7 +460,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -451,7 +470,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -499,7 +519,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -508,7 +529,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -556,7 +578,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -565,7 +588,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockTeamBookings, error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -592,7 +616,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -601,7 +626,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -625,7 +651,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -634,7 +661,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: null, error: { message: 'Team bookings error' } }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'Team bookings error' } }),
       }
 
       vi.mocked(supabase.from)
@@ -658,7 +686,8 @@ describe('Reports Query Functions', () => {
 
       const mockStaffBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       const mockTeamMembersChain = {
@@ -667,7 +696,8 @@ describe('Reports Query Functions', () => {
 
       const mockTeamBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -713,7 +743,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -757,7 +788,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -788,7 +820,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -823,7 +856,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -854,7 +888,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)
@@ -889,7 +924,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: null, error: { message: 'Team bookings error' } }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'Team bookings error' } }),
       }
 
       vi.mocked(supabase.from)
@@ -924,7 +960,8 @@ describe('Reports Query Functions', () => {
 
       const mockBookingsChain = {
         select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockResolvedValue({ data: [], error: null }),
+        not: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: [], error: null }),
       }
 
       vi.mocked(supabase.from)

@@ -92,6 +92,7 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
         service_type
       )
     `)
+    .is('deleted_at', null)
     .order('booking_date', { ascending: true })
 
   if (error) {
@@ -152,10 +153,12 @@ export async function fetchReportsCustomers(): Promise<{
     supabase
       .from('customers')
       .select('id, full_name, email, phone, created_at')
+      .is('deleted_at', null)
       .order('full_name'),
     supabase
       .from('bookings')
       .select('id, booking_date, total_price, status, payment_status, payment_date, created_at, customer_id')
+      .is('deleted_at', null)
   ])
 
   if (customersResult.error) {
@@ -212,7 +215,8 @@ export async function fetchReportsStaff(): Promise<{
     supabase
       .from('bookings')
       .select('id, booking_date, total_price, status, payment_status, payment_date, staff_id, created_at')
-      .not('staff_id', 'is', null),
+      .not('staff_id', 'is', null)
+      .is('deleted_at', null),
     supabase
       .from('team_members')
       .select('team_id, staff_id, joined_at, left_at'),
@@ -220,6 +224,7 @@ export async function fetchReportsStaff(): Promise<{
       .from('bookings')
       .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, team_member_count, created_at')
       .not('team_id', 'is', null)
+      .is('deleted_at', null)
   ])
 
   if (staffResult.error) {
@@ -381,6 +386,7 @@ export async function fetchReportsTeams(): Promise<{
       .from('bookings')
       .select('id, booking_date, total_price, status, payment_status, payment_date, team_id, created_at')
       .not('team_id', 'is', null)
+      .is('deleted_at', null)
   ])
 
   if (teamsResult.error) {
