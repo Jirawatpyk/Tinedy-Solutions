@@ -127,7 +127,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
       case BookingStatus.Cancelled:
         return <XCircle className="h-5 w-5 text-red-600" />
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-600" />
+        return <AlertCircle className="h-5 w-5 text-muted-foreground" />
     }
   }
 
@@ -137,8 +137,8 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-        <div className="h-20 bg-gray-100 rounded animate-pulse" />
+        <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+        <div className="h-20 bg-muted rounded animate-pulse" />
       </div>
     )
   }
@@ -164,7 +164,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
           <div key={item.id} className="relative">
             {/* Timeline line */}
             {index < history.length - 1 && (
-              <div className="absolute left-[10px] top-8 bottom-[-12px] w-0.5 bg-gray-200" />
+              <div className="absolute left-[10px] top-8 bottom-[-12px] w-0.5 bg-tinedy-dark/10" />
             )}
 
             <div className="flex gap-3">
@@ -199,7 +199,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
                     {format(new Date(item.created_at), 'dd MMM yyyy, HH:mm', { locale: enUS })}
                   </p>
                   {item.notes && (
-                    <p className="text-gray-600 italic">"{item.notes}"</p>
+                    <p className="text-muted-foreground italic">"{item.notes}"</p>
                   )}
                 </div>
               </div>

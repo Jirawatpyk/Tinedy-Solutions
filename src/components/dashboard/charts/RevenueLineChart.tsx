@@ -42,11 +42,12 @@ function RevenueLineChartComponent({
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <EmptyState
-            icon={DollarSign}
-            title="No revenue data available"
-            className="py-8"
-          />
+          <div style={{ minHeight: height }}>
+            <EmptyState
+              icon={DollarSign}
+              title="No revenue data available"
+            />
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
             <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>

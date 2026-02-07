@@ -106,7 +106,7 @@ export default function StaffCalendar() {
 
   return (
     <CalendarErrorBoundary>
-      <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+      <div className="h-full bg-tinedy-off-white/50 flex flex-col overflow-hidden">
         {/* PageHeader - Mobile only (lg:hidden by default) */}
         <PageHeader title="My Calendar" />
 
@@ -328,7 +328,7 @@ export default function StaffCalendar() {
                           <span>Cancelled</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-gray-500" />
+                          <div className="w-2 h-2 rounded-full bg-tinedy-dark/60" />
                           <span>No Show</span>
                         </div>
                       </div>

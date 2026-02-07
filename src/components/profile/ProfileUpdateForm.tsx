@@ -203,7 +203,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                 <img
                   src={avatarUrl}
                   alt="Profile"
-                  className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
+                  className="h-24 w-24 rounded-full object-cover border-2 border-tinedy-dark/10"
                 />
                 <Button
                   type="button"
@@ -216,7 +216,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                 </Button>
               </div>
             ) : (
-              <div className="h-24 w-24 rounded-full border-2 border-dashed flex items-center justify-center text-muted-foreground bg-gray-50">
+              <div className="h-24 w-24 rounded-full border-2 border-dashed flex items-center justify-center text-muted-foreground bg-tinedy-off-white/50">
                 <User className="h-10 w-10" />
               </div>
             )}
@@ -253,7 +253,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                   <Shield className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Account Role</p>
+                  <p className="text-sm font-medium text-tinedy-dark">Account Role</p>
                 </div>
               </div>
               <Badge className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm font-semibold capitalize">
@@ -275,7 +275,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                 render={({ field, fieldState }) => (
                   <>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="full_name"
                         placeholder="Enter your full name"
@@ -296,11 +296,11 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     value={initialData.email}
                     disabled
-                    className="pl-10 bg-gray-50"
+                    className="pl-10 bg-tinedy-off-white/50"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -323,7 +323,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                 render={({ field, fieldState }) => (
                   <>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="phone"
                         placeholder="0812345678"
@@ -349,11 +349,11 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Join Date</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     value={format(new Date(initialData.created_at), 'MMMM dd, yyyy')}
                     disabled
-                    className="pl-10 bg-gray-50"
+                    className="pl-10 bg-tinedy-off-white/50"
                   />
                 </div>
               </div>
@@ -370,7 +370,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
                   <Input
                     value={initialData.staff_number}
                     disabled
-                    className="bg-gray-50"
+                    className="bg-tinedy-off-white/50"
                   />
                 </div>
               )}

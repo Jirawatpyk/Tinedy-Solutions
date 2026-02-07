@@ -21,7 +21,7 @@ export function PaymentMethodSkeleton() {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Amount Display */}
-        <div className="text-center py-4 bg-gray-50 rounded-lg">
+        <div className="text-center py-4 bg-tinedy-off-white/50 rounded-lg">
           <Skeleton shimmer={false} className="h-4 w-24 mx-auto mb-2" />
           <Skeleton shimmer={false} className="h-8 w-32 mx-auto" />
         </div>

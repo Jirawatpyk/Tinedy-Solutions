@@ -42,11 +42,12 @@ function BookingStatusPieChartComponent({
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title="No bookings data available"
-            className="py-8"
-          />
+          <div style={{ minHeight: height }}>
+            <EmptyState
+              icon={Calendar}
+              title="No bookings data available"
+            />
+          </div>
         ) : (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={height}>

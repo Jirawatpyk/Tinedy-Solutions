@@ -62,7 +62,7 @@ export function PaymentSuccessPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-tinedy-off-white/50 py-8">
         <div className="max-w-2xl mx-auto px-4">
           <Skeleton className="h-64 w-full" />
         </div>
@@ -72,7 +72,7 @@ export function PaymentSuccessPage() {
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-tinedy-off-white/50 py-8">
         <div className="max-w-2xl mx-auto px-4">
           <Card>
             <CardContent className="pt-6">
@@ -93,7 +93,7 @@ export function PaymentSuccessPage() {
     : booking.total_price
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-tinedy-off-white/50 py-8">
       <div className="max-w-2xl mx-auto px-4">
         <Card>
           <CardContent className="pt-8">
@@ -102,7 +102,7 @@ export function PaymentSuccessPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-12 w-12 text-green-600" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-tinedy-dark mb-2">
                 {isPaid ? 'Payment Confirmed!' : 'Payment Submitted!'}
               </h1>
               <div className="text-muted-foreground">
@@ -149,14 +149,14 @@ export function PaymentSuccessPage() {
                   {isRecurring ? (
                     <div className="pt-2">
                       <p className="text-muted-foreground mb-2">Schedule ({recurringBookings.length} sessions)</p>
-                      <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                      <div className="space-y-2 max-h-48 overflow-y-auto bg-tinedy-off-white/50 rounded-lg p-3">
                         {recurringBookings.map((b, index) => (
                           <div key={b.id} className="flex items-center justify-between text-sm py-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-blue-600 text-xs">{index + 1}/{recurringBookings.length}</span>
-                              <Calendar className="h-3 w-3 text-gray-400" />
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
                               <span>{formatDate(b.booking_date)}</span>
-                              <Clock className="h-3 w-3 text-gray-400 ml-1" />
+                              <Clock className="h-3 w-3 text-muted-foreground ml-1" />
                               <span className="text-xs">{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</span>
                             </div>
                           </div>
@@ -169,7 +169,7 @@ export function PaymentSuccessPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Date</span>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{formatDate(booking.booking_date)}</span>
                         </div>
                       </div>
@@ -178,7 +178,7 @@ export function PaymentSuccessPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Time</span>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
+                          <Clock className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
                             {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
                           </span>
@@ -191,7 +191,7 @@ export function PaymentSuccessPage() {
                   <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Location</span>
                     <div className="flex items-start gap-2 max-w-xs text-right">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
                         {[booking.address, booking.city, booking.state, booking.zip_code]
                           .filter(Boolean)
@@ -224,7 +224,7 @@ export function PaymentSuccessPage() {
                   </div>
 
                   {isRecurring && (
-                    <p className="text-xs text-gray-500 text-right -mt-2">
+                    <p className="text-xs text-muted-foreground text-right -mt-2">
                       Total for all {recurringBookings.length} sessions
                     </p>
                   )}

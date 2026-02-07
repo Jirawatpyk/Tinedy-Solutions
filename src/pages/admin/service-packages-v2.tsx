@@ -374,7 +374,7 @@ export function AdminServicePackagesV2() {
           title="Inactive"
           value={stats.inactive}
           icon={DollarSign}
-          iconColor="text-gray-400"
+          iconColor="text-muted-foreground"
         />
 
         <StatCard

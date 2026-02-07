@@ -79,7 +79,7 @@ export function TeamWorkloadMobile({ data }: TeamWorkloadMobileProps) {
 
             {/* Progress bar */}
             <div
-              className="w-full bg-gray-100 rounded-full h-2.5"
+              className="w-full bg-tinedy-off-white rounded-full h-2.5"
               role="progressbar"
               aria-label={`${item.name}: ${item.value} jobs (${percentage.toFixed(0)}%)`}
               aria-valuenow={Math.round(percentage)}

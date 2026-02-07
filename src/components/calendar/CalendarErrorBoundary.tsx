@@ -89,15 +89,15 @@ export class CalendarErrorBoundary extends Component<Props, State> {
 
                 {this.state.error && (
                   <details className="mt-4">
-                    <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    <summary className="cursor-pointer text-sm font-medium text-tinedy-dark hover:text-tinedy-dark">
                       Technical Details
                     </summary>
-                    <div className="mt-2 p-3 bg-gray-100 rounded-md">
-                      <p className="text-xs font-mono text-gray-800 break-all">
+                    <div className="mt-2 p-3 bg-tinedy-off-white rounded-md">
+                      <p className="text-xs font-mono text-tinedy-dark break-all">
                         {this.state.error.message}
                       </p>
                       {this.state.errorInfo && (
-                        <pre className="mt-2 text-xs text-gray-600 overflow-auto max-h-40">
+                        <pre className="mt-2 text-xs text-muted-foreground overflow-auto max-h-40">
                           {this.state.errorInfo}
                         </pre>
                       )}

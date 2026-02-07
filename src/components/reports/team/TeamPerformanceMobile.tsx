@@ -119,8 +119,8 @@ export function TeamPerformanceMobile({ teamPerformance }: TeamPerformanceProps)
                     </div>
 
                     {/* Job Status */}
-                    <div className="bg-gray-50 rounded-lg p-2">
-                      <div className="flex items-center gap-1 text-xs text-gray-700 mb-1">
+                    <div className="bg-tinedy-off-white/50 rounded-lg p-2">
+                      <div className="flex items-center gap-1 text-xs text-tinedy-dark mb-1">
                         <span className="font-medium">Status</span>
                       </div>
                       <div className="flex gap-2 text-xs">
@@ -139,7 +139,7 @@ export function TeamPerformanceMobile({ teamPerformance }: TeamPerformanceProps)
                       </span>
                     </div>
                     <div
-                      className="w-full bg-gray-200 rounded-full h-2"
+                      className="w-full bg-muted rounded-full h-2"
                       role="progressbar"
                       aria-label={`Completion Rate: ${Math.round(team.completionRate)}%`}
                       aria-valuenow={Math.round(team.completionRate)}

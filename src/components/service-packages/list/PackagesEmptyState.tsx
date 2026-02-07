@@ -6,10 +6,11 @@ import { EmptyState } from '@/components/common/EmptyState'
 function PackagesEmptyStateComponent() {
   return (
     <Card>
-      <CardContent>
+      <CardContent className="py-6">
         <EmptyState
           icon={Package}
           title="No packages found"
+          className="py-6"
         />
       </CardContent>
     </Card>

@@ -352,7 +352,7 @@ export const MobileCalendar: React.FC<MobileCalendarProps> = React.memo(({
 
       {/* Selected Date Bookings */}
       <div className="flex-1 overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b bg-tinedy-off-white/50 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-sm">
               {selectedDate

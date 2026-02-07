@@ -99,7 +99,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                 {team.average_rating !== undefined && (
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-yellow-400" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-gray-700">
+                    <span className="text-[10px] sm:text-xs font-semibold text-tinedy-dark">
                       {team.average_rating.toFixed(1)}
                     </span>
                   </div>

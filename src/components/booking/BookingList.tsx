@@ -180,7 +180,7 @@ function BookingListComponent({
                 return (
                   <div
                     key={booking.id}
-                    className={`p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${isArchived ? 'opacity-60 border-dashed bg-gray-50' : ''}`}
+                    className={`p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${isArchived ? 'opacity-60 border-dashed bg-tinedy-off-white/50' : ''}`}
                     onClick={() => onBookingClick(booking)}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-1 gap-3 sm:gap-4">

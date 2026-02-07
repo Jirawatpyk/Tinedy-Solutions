@@ -64,7 +64,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
     <div className="border-t p-4 bg-white">
       {/* File preview */}
       {selectedFile && (
-        <div className="mb-2 flex items-center gap-2 p-2 bg-gray-100 rounded">
+        <div className="mb-2 flex items-center gap-2 p-2 bg-tinedy-off-white rounded">
           <Paperclip className="h-4 w-4" />
           <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
           <span className="text-xs text-muted-foreground">

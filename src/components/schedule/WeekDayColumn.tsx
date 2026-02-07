@@ -57,7 +57,7 @@ const WeekDayColumnComponent: React.FC<WeekDayColumnProps> = ({
         {TIME_SLOTS.map((_, index) => (
           <div
             key={index}
-            className="absolute w-full border-t border-gray-200"
+            className="absolute w-full border-t border-tinedy-dark/10"
             style={{ top: `${(index / TIME_SLOTS.length) * 100}%` }}
           />
         ))}

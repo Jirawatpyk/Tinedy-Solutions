@@ -74,26 +74,26 @@ export function TieredPricingCard({
           {/* Main Price Display Skeleton */}
           <div className="flex items-baseline justify-between">
             <div className="space-y-1">
-              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+              <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+              <div className="h-3 w-20 bg-muted rounded animate-pulse" />
             </div>
-            <div className="h-6 w-24 bg-gray-200 rounded-full animate-pulse" />
+            <div className="h-6 w-24 bg-muted rounded-full animate-pulse" />
           </div>
 
           {/* Area Range Skeleton */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-12 bg-muted rounded animate-pulse" />
+              <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+              <div className="h-3 w-12 bg-muted rounded animate-pulse" />
             </div>
-            <div className="h-1.5 w-full bg-gray-200 rounded animate-pulse" />
+            <div className="h-1.5 w-full bg-muted rounded animate-pulse" />
           </div>
 
           {/* Est. Duration Skeleton */}
           <div className="flex items-center justify-between pt-0.5">
-            <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+            <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-3 w-12 bg-muted rounded animate-pulse" />
           </div>
         </CardContent>
       </Card>

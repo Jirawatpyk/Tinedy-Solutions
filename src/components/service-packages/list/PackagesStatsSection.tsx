@@ -54,7 +54,7 @@ function PackagesStatsSectionComponent({ stats }: PackagesStatsSectionProps) {
         title="Inactive"
         value={stats.inactive}
         icon={XCircle}
-        iconColor="text-gray-400"
+        iconColor="text-muted-foreground"
       />
     </div>
   )

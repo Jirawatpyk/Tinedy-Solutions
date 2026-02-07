@@ -72,9 +72,9 @@ export const TodayAppointmentsList = ({
                 key={i}
                 className="p-4 border rounded-lg space-y-3 animate-pulse"
               >
-                <div className="h-5 bg-gray-200 rounded w-40" />
-                <div className="h-4 bg-gray-200 rounded w-56" />
-                <div className="h-4 bg-gray-200 rounded w-32" />
+                <div className="h-5 bg-muted rounded w-40" />
+                <div className="h-4 bg-muted rounded w-56" />
+                <div className="h-4 bg-muted rounded w-32" />
               </div>
             ))}
           </div>

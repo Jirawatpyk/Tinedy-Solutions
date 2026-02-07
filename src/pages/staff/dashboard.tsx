@@ -193,7 +193,7 @@ export default function StaffDashboard() {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gradient-to-br from-gray-50 via-gray-50/50 to-primary/5">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gradient-to-br from-tinedy-off-white/50 via-tinedy-off-white/30 to-primary/5">
       {/* Mobile-first Header */}
       <StaffHeader
         searchValue={searchInput}

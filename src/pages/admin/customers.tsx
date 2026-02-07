@@ -448,7 +448,7 @@ export function AdminCustomers() {
                               </Badge>
                             ))}
                             {customer.tags.length > 2 && (
-                              <Badge variant="outline" className="text-[10px] sm:text-xs bg-gray-100 text-gray-700">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs bg-tinedy-off-white text-tinedy-dark">
                                 +{customer.tags.length - 2}
                               </Badge>
                             )}

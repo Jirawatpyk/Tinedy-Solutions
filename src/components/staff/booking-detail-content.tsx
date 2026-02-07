@@ -281,7 +281,7 @@ export function BookingDetailContent({
                             'h-4 w-4',
                             star <= review.rating
                               ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-tinedy-dark/20'
+                              : 'text-tinedy-dark/40'
                           )}
                         />
                       ))}

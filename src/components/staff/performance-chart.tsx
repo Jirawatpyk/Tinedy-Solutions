@@ -33,8 +33,8 @@ function CustomTooltip({ active, payload, label }: {
 }) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[120px]">
-        <p className="font-medium text-gray-900 mb-1.5 text-xs">{label}</p>
+      <div className="bg-white border border-tinedy-dark/10 rounded-lg shadow-lg p-3 min-w-[120px]">
+        <p className="font-medium text-tinedy-dark mb-1.5 text-xs">{label}</p>
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-3 text-xs">
             <span className="flex items-center gap-1.5">
@@ -42,11 +42,11 @@ function CustomTooltip({ active, payload, label }: {
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-gray-500">
+              <span className="text-muted-foreground">
                 {entry.dataKey === 'tasks' ? 'Tasks' : 'Revenue'}
               </span>
             </span>
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-tinedy-dark">
               {entry.dataKey === 'revenue'
                 ? `฿${entry.value.toLocaleString()}`
                 : entry.value}

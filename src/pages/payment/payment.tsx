@@ -120,7 +120,7 @@ export function PaymentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-tinedy-off-white/50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <Skeleton className="h-12 w-64 mb-8" />
           <div className="grid gap-6 md:grid-cols-2">
@@ -134,7 +134,7 @@ export function PaymentPage() {
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-tinedy-off-white/50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <Alert variant="destructive">
             <AlertDescription>
@@ -153,14 +153,14 @@ export function PaymentPage() {
     : booking.total_price
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-tinedy-off-white/50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-tinedy-dark mb-2">
             Complete Your Payment
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Booking ID: <span className="font-semibold">{formatBookingId(booking.id)}</span>
             {isRecurring && (
               <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -198,12 +198,12 @@ export function PaymentPage() {
                     <p className="text-sm text-muted-foreground mb-2">Schedule ({recurringBookings.length} sessions)</p>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {recurringBookings.map((b, index) => (
-                        <div key={b.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                        <div key={b.id} className="flex items-center justify-between p-2 bg-tinedy-off-white/50 rounded text-sm">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-blue-600">{index + 1}/{recurringBookings.length}</span>
-                            <Calendar className="h-3 w-3 text-gray-400" />
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
                             <span>{formatDate(b.booking_date)}</span>
-                            <Clock className="h-3 w-3 text-gray-400 ml-2" />
+                            <Clock className="h-3 w-3 text-muted-foreground ml-2" />
                             <span>{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</span>
                           </div>
                           <span className="text-green-600 font-medium">{formatCurrency(b.total_price)}</span>
@@ -217,14 +217,14 @@ export function PaymentPage() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Date</p>
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
                         <p className="font-medium">{formatDate(booking.booking_date)}</p>
                       </div>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Time</p>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
+                        <Clock className="h-4 w-4 text-muted-foreground" />
                         <p className="font-medium">
                           {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
                         </p>
@@ -237,7 +237,7 @@ export function PaymentPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Location</p>
                   <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <p className="text-sm">
                       {[booking.address, booking.city, booking.state, booking.zip_code]
                         .filter(Boolean)
@@ -250,13 +250,13 @@ export function PaymentPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Customer</p>
                   <p className="font-medium">{booking.customers?.full_name}</p>
-                  <p className="text-sm text-gray-600">{booking.customers?.phone}</p>
+                  <p className="text-sm text-muted-foreground">{booking.customers?.phone}</p>
                 </div>
 
                 {/* Total */}
                 <div className="pt-4 border-t">
                   {isRecurring && (
-                    <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+                    <div className="flex items-center justify-between mb-2 text-sm text-muted-foreground">
                       <span>Price per session:</span>
                       <span>{formatCurrency(booking.total_price)}</span>
                     </div>
@@ -268,7 +268,7 @@ export function PaymentPage() {
                     </p>
                   </div>
                   {isRecurring && (
-                    <p className="text-xs text-gray-500 text-right mt-1">
+                    <p className="text-xs text-muted-foreground text-right mt-1">
                       Pay once for all {recurringBookings.length} sessions
                     </p>
                   )}
@@ -299,8 +299,8 @@ export function PaymentPage() {
                       <QrCode className="h-6 w-6 text-blue-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900">PromptPay QR</p>
-                      <p className="text-sm text-gray-600">Scan to pay instantly</p>
+                      <p className="font-semibold text-tinedy-dark">PromptPay QR</p>
+                      <p className="text-sm text-muted-foreground">Scan to pay instantly</p>
                     </div>
                     {paymentMethod === 'promptpay' && (
                       <CheckCircle2 className="h-6 w-6 text-blue-600" />
@@ -322,8 +322,8 @@ export function PaymentPage() {
                       <Upload className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900">Bank Transfer</p>
-                      <p className="text-sm text-gray-600">Upload transfer slip</p>
+                      <p className="font-semibold text-tinedy-dark">Bank Transfer</p>
+                      <p className="text-sm text-muted-foreground">Upload transfer slip</p>
                     </div>
                     {paymentMethod === 'slip' && (
                       <CheckCircle2 className="h-6 w-6 text-blue-600" />

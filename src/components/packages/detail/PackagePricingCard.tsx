@@ -81,7 +81,7 @@ function PackagePricingCardComponent({ packageData }: PackagePricingCardProps) {
                 {/* Mobile: Card View */}
                 <div className="sm:hidden space-y-3">
                   {packageData.tiers.map((tier) => (
-                    <div key={tier.id} className="border rounded-lg p-3 bg-gray-50/50">
+                    <div key={tier.id} className="border rounded-lg p-3 bg-tinedy-off-white/30">
                       <div className="mb-2">
                         <span className="font-semibold text-sm">{tier.area_min} - {tier.area_max} sqm</span>
                       </div>

@@ -9,10 +9,10 @@ interface BookingSearchHeaderProps {
 
 export function BookingSearchHeader({ searchInput, onSearchChange, onClear }: BookingSearchHeaderProps) {
   return (
-    <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-20 shadow-sm">
+    <div className="bg-white/80 backdrop-blur-xl border-b border-tinedy-dark/5 sticky top-0 z-20 shadow-sm">
       <div className="px-3 sm:px-6 lg:px-8 py-2 tablet-landscape:py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-          <h1 className="text-lg tablet-landscape:text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+          <h1 className="text-lg tablet-landscape:text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-tinedy-dark via-tinedy-dark/90 to-tinedy-dark/80 bg-clip-text text-transparent">
             My Bookings
           </h1>
           {/* Search Input */}
@@ -30,7 +30,7 @@ export function BookingSearchHeader({ searchInput, onSearchChange, onClear }: Bo
               <button
                 type="button"
                 onClick={onClear}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-tinedy-off-white rounded-full transition-colors"
                 title="Clear search"
                 aria-label="Clear search"
               >

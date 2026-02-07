@@ -106,7 +106,7 @@ function getPricingModelBadge(model: string) {
       Tiered
     </Badge>
   ) : (
-    <Badge variant="outline" className="border-gray-500 text-gray-700">
+    <Badge variant="outline" className="border-tinedy-dark/40 text-tinedy-dark">
       <DollarSign className="h-3 w-3 mr-1" />
       Fixed
     </Badge>

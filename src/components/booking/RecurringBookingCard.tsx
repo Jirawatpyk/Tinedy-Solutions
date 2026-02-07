@@ -190,7 +190,7 @@ export function RecurringBookingCard({
               </div>
               {group.noShowCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 flex-shrink-0" />
+                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                   <span>{group.noShowCount} <span className="hidden sm:inline">No Show</span></span>
                 </div>
               )}

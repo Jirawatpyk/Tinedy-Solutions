@@ -275,7 +275,7 @@ function TeamsTabComponent({
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-1.5 sm:h-2">
+                        <div className="flex-1 bg-muted rounded-full h-1.5 sm:h-2">
                           <div
                             className={`h-1.5 sm:h-2 rounded-full ${
                               completionRate >= 80

@@ -163,7 +163,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
                   STATUS_DOTS[booking.status as keyof typeof STATUS_DOTS]
                 )}
               />
-              <span className="font-medium text-gray-600 truncate">
+              <span className="font-medium text-muted-foreground truncate">
                 {booking.start_time?.slice(0, 5)}
               </span>
             </div>

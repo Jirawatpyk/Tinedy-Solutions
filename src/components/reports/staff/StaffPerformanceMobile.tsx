@@ -145,7 +145,7 @@ export function StaffPerformanceMobile({ staffPerformance }: StaffPerformancePro
                         </span>
                       </div>
                       <div
-                        className="w-full bg-gray-200 rounded-full h-2"
+                        className="w-full bg-muted rounded-full h-2"
                         role="progressbar"
                         aria-label={`Completion Rate: ${Math.round(staff.completionRate)}%`}
                         aria-valuenow={Math.round(staff.completionRate)}
@@ -168,7 +168,7 @@ export function StaffPerformanceMobile({ staffPerformance }: StaffPerformancePro
                         </span>
                       </div>
                       <div
-                        className="w-full bg-gray-200 rounded-full h-2"
+                        className="w-full bg-muted rounded-full h-2"
                         role="progressbar"
                         aria-label={`Utilization Rate: ${Math.round(staff.utilizationRate)}%`}
                         aria-valuenow={Math.round(staff.utilizationRate)}

@@ -114,7 +114,7 @@ function PackageBookingsCardComponent({
             {/* Mobile: Card View */}
             <div className="sm:hidden space-y-3">
               {paginatedBookings.map((booking) => (
-                <div key={booking.id} className="border rounded-lg p-3 bg-gray-50/50">
+                <div key={booking.id} className="border rounded-lg p-3 bg-tinedy-off-white/30">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{booking.customers?.full_name || 'N/A'}</p>

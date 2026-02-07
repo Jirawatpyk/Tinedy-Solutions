@@ -237,7 +237,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-tinedy-dark mb-2">
               Payment Slip Uploaded!
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -292,7 +292,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
         {/* QR Code */}
         {qrCode && (
           <div className="flex justify-center">
-            <div className="p-4 bg-white border-2 border-gray-200 rounded-lg">
+            <div className="p-4 bg-white border-2 border-tinedy-dark/10 rounded-lg">
               <img
                 src={qrCode}
                 alt="PromptPay QR Code"
@@ -304,8 +304,8 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
 
         {/* Instructions */}
         <div className="space-y-2 text-sm">
-          <p className="font-semibold text-gray-900">How to Pay:</p>
-          <ol className="list-decimal list-inside space-y-1 text-gray-600">
+          <p className="font-semibold text-tinedy-dark">How to Pay:</p>
+          <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
             <li>Open your mobile banking app</li>
             <li>Select "Scan QR" or "PromptPay"</li>
             <li>Scan the QR code above</li>
@@ -317,27 +317,27 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
         {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+            <div className="w-full border-t border-tinedy-dark/10 dark:border-tinedy-dark/70" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-white dark:bg-card px-4 text-gray-500 dark:text-gray-400">After payment, upload slip</span>
+            <span className="bg-white dark:bg-card px-4 text-muted-foreground dark:text-muted-foreground">After payment, upload slip</span>
           </div>
         </div>
 
         {/* Slip Upload Section */}
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-gray-900">Upload Payment Slip</p>
+          <p className="text-sm font-semibold text-tinedy-dark">Upload Payment Slip</p>
 
           {!preview ? (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+              className="border-2 border-dashed border-tinedy-dark/20 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
             >
               <div className="flex flex-col items-center">
                 <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
                   <Upload className="h-6 w-6 text-blue-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
+                <p className="text-sm font-medium text-tinedy-dark mb-1">
                   Click to upload payment slip
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -354,7 +354,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
               />
             </div>
           ) : (
-            <div className="relative border-2 border-gray-200 rounded-lg p-4">
+            <div className="relative border-2 border-tinedy-dark/10 rounded-lg p-4">
               <button
                 type="button"
                 onClick={handleRemoveFile}
@@ -368,7 +368,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
                 alt="Payment slip preview"
                 className="w-full max-h-64 object-contain rounded-lg"
               />
-              <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <ImageIcon className="h-4 w-4" />
                 <span className="truncate">{file?.name}</span>
               </div>

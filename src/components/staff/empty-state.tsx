@@ -35,7 +35,7 @@ export const EmptyState = memo(function EmptyState({ type }: EmptyStateProps) {
   const { icon: Icon, title, message, gradient, iconColor } = config[type]
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} border border-gray-200/50 p-8 sm:p-12 text-center`}>
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} border border-tinedy-dark/5 p-8 sm:p-12 text-center`}>
       {/* Decorative elements */}
       <div className="absolute top-4 right-4 opacity-10">
         <Sparkles className="h-12 w-12 text-primary" />
@@ -53,7 +53,7 @@ export const EmptyState = memo(function EmptyState({ type }: EmptyStateProps) {
       </div>
 
       {/* Text */}
-      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
+      <h3 className="text-lg sm:text-xl font-bold text-tinedy-dark mb-2">
         {title}
       </h3>
       <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">

@@ -32,7 +32,7 @@ export function NotificationSettingsCard() {
               </>
             ) : (
               <>
-                <BellOff className="h-4 w-4 text-gray-500" />
+                <BellOff className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Notifications Disabled</span>
               </>
             )}
