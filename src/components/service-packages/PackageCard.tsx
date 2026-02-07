@@ -43,7 +43,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/permission-guard'
-import { formatPrice } from '@/lib/pricing-utils'
+import { formatCurrency } from '@/lib/utils'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PricingModel } from '@/types'
 
@@ -144,7 +144,7 @@ export function PackageCard({
 
   return (
     <Card
-      className={`relative hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${!isActive ? 'opacity-60' : ''} ${isArchived ? 'opacity-50 border-dashed border-orange-300' : ''}`}
+      className={`relative card-interactive ${!isActive ? 'opacity-60' : ''} ${isArchived ? 'opacity-50 border-dashed border-orange-300' : ''}`}
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">
@@ -283,7 +283,7 @@ export function PackageCard({
                 Price
               </div>
               <span className="font-semibold text-lg text-tinedy-blue">
-                {formatPrice(pkg.base_price)}
+                {formatCurrency(pkg.base_price)}
               </span>
             </div>
 
@@ -319,7 +319,7 @@ export function PackageCard({
                   Price Range
                 </div>
                 <span className="text-sm font-medium">
-                  {formatPrice(pkg.min_price)} - {formatPrice(pkg.max_price)}
+                  {formatCurrency(pkg.min_price)} - {formatCurrency(pkg.max_price)}
                 </span>
               </div>
             )}

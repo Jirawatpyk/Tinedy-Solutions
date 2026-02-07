@@ -31,6 +31,7 @@ import {
   RotateCcw,
   PlayCircle
 } from 'lucide-react'
+import { BookingStatus } from '@/types/booking'
 import { cn, formatCurrency } from '@/lib/utils'
 import { getRecurringPatternLabel } from '@/types/recurring-booking'
 import { formatDate } from '@/lib/utils'
@@ -58,8 +59,9 @@ interface RecurringBookingCardProps {
 }
 
 // Helper function to check if status is final
+const FINAL_STATUSES: BookingStatus[] = [BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow]
 const isFinalStatus = (status: string): boolean => {
-  return ['completed', 'cancelled', 'no_show'].includes(status)
+  return FINAL_STATUSES.includes(status as BookingStatus)
 }
 
 export function RecurringBookingCard({
@@ -348,9 +350,9 @@ export function RecurringBookingCard({
               const isArchived = !!booking.deleted_at
               const bgColor = isArchived
                 ? 'bg-gray-100 hover:bg-gray-200 opacity-60 border-dashed'
-                : booking.status === 'completed'
+                : booking.status === BookingStatus.Completed
                 ? 'bg-green-50 hover:bg-green-100'
-                : booking.status === 'cancelled'
+                : booking.status === BookingStatus.Cancelled
                 ? 'bg-red-50 hover:bg-red-100'
                 : 'hover:bg-accent'
 

@@ -26,6 +26,7 @@ import {
   type TeamMembership,
   type StaffStats,
 } from '@/lib/queries/staff-bookings-queries'
+import { BookingStatus } from '@/types/booking'
 
 // ============================================================================
 // HOOK INTERFACE
@@ -269,7 +270,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
 
       const { error } = await supabase
         .from('bookings')
-        .update({ status: 'in_progress' })
+        .update({ status: BookingStatus.InProgress })
         .eq('id', bookingId)
 
       if (error) {
@@ -291,7 +292,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.setQueryData(
         todayKey,
         (old: StaffBooking[] | undefined) =>
-          old?.map((b) => (b.id === bookingId ? { ...b, status: 'in_progress' as const } : b))
+          old?.map((b) => (b.id === bookingId ? { ...b, status: BookingStatus.InProgress } : b))
       )
 
       logger.debug('Optimistically updated booking status', { bookingId }, { context: 'StaffDashboard' })
@@ -322,7 +323,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     mutationFn: async (bookingId: string) => {
       const { error } = await supabase
         .from('bookings')
-        .update({ status: 'completed' })
+        .update({ status: BookingStatus.Completed })
         .eq('id', bookingId)
 
       if (error) throw error
@@ -341,7 +342,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       queryClient.setQueryData(
         todayKey,
         (old: StaffBooking[] | undefined) =>
-          old?.map((b) => (b.id === bookingId ? { ...b, status: 'completed' as const } : b))
+          old?.map((b) => (b.id === bookingId ? { ...b, status: BookingStatus.Completed } : b))
       )
 
       logger.debug('Optimistically updated booking status to completed', { bookingId }, { context: 'StaffDashboard' })
@@ -375,7 +376,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     mutationFn: async (bookingId: string) => {
       const { error } = await supabase
         .from('bookings')
-        .update({ status: 'in_progress' })
+        .update({ status: BookingStatus.InProgress })
         .eq('id', bookingId)
 
       if (error) throw error
@@ -397,7 +398,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
           queryKey: ['staff-bookings'],
           predicate: (query) => Array.isArray(query.state.data),
         },
-        (old) => old?.map((b) => (b.id === bookingId ? { ...b, status: 'in_progress' as const } : b))
+        (old) => old?.map((b) => (b.id === bookingId ? { ...b, status: BookingStatus.InProgress } : b))
       )
 
       logger.debug('Optimistically reverted booking status', { bookingId }, { context: 'StaffDashboard' })

@@ -1,9 +1,10 @@
 import type { Booking } from '@/types'
+import { BookingStatus } from '@/types/booking'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useTeamsList } from '@/hooks/useTeams'
-import { useBookingsByDateRange } from '@/hooks/useBookings'
-import { useSwipe } from '@/hooks/useSwipe'
+import { useTeamsList } from '@/hooks/use-teams'
+import { useBookingsByDateRange } from '@/hooks/use-bookings'
+import { useSwipe } from '@/hooks/use-swipe'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
@@ -18,7 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { ChevronLeft, ChevronRight, Download, Calendar, List, LayoutGrid } from 'lucide-react'
-import { useBookingStatusManager } from '@/hooks/useBookingStatusManager'
+import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
@@ -28,13 +29,13 @@ import { WeekDayColumn } from '@/components/schedule/WeekDayColumn'
 import { MobileBookingList } from '@/components/schedule/MobileBookingList'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
-import type { BookingFormState } from '@/hooks/useBookingForm'
+import type { BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
-import { useServicePackages } from '@/hooks/useServicePackages'
-import { useStaffList } from '@/hooks/useStaff'
+import { useServicePackages } from '@/hooks/use-service-packages'
+import { useStaffList } from '@/hooks/use-staff'
 import * as XLSX from 'xlsx'
 
-// BookingFormState imported from @/hooks/useBookingForm
+// BookingFormState imported from @/hooks/use-booking-form
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -590,8 +591,8 @@ export function AdminWeeklySchedule() {
   // OPTIMIZATION 1: Memoize weekStats calculation to avoid re-computing every render
   const weekStats = useMemo(() => {
     const totalBookings = bookings.length
-    const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length
-    const completedBookings = bookings.filter(b => b.status === 'completed').length
+    const confirmedBookings = bookings.filter(b => b.status === BookingStatus.Confirmed || b.status === BookingStatus.InProgress).length
+    const completedBookings = bookings.filter(b => b.status === BookingStatus.Completed).length
 
     // Find busiest day using helper function
     const bookingsByDay = DAYS_OF_WEEK.map((_, index) => ({

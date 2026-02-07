@@ -19,10 +19,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { TrendingUp, Briefcase, CheckCircle, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   formatCurrency,
-  getInitials,
   getAvatarColor,
   getRankBadgeColor,
 } from '@/lib/utils'
+import { getInitials } from '@/lib/string-utils'
 import type { StaffPerformanceProps } from './types'
 import { getUtilizationInfo } from './types'
 

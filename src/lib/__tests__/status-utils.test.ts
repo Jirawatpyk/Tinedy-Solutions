@@ -33,9 +33,9 @@ describe('status-utils', () => {
       expect(variant).toBe('purple')
     })
 
-    it('should return "danger" for no_show status', () => {
+    it('should return "default" for no_show status', () => {
       const variant = getBookingStatusVariant('no_show')
-      expect(variant).toBe('danger')
+      expect(variant).toBe('default')
     })
 
     it('should return "default" for unknown status', () => {

@@ -27,7 +27,8 @@ import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '@/types/calendar-filters'
 import { useAuth } from '@/contexts/auth-context'
-import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
+import { UserRole } from '@/types/common'
+import type { UseCalendarFiltersReturn } from '@/hooks/use-calendar-filters'
 
 interface CalendarFiltersDesktopProps {
   /** Filter state and actions from useCalendarFilters hook */
@@ -42,7 +43,7 @@ const CalendarFiltersDesktopComponent: React.FC<CalendarFiltersDesktopProps> = (
 }) => {
   const { filters, hasActiveFilters, activeFilterCount } = filterControls
   const { profile } = useAuth()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === UserRole.Admin
 
   // Fetch staff list for filter options (only role = 'staff', exclude admin and manager)
   const { data: staffList = [] } = useQuery(staffQueryOptions.listSimple('staff'))

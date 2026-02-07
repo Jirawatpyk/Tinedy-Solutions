@@ -21,6 +21,7 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { supabase } from '@/lib/supabase'
 import { getNavigationRoutes } from '@/lib/route-utils'
 import { formatRole } from '@/lib/role-utils'
+import { UserRole } from '@/types/common'
 
 interface SidebarProps {
   isOpen: boolean
@@ -180,6 +181,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  data-testid="user-menu"
                   className={cn(
                     "w-full flex items-center rounded-lg transition-all duration-300 hover:bg-tinedy-blue/50 p-2 -m-2",
                     isCollapsed ? 'justify-center' : 'space-x-3'
@@ -217,14 +219,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => {
-                  navigate(profile?.role === 'staff' ? '/staff/profile' : '/admin/profile')
+                  navigate(profile?.role === UserRole.Staff ? '/staff/profile' : '/admin/profile')
                   onClose()
                 }}>
                   <User className="mr-2 h-4 w-4" />
                   <span>My Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
+                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut} data-testid="logout-button">
                   {isLoggingOut ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />

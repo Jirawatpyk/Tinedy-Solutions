@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
@@ -185,9 +186,18 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
 
   return (
     <>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Avatar Upload - Centered */}
-          <div className="flex flex-col items-center space-y-4 pb-6 border-b">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profile Information
+          </CardTitle>
+          <CardDescription>Update your personal details and profile picture</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Avatar Upload - Centered */}
+            <div className="flex flex-col items-center space-y-4 pb-6 border-b">
             {avatarUrl ? (
               <div className="relative">
                 <img
@@ -395,6 +405,8 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
             </Button>
           </div>
         </form>
+      </CardContent>
+    </Card>
 
       {/* Confirm Delete Avatar Dialog */}
       <ConfirmDialog

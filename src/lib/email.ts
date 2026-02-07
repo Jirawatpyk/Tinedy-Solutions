@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { BookingStatus } from '@/types/booking';
 
 // Shared interfaces
 export interface BookingEmailData {
@@ -56,7 +57,7 @@ async function queueEmail(
       subject,
       html_content: htmlContent,
       scheduled_at: scheduledAt?.toISOString(),
-      status: 'pending',
+      status: BookingStatus.Pending,
     });
 
     if (error) {

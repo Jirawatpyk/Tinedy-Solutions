@@ -1,12 +1,12 @@
 import type { CustomerRecord } from '@/types'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCustomers } from '@/hooks/useCustomers'
+import { useCustomers } from '@/hooks/use-customers'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { getLoadErrorMessage } from '@/lib/error-messages'
 import { useToast } from '@/hooks/use-toast'
@@ -14,6 +14,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
+import { PageHeader } from '@/components/common/PageHeader'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
@@ -154,18 +155,16 @@ export function AdminCustomers() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Manage your customer database
-            </p>
-          </div>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Customer
-          </Button>
-        </div>
+        <PageHeader
+          title="Customers"
+          subtitle="Manage your customer database"
+          actions={
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Customer
+            </Button>
+          }
+        />
 
         {/* Stats Cards skeleton */}
         <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -218,43 +217,44 @@ export function AdminCustomers() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">Manage your customer database</p>
-        <div className="flex items-center gap-4">
-          {/* Show archived toggle - Admin only */}
-          <AdminOnly>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="show-archived-customers"
-                checked={showArchived}
-                onCheckedChange={(checked) => setShowArchived(checked as boolean)}
-              />
-              <label
-                htmlFor="show-archived-customers"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Show archived
-              </label>
-            </div>
-          </AdminOnly>
-          <Button
-            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-            onClick={openCreateDialog}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Customer
-          </Button>
+      <PageHeader
+        title="Customers"
+        subtitle="Manage your customer database"
+        actions={
+          <>
+            <AdminOnly>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-archived-customers"
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                />
+                <label
+                  htmlFor="show-archived-customers"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Show archived
+                </label>
+              </div>
+            </AdminOnly>
+            <Button
+              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+              onClick={openCreateDialog}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Customer
+            </Button>
+          </>
+        }
+      />
 
-          {/* Customer Form Dialog */}
-          <CustomerFormDialog
-            isOpen={isDialogOpen}
-            onClose={handleDialogClose}
-            onSuccess={handleDialogSuccess}
-            customer={editingCustomer}
-          />
-        </div>
-      </div>
+      {/* Customer Form Dialog */}
+      <CustomerFormDialog
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        onSuccess={handleDialogSuccess}
+        customer={editingCustomer}
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -386,7 +386,7 @@ export function AdminCustomers() {
             return (
               <Card
                 key={customer.id}
-                className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}
+                className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}
                 onClick={() => navigate(`${basePath}/customers/${customer.id}`)}
               >
                 <CardHeader className="pb-3 px-4 sm:px-6">

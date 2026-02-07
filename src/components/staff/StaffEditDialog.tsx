@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { TagInput } from '@/components/ui/tag-input'
 import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { useAuth } from '@/contexts/auth-context'
+import { UserRole } from '@/types/common'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
@@ -99,7 +100,7 @@ export function StaffEditDialog({
         phone: updateData.phone,
         staff_number: updateData.staff_number,
         skills: updateData.skills && updateData.skills.length > 0 ? updateData.skills : null,
-        ...(profile?.role === 'admin' && { role: updateData.role }),
+        ...(profile?.role === UserRole.Admin && { role: updateData.role }),
       }
 
       const { error } = await supabase
@@ -174,7 +175,7 @@ export function StaffEditDialog({
     }
   }
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === UserRole.Admin
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

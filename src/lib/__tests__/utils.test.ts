@@ -5,13 +5,13 @@ import {
   formatDateTime,
   formatCurrency,
   getBangkokDateString,
-  getInitials,
   getAvatarColor,
   getRankBadgeColor,
   formatBookingId,
   AVATAR_COLORS,
   RANK_BADGE_COLORS,
 } from '../utils'
+import { getInitials } from '../string-utils'
 
 describe('utils', () => {
   describe('cn', () => {
@@ -245,8 +245,8 @@ describe('utils', () => {
       expect(getInitials('John Doe')).toBe('JD')
     })
 
-    it('should return first two letters for single name', () => {
-      expect(getInitials('Alice')).toBe('AL')
+    it('should return first initial for single name', () => {
+      expect(getInitials('Alice')).toBe('A')
     })
 
     it('should handle three-word names', () => {

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingCreateModal } from '../BookingCreateModal'
 import { createMockServicePackage } from '@/test/factories'
-import type { UnifiedServicePackage } from '@/hooks/useServicePackages'
+import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
 
 // Mock modules
 vi.mock('@/lib/supabase', () => ({

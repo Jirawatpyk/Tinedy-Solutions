@@ -12,7 +12,7 @@ import { StatCard } from '@/components/common/StatCard/StatCard'
 import { TopCustomersCard } from '@/components/reports/TopCustomersCard'
 import { getCustomerAcquisitionTrend, getCustomerCLVDistribution, getCustomerSegmentation, getRepeatCustomerRateTrend, getDateRangePreset, type CustomerWithBookings } from '@/lib/analytics'
 import { CHART_COLORS } from '@/types/reports'
-import { useChartAnimation } from '@/hooks/useChartAnimation'
+import { useChartAnimation } from '@/hooks/use-chart-animation'
 import {
   LineChart,
   Line,

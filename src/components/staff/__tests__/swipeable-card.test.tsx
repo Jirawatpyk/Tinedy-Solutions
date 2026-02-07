@@ -6,7 +6,7 @@ import { SwipeableCard } from '../swipeable-card'
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, onTap, onDragStart, onDragEnd, ...props }: React.HTMLAttributes<HTMLDivElement> & { onTap?: () => void, onDragStart?: () => void, onDragEnd?: () => void }) => (
+    div: ({ children, onTap, onDragStart: _onDragStart, onDragEnd: _onDragEnd, ...props }: React.HTMLAttributes<HTMLDivElement> & { onTap?: () => void, onDragStart?: () => void, onDragEnd?: () => void }) => (
       <div {...props} onClick={onTap}>{children}</div>
     ),
   },

@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { format } from 'date-fns'
 import { getBangkokToday, getDateDaysAgo } from '@/lib/dashboard-utils'
+import { BookingStatus as BookingStatusEnum } from '@/types/booking'
 import type {
   Stats,
   StatsChange,
@@ -37,7 +38,7 @@ export async function fetchDashboardStats(): Promise<Stats> {
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending'),
+        .eq('status', BookingStatusEnum.Pending),
     ])
 
   const totalRevenue =
@@ -84,7 +85,7 @@ export async function fetchTodayStats(): Promise<StatsChange> {
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
+        .eq('status', BookingStatusEnum.Pending)
         .gte('created_at', `${todayStr}T00:00:00+07:00`)
         .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
     ])
@@ -115,11 +116,11 @@ export async function fetchBookingsByStatus(): Promise<BookingStatus[]> {
   })
 
   const statusColors: Record<string, string> = {
-    confirmed: '#3b82f6', // blue-500
-    pending: '#f59e0b', // amber-500
-    in_progress: '#8b5cf6', // violet-500
-    completed: '#22c55e', // green-500
-    cancelled: '#ef4444', // red-500
+    [BookingStatusEnum.Confirmed]: '#3b82f6', // blue-500
+    [BookingStatusEnum.Pending]: '#f59e0b', // amber-500
+    [BookingStatusEnum.InProgress]: '#8b5cf6', // violet-500
+    [BookingStatusEnum.Completed]: '#22c55e', // green-500
+    [BookingStatusEnum.Cancelled]: '#ef4444', // red-500
   }
 
   return Object.entries(statusCounts).map(([status, count]) => ({
@@ -239,7 +240,7 @@ export async function fetchMiniStats(): Promise<MiniStats> {
   const avgBookingValue = data && data.length > 0 ? totalBookingValue / data.length : 0
 
   // 3. Completion Rate
-  const completedCount = data?.filter((b) => b.status === 'completed').length || 0
+  const completedCount = data?.filter((b) => b.status === BookingStatusEnum.Completed).length || 0
   const completionRate = data && data.length > 0 ? (completedCount / data.length) * 100 : 0
 
   return {

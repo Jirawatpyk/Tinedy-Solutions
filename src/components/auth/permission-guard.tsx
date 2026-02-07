@@ -37,7 +37,8 @@
 
 import { memo, type ReactNode } from 'react'
 import { usePermissions } from '@/hooks/use-permissions'
-import type { PermissionAction, PermissionResource, UserRole } from '@/types/common'
+import { UserRole } from '@/types/common'
+import type { PermissionAction, PermissionResource } from '@/types/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ShieldAlert } from 'lucide-react'
 import { logger } from '@/lib/logger'
@@ -361,7 +362,7 @@ export function AdminOnly({
 }: Omit<PermissionGuardProps, 'requires'>) {
   return (
     <PermissionGuard
-      requires={{ mode: 'role', roles: ['admin'] }}
+      requires={{ mode: 'role', roles: [UserRole.Admin] }}
       fallback={fallback}
       {...props}
     >
@@ -387,7 +388,7 @@ export function ManagerOrAdmin({
 }: Omit<PermissionGuardProps, 'requires'>) {
   return (
     <PermissionGuard
-      requires={{ mode: 'role', roles: ['admin', 'manager'] }}
+      requires={{ mode: 'role', roles: [UserRole.Admin, UserRole.Manager] }}
       fallback={fallback}
       {...props}
     >
@@ -413,7 +414,7 @@ export function StaffOnly({
 }: Omit<PermissionGuardProps, 'requires'>) {
   return (
     <PermissionGuard
-      requires={{ mode: 'role', roles: ['staff'] }}
+      requires={{ mode: 'role', roles: [UserRole.Staff] }}
       fallback={fallback}
       {...props}
     >

@@ -6,6 +6,7 @@ import { ChatArea } from '@/components/chat/chat-area'
 import { NewChatModal } from '@/components/chat/new-chat-modal'
 import { useToast } from '@/hooks/use-toast'
 import type { Profile } from '@/types/chat'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminChat() {
   const { user } = useAuth()
@@ -106,8 +107,11 @@ export function AdminChat() {
   return (
     <div className="flex-1 flex flex-col space-y-4 min-h-0">
       {/* Page Header - Hide on mobile when chat is open */}
-      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px] ${selectedUser ? 'hidden lg:flex' : 'flex'}`}>
-        <p className="text-xs sm:text-sm text-muted-foreground">Communicate with your team in real-time</p>
+      <div className={selectedUser ? 'hidden lg:block' : 'block'}>
+        <PageHeader
+          title="Chat"
+          subtitle="Communicate with your team in real-time"
+        />
       </div>
 
       {/* Chat Container - Mobile: Stack, Desktop: Side by side */}

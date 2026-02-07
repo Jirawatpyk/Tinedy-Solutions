@@ -23,15 +23,15 @@ test.describe('Staff: View Customers (Read-Only)', () => {
     // If not, this test should verify they CANNOT access it
   })
 
-  test.skip('should view customer details', async ({ page }) => {
+  test.skip('should view customer details', async ({ page: _page }) => {
     // TODO: Requires navigation to specific customer detail page
   })
 
-  test.skip('should NOT access creation forms', async ({ page }) => {
+  test.skip('should NOT access creation forms', async ({ page: _page }) => {
     // TODO: Requires checking for absence of "Add Customer" button
   })
 
-  test.skip('should NOT see analytics', async ({ page }) => {
+  test.skip('should NOT see analytics', async ({ page: _page }) => {
     // TODO: Requires checking customer detail page for analytics section
   })
 })

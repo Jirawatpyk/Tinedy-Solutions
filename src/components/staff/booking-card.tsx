@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, Play, Users, Loader2 } from 'lucide-react'
 import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
+import { BookingStatus } from '@/types/booking'
 import { format } from 'date-fns'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
@@ -38,12 +39,12 @@ export const BookingCard = memo(function BookingCard({
   )
 
   const canStartProgress = useMemo(
-    () => booking.status === 'confirmed',
+    () => booking.status === BookingStatus.Confirmed,
     [booking.status]
   )
 
   const canMarkCompleted = useMemo(
-    () => booking.status === 'in_progress',
+    () => booking.status === BookingStatus.InProgress,
     [booking.status]
   )
 

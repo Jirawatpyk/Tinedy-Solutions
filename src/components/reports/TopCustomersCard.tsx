@@ -4,10 +4,10 @@ import { Mail, Calendar, TrendingUp } from 'lucide-react'
 import {
   formatCurrency,
   formatDate,
-  getInitials,
   getAvatarColor,
   getRankBadgeColor,
 } from '@/lib/utils'
+import { getInitials } from '@/lib/string-utils'
 
 interface TopCustomer {
   id: string

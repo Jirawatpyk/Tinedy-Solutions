@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { useServicePackages } from '@/hooks/useServicePackages'
-import { useStaffList } from '@/hooks/useStaff'
-import { useTeamsList } from '@/hooks/useTeams'
+import { useServicePackages } from '@/hooks/use-service-packages'
+import { useStaffList } from '@/hooks/use-staff'
+import { useTeamsList } from '@/hooks/use-teams'
 import { calculateEndTime } from '@/lib/dashboard-utils'
 
 // Hooks
@@ -10,14 +10,16 @@ import { useDashboardStats, useDashboardActions, useBookingModal } from '@/hooks
 
 // Components
 import { DashboardStats, QuickInsights, DashboardCharts, TodayAppointmentsList } from '@/components/dashboard/admin'
+import { PageHeader } from '@/components/common/PageHeader'
 import { BookingDetailModal } from './booking-detail-modal'
 import { BookingEditModal } from '@/components/booking'
 import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Types
+import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { BookingFormState } from '@/hooks/useBookingForm'
+import type { BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
 
 export function AdminDashboard() {
@@ -167,13 +169,10 @@ export function AdminDashboard() {
   if (dashboardData.error) {
     return (
       <div className="space-y-6">
-        {/* Page Header */}
-        <div>
-          <h1 className="text-3xl font-display font-bold text-tinedy-dark">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome back! Here's what's happening today.
-          </p>
-        </div>
+        <PageHeader
+          title="Dashboard"
+          subtitle="Welcome back! Here's what's happening today."
+        />
 
         {/* Error Card */}
         <div className="rounded-lg border border-red-200 bg-red-50 p-6">
@@ -205,13 +204,10 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-tinedy-dark">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's what's happening today.
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Welcome back! Here's what's happening today."
+      />
 
       {/* Stats Cards */}
       <DashboardStats
@@ -382,7 +378,7 @@ export function AdminDashboard() {
           confirmLabel="Confirm"
           cancelLabel="Cancel"
           onConfirm={actions.confirmStatusChange}
-          variant={['cancelled', 'no_show'].includes(actions.statusChangeConfirm.newStatus) ? 'destructive' : 'default'}
+          variant={([BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(actions.statusChangeConfirm.newStatus) ? 'destructive' : 'default'}
           isLoading={actions.actionLoading.statusChange}
         />
       )}

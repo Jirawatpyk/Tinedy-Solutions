@@ -23,7 +23,8 @@ export function formatDateTime(date: Date | string): string {
   })
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return '-'
   return '฿' + new Intl.NumberFormat('th-TH', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -44,24 +45,6 @@ export function getBangkokDateString(): string {
 // ============================================================================
 // Avatar & Display Utilities
 // ============================================================================
-
-/**
- * Get initials from a full name (max 2 characters)
- * @example getInitials('John Doe') => 'JD'
- * @example getInitials('Alice') => 'AL'
- */
-export function getInitials(name: string): string {
-  if (!name || typeof name !== 'string') return '?'
-
-  const trimmed = name.trim()
-  if (!trimmed) return '?'
-
-  const parts = trimmed.split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase()
-  }
-  return trimmed.slice(0, 2).toUpperCase()
-}
 
 /**
  * Avatar background colors for consistent theming

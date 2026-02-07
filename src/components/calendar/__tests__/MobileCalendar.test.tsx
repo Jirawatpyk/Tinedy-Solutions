@@ -14,7 +14,7 @@ import { MobileCalendar } from '../MobileCalendar'
 import type { Booking } from '@/types/booking'
 
 // Mock dependencies
-vi.mock('@/hooks/useSwipe', () => ({
+vi.mock('@/hooks/use-swipe', () => ({
   useSwipe: () => ({
     onTouchStart: vi.fn(),
     onTouchMove: vi.fn(),

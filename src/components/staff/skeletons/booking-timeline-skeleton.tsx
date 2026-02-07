@@ -23,20 +23,20 @@ export function BookingTimelineSkeleton({ className }: BookingTimelineSkeletonPr
 
       <div className="relative space-y-4 p-4">
         {/* Timeline header */}
-        <Skeleton className="h-5 w-32" />
+        <Skeleton shimmer={false} className="h-5 w-32" />
 
         {/* Timeline items (3 typical entries) */}
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex gap-3">
             {/* Timeline dot */}
             <div className="flex flex-col items-center">
-              <Skeleton className="h-3 w-3 rounded-full" />
-              {i < 3 && <Skeleton className="h-12 w-0.5" />}
+              <Skeleton shimmer={false} className="h-3 w-3 rounded-full" />
+              {i < 3 && <Skeleton shimmer={false} className="h-12 w-0.5" />}
             </div>
             {/* Content */}
             <div className="flex-1 space-y-1 pb-4">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-40" />
+              <Skeleton shimmer={false} className="h-4 w-24" />
+              <Skeleton shimmer={false} className="h-3 w-40" />
             </div>
           </div>
         ))}

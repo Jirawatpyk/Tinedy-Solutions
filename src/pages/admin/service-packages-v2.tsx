@@ -34,8 +34,9 @@ import { Package, Plus, Layers, TrendingUp, DollarSign } from 'lucide-react'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
 import { PricingModel } from '@/types'
-import { useServicePackages } from '@/hooks/useServicePackages'
+import { useServicePackages } from '@/hooks/use-service-packages'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminServicePackagesV2() {
   const { toast } = useToast()
@@ -267,15 +268,16 @@ export function AdminServicePackagesV2() {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage cleaning service packages with tiered pricing
-          </p>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Package
-          </Button>
-        </div>
+        <PageHeader
+          title="Tiered Packages"
+          subtitle="Manage cleaning service packages with tiered pricing"
+          actions={
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Package
+            </Button>
+          }
+        />
 
         {/* Stats Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -320,36 +322,37 @@ export function AdminServicePackagesV2() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage cleaning service packages with tiered pricing
-        </p>
-        <div className="flex items-center gap-4">
-          {/* Show Archived - Admin only */}
-          <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="showArchived"
-                checked={showArchived}
-                onCheckedChange={(checked) => setShowArchived(checked === true)}
-              />
-              <label
-                htmlFor="showArchived"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Show archived
-              </label>
-            </div>
-          </PermissionGuard>
-          <Button
-            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-            onClick={handleCreatePackage}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Package
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Tiered Packages"
+        subtitle="Manage cleaning service packages with tiered pricing"
+        actions={
+          <>
+            {/* Show Archived - Admin only */}
+            <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="showArchived"
+                  checked={showArchived}
+                  onCheckedChange={(checked) => setShowArchived(checked === true)}
+                />
+                <label
+                  htmlFor="showArchived"
+                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Show archived
+                </label>
+              </div>
+            </PermissionGuard>
+            <Button
+              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+              onClick={handleCreatePackage}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Package
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

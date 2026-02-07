@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -25,7 +24,8 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
-import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users } from 'lucide-react'
+import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users, UserPlus } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { TagInput } from '@/components/ui/tag-input'
 import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { formatDate } from '@/lib/utils'
@@ -34,7 +34,8 @@ import { PermissionAwareDeleteButton } from '@/components/common/PermissionAware
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { useAuth } from '@/contexts/auth-context'
-import { useStaffWithRatings } from '@/hooks/useStaff'
+import { UserRole } from '@/types/common'
+import { useStaffWithRatings } from '@/hooks/use-staff'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -43,6 +44,7 @@ import {
   type StaffCreateFormData,
 } from '@/schemas'
 import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import { PageHeader } from '@/components/common/PageHeader'
 import type { StaffWithRating } from '@/types/staff'
 
 export function AdminStaff() {
@@ -75,7 +77,7 @@ export function AdminStaff() {
       email: '',
       full_name: '',
       phone: '',
-      role: 'staff',
+      role: UserRole.Staff,
       password: '',
       staff_number: '',
       skills: [],
@@ -258,7 +260,7 @@ export function AdminStaff() {
       email: '',
       full_name: '',
       phone: '',
-      role: 'staff',
+      role: UserRole.Staff,
       password: '',
       staff_number: '',
       skills: [],
@@ -267,9 +269,9 @@ export function AdminStaff() {
 
   const getStaffStats = () => {
     const totalStaff = staff.length
-    const admins = staff.filter(s => s.role === 'admin').length
-    const managers = staff.filter(s => s.role === 'manager').length
-    const staffMembers = staff.filter(s => s.role === 'staff').length
+    const admins = staff.filter(s => s.role === UserRole.Admin).length
+    const managers = staff.filter(s => s.role === UserRole.Manager).length
+    const staffMembers = staff.filter(s => s.role === UserRole.Staff).length
     return { totalStaff, admins, managers, staffMembers }
   }
 
@@ -278,16 +280,16 @@ export function AdminStaff() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage your team members
-          </p>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Staff
-          </Button>
-        </div>
+        <PageHeader
+          title="Staff"
+          subtitle="Manage your team members"
+          actions={
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Staff
+            </Button>
+          }
+        />
 
         {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -344,22 +346,24 @@ export function AdminStaff() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage your team members
-        </p>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-              onClick={resetForm}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Staff
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <PageHeader
+        title="Staff"
+        subtitle="Manage your team members"
+        actions={
+          <Button
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Staff
+          </Button>
+        }
+      />
+
+      {/* Create Staff Dialog - Using controlled open/onOpenChange pattern instead of DialogTrigger
+          to allow Button to be placed in PageHeader actions slot while Dialog renders as sibling */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Add New Staff Member</DialogTitle>
               <DialogDescription>Create a new staff account</DialogDescription>
@@ -539,9 +543,8 @@ export function AdminStaff() {
                   </Button>
                 </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -609,10 +612,17 @@ export function AdminStaff() {
       {/* Staff list */}
       {filteredStaff.length === 0 ? (
         <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">
-              No staff members found
-            </p>
+          <CardContent>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? 'No staff found' : 'No staff members yet'}
+              description={searchQuery ? 'Try a different search term' : 'Add your first staff member to get started'}
+              action={!searchQuery ? {
+                label: 'Add Staff',
+                onClick: () => { resetForm(); setIsDialogOpen(true); },
+                icon: UserPlus
+              } : undefined}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -621,7 +631,7 @@ export function AdminStaff() {
             {filteredStaff.slice(0, displayCount).map((member) => (
               <Card
                 key={member.id}
-                className="hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer"
+                className="card-interactive"
                 onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
                 <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
@@ -644,10 +654,10 @@ export function AdminStaff() {
                         </CardTitle>
                         <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                           <Badge
-                            variant={member.role === 'admin' ? 'default' : member.role === 'manager' ? 'default' : 'secondary'}
-                            className={`text-[10px] sm:text-xs ${member.role === 'manager' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+                            variant={member.role === UserRole.Admin ? 'default' : member.role === UserRole.Manager ? 'default' : 'secondary'}
+                            className={`text-[10px] sm:text-xs ${member.role === UserRole.Manager ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                           >
-                            {member.role === 'admin' ? '👑 Super admin' : member.role === 'manager' ? '👔 Admin' : 'Staff'}
+                            {member.role === UserRole.Admin ? '👑 Super admin' : member.role === UserRole.Manager ? '👔 Admin' : 'Staff'}
                           </Badge>
                           {member.average_rating !== undefined && (
                             <div className="flex items-center gap-1 text-yellow-500">
@@ -662,9 +672,9 @@ export function AdminStaff() {
                     </div>
                     <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       {/* Admin: แก้ไขได้ทุกคน | Manager: แก้ไขได้ตัวเอง + Staff | Staff: แก้ไขได้ตัวเอง */}
-                      {(profile?.role === 'admin' ||
+                      {(profile?.role === UserRole.Admin ||
                         member.id === user?.id ||
-                        (profile?.role === 'manager' && member.role === 'staff')) && (
+                        (profile?.role === UserRole.Manager && member.role === UserRole.Staff)) && (
                         <SimpleTooltip content="Edit staff">
                           <Button
                             variant="ghost"

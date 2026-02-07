@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
-import { useTeamsWithDetails } from '@/hooks/useTeams'
+import { useTeamsWithDetails } from '@/hooks/use-teams'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import {
   Dialog,
@@ -26,8 +26,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
+import { EmptyState } from '@/components/common/EmptyState'
 import { useToast } from '@/hooks/use-toast'
 import { AdminOnly } from '@/components/auth/permission-guard'
+import { PageHeader } from '@/components/common/PageHeader'
 import { TeamCard } from '@/components/teams/team-card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { mapErrorToUserMessage, getLoadErrorMessage, getTeamMemberError } from '@/lib/error-messages'
@@ -495,13 +497,16 @@ export function AdminTeams() {
     return (
       <div className="space-y-6">
         {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">Manage teams and team members</p>
-          <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            New Team
-          </Button>
-        </div>
+        <PageHeader
+          title="Teams"
+          subtitle="Manage teams and team members"
+          actions={
+            <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              New Team
+            </Button>
+          }
+        />
 
         {/* Stats cards skeleton */}
         <div className="grid gap-4 md:grid-cols-3">
@@ -563,31 +568,34 @@ export function AdminTeams() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">Manage teams and team members</p>
-        <div className="flex items-center gap-4">
-          {/* Show archived toggle - Admin only */}
-          <AdminOnly>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="show-archived"
-                checked={showArchived}
-                onCheckedChange={(checked) => setShowArchived(checked as boolean)}
-              />
-              <label
-                htmlFor="show-archived"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Show archived
-              </label>
-            </div>
-          </AdminOnly>
-          <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
-            <Plus className="h-4 w-4 mr-2" />
-            New Team
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Teams"
+        subtitle="Manage teams and team members"
+        actions={
+          <>
+            {/* Show archived toggle - Admin only */}
+            <AdminOnly>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-archived"
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                />
+                <label
+                  htmlFor="show-archived"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Show archived
+                </label>
+              </div>
+            </AdminOnly>
+            <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
+              <Plus className="h-4 w-4 mr-2" />
+              New Team
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -634,20 +642,17 @@ export function AdminTeams() {
       {/* Teams Grid */}
       {filteredTeams.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? 'No teams found' : 'No teams yet'}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery ? 'Try a different search term' : 'Create your first team to get started'}
-            </p>
-            {!searchQuery && (
-              <Button onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Team
-              </Button>
-            )}
+          <CardContent>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? 'No teams found' : 'No teams yet'}
+              description={searchQuery ? 'Try a different search term' : 'Create your first team to get started'}
+              action={!searchQuery ? {
+                label: 'New Team',
+                onClick: openCreateDialog,
+                icon: Plus
+              } : undefined}
+            />
           </CardContent>
         </Card>
       ) : (

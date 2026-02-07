@@ -13,7 +13,7 @@ import {
   type RouteKey,
   type RouteConfig,
 } from '@/config/routes'
-import type { UserRole } from '@/types/common'
+import { UserRole } from '@/types/common'
 
 /**
  * Page Metadata
@@ -158,10 +158,10 @@ export function canAccessRoute(routeKey: RouteKey, role: UserRole | null): boole
  */
 export function getDefaultRoute(role: UserRole | null): RouteKey {
   switch (role) {
-    case 'admin':
-    case 'manager':
+    case UserRole.Admin:
+    case UserRole.Manager:
       return 'ADMIN_DASHBOARD'
-    case 'staff':
+    case UserRole.Staff:
       return 'STAFF_DASHBOARD'
     default:
       return 'LOGIN'
@@ -183,10 +183,10 @@ export function getDefaultRoute(role: UserRole | null): RouteKey {
  */
 export function getDefaultPath(role: UserRole | null): string {
   switch (role) {
-    case 'admin':
-    case 'manager':
+    case UserRole.Admin:
+    case UserRole.Manager:
       return '/admin'
-    case 'staff':
+    case UserRole.Staff:
       return '/staff'
     default:
       return '/login'
@@ -266,7 +266,7 @@ export function getBasePath(role: UserRole | null): string {
  * getCustomerPath('123', 'admin') // '/admin/customers/123'
  * ```
  */
-export function getCustomerPath(customerId: string, role: UserRole = 'admin'): string {
+export function getCustomerPath(customerId: string, role: UserRole = UserRole.Admin): string {
   const basePath = getBasePath(role)
   return `${basePath}/customers/${customerId}`
 }
@@ -283,7 +283,7 @@ export function getCustomerPath(customerId: string, role: UserRole = 'admin'): s
  * getStaffPath('456', 'admin') // '/admin/staff/456'
  * ```
  */
-export function getStaffPath(staffId: string, role: UserRole = 'admin'): string {
+export function getStaffPath(staffId: string, role: UserRole = UserRole.Admin): string {
   const basePath = getBasePath(role)
   return `${basePath}/staff/${staffId}`
 }
@@ -300,7 +300,7 @@ export function getStaffPath(staffId: string, role: UserRole = 'admin'): string 
  * getTeamPath('789', 'admin') // '/admin/teams/789'
  * ```
  */
-export function getTeamPath(teamId: string, role: UserRole = 'admin'): string {
+export function getTeamPath(teamId: string, role: UserRole = UserRole.Admin): string {
   const basePath = getBasePath(role)
   return `${basePath}/teams/${teamId}`
 }
@@ -317,7 +317,7 @@ export function getTeamPath(teamId: string, role: UserRole = 'admin'): string {
  * getPackagePath('pkg-1', 'admin') // '/admin/packages/pkg-1'
  * ```
  */
-export function getPackagePath(packageId: string, role: UserRole = 'admin'): string {
+export function getPackagePath(packageId: string, role: UserRole = UserRole.Admin): string {
   const basePath = getBasePath(role)
   return `${basePath}/packages/${packageId}`
 }
@@ -363,7 +363,7 @@ export function getNavigationRoutes(role: UserRole | null): RouteConfig[] {
   if (!role) return []
 
   // Get routes based on role
-  const routes = role === 'staff' ? Object.values(STAFF_ROUTES) : Object.values(ADMIN_ROUTES)
+  const routes = role === UserRole.Staff ? Object.values(STAFF_ROUTES) : Object.values(ADMIN_ROUTES)
 
   // Filter only navigation routes
   return routes.filter(route => route.showInNav)

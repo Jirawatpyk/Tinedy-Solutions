@@ -591,7 +591,6 @@ export const test = base.extend<{ mswPage: Page }>({
     await initializeMSW(page)
 
     // Provide page to test
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page)
 
     // Cleanup (if needed)

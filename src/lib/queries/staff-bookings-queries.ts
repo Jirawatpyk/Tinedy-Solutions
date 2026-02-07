@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { logger } from '@/lib/logger'
 import { calculateBookingRevenue, buildTeamFilterCondition } from '@/lib/team-revenue-utils'
 import { isWithinMembershipPeriod } from '@/lib/review-utils'
+import { BookingStatus } from '@/types/booking'
 
 // ============================================================================
 // TYPES
@@ -684,7 +685,7 @@ export async function fetchStaffStats(
         let query = supabase
           .from('bookings')
           .select('id, staff_id, team_id, created_at, status')
-          .eq('status', 'completed')
+          .eq('status', BookingStatus.Completed)
           .gte('booking_date', thirtyDaysAgoStr)
           .lte('booking_date', todayStr)
           .is('deleted_at', null) // Exclude archived bookings
@@ -755,7 +756,7 @@ export async function fetchStaffStats(
         let query = supabase
           .from('bookings')
           .select('total_price, team_id, staff_id, team_member_count, created_at')
-          .eq('status', 'completed')
+          .eq('status', BookingStatus.Completed)
           .eq('payment_status', 'paid')
           .gte('booking_date', startOfMonthStr)
           .lte('booking_date', todayStr)
@@ -850,7 +851,7 @@ export async function fetchStaffStats(
           data.jobs += 1
           // Revenue: only count if completed AND paid (same as Earnings)
           // Use shared calculateBookingRevenue function for consistency
-          if (booking.status === 'completed' && booking.payment_status === 'paid') {
+          if (booking.status === BookingStatus.Completed && booking.payment_status === 'paid') {
             data.revenue += calculateBookingRevenue(booking, new Map())
           }
         })

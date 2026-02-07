@@ -8,6 +8,7 @@ import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucid
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
+import { getInitials } from '@/lib/string-utils'
 
 interface TeamMember {
   id: string
@@ -42,14 +43,6 @@ interface TeamCardProps {
   onRemoveMember: (teamId: string, staffId: string) => void
 }
 
-// Helper function moved outside component
-const getInitials = (name: string) => {
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-}
 
 export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCancel, onRestore, onAddMember, onRemoveMember }: TeamCardProps) {
   const navigate = useNavigate()
@@ -82,7 +75,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
   )
 
   return (
-    <Card className={`hover:shadow-lg transition-all hover:border-tinedy-blue/50 cursor-pointer ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
+    <Card className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
       <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">

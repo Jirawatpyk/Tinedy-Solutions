@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, Fragment } from 'react'
 import { isWithinInterval } from 'date-fns'
 import { usePermissions } from '@/hooks/use-permissions'
-import { useReportStats } from '@/hooks/useReportStats'
+import { useReportStats } from '@/hooks/use-report-stats'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Select,
@@ -54,6 +54,7 @@ import { RevenueBookingsTab } from '@/components/reports/tabs/RevenueBookingsTab
 import { CustomersTab } from '@/components/reports/tabs/CustomersTab'
 import { StaffTab } from '@/components/reports/tabs/StaffTab'
 import { TeamsTab } from '@/components/reports/tabs/TeamsTab'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminReports() {
   // React Query - Fetch all reports data (replaces 9 useState + 4 fetch functions)
@@ -334,13 +335,16 @@ export function AdminReports() {
     return (
       <div className="space-y-6">
         {/* Page header - Always show */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Skeleton className="h-3 sm:h-4 w-48 sm:w-64" />
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Skeleton className="h-8 sm:h-9 w-full sm:w-48" />
-            <Skeleton className="h-8 sm:h-9 w-full sm:w-32" />
-          </div>
-        </div>
+        <PageHeader
+          title="Reports"
+          subtitle="Revenue insights and business metrics"
+          actions={
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Skeleton className="h-8 sm:h-9 w-full sm:w-48" />
+              <Skeleton className="h-8 sm:h-9 w-full sm:w-32" />
+            </div>
+          }
+        />
 
         {/* Tabs skeleton */}
         <Skeleton className="h-9 sm:h-10 w-full" />
@@ -394,70 +398,71 @@ export function AdminReports() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-h-[40px]">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Revenue insights and business metrics
-        </p>
-        <div className="flex flex-row gap-2">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="yesterday">Yesterday</SelectItem>
-              <SelectItem value="last7days">Last 7 Days</SelectItem>
-              <SelectItem value="last30days">Last 30 Days</SelectItem>
-              <SelectItem value="thisWeek">This Week</SelectItem>
-              <SelectItem value="lastWeek">Last Week</SelectItem>
-              <SelectItem value="thisMonth">This Month</SelectItem>
-              <SelectItem value="lastMonth">Last Month</SelectItem>
-              <SelectItem value="last3months">Last 3 Months</SelectItem>
-              <SelectItem value="thisYear">This Year</SelectItem>
-              <SelectItem value="lastYear">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <DropdownMenu>
-            {/* Mobile: Icon only with tooltip */}
-            <SimpleTooltip content="Export to Excel">
+      <PageHeader
+        title="Reports"
+        subtitle="Revenue insights and business metrics"
+        actions={
+          <div className="flex flex-row gap-2">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="last7days">Last 7 Days</SelectItem>
+                <SelectItem value="last30days">Last 30 Days</SelectItem>
+                <SelectItem value="thisWeek">This Week</SelectItem>
+                <SelectItem value="lastWeek">Last Week</SelectItem>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="lastMonth">Last Month</SelectItem>
+                <SelectItem value="last3months">Last 3 Months</SelectItem>
+                <SelectItem value="thisYear">This Year</SelectItem>
+                <SelectItem value="lastYear">Last Year</SelectItem>
+              </SelectContent>
+            </Select>
+            <DropdownMenu>
+              {/* Mobile: Icon only with tooltip */}
+              <SimpleTooltip content="Export to Excel">
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 w-9 p-0 sm:hidden">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </SimpleTooltip>
+              {/* Desktop: Icon + text, no tooltip */}
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-9 w-9 p-0 sm:hidden">
+                <Button variant="outline" className="h-9 hidden sm:flex gap-2">
                   <Download className="h-4 w-4" />
+                  <span>Export</span>
                 </Button>
               </DropdownMenuTrigger>
-            </SimpleTooltip>
-            {/* Desktop: Icon + text, no tooltip */}
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 hidden sm:flex gap-2">
-                <Download className="h-4 w-4" />
-                <span>Export</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {activeTab === 'revenue' && (
-                <DropdownMenuItem onClick={() => handleExport('revenue-all-excel')}>
-                  Export Revenue Report
-                </DropdownMenuItem>
-              )}
-              {activeTab === 'customers' && (
-                <DropdownMenuItem onClick={() => handleExport('customers-excel')}>
-                  Export Customer Report
-                </DropdownMenuItem>
-              )}
-              {activeTab === 'staff' && (
-                <DropdownMenuItem onClick={() => handleExport('staff-excel')}>
-                  Export Staff Report
-                </DropdownMenuItem>
-              )}
-              {activeTab === 'teams' && (
-                <DropdownMenuItem onClick={() => handleExport('teams-excel')}>
-                  Export Team Report
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              <DropdownMenuContent align="end" className="w-56">
+                {activeTab === 'revenue' && (
+                  <DropdownMenuItem onClick={() => handleExport('revenue-all-excel')}>
+                    Export Revenue Report
+                  </DropdownMenuItem>
+                )}
+                {activeTab === 'customers' && (
+                  <DropdownMenuItem onClick={() => handleExport('customers-excel')}>
+                    Export Customer Report
+                  </DropdownMenuItem>
+                )}
+                {activeTab === 'staff' && (
+                  <DropdownMenuItem onClick={() => handleExport('staff-excel')}>
+                    Export Staff Report
+                  </DropdownMenuItem>
+                )}
+                {activeTab === 'teams' && (
+                  <DropdownMenuItem onClick={() => handleExport('teams-excel')}>
+                    Export Team Report
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        }
+      />
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="space-y-6">

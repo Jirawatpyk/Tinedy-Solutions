@@ -8,7 +8,7 @@
  * Usage:
  * ```tsx
  * import { CalendarFilters } from '@/components/calendar/filters/CalendarFilters'
- * import { useCalendarFilters } from '@/hooks/useCalendarFilters'
+ * import { useCalendarFilters } from '@/hooks/use-calendar-filters'
  *
  * function Calendar() {
  *   const filterControls = useCalendarFilters()
@@ -22,7 +22,7 @@ import React from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { CalendarFiltersDesktop } from './CalendarFiltersDesktop'
 import { CalendarFiltersMobile } from './CalendarFiltersMobile'
-import type { UseCalendarFiltersReturn } from '@/hooks/useCalendarFilters'
+import type { UseCalendarFiltersReturn } from '@/hooks/use-calendar-filters'
 
 interface CalendarFiltersProps {
   /** Filter state and actions from useCalendarFilters hook */
