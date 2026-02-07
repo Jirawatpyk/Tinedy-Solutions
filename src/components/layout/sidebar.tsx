@@ -181,6 +181,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  data-testid="user-menu"
                   className={cn(
                     "w-full flex items-center rounded-lg transition-all duration-300 hover:bg-tinedy-blue/50 p-2 -m-2",
                     isCollapsed ? 'justify-center' : 'space-x-3'
@@ -225,7 +226,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   <span>My Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
+                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut} data-testid="logout-button">
                   {isLoggingOut ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />

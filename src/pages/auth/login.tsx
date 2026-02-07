@@ -126,6 +126,7 @@ export function LoginPage() {
                   aria-label="Email address"
                   aria-required="true"
                   aria-invalid={!!errors.email}
+                  data-testid="email-input"
                 />
               </div>
               {errors.email && (
@@ -146,6 +147,7 @@ export function LoginPage() {
                   aria-label="Password"
                   aria-required="true"
                   aria-invalid={!!errors.password}
+                  data-testid="password-input"
                 />
                 <button
                   type="button"
@@ -170,6 +172,7 @@ export function LoginPage() {
               disabled={isSubmitting}
               aria-busy={isSubmitting}
               aria-label={isSubmitting ? 'Signing in...' : 'Sign in to your account'}
+              data-testid="login-button"
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">

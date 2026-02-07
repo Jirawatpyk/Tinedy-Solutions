@@ -70,7 +70,7 @@ test.describe('MSW Infrastructure', () => {
     await expect(page).toHaveURL(/\/login/)
 
     // Should see error toast or message
-    await expect(page.locator('[data-testid="error-toast"]')).toBeVisible({
+    await expect(page.locator('text=Sign in failed').or(page.locator('.destructive'))).toBeVisible({
       timeout: 5000,
     })
   })
