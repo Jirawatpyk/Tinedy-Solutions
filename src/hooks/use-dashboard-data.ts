@@ -145,19 +145,19 @@ export function useDashboardData(): DashboardData {
         revenueDataRes,
       ] = await Promise.all([
         // Total stats
-        supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed),
-        supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed).is('deleted_at', null),
+        supabase.from('customers').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending).is('deleted_at', null),
 
         // Today's new data
-        supabase.from('bookings').select('*', { count: 'exact' }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed).gte('updated_at', todayStart).lte('updated_at', todayEnd),
-        supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', todayStart).lte('created_at', todayEnd),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending).gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('*', { count: 'exact' }).is('deleted_at', null).gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('total_price').eq('status', BookingStatus.Completed).is('deleted_at', null).gte('updated_at', todayStart).lte('updated_at', todayEnd),
+        supabase.from('customers').select('*', { count: 'exact', head: true }).is('deleted_at', null).gte('created_at', todayStart).lte('created_at', todayEnd),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', BookingStatus.Pending).is('deleted_at', null).gte('created_at', todayStart).lte('created_at', todayEnd),
 
         // Bookings by status
-        supabase.from('bookings').select('status'),
+        supabase.from('bookings').select('status').is('deleted_at', null),
 
         // Today's bookings detail
         supabase.from('bookings').select(`
@@ -166,10 +166,10 @@ export function useDashboardData(): DashboardData {
           service_packages (name, service_type),
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
-        `).eq('booking_date', today).order('start_time', { ascending: true }),
+        `).is('deleted_at', null).eq('booking_date', today).order('start_time', { ascending: true }),
 
         // Revenue data for last 7 days
-        supabase.from('bookings').select('booking_date, total_price').eq('status', BookingStatus.Completed).gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
+        supabase.from('bookings').select('booking_date, total_price').eq('status', BookingStatus.Completed).is('deleted_at', null).gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),
       ])
 
       // Calculate total revenue

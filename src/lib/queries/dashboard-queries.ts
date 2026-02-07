@@ -32,13 +32,14 @@ import type {
 export async function fetchDashboardStats(): Promise<Stats> {
   const [totalBookingsRes, completedBookingsRes, totalCustomersRes, pendingBookingsRes] =
     await Promise.all([
-      supabase.from('bookings').select('*', { count: 'exact', head: true }),
-      supabase.from('bookings').select('total_price').eq('payment_status', 'paid'),
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+      supabase.from('bookings').select('total_price').eq('payment_status', 'paid').is('deleted_at', null),
+      supabase.from('customers').select('*', { count: 'exact', head: true }).is('deleted_at', null),
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('status', BookingStatusEnum.Pending),
+        .eq('status', BookingStatusEnum.Pending)
+        .is('deleted_at', null),
     ])
 
   const totalRevenue =
@@ -67,6 +68,7 @@ export async function fetchTodayStats(): Promise<StatsChange> {
       supabase
         .from('bookings')
         .select('*', { count: 'exact' })
+        .is('deleted_at', null)
         .gte('created_at', `${todayStr}T00:00:00+07:00`)
         .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
       // นับยอดรายได้ที่จ่ายวันนี้ - ใช้ payment_date (DATE column)
@@ -74,11 +76,13 @@ export async function fetchTodayStats(): Promise<StatsChange> {
         .from('bookings')
         .select('total_price')
         .eq('payment_status', 'paid')
-        .eq('payment_date', todayStr),
+        .eq('payment_date', todayStr)
+        .is('deleted_at', null),
       // นับลูกค้าใหม่วันนี้
       supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .gte('created_at', `${todayStr}T00:00:00+07:00`)
         .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
       // นับ pending bookings ที่สร้างวันนี้
@@ -86,6 +90,7 @@ export async function fetchTodayStats(): Promise<StatsChange> {
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .eq('status', BookingStatusEnum.Pending)
+        .is('deleted_at', null)
         .gte('created_at', `${todayStr}T00:00:00+07:00`)
         .lt('created_at', `${new Date(new Date(todayStr).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00+07:00`),
     ])
@@ -106,7 +111,7 @@ export async function fetchTodayStats(): Promise<StatsChange> {
  * staleTime: 5 minutes
  */
 export async function fetchBookingsByStatus(): Promise<BookingStatus[]> {
-  const { data, error } = await supabase.from('bookings').select('status')
+  const { data, error } = await supabase.from('bookings').select('status').is('deleted_at', null)
 
   if (error) throw new Error(`Failed to fetch bookings by status: ${error.message}`)
 
@@ -149,6 +154,7 @@ export async function fetchTodayBookings(): Promise<TodayBooking[]> {
       teams(name, team_lead:team_lead_id(id, full_name, email, avatar_url))
     `
     )
+    .is('deleted_at', null)
     .eq('booking_date', todayStr)
     .order('start_time', { ascending: true })
 
@@ -169,6 +175,7 @@ export async function fetchDailyRevenue(days: number = 7): Promise<DailyRevenue[
     .from('bookings')
     .select('payment_date, total_price')
     .eq('payment_status', 'paid')
+    .is('deleted_at', null)
     .gte('payment_date', sevenDaysAgoStr)
     .lte('payment_date', todayStr)
     .order('payment_date', { ascending: true })
@@ -208,6 +215,7 @@ export async function fetchMiniStats(): Promise<MiniStats> {
     .select(
       'total_price, status, service_packages(name), service_packages_v2:package_v2_id(name)'
     )
+    .is('deleted_at', null)
 
   if (error) throw new Error(`Failed to fetch mini stats: ${error.message}`)
 

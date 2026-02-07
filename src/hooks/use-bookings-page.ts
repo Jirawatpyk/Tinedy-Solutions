@@ -561,12 +561,14 @@ export function useBookingsPage() {
           const { data: futureBookings } = await supabase.from('bookings').select('id')
             .eq('recurring_group_id', booking.recurring_group_id)
             .gte('recurring_sequence', booking.recurring_sequence)
+            .is('deleted_at', null)
           bookingIdsToArchive = futureBookings?.map(b => b.id) || []; break
         }
         case 'all': {
           if (!booking.recurring_group_id) throw new Error('Booking is not part of a recurring group')
           const { data: allBookings } = await supabase.from('bookings').select('id')
             .eq('recurring_group_id', booking.recurring_group_id)
+            .is('deleted_at', null)
           bookingIdsToArchive = allBookings?.map(b => b.id) || []; break
         }
       }

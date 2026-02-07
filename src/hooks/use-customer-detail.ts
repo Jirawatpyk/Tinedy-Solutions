@@ -366,6 +366,7 @@ export function useCustomerDetail(customerId: string | undefined) {
         .from('customers')
         .select('*')
         .eq('id', customerId)
+        .is('deleted_at', null)
         .single()
 
       if (customerError) throw customerError
