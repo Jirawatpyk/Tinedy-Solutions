@@ -223,8 +223,8 @@ jobs:
       - name: Detect changed test files
         id: changed-tests
         run: |
-          CHANGED_E2E=$(git diff --name-only origin/main...HEAD -- 'tests/e2e/' | grep -E '\.(spec|test)\.(ts|js)$' || echo "")
-          CHANGED_UNIT=$(git diff --name-only origin/main...HEAD -- 'src/' | grep -E '\.(spec|test)\.(ts|tsx)$' || echo "")
+          CHANGED_E2E=$(git diff --name-only origin/main...HEAD -- 'tests/e2e/' | grep -E '\.(spec|test)\.(ts|js)$' | tr '\n' ' ' | xargs || echo "")
+          CHANGED_UNIT=$(git diff --name-only origin/main...HEAD -- 'src/' | grep -E '\.(spec|test)\.(ts|tsx)$' | tr '\n' ' ' | xargs || echo "")
           echo "changed_e2e=${CHANGED_E2E}" >> $GITHUB_OUTPUT
           echo "changed_unit=${CHANGED_UNIT}" >> $GITHUB_OUTPUT
           echo "--- Changed E2E specs ---"
