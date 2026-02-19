@@ -111,7 +111,7 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
       {isOver90Days && (
         <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-xs text-yellow-800">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <span>⚠️ Duration exceeds 90 days — please verify</span>
+          <span>Duration exceeds {MAX_BOOKING_DAYS_WARNING} days — please verify</span>
         </div>
       )}
     </div>

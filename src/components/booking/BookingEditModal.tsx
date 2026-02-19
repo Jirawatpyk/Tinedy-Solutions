@@ -98,7 +98,7 @@ export function BookingEditModal({
   onSuccess,
 }: BookingEditModalProps) {
   const queryClient = useQueryClient()
-  const [status, setStatus] = useState<string>(BookingStatus.Pending)
+  const [status, setStatus] = useState<string>(booking?.status ?? BookingStatus.Pending)
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingUpdate, setPendingUpdate] = useState<Record<string, unknown> | null>(null)
 

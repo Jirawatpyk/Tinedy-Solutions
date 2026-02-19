@@ -103,7 +103,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: 'Credit Card',
   transfer: 'Bank Transfer',
   promptpay: 'PromptPay',
-} as const
+}
 
 // ============================================================================
 // LEGACY EXPORTS (for backward compatibility)

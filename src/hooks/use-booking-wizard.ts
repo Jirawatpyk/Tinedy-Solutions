@@ -18,7 +18,7 @@
 import { useReducer, useCallback, useEffect } from 'react'
 import type { CustomerSearchResult } from '@/hooks/use-customer-search'
 import type { ServicePackageV2WithTiers } from '@/lib/queries/package-queries'
-import type { PriceMode } from '@/types/booking'
+import { PriceMode } from '@/types/booking'
 
 // ============================================================================
 // TYPES
@@ -140,7 +140,7 @@ export function createInitialState(mode: WizardMode = 'wizard'): WizardState {
 
     package_v2_id: null,
     selectedPackage: null,
-    price_mode: 'package',
+    price_mode: PriceMode.Package,
     total_price: 0,
     custom_price: null,
     price_override: false,
@@ -208,14 +208,14 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
     if (!state.start_time) {
       errors.start_time = 'Please enter a start time'
     }
-    if (state.price_mode === 'custom') {
+    if (state.price_mode === PriceMode.Custom) {
       if (!state.job_name.trim()) {
         errors.job_name = 'Please enter a job name'
       }
       if (state.custom_price === null || state.custom_price < 0) {
         errors.custom_price = 'Please enter a price'
       }
-    } else if (state.price_mode === 'override') {
+    } else if (state.price_mode === PriceMode.Override) {
       if (!state.package_v2_id) {
         errors.package_v2_id = 'Please select a package before overriding price'
       }
@@ -354,7 +354,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           ...state,
           package_v2_id: null,
           selectedPackage: null,
-          price_mode: 'package',
+          price_mode: PriceMode.Package,
           total_price: 0,
         }
       }
@@ -368,7 +368,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         package_v2_id: pkg.id,
         selectedPackage: pkg,
-        price_mode: 'package',
+        price_mode: PriceMode.Package,
         total_price: pkg.base_price ?? 0,
         custom_price: null,
         price_override: false,
@@ -377,21 +377,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     }
 
     case 'SET_PRICE_MODE': {
-      if (action.mode === 'custom') {
+      if (action.mode === PriceMode.Custom) {
         return {
           ...state,
-          price_mode: 'custom',
+          price_mode: PriceMode.Custom,
           package_v2_id: null,
           selectedPackage: null,
           total_price: 0,
           custom_price: null,
         }
       }
-      if (action.mode === 'package') {
+      if (action.mode === PriceMode.Package) {
         // Switch to package: reset price (will be set by SELECT_PACKAGE) + clear custom fields
         return {
           ...state,
-          price_mode: 'package',
+          price_mode: PriceMode.Package,
           job_name: '',
           custom_price: null,
           total_price: 0,
