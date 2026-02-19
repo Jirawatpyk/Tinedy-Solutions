@@ -128,11 +128,21 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
 }: BookingModalsContainerProps) {
   return (
     <>
-      {/* New Booking Modal */}
+      {/* New Booking Modal — pre-seed customer from detail page */}
       <BookingFormContainer
         open={isBookingDialogOpen}
         onOpenChange={(open) => { if (!open) onCloseBookingDialog() }}
         onSuccess={onBookingSuccess}
+        initialCustomer={{
+          id: customer.id,
+          full_name: customer.full_name,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          city: customer.city,
+          state: customer.state,
+          zip_code: customer.zip_code,
+        }}
       />
 
       {/* Add Note Dialog */}

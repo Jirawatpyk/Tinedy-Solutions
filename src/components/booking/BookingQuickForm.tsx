@@ -39,6 +39,8 @@ interface BookingQuickFormProps {
   userId?: string
   /** Pre-seed state for Edit mode */
   initialState?: Partial<WizardState>
+  /** Pre-seed customer (e.g. when opening from Customer Detail page) */
+  initialCustomer?: import('@/hooks/use-customer-search').CustomerSearchResult
   onSuccess?: () => void
   onCancel?: () => void
   /** If true, hide mode toggle (edit always stays in quick mode) */
@@ -49,12 +51,13 @@ interface BookingQuickFormProps {
 export function BookingQuickForm({
   userId,
   initialState,
+  initialCustomer,
   onSuccess,
   onCancel,
   hideToggle,
   onSwitchToWizard,
 }: BookingQuickFormProps) {
-  const { state, dispatch } = useBookingWizard({ userId, initialState })
+  const { state, dispatch } = useBookingWizard({ userId, initialState, initialCustomer })
   const mutation = useCreateBookingMutation()
 
   const { data: packagesV2 = [], isLoading: packagesLoading } = useQuery(

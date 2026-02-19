@@ -535,10 +535,12 @@ const STORAGE_KEY_PREFIX = 'booking-form-mode_'
 export interface UseBookingWizardOptions {
   userId?: string
   initialState?: Partial<WizardState>
+  /** Pre-seed customer (e.g. when opening from Customer Detail page) */
+  initialCustomer?: CustomerSearchResult
 }
 
 export function useBookingWizard(options: UseBookingWizardOptions = {}) {
-  const { userId, initialState: overrides } = options
+  const { userId, initialState: overrides, initialCustomer } = options
 
   // R5: Load mode from localStorage scoped per user (prevent preference leak between users)
   const storageKey = userId ? `${STORAGE_KEY_PREFIX}${userId}` : STORAGE_KEY_PREFIX
@@ -546,9 +548,23 @@ export function useBookingWizard(options: UseBookingWizardOptions = {}) {
     ? (localStorage.getItem(storageKey) as WizardMode | null)
     : null) ?? 'wizard'
 
+  // Pre-seed customer overrides: mirror SELECT_CUSTOMER reducer + skip to Step 2
+  const customerOverrides: Partial<WizardState> = initialCustomer
+    ? {
+        customer: initialCustomer,
+        isNewCustomer: false,
+        useCustomerAddress: !!initialCustomer.address,
+        address: initialCustomer.address ?? '',
+        city: initialCustomer.city ?? '',
+        state: initialCustomer.state ?? '',
+        zip_code: initialCustomer.zip_code ?? '',
+        step: 2 as WizardStep,
+      }
+    : {}
+
   const [state, dispatch] = useReducer(
     wizardReducer,
-    { ...createInitialState(savedMode), ...overrides }
+    { ...createInitialState(savedMode), ...customerOverrides, ...overrides }
   )
 
   // Persist mode preference on change

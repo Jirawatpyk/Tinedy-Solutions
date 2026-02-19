@@ -17,12 +17,15 @@ import { AppSheet } from '@/components/ui/app-sheet'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { BookingWizard } from './BookingWizard'
 import { BookingQuickForm } from './BookingQuickForm'
+import type { CustomerSearchResult } from '@/hooks/use-customer-search'
 
 interface BookingFormContainerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   userId?: string
   onSuccess?: () => void
+  /** Pre-seed customer — skips Step 1 in wizard, pre-fills in quick form */
+  initialCustomer?: CustomerSearchResult
 }
 
 export function BookingFormContainer({
@@ -30,6 +33,7 @@ export function BookingFormContainer({
   onOpenChange,
   userId,
   onSuccess,
+  initialCustomer,
 }: BookingFormContainerProps) {
   const storageKey = userId ? `booking-form-mode_${userId}` : 'booking-form-mode_'
 
@@ -75,6 +79,7 @@ export function BookingFormContainer({
             onSuccess={handleSuccess}
             onCancel={handleCancel}
             onSwitchToQuick={() => switchMode('quick')}
+            initialCustomer={initialCustomer}
           />
         ) : (
           <BookingQuickForm
@@ -82,6 +87,7 @@ export function BookingFormContainer({
             onSuccess={handleSuccess}
             onCancel={handleCancel}
             onSwitchToWizard={() => switchMode('wizard')}
+            initialCustomer={initialCustomer}
           />
         )}
       </DashboardErrorBoundary>

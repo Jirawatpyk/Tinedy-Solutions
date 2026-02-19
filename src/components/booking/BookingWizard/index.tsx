@@ -27,6 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useBookingWizard, validateFullState } from '@/hooks/use-booking-wizard'
+import type { CustomerSearchResult } from '@/hooks/use-customer-search'
 import { useCreateBookingMutation } from '@/hooks/use-create-booking-mutation'
 import type { BookingInsertData } from '@/hooks/use-create-booking-mutation'
 import { useQuery } from '@tanstack/react-query'
@@ -47,10 +48,12 @@ interface BookingWizardProps {
   onSuccess?: () => void
   onCancel?: () => void
   onSwitchToQuick?: () => void
+  /** Pre-seed customer — wizard starts at Step 2 */
+  initialCustomer?: CustomerSearchResult
 }
 
-export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: BookingWizardProps) {
-  const { state, dispatch } = useBookingWizard({ userId })
+export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick, initialCustomer }: BookingWizardProps) {
+  const { state, dispatch } = useBookingWizard({ userId, initialCustomer })
   const mutation = useCreateBookingMutation()
   const { checkConflicts, clearConflicts } = useConflictDetection()
 
