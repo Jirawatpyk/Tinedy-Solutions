@@ -372,7 +372,7 @@ export function BookingDetailSheet({
     <AppSheet
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
-      title="รายละเอียดการจอง"
+      title={booking ? `รายละเอียดการจอง ${formatBookingId(booking.id)}` : 'รายละเอียดการจอง'}
       size="md"
     >
       {!booking ? (
@@ -431,9 +431,6 @@ export function BookingDetailSheet({
                 <div className="space-y-0.5 min-w-0">
                   <p className="font-medium text-tinedy-dark text-sm leading-tight">
                     {booking.customers?.full_name || 'N/A'}
-                    <span className="ml-2 text-xs text-muted-foreground font-normal">
-                      {formatBookingId(booking.id)}
-                    </span>
                   </p>
                   {booking.customers?.email && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
@@ -640,44 +637,43 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 6: การชำระเงิน (moved up — more prominent) */}
+            {/* Section 6: การชำระเงิน */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <CreditCard className="h-4 w-4 text-tinedy-blue" />
                 การชำระเงิน
               </div>
-              <div className="pl-1 space-y-3">
-                {/* Payment status + amount */}
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">สถานะการชำระ</Label>
-                    <div className="mt-1">{getPaymentStatusBadge(booking.payment_status)}</div>
-                  </div>
-                  <div className="text-right">
-                    <Label className="text-muted-foreground text-xs">ยอดรวม</Label>
-                    <p className="font-semibold text-green-600 text-base mt-1">
-                      {formatCurrency(
-                        booking.is_recurring && booking.recurring_total
-                          ? Number(booking.total_price || 0) * booking.recurring_total
-                          : Number(booking.total_price || 0),
-                      )}
-                    </p>
-                    {booking.payment_date && (
-                      <p className="text-xs text-muted-foreground">
-                        ชำระเมื่อ {formatDate(booking.payment_date)}
-                      </p>
+
+              {/* ── Payment info card ── */}
+              <div className="rounded-lg border bg-muted/30 px-3 py-2.5 space-y-2">
+                {/* Row 1: Status badge + Amount */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>{getPaymentStatusBadge(booking.payment_status)}</div>
+                  <p className="font-bold text-green-600 text-base leading-tight">
+                    {formatCurrency(
+                      booking.is_recurring && booking.recurring_total
+                        ? Number(booking.total_price || 0) * booking.recurring_total
+                        : Number(booking.total_price || 0),
                     )}
-                  </div>
+                  </p>
                 </div>
 
-                {/* Payment method */}
-                {booking.payment_method && (
-                  <p className="text-xs text-muted-foreground capitalize">
-                    วิธีชำระ: {booking.payment_method.replace('_', ' ')}
-                  </p>
+                {/* Row 2: Method + date (inline) */}
+                {(booking.payment_method || booking.payment_date) && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {booking.payment_method && (
+                      <span className="capitalize">{booking.payment_method.replace('_', ' ')}</span>
+                    )}
+                    {booking.payment_method && booking.payment_date && (
+                      <span>•</span>
+                    )}
+                    {booking.payment_date && (
+                      <span>ชำระเมื่อ {formatDate(booking.payment_date)}</span>
+                    )}
+                  </div>
                 )}
 
-                {/* Payment slip link */}
+                {/* Slip link */}
                 {booking.payment_slip_url && (
                   <a
                     href={booking.payment_slip_url}
@@ -689,109 +685,109 @@ export function BookingDetailSheet({
                     ดูสลิปการชำระ
                   </a>
                 )}
+              </div>
 
-                {/* Payment actions */}
-                {booking.payment_status !== 'refunded' && (
-                  <div className="flex flex-wrap gap-2">
-                    {booking.payment_status === 'pending_verification' &&
-                      booking.payment_slip_url &&
-                      onVerifyPayment && (
-                        <Button
-                          onClick={() => onVerifyPayment(booking.id)}
-                          disabled={actionLoading?.markAsPaid}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 h-8 text-xs"
-                        >
-                          {actionLoading?.markAsPaid ? 'กำลังตรวจสอบ...' : 'ยืนยันการชำระ'}
-                        </Button>
-                      )}
-                    {booking.payment_status === 'unpaid' && (
-                      <Select
-                        onValueChange={(method) => onMarkAsPaid(booking.id, method)}
-                        disabled={actionLoading?.markAsPaid}
-                      >
-                        <SelectTrigger className="w-40 h-8 text-xs">
-                          <SelectValue
-                            placeholder={
-                              actionLoading?.markAsPaid ? 'กำลังดำเนินการ...' : 'บันทึกการชำระ'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">เงินสด</SelectItem>
-                          <SelectItem value="credit_card">บัตรเครดิต</SelectItem>
-                          <SelectItem value="transfer">โอนเงิน</SelectItem>
-                          <SelectItem value="promptpay">PromptPay</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {booking.payment_status === 'paid' && onRequestRefund && (
+              {/* ── Payment actions ── */}
+              {booking.payment_status !== 'refunded' && (
+                <div className="flex flex-wrap gap-2">
+                  {booking.payment_status === 'pending_verification' &&
+                    booking.payment_slip_url &&
+                    onVerifyPayment && (
                       <Button
-                        onClick={() => onRequestRefund(booking.id)}
-                        disabled={actionLoading?.refund}
+                        onClick={() => onVerifyPayment(booking.id)}
+                        disabled={actionLoading?.markAsPaid}
                         size="sm"
-                        variant="outline"
-                        className="border-purple-300 text-purple-700 hover:bg-purple-50 h-8 text-xs"
+                        className="bg-green-600 hover:bg-green-700 h-8 text-xs"
                       >
-                        {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'ขอคืนเงิน'}
+                        {actionLoading?.markAsPaid ? 'กำลังตรวจสอบ...' : 'ยืนยันการชำระ'}
                       </Button>
                     )}
-                    {booking.payment_status === 'refund_pending' && (
+                  {booking.payment_status === 'unpaid' && (
+                    <Select
+                      onValueChange={(method) => onMarkAsPaid(booking.id, method)}
+                      disabled={actionLoading?.markAsPaid}
+                    >
+                      <SelectTrigger className="w-40 h-8 text-xs">
+                        <SelectValue
+                          placeholder={
+                            actionLoading?.markAsPaid ? 'กำลังดำเนินการ...' : 'บันทึกการชำระ'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">เงินสด</SelectItem>
+                        <SelectItem value="credit_card">บัตรเครดิต</SelectItem>
+                        <SelectItem value="transfer">โอนเงิน</SelectItem>
+                        <SelectItem value="promptpay">PromptPay</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {booking.payment_status === 'paid' && onRequestRefund && (
+                    <Button
+                      onClick={() => onRequestRefund(booking.id)}
+                      disabled={actionLoading?.refund}
+                      size="sm"
+                      variant="outline"
+                      className="border-purple-300 text-purple-700 hover:bg-purple-50 h-8 text-xs"
+                    >
+                      {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'ขอคืนเงิน'}
+                    </Button>
+                  )}
+                  {booking.payment_status === 'refund_pending' && (
+                    <>
+                      {onCompleteRefund && (
+                        <Button
+                          onClick={() => onCompleteRefund(booking.id)}
+                          disabled={actionLoading?.refund}
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 h-8 text-xs"
+                        >
+                          {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'คืนเงินแล้ว'}
+                        </Button>
+                      )}
+                      {onCancelRefund && (
+                        <Button
+                          onClick={() => onCancelRefund(booking.id)}
+                          disabled={actionLoading?.refund}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs"
+                        >
+                          ยกเลิกการคืนเงิน
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── Payment link (unpaid only) ── */}
+              {booking.payment_status === 'unpaid' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Link2 className="h-3.5 w-3.5" />
+                    ลิงก์ชำระเงิน
+                  </span>
+                  <Button
+                    onClick={handleCopyPaymentLink}
+                    variant={copiedLink ? 'default' : 'outline'}
+                    size="sm"
+                    className={`h-7 text-xs ${copiedLink ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                  >
+                    {copiedLink ? (
                       <>
-                        {onCompleteRefund && (
-                          <Button
-                            onClick={() => onCompleteRefund(booking.id)}
-                            disabled={actionLoading?.refund}
-                            size="sm"
-                            className="bg-purple-600 hover:bg-purple-700 h-8 text-xs"
-                          >
-                            {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'คืนเงินแล้ว'}
-                          </Button>
-                        )}
-                        {onCancelRefund && (
-                          <Button
-                            onClick={() => onCancelRefund(booking.id)}
-                            disabled={actionLoading?.refund}
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs"
-                          >
-                            ยกเลิกการคืนเงิน
-                          </Button>
-                        )}
+                        <Check className="h-3 w-3 mr-1" />
+                        คัดลอกแล้ว
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3 mr-1" />
+                        คัดลอกลิงก์
                       </>
                     )}
-                  </div>
-                )}
-
-                {/* Payment link (unpaid only) — clean copy button, no URL display */}
-                {booking.payment_status === 'unpaid' && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Link2 className="h-3.5 w-3.5" />
-                      ลิงก์ชำระเงิน
-                    </span>
-                    <Button
-                      onClick={handleCopyPaymentLink}
-                      variant={copiedLink ? 'default' : 'outline'}
-                      size="sm"
-                      className={`h-7 text-xs ${copiedLink ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                    >
-                      {copiedLink ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1" />
-                          คัดลอกแล้ว
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          คัดลอกลิงก์
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Section 7: หมายเหตุ (moved after payment) */}

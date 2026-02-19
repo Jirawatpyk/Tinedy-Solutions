@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Phone, Mail } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
 import { supabase } from '@/lib/supabase'
@@ -104,6 +106,14 @@ export function BookingEditModal({
   // Seed wizard with booking data (FM1-E fallbacks)
   const initialState = booking ? buildInitialState(booking) : undefined
   const { state, dispatch } = useBookingWizard({ initialState })
+
+  // Re-seed wizard whenever booking changes (handles case where component mounts with booking=null
+  // then receives a booking — useReducer initializer only runs once on mount)
+  useEffect(() => {
+    if (booking?.id) {
+      dispatch({ type: 'SEED', overrides: buildInitialState(booking) })
+    }
+  }, [booking?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync status from booking when it changes
   useEffect(() => {
@@ -212,6 +222,36 @@ export function BookingEditModal({
         <div className="flex flex-col h-full">
           {/* Scrollable form */}
           <div className="flex-1 overflow-y-auto space-y-5 px-4 py-4 pb-20">
+            {/* Customer info (read-only) */}
+            {booking?.customers && (
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="bg-tinedy-blue/10 text-tinedy-blue text-xs">
+                    {booking.customers.full_name?.slice(0, 2).toUpperCase() ?? 'N/A'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="font-medium text-sm text-tinedy-dark leading-tight">
+                    {booking.customers.full_name}
+                  </p>
+                  {booking.customers.phone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {booking.customers.phone}
+                    </p>
+                  )}
+                  {booking.customers.email && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      {booking.customers.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
             {/* Pricing */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-muted-foreground">บริการและราคา</p>

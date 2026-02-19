@@ -123,6 +123,7 @@ export type WizardAction =
   | { type: 'SET_VALIDATION_ERRORS'; errors: Partial<Record<string, string>> }
   | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
   | { type: 'RESET' }
+  | { type: 'SEED'; overrides: Partial<WizardState> }
 
 // ============================================================================
 // INITIAL STATE
@@ -185,56 +186,56 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
   if (step === 1) {
     // R6: Step 1 requires customerId OR (isNewCustomer AND name AND phone)
     if (!state.customer && !state.isNewCustomer) {
-      errors.customer = 'กรุณาเลือกลูกค้าหรือเพิ่มลูกค้าใหม่'
+      errors.customer = 'Please select a customer or add a new one'
     }
     if (state.isNewCustomer) {
       if (!state.newCustomerData.full_name.trim()) {
-        errors.new_customer_name = 'กรุณากรอกชื่อลูกค้า'
+        errors.new_customer_name = 'Please enter the customer name'
       }
       if (!state.newCustomerData.phone.trim()) {
-        errors.new_customer_phone = 'กรุณากรอกเบอร์โทรศัพท์'
+        errors.new_customer_phone = 'Please enter a phone number'
       }
     }
   }
 
   if (step === 2) {
     if (!state.booking_date) {
-      errors.booking_date = 'กรุณาเลือกวันที่'
+      errors.booking_date = 'Please select a date'
     }
     if (state.isMultiDay && state.end_date && state.end_date < state.booking_date) {
-      errors.end_date = 'วันสิ้นสุดต้องไม่น้อยกว่าวันเริ่มต้น'
+      errors.end_date = 'End date must not be before start date'
     }
     if (!state.start_time) {
-      errors.start_time = 'กรุณากรอกเวลาเริ่มต้น'
+      errors.start_time = 'Please enter a start time'
     }
     if (state.price_mode === 'custom') {
       if (!state.job_name.trim()) {
-        errors.job_name = 'กรุณาระบุชื่องาน'
+        errors.job_name = 'Please enter a job name'
       }
       if (state.custom_price === null || state.custom_price < 0) {
-        errors.custom_price = 'กรุณาระบุราคา'
+        errors.custom_price = 'Please enter a price'
       }
     } else if (state.price_mode === 'override') {
       if (!state.package_v2_id) {
-        errors.package_v2_id = 'กรุณาเลือก Package ก่อนปรับราคา'
+        errors.package_v2_id = 'Please select a package before overriding price'
       }
       if (state.custom_price === null || state.custom_price < 0) {
-        errors.custom_price = 'กรุณาระบุราคาที่ต้องการ'
+        errors.custom_price = 'Please enter the desired price'
       }
     } else {
       // Package mode
       if (!state.package_v2_id) {
-        errors.package_v2_id = 'กรุณาเลือก Package'
+        errors.package_v2_id = 'Please select a package'
       }
     }
   }
 
   if (step === 3) {
     if (!state.address.trim()) {
-      errors.address = 'กรุณากรอกที่อยู่'
+      errors.address = 'Please enter an address'
     }
     if (!state.city.trim()) {
-      errors.city = 'กรุณากรอกเมือง/เขต'
+      errors.city = 'Please enter a city/district'
     }
   }
 
@@ -500,6 +501,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'RESET':
       return { ...createInitialState(state.mode), mode: state.mode }
+
+    case 'SEED':
+      // Re-seed entire state from external data (e.g., edit modal opens with new booking)
+      return { ...createInitialState(), mode: state.mode, ...action.overrides }
 
     default:
       return state
