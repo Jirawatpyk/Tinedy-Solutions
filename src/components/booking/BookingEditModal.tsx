@@ -216,6 +216,11 @@ export function BookingEditModal({
     onOpenChange(false)
     clearConflicts()
     setPendingUpdate(null)
+    // M1 fix: Reset wizard state to original booking data on close.
+    // Prevents stale edits from persisting when user cancels and reopens.
+    if (booking) {
+      dispatch({ type: 'SEED', overrides: buildInitialState(booking) })
+    }
   }
 
   const endBeforeStart =

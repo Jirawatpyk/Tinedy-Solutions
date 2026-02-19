@@ -123,10 +123,16 @@ export function useConflictDetection(params?: ConflictCheckParams) {
       if (staffId) {
         query = query.eq('staff_id', staffId)
       } else if (teamId) {
-        const { data: memberRows } = await supabase
+        const { data: memberRows, error: memberError } = await supabase
           .from('team_members')
           .select('staff_id')
           .eq('team_id', teamId)
+
+        // L2 fix: Log team_members query errors for diagnostics (graceful degradation preserved)
+        if (memberError) {
+          console.warn('[useConflictDetection] team_members query failed, falling back to team-only check:', memberError)
+        }
+
         const memberIds = (memberRows ?? [])
           .map((r) => r.staff_id)
           .filter(Boolean) as string[]
@@ -161,10 +167,17 @@ export function useConflictDetection(params?: ConflictCheckParams) {
         )
 
         if (hasOverlap) {
+          // L3 fix: Determine precise conflictType — in teamId branch, an individual
+          // staff booking (staff_id set, no team_id) is a 'staff' conflict, not 'team'.
+          const type: BookingConflict['conflictType'] = staffId
+            ? 'staff'
+            : booking.team_id === teamId
+              ? 'team'
+              : 'staff'
           detectedConflicts.push({
             booking: booking as BookingRecordWithRelations,
-            conflictType: staffId ? 'staff' : 'team',
-            message: `${staffId ? 'Staff' : 'Team'} is already booked at this time`,
+            conflictType: type,
+            message: `${type === 'staff' ? 'Staff member' : 'Team'} is already booked at this time`,
           })
         }
       })
