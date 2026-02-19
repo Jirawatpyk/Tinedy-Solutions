@@ -235,7 +235,9 @@ export const getRevenueByServiceType = (
   const custom = paidBookings
     .filter((b) => {
       const priceMode = (b as { price_mode?: string | null }).price_mode
-      return priceMode === 'custom' || priceMode === 'override'
+      // H2 fix: only 'custom' → งานพิเศษ bucket.
+      // 'override' still has a service_type → already counted in cleaning/training above.
+      return priceMode === 'custom'
     })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 

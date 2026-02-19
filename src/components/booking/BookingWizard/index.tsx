@@ -96,7 +96,16 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
     // RT7: Full re-validate before submit
     const errors = validateFullState(state)
     if (Object.keys(errors).length > 0) {
-      dispatch({ type: 'GOTO_STEP', step: 1 })
+      // M4 fix: jump to the first step that actually has errors
+      const step1Keys = ['customer', 'new_customer_name', 'new_customer_phone']
+      const step2Keys = ['booking_date', 'end_date', 'start_time', 'job_name', 'custom_price', 'package_v2_id']
+      if (step1Keys.some((k) => errors[k])) {
+        dispatch({ type: 'GOTO_STEP', step: 1 })
+      } else if (step2Keys.some((k) => errors[k])) {
+        dispatch({ type: 'GOTO_STEP', step: 2 })
+      } else {
+        dispatch({ type: 'GOTO_STEP', step: 3 })
+      }
       toast.error('Please fill in all required fields')
       dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
       return
@@ -281,11 +290,14 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
         confirmLabel="Create Anyway"
         cancelLabel="Cancel"
         onConfirm={async () => {
-          if (pendingSubmitData) {
-            await doSubmit(pendingSubmitData)
-          }
+          // M6 fix: clear dialog state BEFORE doSubmit to avoid setState-on-unmount
+          // (onSuccess may close the sheet and unmount this component)
+          const data = pendingSubmitData
           setShowConflictDialog(false)
           setPendingSubmitData(null)
+          if (data) {
+            await doSubmit(data)
+          }
         }}
       />
     </div>

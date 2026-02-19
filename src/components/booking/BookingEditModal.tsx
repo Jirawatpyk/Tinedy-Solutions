@@ -53,11 +53,8 @@ interface BookingEditModalProps {
 
 // Build initialState from existing booking (FM1-E fix)
 function buildInitialState(booking: Booking) {
-  const priceMode: typeof PriceMode[keyof typeof PriceMode] = booking.price_override
-    ? PriceMode.Override
-    : booking.job_name
-    ? PriceMode.Custom
-    : PriceMode.Package
+  // M3 fix: read price_mode directly from DB (G2 — no derivation)
+  const priceMode: PriceMode = booking.price_mode ?? PriceMode.Package
 
   const assignmentType: 'staff' | 'team' | 'none' = booking.staff_id
     ? 'staff'
@@ -163,9 +160,9 @@ export function BookingEditModal({
       end_time: state.end_time || null,
       package_v2_id: state.package_v2_id,
       price_mode: state.price_mode,
-      total_price: state.price_mode === 'package' ? state.total_price : state.custom_price ?? 0,
+      total_price: state.price_mode === PriceMode.Package ? state.total_price : state.custom_price ?? 0,
       custom_price: state.custom_price,
-      price_override: state.price_mode === 'override',
+      price_override: state.price_mode === PriceMode.Override,
       job_name: state.job_name || null,
       area_sqm: state.area_sqm,
       frequency: state.frequency,
@@ -187,6 +184,7 @@ export function BookingEditModal({
         staffId: state.staff_id,
         teamId: state.team_id,
         bookingDate: state.booking_date,
+        endDate: state.end_date,
         startTime: state.start_time,
         endTime: state.end_time,
         excludeBookingId: booking?.id,

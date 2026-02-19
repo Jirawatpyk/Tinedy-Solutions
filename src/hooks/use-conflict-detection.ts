@@ -117,11 +117,25 @@ export function useConflictDetection(params?: ConflictCheckParams) {
         query = query.neq('id', excludeBookingId)
       }
 
-      // EC-C2: Filter by staff OR team assignment
+      // EC-C2: Filter by staff OR team assignment.
+      // L7 fix: when checking a team, also include individual bookings for all team members.
+      // A team member booked individually on the same date/time is a real conflict.
       if (staffId) {
         query = query.eq('staff_id', staffId)
       } else if (teamId) {
-        query = query.eq('team_id', teamId)
+        const { data: memberRows } = await supabase
+          .from('team_members')
+          .select('staff_id')
+          .eq('team_id', teamId)
+        const memberIds = (memberRows ?? [])
+          .map((r) => r.staff_id)
+          .filter(Boolean) as string[]
+
+        if (memberIds.length > 0) {
+          query = query.or(`team_id.eq.${teamId},staff_id.in.(${memberIds.join(',')})`)
+        } else {
+          query = query.eq('team_id', teamId)
+        }
       }
 
       const { data: fetchedBookings, error: queryError } = await query
