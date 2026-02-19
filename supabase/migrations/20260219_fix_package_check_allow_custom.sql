@@ -6,7 +6,7 @@
 ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_package_check;
 
 ALTER TABLE bookings
-  ADD CONSTRAINT bookings_package_check
+  ADD CONSTRAINT IF NOT EXISTS bookings_package_check
   CHECK (
     -- Cannot have both V1 and V2 package set simultaneously
     service_package_id IS NULL OR package_v2_id IS NULL

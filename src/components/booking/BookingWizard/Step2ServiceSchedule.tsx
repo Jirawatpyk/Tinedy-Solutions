@@ -54,7 +54,12 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
   const { data: packagesV2 = [], isLoading: packagesLoading } = useQuery(packageQueryOptions.v2)
 
   // Local state for recurring UI only
-  const [occurrences, setOccurrences] = useState(3)
+  // H2: Lazy init — restore from recurringDates.length so back-navigation doesn't reset
+  const [occurrences, setOccurrences] = useState(() =>
+    recurringPattern === 'auto_monthly' && recurringDates.length > 0
+      ? recurringDates.length
+      : 3
+  )
   const [newDateInput, setNewDateInput] = useState('')
 
   // Auto-generate monthly dates when booking_date, occurrences, or pattern changes
@@ -252,6 +257,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                   value={newDateInput}
                   min={booking_date || undefined}
                   onChange={(e) => setNewDateInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddDate()}
                   className="h-9 flex-1"
                 />
                 <Button

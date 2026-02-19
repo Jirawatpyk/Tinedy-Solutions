@@ -150,11 +150,14 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
   const bookingIds: string[] = []
 
   if (data.recurring_dates && data.recurring_dates.length > 0) {
-    // Batch recurring bookings — one per date
-    for (const date of data.recurring_dates) {
-      const id = await createSingleBooking(customerId, data, date)
-      bookingIds.push(id)
-    }
+    // H1: Always create the primary booking_date first
+    const primaryId = await createSingleBooking(customerId, data, data.booking_date)
+    bookingIds.push(primaryId)
+    // M1: Batch recurring dates in parallel (not sequential)
+    const recurringIds = await Promise.all(
+      data.recurring_dates.map((date) => createSingleBooking(customerId, data, date))
+    )
+    bookingIds.push(...recurringIds)
   } else {
     // Single booking
     const id = await createSingleBooking(customerId, data, data.booking_date)
