@@ -41,6 +41,7 @@ import { DateRangePicker } from './BookingWizard/DateRangePicker'
 import { Step3Assignment } from './BookingWizard/Step3Assignment'
 import { PriceMode, BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
+import { getAllStatusOptions } from '@/lib/booking-utils'
 
 interface BookingEditModalProps {
   open: boolean
@@ -322,12 +323,9 @@ export function BookingEditModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={BookingStatus.Pending}>รอดำเนินการ</SelectItem>
-                  <SelectItem value={BookingStatus.Confirmed}>ยืนยันแล้ว</SelectItem>
-                  <SelectItem value={BookingStatus.InProgress}>กำลังดำเนินการ</SelectItem>
-                  <SelectItem value={BookingStatus.Completed}>เสร็จสิ้น</SelectItem>
-                  <SelectItem value={BookingStatus.Cancelled}>ยกเลิก</SelectItem>
-                  <SelectItem value={BookingStatus.NoShow}>ไม่มาตามนัด</SelectItem>
+                  {getAllStatusOptions().map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
