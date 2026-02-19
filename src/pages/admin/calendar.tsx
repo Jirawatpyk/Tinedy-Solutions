@@ -129,7 +129,6 @@ export function AdminCalendar() {
   const handleEditBooking = (booking: Booking) => {
     // Populate edit form with booking data
     setEditFormData({
-      service_package_id: booking.service_package_id,
       booking_date: booking.booking_date,
       start_time: booking.start_time,
       end_time: booking.end_time,
@@ -155,9 +154,9 @@ export function AdminCalendar() {
 
     // Set package selection for PackageSelector component
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (booking.service_package_id || ('package_v2_id' in booking && (booking as any).package_v2_id)) {
+    if ('package_v2_id' in booking && (booking as any).package_v2_id) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const packageId = ('package_v2_id' in booking && (booking as any).package_v2_id) || booking.service_package_id
+      const packageId = (booking as any).package_v2_id
 
       // หา package จาก unified packages (รวม V1 + V2 แล้ว)
       const pkg = servicePackages.find(p => p.id === packageId)
@@ -516,7 +515,6 @@ export function AdminCalendar() {
             booking_date: formData.booking_date || '',
             start_time: formData.start_time || '',
             end_time: formData.end_time || '',
-            service_package_id: formData.service_package_id || '',
             package_v2_id: formData.package_v2_id || '',
             staff_id: formData.staff_id || '',
             team_id: formData.team_id || '',
@@ -564,7 +562,6 @@ export function AdminCalendar() {
               booking_date: formData.booking_date || '',
               start_time: formData.start_time || '',
               end_time: formData.end_time || '',
-              service_package_id: formData.service_package_id || '',
               package_v2_id: formData.package_v2_id || '',
               staff_id: formData.staff_id || '',
               team_id: formData.team_id || '',
@@ -585,7 +582,7 @@ export function AdminCalendar() {
       )}
 
       {/* Staff Availability Modal - Create */}
-      {(createFormData.service_package_id || createFormData.package_v2_id) && createFormData.booking_date && createFormData.start_time && (
+      {createFormData.package_v2_id && createFormData.booking_date && createFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isCreateAvailabilityOpen}
           onClose={() => {
@@ -617,23 +614,23 @@ export function AdminCalendar() {
           dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
           startTime={createFormData.start_time || ''}
           endTime={
-            createFormData.service_package_id && createFormData.start_time
+            createFormData.package_v2_id && createFormData.start_time
               ? calculateEndTime(
                   createFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.duration_minutes || 0
+                  servicePackages.find(pkg => pkg.id === createFormData.package_v2_id)?.duration_minutes || 0
                 )
               : createFormData.end_time || ''
           }
-          servicePackageId={createFormData.service_package_id || createFormData.package_v2_id || ''}
+          servicePackageId={createFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === createFormData.service_package_id)?.name ||
+            servicePackages.find(pkg => pkg.id === createFormData.package_v2_id)?.name ||
             createPackageSelection?.packageName
           }
         />
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {(editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
+      {editFormData.package_v2_id && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditAvailabilityOpen}
           onClose={() => {
@@ -664,16 +661,16 @@ export function AdminCalendar() {
           date={editFormData.booking_date || ''}
           startTime={editFormData.start_time || ''}
           endTime={
-            editFormData.service_package_id && editFormData.start_time
+            editFormData.package_v2_id && editFormData.start_time
               ? calculateEndTime(
                   editFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.duration_minutes || 0
+                  servicePackages.find(pkg => pkg.id === editFormData.package_v2_id)?.duration_minutes || 0
                 )
               : editFormData.end_time || ''
           }
-          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
+          servicePackageId={editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === editFormData.service_package_id)?.name ||
+            servicePackages.find(pkg => pkg.id === editFormData.package_v2_id)?.name ||
             editPackageSelection?.packageName
           }
           currentAssignedStaffId={editFormData.staff_id}

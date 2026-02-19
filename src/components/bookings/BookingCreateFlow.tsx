@@ -183,7 +183,6 @@ function BookingCreateFlowComponent({
       booking_date?: string
       start_time?: string
       end_time?: string
-      service_package_id?: string
       package_v2_id?: string
       staff_id?: string
       team_id?: string
@@ -203,7 +202,6 @@ function BookingCreateFlowComponent({
         booking_date: formData.booking_date || '',
         start_time: formData.start_time || '',
         end_time: endTime,
-        service_package_id: formData.service_package_id || '',
         package_v2_id: formData.package_v2_id || '',
         staff_id: formData.staff_id || '',
         team_id: formData.team_id || '',
@@ -259,14 +257,14 @@ function BookingCreateFlowComponent({
 
   // Determine if staff availability modal should be shown
   const shouldShowAvailabilityModal =
-    (createForm.formData.service_package_id || createForm.formData.package_v2_id) &&
+    createForm.formData.package_v2_id &&
     // Must have date (recurring or single booking) and start time
     (createRecurringDates.length > 0 || createForm.formData.booking_date) &&
     createForm.formData.start_time
 
   // Get service package name for availability modal
-  const servicePackageName = createForm.formData.service_package_id
-    ? servicePackages.find((pkg) => pkg.id === createForm.formData.service_package_id)?.name
+  const servicePackageName = createForm.formData.package_v2_id
+    ? servicePackages.find((pkg) => pkg.id === createForm.formData.package_v2_id)?.name
     : 'Service Package'
 
   return (
@@ -310,9 +308,7 @@ function BookingCreateFlowComponent({
           dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
           startTime={createForm.formData.start_time || ''}
           endTime={createForm.formData.end_time || ''}
-          servicePackageId={
-            createForm.formData.service_package_id || createForm.formData.package_v2_id || ''
-          }
+          servicePackageId={createForm.formData.package_v2_id || ''}
           servicePackageName={servicePackageName}
         />
       )}

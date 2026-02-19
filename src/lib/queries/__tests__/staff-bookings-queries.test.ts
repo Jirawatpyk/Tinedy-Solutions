@@ -83,33 +83,34 @@ describe('staff-bookings-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        or: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
+        // eq('staff_id', userId) is called last when teamIds=[] — resolves here
+        eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
       const result = await fetchStaffBookingsToday('staff-1', [])
 
+      expect(mockChain.lte).toHaveBeenCalledWith('booking_date', expect.any(String))
       expect(mockChain.is).toHaveBeenCalledWith('deleted_at', null)
-      expect(mockChain.eq).toHaveBeenCalled()
+      expect(mockChain.eq).toHaveBeenCalledWith('staff_id', 'staff-1')
       expect(result).toBeDefined()
     })
 
     it('should throw error on database error', async () => {
-      const mockChain: any = {
+      const mockChain = {
         select: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        or: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
+        // eq('staff_id', userId) is the final call — resolves with error
+        eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
       }
-
-      // eq() is called twice: first for booking_date (return this), second for staff_id (resolve with error)
-      mockChain.eq = vi.fn()
-        .mockReturnValueOnce(mockChain)
-        .mockResolvedValueOnce({ data: null, error: { message: 'Database error' } })
 
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 

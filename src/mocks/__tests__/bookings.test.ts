@@ -106,7 +106,7 @@ describe('Booking Handlers', () => {
     it('should create a new booking', async () => {
       const newBooking = {
         customer_id: 'customer-001',
-        service_package_id: 'service-001',
+
         staff_id: 'staff-001',
         booking_date: '2025-02-01',
         start_time: '10:00:00',
@@ -150,7 +150,7 @@ describe('Booking Handlers', () => {
     it('should reject booking with both staff_id and team_id', async () => {
       const invalidBooking = {
         customer_id: 'customer-001',
-        service_package_id: 'service-001',
+
         staff_id: 'staff-001',
         team_id: 'team-001', // Invalid: cannot have both
         booking_date: '2025-02-01',

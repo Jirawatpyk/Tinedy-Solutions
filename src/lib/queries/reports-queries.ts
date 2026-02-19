@@ -32,7 +32,6 @@ export interface BookingWithService {
   created_at: string
   customer_id: string
   staff_id: string | null
-  service_package_id: string
   package_v2_id: string | null
   recurring_group_id?: string | null
   recurring_sequence?: number
@@ -41,6 +40,7 @@ export interface BookingWithService {
   is_recurring?: boolean
   parent_booking_id?: string | null
   service_packages: { name: string; service_type: string } | null
+  service_packages_v2?: { name: string; service_type: string } | null
 }
 
 // Re-export types from analytics.ts to avoid duplicates
@@ -75,7 +75,6 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
       created_at,
       customer_id,
       staff_id,
-      service_package_id,
       package_v2_id,
       recurring_group_id,
       recurring_sequence,
@@ -111,7 +110,6 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
     created_at: string
     customer_id: string
     staff_id: string | null
-    service_package_id: string
     package_v2_id: string | null
     recurring_group_id?: string | null
     recurring_sequence?: number

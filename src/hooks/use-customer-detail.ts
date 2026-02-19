@@ -70,7 +70,6 @@ interface CustomerDetailState {
     booking_date?: string
     start_time?: string
     end_time?: string
-    service_package_id?: string
     package_v2_id?: string
   } | null
   selectedCreateStaffId: string
@@ -85,7 +84,6 @@ interface CustomerDetailState {
     booking_date?: string
     start_time?: string
     end_time?: string
-    service_package_id?: string
     package_v2_id?: string
   } | null
   selectedEditStaffId: string
@@ -608,7 +606,6 @@ export function useCustomerDetail(customerId: string | undefined) {
 
   const handleEditBooking = useCallback((booking: Booking) => {
     const formState: BookingFormState = {
-      service_package_id: booking.service_package_id,
       package_v2_id: 'package_v2_id' in booking ? (booking.package_v2_id || undefined) : undefined,
       area_sqm: 'area_sqm' in booking ? (booking.area_sqm || undefined) : undefined,
       frequency: 'frequency' in booking ? (booking.frequency || undefined) : undefined,
@@ -631,7 +628,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     else if (booking.team_id) assignmentType = 'team'
 
     let pkgSelection: PackageSelectionData | null = null
-    const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+    const packageId = 'package_v2_id' in booking ? booking.package_v2_id : null
     if (packageId) {
       const pkg = servicePackages.find(p => p.id === packageId)
       if (pkg) {
@@ -672,7 +669,6 @@ export function useCustomerDetail(customerId: string | undefined) {
       zip_code: booking.zip_code,
       staff_id: booking.staff_id,
       team_id: booking.team_id,
-      service_package_id: booking.service_package_id,
       package_v2_id: 'package_v2_id' in booking ? booking.package_v2_id : null,
       area_sqm: 'area_sqm' in booking ? booking.area_sqm : null,
       frequency: 'frequency' in booking ? booking.frequency : null,

@@ -148,7 +148,7 @@ export function usePackageDetail(packageId: string | undefined) {
       const { data: bookingsData, error } = await supabase
         .from('bookings')
         .select('status, total_price, booking_date')
-        .or(`service_package_id.eq.${pkgId},package_v2_id.eq.${pkgId}`)
+        .eq('package_v2_id', pkgId)
 
       if (error) throw error
       if (!bookingsData) return
@@ -189,7 +189,7 @@ export function usePackageDetail(packageId: string | undefined) {
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
-        .or(`service_package_id.eq.${pkgId},package_v2_id.eq.${pkgId}`)
+        .eq('package_v2_id', pkgId)
         .order('created_at', { ascending: false })
         .limit(20)
 

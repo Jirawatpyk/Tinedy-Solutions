@@ -133,8 +133,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
@@ -144,8 +144,8 @@ describe('booking-queries', () => {
       const result = await fetchBookingsByDateRange('2025-01-20', '2025-01-22')
 
       expect(result).toHaveLength(2)
-      expect(mockChain.gte).toHaveBeenCalledWith('booking_date', '2025-01-20')
       expect(mockChain.lte).toHaveBeenCalledWith('booking_date', '2025-01-22')
+      expect(mockChain.or).toHaveBeenCalledWith(expect.stringContaining('2025-01-20'))
     })
 
     it('should filter by multi-select staffIds', async () => {
@@ -153,8 +153,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -174,8 +174,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -195,8 +195,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
@@ -219,8 +219,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -240,8 +240,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
@@ -264,8 +264,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -285,8 +285,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -306,8 +306,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -327,8 +327,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
@@ -351,8 +351,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
@@ -375,8 +375,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
@@ -396,8 +396,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
@@ -418,8 +418,8 @@ describe('booking-queries', () => {
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         is: vi.fn().mockResolvedValue({ data: [mockBooking], error: null }),
       }

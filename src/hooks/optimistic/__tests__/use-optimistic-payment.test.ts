@@ -97,7 +97,6 @@ describe('useOptimisticPayment', () => {
     zip_code: '10100',
     staff_id: 'staff-1',
     team_id: 'team-1',
-    service_package_id: 'pkg-1',
     notes: null,
     customers: { id: 'customer-1', full_name: 'Test Customer', email: 'test@example.com' },
     service_packages: { name: 'Basic Service', service_type: 'cleaning', price: 1000 },

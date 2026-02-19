@@ -400,7 +400,7 @@ export function useBookingsPage() {
       viewBookingId?: string
       prefilledData?: {
         booking_date: string; start_time: string; end_time: string
-        service_package_id: string; package_v2_id?: string
+        package_v2_id?: string
         staff_id: string; team_id: string; total_price?: number
         area_sqm?: number | null; frequency?: 1 | 2 | 4 | 8 | null
         is_recurring?: boolean; recurring_dates?: string[]; recurring_pattern?: RecurringPattern
@@ -417,7 +417,7 @@ export function useBookingsPage() {
       const pf = locationState.prefilledData
       createForm.setValues({
         booking_date: pf.booking_date, start_time: pf.start_time, end_time: pf.end_time,
-        service_package_id: pf.service_package_id || '', package_v2_id: pf.package_v2_id,
+        package_v2_id: pf.package_v2_id,
         staff_id: pf.staff_id, team_id: pf.team_id,
         total_price: pf.total_price || 0, area_sqm: pf.area_sqm || null, frequency: pf.frequency || null,
       })
@@ -428,14 +428,6 @@ export function useBookingsPage() {
           dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: {
             packageId: pkg.id, pricingModel: 'tiered', areaSqm: pf.area_sqm,
             frequency: pf.frequency, price: pf.total_price || 0, requiredStaff: 1, packageName: pkg.name,
-          }})
-        }
-      } else if (pf.service_package_id) {
-        const pkg = servicePackages.find(p => p.id === pf.service_package_id)
-        if (pkg && pkg.base_price) {
-          dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: {
-            packageId: pkg.id, pricingModel: 'fixed', price: pkg.base_price, requiredStaff: 1,
-            packageName: pkg.name, estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
           }})
         }
       }
@@ -476,7 +468,7 @@ export function useBookingsPage() {
       const booking = bookings.find(b => b.id === locationState.editBookingId)
       if (booking) {
         editForm.setValues({
-          customer_id: booking.customers?.id || '', service_package_id: booking.service_package_id,
+          customer_id: booking.customers?.id || '',
           staff_id: booking.staff_id || '', team_id: booking.team_id || '',
           booking_date: booking.booking_date, start_time: booking.start_time,
           end_time: booking.end_time, address: booking.address, city: booking.city || '',
@@ -707,7 +699,7 @@ export function useBookingsPage() {
   const openEditBooking = useCallback((booking: Booking) => {
     dispatch({ type: 'SET_SELECTED_BOOKING', payload: booking })
     editForm.setValues({
-      customer_id: booking.customers?.id || '', service_package_id: booking.service_package_id,
+      customer_id: booking.customers?.id || '',
       staff_id: booking.staff_id || '', team_id: booking.team_id || '',
       booking_date: booking.booking_date, start_time: formatTime(booking.start_time),
       end_time: formatTime(booking.end_time), address: booking.address,
@@ -719,8 +711,8 @@ export function useBookingsPage() {
     else if (booking.team_id) assignmentType = 'team'
 
     // Set package selection
-    if (booking.service_package_id || ('package_v2_id' in booking && booking.package_v2_id)) {
-      const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+    if ('package_v2_id' in booking && booking.package_v2_id) {
+      const packageId = booking.package_v2_id
       const pkg = servicePackages.find(p => p.id === packageId)
       if (pkg) {
         const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'

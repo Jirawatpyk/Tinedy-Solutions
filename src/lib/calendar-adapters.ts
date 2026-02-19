@@ -40,7 +40,6 @@ export function calendarEventToBooking(event: CalendarEvent): Booking {
     customer_id: '',
     staff_id: event.staff_id,
     team_id: event.team_id,
-    service_package_id: '',
     booking_date: format(event.start, 'yyyy-MM-dd'),
     start_time: format(event.start, 'HH:mm:ss'),
     end_time: format(event.end, 'HH:mm:ss'),
@@ -94,7 +93,9 @@ export function calendarEventsToBookings(events: CalendarEvent[]): Booking[] {
  */
 export function bookingToCalendarEvent(booking: Booking): CalendarEvent {
   const startDate = new Date(`${booking.booking_date}T${booking.start_time}`)
-  const endDate = new Date(`${booking.booking_date}T${booking.end_time}`)
+  // T4.1: Multi-day support — use end_date if present, otherwise use booking_date
+  const endDateStr = booking.end_date ?? booking.booking_date
+  const endDate = new Date(`${endDateStr}T${booking.end_time}`)
 
   return {
     id: booking.id,
@@ -215,7 +216,6 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
     customer_id: '',
     staff_id: event.staff_id,
     team_id: event.team_id,
-    service_package_id: '',
     package_v2_id: null,
     created_at: event.created_at, // Use actual booking created_at for team member filtering
     area_sqm: event.area_sqm,

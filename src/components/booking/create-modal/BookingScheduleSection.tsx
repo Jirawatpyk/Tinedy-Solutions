@@ -64,26 +64,19 @@ const BookingScheduleSection = React.memo(function BookingScheduleSection({
                     version: selectedPkg?._source
                   }, { context: 'BookingScheduleSection' })
 
-                  // FIX: ตั้งค่าตาม version ของ package (ต้องมีเพียงหนึ่งตัว)
-                  if (isV1Package) {
-                    form.setValue('service_package_id', selection.packageId)
-                    form.setValue('package_v2_id', '')
-                  } else {
-                    form.setValue('service_package_id', '')
-                    form.setValue('package_v2_id', selection.packageId)
-                  }
+                  // Set package_v2_id for all packages (V1 packages phased out)
+                  form.setValue('package_v2_id', selection.packageId)
 
                   form.setValue('total_price', selection.price)
                   form.setValue('area_sqm', undefined)
                   form.setValue('frequency', undefined)
                 } else {
-                  // Tiered pricing - ต้องเป็น V2 แน่นอน
+                  // Tiered pricing - V2 package
                   logger.debug('Setting tiered price', {
                     price: selection.price,
                     areaSqm: selection.areaSqm,
                     frequency: selection.frequency
                   }, { context: 'BookingScheduleSection' })
-                  form.setValue('service_package_id', '')
                   form.setValue('package_v2_id', selection.packageId)
                   form.setValue('area_sqm', selection.areaSqm)
                   form.setValue('frequency', selection.frequency as 1 | 2 | 4 | 8)
@@ -111,7 +104,6 @@ const BookingScheduleSection = React.memo(function BookingScheduleSection({
               } else {
                 // Clear selection
                 logger.debug('Clearing package selection', undefined, { context: 'BookingScheduleSection' })
-                form.setValue('service_package_id', '')
                 form.setValue('package_v2_id', '')
                 form.setValue('area_sqm', undefined)
                 form.setValue('frequency', undefined)

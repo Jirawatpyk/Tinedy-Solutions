@@ -99,7 +99,6 @@ export function AdminDashboard() {
   const handleEditBooking = (booking: Booking) => {
     // Populate edit form with booking data
     setEditFormData({
-      service_package_id: booking.service_package_id,
       package_v2_id: booking.package_v2_id || undefined,
       booking_date: booking.booking_date,
       start_time: booking.start_time,
@@ -127,7 +126,7 @@ export function AdminDashboard() {
     }
 
     // Set package selection for PackageSelector component
-    const packageId = booking.package_v2_id || booking.service_package_id
+    const packageId = booking.package_v2_id
 
     if (packageId) {
       const pkg = servicePackages.find((p) => p.id === packageId)
@@ -285,7 +284,6 @@ export function AdminDashboard() {
               booking_date: formData.booking_date || '',
               start_time: formData.start_time || '',
               end_time: formData.end_time || '',
-              service_package_id: formData.service_package_id || '',
               package_v2_id: formData.package_v2_id || '',
               staff_id: formData.staff_id || '',
               team_id: formData.team_id || '',
@@ -306,7 +304,7 @@ export function AdminDashboard() {
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {(editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
+      {editFormData.package_v2_id && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditAvailabilityOpen}
           onClose={() => {
@@ -334,17 +332,17 @@ export function AdminDashboard() {
           date={editFormData.booking_date || ''}
           startTime={editFormData.start_time || ''}
           endTime={
-            (editFormData.service_package_id || editFormData.package_v2_id) && editFormData.start_time
+            editFormData.package_v2_id && editFormData.start_time
               ? calculateEndTime(
                   editFormData.start_time,
-                  servicePackages.find((pkg) => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))
+                  servicePackages.find((pkg) => pkg.id === editFormData.package_v2_id)
                     ?.duration_minutes || 0
                 )
               : editFormData.end_time || ''
           }
-          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
+          servicePackageId={editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find((pkg) => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))?.name
+            servicePackages.find((pkg) => pkg.id === editFormData.package_v2_id)?.name
           }
           currentAssignedStaffId={editFormData.staff_id}
           currentAssignedTeamId={editFormData.team_id}

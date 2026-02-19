@@ -50,7 +50,6 @@ const createMockBooking = (id: string, name: string): StaffBooking => ({
   state: 'Bangkok',
   zip_code: '10110',
   customer_id: 'customer-1',
-  service_package_id: 'sp-1',
   package_v2_id: null,
   created_at: '2025-01-19T00:00:00Z',
   staff_id: 'staff-1',

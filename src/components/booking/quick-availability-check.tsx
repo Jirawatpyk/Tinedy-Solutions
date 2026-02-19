@@ -383,8 +383,7 @@ export function QuickAvailabilityCheck() {
                   booking_date: isRecurring ? '' : date, // Empty if recurring
                   start_time: startTime,
                   end_time: endTime,
-                  service_package_id: selectedService?.pricing_model === 'fixed' ? servicePackageId : '',
-                  package_v2_id: selectedService?.pricing_model === 'tiered' ? servicePackageId : undefined,
+                  package_v2_id: servicePackageId,
                   staff_id: staffId,
                   team_id: '',
                   total_price: selectedService?.base_price || 0,
@@ -419,8 +418,7 @@ export function QuickAvailabilityCheck() {
                   booking_date: isRecurring ? '' : date, // Empty if recurring
                   start_time: startTime,
                   end_time: endTime,
-                  service_package_id: selectedService?.pricing_model === 'fixed' ? servicePackageId : '',
-                  package_v2_id: selectedService?.pricing_model === 'tiered' ? servicePackageId : undefined,
+                  package_v2_id: servicePackageId,
                   staff_id: '',
                   team_id: teamId,
                   total_price: selectedService?.base_price || 0,

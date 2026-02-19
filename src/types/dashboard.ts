@@ -34,7 +34,6 @@ export interface TodayBooking {
   zip_code: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
   package_v2_id?: string | null
   area_sqm?: number | null
   frequency?: 1 | 2 | 4 | 8 | null

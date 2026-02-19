@@ -234,7 +234,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'existing-customer',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -282,7 +282,7 @@ describe('useBookingForm', () => {
             full_name: 'John Doe',
             email: 'valid@example.com',
             phone: '08123456789',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -315,7 +315,7 @@ describe('useBookingForm', () => {
               full_name: 'Test User',
               email,
               phone: '08123456789',
-              service_package_id: 'pkg-1',
+              package_v2_id: 'pkg-1',
               booking_date: '2025-12-01',
               start_time: '10:00',
               address: '123 Main St',
@@ -374,7 +374,7 @@ describe('useBookingForm', () => {
       })
 
       // Assert
-      expect(result.current.errors.service_package_id).toBe('Service package is required')
+      expect(result.current.errors.package_v2_id).toBe('Service package is required')
     })
 
     it('should accept valid service package', () => {
@@ -383,7 +383,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -399,7 +399,7 @@ describe('useBookingForm', () => {
       })
 
       // Assert
-      expect(result.current.errors.service_package_id).toBeUndefined()
+      expect(result.current.errors.package_v2_id).toBeUndefined()
     })
   })
 
@@ -436,7 +436,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -490,7 +490,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -515,7 +515,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -589,7 +589,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -614,7 +614,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -644,7 +644,7 @@ describe('useBookingForm', () => {
           useBookingForm({
             initialData: {
               customer_id: 'cust-1',
-              service_package_id: 'pkg-1',
+              package_v2_id: 'pkg-1',
               booking_date: '2025-12-01',
               start_time: '10:00',
               address: '123 Main St',
@@ -690,7 +690,7 @@ describe('useBookingForm', () => {
         useBookingForm({
           initialData: {
             customer_id: 'cust-1',
-            service_package_id: 'pkg-1',
+            package_v2_id: 'pkg-1',
             booking_date: '2025-12-01',
             start_time: '10:00',
             address: '123 Main St',
@@ -731,7 +731,7 @@ describe('useBookingForm', () => {
       const onSubmit = vi.fn()
       const formData = {
         customer_id: 'cust-1',
-        service_package_id: 'pkg-1',
+        package_v2_id: 'pkg-1',
         booking_date: '2025-12-01',
         start_time: '10:00',
         address: '123 Main St',
@@ -766,7 +766,7 @@ describe('useBookingForm', () => {
 
       const formData = {
         customer_id: 'cust-1',
-        service_package_id: 'pkg-1',
+        package_v2_id: 'pkg-1',
         booking_date: '2025-12-01',
         start_time: '10:00',
         address: '123 Main St',
@@ -811,7 +811,7 @@ describe('useBookingForm', () => {
 
       const formData = {
         customer_id: 'cust-1',
-        service_package_id: 'pkg-1',
+        package_v2_id: 'pkg-1',
         booking_date: '2025-12-01',
         start_time: '10:00',
         address: '123 Main St',
@@ -846,7 +846,7 @@ describe('useBookingForm', () => {
 
       const formData = {
         customer_id: 'cust-1',
-        service_package_id: 'pkg-1',
+        package_v2_id: 'pkg-1',
         booking_date: '2025-12-01',
         start_time: '10:00',
         address: '123 Main St',
@@ -968,7 +968,7 @@ describe('useBookingForm', () => {
           full_name: 'John Doe',
           email: 'john@example.com',
           phone: '08123456789',
-          service_package_id: 'pkg-1',
+          package_v2_id: 'pkg-1',
           booking_date: '2025-12-01',
           start_time: '10:00',
           address: '123 Main St',

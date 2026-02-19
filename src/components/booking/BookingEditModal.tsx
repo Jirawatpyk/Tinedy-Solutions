@@ -111,7 +111,6 @@ export function BookingEditModal({
       booking_date: '',
       start_time: '',
       end_time: '',
-      service_package_id: '',
       package_v2_id: '',
       total_price: 0,
       area_sqm: undefined,
@@ -151,7 +150,6 @@ export function BookingEditModal({
           booking_date: booking.booking_date || '',
           start_time: formatTime(booking.start_time || ''),
           end_time: formatTime(booking.end_time || ''),
-          service_package_id: booking.service_package_id || '',
           package_v2_id: booking.package_v2_id || '',
           total_price: booking.total_price || 0,
           area_sqm: booking.area_sqm || undefined,
@@ -197,7 +195,7 @@ export function BookingEditModal({
 
       // Only calculate end_time if not set (ไม่มีค่า end_time)
       if (!endTime && data.start_time) {
-        const selectedPackage = servicePackages.find(pkg => pkg.id === data.service_package_id || pkg.id === data.package_v2_id)
+        const selectedPackage = servicePackages.find(pkg => pkg.id === data.package_v2_id)
 
         if (selectedPackage && selectedPackage.duration_minutes) {
           // Package with fixed duration
@@ -212,8 +210,7 @@ export function BookingEditModal({
       // Store booking_id separately
       const bookingId = booking?.id || ''
 
-      // Determine package type (fixed or tiered)
-      const hasFixedPackage = data.service_package_id && data.service_package_id.trim()
+      // Determine package type (tiered only in V2)
       const hasTieredPackage = data.package_v2_id && data.package_v2_id.trim()
 
       // Get team member count if team is assigned (for earnings calculation)
@@ -253,7 +250,6 @@ export function BookingEditModal({
         team_id: string | null
         team_member_count: number | null
         status: string
-        service_package_id?: string | null
         package_v2_id?: string | null
         area_sqm?: number | null
         frequency?: number | null
@@ -277,18 +273,10 @@ export function BookingEditModal({
       if (hasTieredPackage) {
         // Tiered pricing package (V2)
         updateData.package_v2_id = data.package_v2_id
-        updateData.service_package_id = null // Clear fixed package ID
         updateData.area_sqm = data.area_sqm || null
         updateData.frequency = data.frequency || null
-      } else if (hasFixedPackage) {
-        // Fixed pricing package (V1)
-        updateData.service_package_id = data.service_package_id
-        updateData.package_v2_id = null // Clear tiered package ID
-        updateData.area_sqm = null // Clear tiered fields
-        updateData.frequency = null
       } else {
-        // No package selected (shouldn't happen, but handle it)
-        updateData.service_package_id = null
+        // No package selected
         updateData.package_v2_id = null
         updateData.area_sqm = null
         updateData.frequency = null
@@ -392,15 +380,13 @@ export function BookingEditModal({
                   setPackageSelection(selection)
                   if (selection) {
                     if (selection.pricingModel === 'fixed') {
-                      // Fixed pricing - เซ็ตเฉพาะ service_package_id
-                      form.setValue('service_package_id', selection.packageId)
-                      form.setValue('package_v2_id', '') // ล้าง package_v2_id
+                      // Fixed pricing (legacy V1 path — set as package_v2_id for now)
+                      form.setValue('package_v2_id', selection.packageId)
                       form.setValue('total_price', selection.price)
                       form.setValue('area_sqm', undefined)
                       form.setValue('frequency', undefined)
                     } else {
-                      // Tiered pricing - เซ็ตเฉพาะ package_v2_id
-                      form.setValue('service_package_id', '') // ล้าง service_package_id
+                      // Tiered pricing - V2 package
                       form.setValue('package_v2_id', selection.packageId)
                       form.setValue('area_sqm', selection.areaSqm)
                       form.setValue('frequency', selection.frequency as 1 | 2 | 4 | 8)
@@ -415,7 +401,6 @@ export function BookingEditModal({
                       form.setValue('end_time', endTime)
                     }
                   } else {
-                    form.setValue('service_package_id', '')
                     form.setValue('package_v2_id', '')
                     form.setValue('area_sqm', undefined)
                     form.setValue('frequency', undefined)

@@ -151,10 +151,8 @@ function BookingEditFlowComponent({
    * Get service package name by ID
    */
   const getServicePackageName = () => {
-    if (editForm.formData.service_package_id) {
-      const pkg = servicePackages.find(
-        (p) => p.id === editForm.formData.service_package_id
-      )
+    if (editForm.formData.package_v2_id) {
+      const pkg = servicePackages.find((p) => p.id === editForm.formData.package_v2_id)
       return pkg?.name
     }
     return 'Service Package'
@@ -165,7 +163,7 @@ function BookingEditFlowComponent({
    * Requires service package, date, and start time
    */
   const canShowAvailabilityModal =
-    (editForm.formData.service_package_id || editForm.formData.package_v2_id) &&
+    editForm.formData.package_v2_id &&
     editForm.formData.booking_date &&
     editForm.formData.start_time
 
@@ -194,7 +192,6 @@ function BookingEditFlowComponent({
             booking_date: formData.booking_date || '',
             start_time: formData.start_time || '',
             end_time: endTime,
-            service_package_id: formData.service_package_id || '',
             package_v2_id: formData.package_v2_id || '',
             staff_id: formData.staff_id || '',
             team_id: formData.team_id || '',
@@ -227,11 +224,7 @@ function BookingEditFlowComponent({
           date={editForm.formData.booking_date}
           startTime={editForm.formData.start_time || ''}
           endTime={editForm.formData.end_time || ''}
-          servicePackageId={
-            editForm.formData.service_package_id ||
-            editForm.formData.package_v2_id ||
-            ''
-          }
+          servicePackageId={editForm.formData.package_v2_id || ''}
           servicePackageName={getServicePackageName()}
           currentAssignedStaffId={editForm.formData.staff_id}
           currentAssignedTeamId={editForm.formData.team_id}

@@ -49,7 +49,6 @@ describe('BookingList', () => {
     zip_code: '10110',
     staff_id: 'staff-123',
     team_id: null,
-    service_package_id: 'service-123',
     notes: 'Test notes',
     payment_status: 'unpaid',
     customers: {
@@ -89,7 +88,6 @@ describe('BookingList', () => {
   ): RecurringBookingRecord => ({
     id: booking.id,
     customer_id: booking.customer_id || 'customer-123',
-    service_package_id: booking.service_package_id,
     booking_date: booking.booking_date,
     start_time: booking.start_time,
     end_time: booking.end_time || null,
