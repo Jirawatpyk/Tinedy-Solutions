@@ -12,7 +12,8 @@
  */
 
 import type { Booking } from '@/types'
-import { BookingStatus, PriceMode } from '@/types/booking'
+import { BookingStatus, PaymentStatus, PaymentMethod, PriceMode } from '@/types/booking'
+import { PAYMENT_METHOD_LABELS } from '@/constants/booking-status'
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -56,6 +57,12 @@ import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatDateRange, bookingDurationDays } from '@/lib/date-range-utils'
 
+/** ms to show clipboard feedback before reverting the button label */
+const CLIPBOARD_FEEDBACK_MS = 2000
+
+/** Maximum booking duration that shows no warning (>90 days shows a notice in DateRangePicker) */
+const GOOGLE_MAPS_SEARCH_URL = 'https://www.google.com/maps/search/?api=1&query='
+
 interface Review {
   id: string
   rating: number
@@ -91,12 +98,6 @@ interface BookingDetailSheetProps {
     refund?: boolean
   }
 }
-
-const FINAL_STATUSES = [
-  BookingStatus.Completed,
-  BookingStatus.Cancelled,
-  BookingStatus.NoShow,
-] as string[]
 
 export function BookingDetailSheet({
   booking,
@@ -285,7 +286,7 @@ export function BookingDetailSheet({
       .then(() => {
         setCopiedLink(true)
         toast({ title: 'Copied!', description: 'Payment link copied to clipboard' })
-        setTimeout(() => setCopiedLink(false), 2000)
+        setTimeout(() => setCopiedLink(false), CLIPBOARD_FEEDBACK_MS)
       })
       .catch(() => {
         toast({ title: 'Error', description: 'Failed to copy link', variant: 'destructive' })
@@ -331,7 +332,8 @@ export function BookingDetailSheet({
   // ── Helpers ──────────────────────────────────────────────────────────────
   const isCustomMode = booking?.price_mode === PriceMode.Custom
   const isOverrideMode = booking?.price_mode === PriceMode.Override
-  const isFinalStatus = FINAL_STATUSES.includes(booking?.status ?? '')
+  // A status is "final" when it has no further valid transitions
+  const isFinalStatus = booking ? getAvailableStatuses(booking.status).length === 0 : false
   const durationDays = booking ? bookingDurationDays(booking) : 0
   const isMultiDay = durationDays > 1
 
@@ -340,7 +342,7 @@ export function BookingDetailSheet({
     ? null
     : booking?.service_packages_v2?.service_type ?? booking?.service_packages?.service_type
   const serviceName = isCustomMode
-    ? (booking?.job_name ?? 'งานพิเศษ')
+    ? (booking?.job_name ?? 'Custom Job')
     : (booking?.service_packages_v2?.name ?? booking?.service_packages?.name ?? booking?.job_name ?? 'N/A')
 
   // ── Loading Skeleton ──────────────────────────────────────────────────────
@@ -372,7 +374,7 @@ export function BookingDetailSheet({
     <AppSheet
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
-      title={booking ? `รายละเอียดการจอง ${formatBookingId(booking.id)}` : 'รายละเอียดการจอง'}
+      title={booking ? `Booking Details ${formatBookingId(booking.id)}` : 'Booking Details'}
       size="md"
     >
       {!booking ? (
@@ -391,7 +393,7 @@ export function BookingDetailSheet({
               </span>
               {isMultiDay && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {durationDays} วัน
+                  {durationDays} days
                 </Badge>
               )}
             </div>
@@ -404,10 +406,10 @@ export function BookingDetailSheet({
                   {formatCurrency(Number(booking.total_price))}
                 </p>
                 {isOverrideMode && (
-                  <span className="text-xs text-muted-foreground">(ปรับราคา)</span>
+                  <span className="text-xs text-muted-foreground">(Override)</span>
                 )}
                 {isCustomMode && (
-                  <span className="text-xs text-muted-foreground">(ราคาพิเศษ)</span>
+                  <span className="text-xs text-muted-foreground">(Custom Price)</span>
                 )}
               </div>
             </div>
@@ -416,11 +418,11 @@ export function BookingDetailSheet({
           {/* ── Zone 2: Body (scrollable) ─────────────────────────────────── */}
           <div className="flex-1 overflow-y-auto pb-6 px-4 py-4 space-y-5">
 
-            {/* Section 1: ลูกค้า */}
+            {/* Section 1: Customer */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <User className="h-4 w-4 text-tinedy-blue" />
-                ลูกค้า
+                Customer
               </div>
               <div className="flex items-start gap-3 pl-1">
                 <Avatar className="h-9 w-9 flex-shrink-0">
@@ -450,16 +452,16 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 2: บริการ */}
+            {/* Section 2: Service */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <Package className="h-4 w-4 text-tinedy-blue" />
-                บริการ
+                Service
               </div>
               <div className="pl-1 space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   {isCustomMode ? (
-                    <Badge variant="secondary" className="text-xs">งานพิเศษ</Badge>
+                    <Badge variant="secondary" className="text-xs">Custom Job</Badge>
                   ) : serviceType ? (
                     <Badge variant="outline" className="text-xs">{serviceType}</Badge>
                   ) : null}
@@ -467,12 +469,12 @@ export function BookingDetailSheet({
                 </div>
                 {booking.area_sqm != null && booking.area_sqm > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    พื้นที่: {booking.area_sqm} ตร.ม.
+                    Area: {booking.area_sqm} sqm
                   </p>
                 )}
                 {!isCustomMode && booking.frequency && (
                   <p className="text-xs text-muted-foreground">
-                    ความถี่:{' '}
+                    Frequency:{' '}
                     {booking.is_recurring && booking.recurring_sequence && booking.recurring_total
                       ? `${booking.recurring_sequence}/${booking.recurring_total} (${getFrequencyLabel(booking.frequency)})`
                       : getFrequencyLabel(booking.frequency)}
@@ -481,14 +483,14 @@ export function BookingDetailSheet({
               </div>
             </div>
 
-            {/* Section 3: ผู้รับผิดชอบ (conditional + own divider) */}
+            {/* Section 3: Assignment (conditional + own divider) */}
             {(booking.profiles || booking.teams) && (
               <>
                 <div className="h-px bg-border" />
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                     <Users className="h-4 w-4 text-tinedy-blue" />
-                    ผู้รับผิดชอบ
+                    Assignee
                   </div>
                   <div className="pl-1 space-y-2">
                     {booking.profiles && (
@@ -512,7 +514,7 @@ export function BookingDetailSheet({
                               className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-secondary/80"
                               onClick={toggleTeamMembers}
                             >
-                              {booking.team_member_count} คน
+                              {booking.team_member_count} members
                               <ChevronDown
                                 className={`h-3 w-3 ml-0.5 transition-transform ${showTeamMembers ? 'rotate-180' : ''}`}
                               />
@@ -523,19 +525,19 @@ export function BookingDetailSheet({
                           <div className="flex items-center gap-1.5 pl-5">
                             <Crown className="h-3 w-3 text-amber-600 flex-shrink-0" />
                             <span className="text-xs text-muted-foreground">
-                              หัวหน้าทีม: {booking.teams.team_lead.full_name}
+                              Team Lead: {booking.teams.team_lead.full_name}
                             </span>
                           </div>
                         )}
                         {showTeamMembers && (
                           <div className="pl-5 border-l-2 border-tinedy-green/30 space-y-1.5">
                             <Label className="text-muted-foreground text-xs">
-                              สมาชิก (ณ เวลาสร้าง)
+                              Members (at booking time)
                             </Label>
                             {loadingTeamMembers ? (
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                กำลังโหลด...
+                                Loading...
                               </div>
                             ) : teamMembers.length > 0 ? (
                               <div className="space-y-1">
@@ -552,7 +554,7 @@ export function BookingDetailSheet({
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-xs text-muted-foreground">ไม่พบสมาชิก</p>
+                              <p className="text-xs text-muted-foreground">No members found</p>
                             )}
                           </div>
                         )}
@@ -565,11 +567,11 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 4: ที่อยู่ */}
+            {/* Section 4: Address */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <MapPin className="h-4 w-4 text-tinedy-blue" />
-                ที่อยู่
+                Address
               </div>
               <div className="pl-1 space-y-2">
                 <p className="text-sm text-muted-foreground break-words">{formatFullAddress(booking)}</p>
@@ -580,7 +582,7 @@ export function BookingDetailSheet({
                   onClick={() => {
                     const addr = formatFullAddress(booking)
                     window.open(
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`,
+                      `${GOOGLE_MAPS_SEARCH_URL}${encodeURIComponent(addr)}`,
                       '_blank',
                     )
                   }}
@@ -593,7 +595,7 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 5: สถานะ + ส่งเตือน */}
+            {/* Section 5: Status + reminder */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Booking status change */}
@@ -606,7 +608,7 @@ export function BookingDetailSheet({
                     <SelectTrigger className="w-40 h-8 text-xs">
                       <SelectValue>
                         {actionLoading?.statusChange
-                          ? 'กำลังอัพเดท...'
+                          ? 'Updating...'
                           : getStatusLabel(booking.status)}
                       </SelectValue>
                     </SelectTrigger>
@@ -620,7 +622,7 @@ export function BookingDetailSheet({
                   </Select>
                 )}
                 {/* Send Reminder */}
-                <SimpleTooltip content={!booking.customers?.email ? 'ไม่มีอีเมลลูกค้า' : 'ส่งอีเมลเตือน'}>
+                <SimpleTooltip content={!booking.customers?.email ? 'No customer email' : 'Send reminder email'}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -629,7 +631,7 @@ export function BookingDetailSheet({
                     disabled={sendingReminder || !booking.customers?.email}
                   >
                     <Send className="h-3.5 w-3.5 mr-1.5" />
-                    {sendingReminder ? 'กำลังส่ง...' : 'ส่งเตือน'}
+                    {sendingReminder ? 'Sending...' : 'Send Reminder'}
                   </Button>
                 </SimpleTooltip>
               </div>
@@ -637,11 +639,11 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 6: การชำระเงิน */}
+            {/* Section 6: Payment */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <CreditCard className="h-4 w-4 text-tinedy-blue" />
-                การชำระเงิน
+                Payment
               </div>
 
               {/* ── Payment info card ── */}
@@ -650,11 +652,7 @@ export function BookingDetailSheet({
                 <div className="flex items-center justify-between gap-3">
                   <div>{getPaymentStatusBadge(booking.payment_status)}</div>
                   <p className="font-bold text-green-600 text-base leading-tight">
-                    {formatCurrency(
-                      booking.is_recurring && booking.recurring_total
-                        ? Number(booking.total_price || 0) * booking.recurring_total
-                        : Number(booking.total_price || 0),
-                    )}
+                    {formatCurrency(Number(booking.total_price || 0))}
                   </p>
                 </div>
 
@@ -662,13 +660,13 @@ export function BookingDetailSheet({
                 {(booking.payment_method || booking.payment_date) && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {booking.payment_method && (
-                      <span className="capitalize">{booking.payment_method.replace('_', ' ')}</span>
+                      <span>{PAYMENT_METHOD_LABELS[booking.payment_method] ?? booking.payment_method}</span>
                     )}
                     {booking.payment_method && booking.payment_date && (
                       <span>•</span>
                     )}
                     {booking.payment_date && (
-                      <span>ชำระเมื่อ {formatDate(booking.payment_date)}</span>
+                      <span>Paid on {formatDate(booking.payment_date)}</span>
                     )}
                   </div>
                 )}
@@ -682,15 +680,15 @@ export function BookingDetailSheet({
                     className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline"
                   >
                     <Link2 className="h-3.5 w-3.5" />
-                    ดูสลิปการชำระ
+                    View Payment Slip
                   </a>
                 )}
               </div>
 
               {/* ── Payment actions ── */}
-              {booking.payment_status !== 'refunded' && (
+              {booking.payment_status !== PaymentStatus.Refunded && (
                 <div className="flex flex-wrap gap-2">
-                  {booking.payment_status === 'pending_verification' &&
+                  {booking.payment_status === PaymentStatus.PendingVerification &&
                     booking.payment_slip_url &&
                     onVerifyPayment && (
                       <Button
@@ -699,10 +697,10 @@ export function BookingDetailSheet({
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 h-8 text-xs"
                       >
-                        {actionLoading?.markAsPaid ? 'กำลังตรวจสอบ...' : 'ยืนยันการชำระ'}
+                        {actionLoading?.markAsPaid ? 'Verifying...' : 'Verify Payment'}
                       </Button>
                     )}
-                  {booking.payment_status === 'unpaid' && (
+                  {booking.payment_status === PaymentStatus.Unpaid && (
                     <Select
                       onValueChange={(method) => onMarkAsPaid(booking.id, method)}
                       disabled={actionLoading?.markAsPaid}
@@ -710,19 +708,19 @@ export function BookingDetailSheet({
                       <SelectTrigger className="w-40 h-8 text-xs">
                         <SelectValue
                           placeholder={
-                            actionLoading?.markAsPaid ? 'กำลังดำเนินการ...' : 'บันทึกการชำระ'
+                            actionLoading?.markAsPaid ? 'Processing...' : 'Record Payment'
                           }
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">เงินสด</SelectItem>
-                        <SelectItem value="credit_card">บัตรเครดิต</SelectItem>
-                        <SelectItem value="transfer">โอนเงิน</SelectItem>
-                        <SelectItem value="promptpay">PromptPay</SelectItem>
+                        <SelectItem value={PaymentMethod.Cash}>{PAYMENT_METHOD_LABELS[PaymentMethod.Cash]}</SelectItem>
+                        <SelectItem value={PaymentMethod.CreditCard}>{PAYMENT_METHOD_LABELS[PaymentMethod.CreditCard]}</SelectItem>
+                        <SelectItem value={PaymentMethod.Transfer}>{PAYMENT_METHOD_LABELS[PaymentMethod.Transfer]}</SelectItem>
+                        <SelectItem value={PaymentMethod.PromptPay}>{PAYMENT_METHOD_LABELS[PaymentMethod.PromptPay]}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
-                  {booking.payment_status === 'paid' && onRequestRefund && (
+                  {booking.payment_status === PaymentStatus.Paid && onRequestRefund && (
                     <Button
                       onClick={() => onRequestRefund(booking.id)}
                       disabled={actionLoading?.refund}
@@ -730,10 +728,10 @@ export function BookingDetailSheet({
                       variant="outline"
                       className="border-purple-300 text-purple-700 hover:bg-purple-50 h-8 text-xs"
                     >
-                      {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'ขอคืนเงิน'}
+                      {actionLoading?.refund ? 'Processing...' : 'Request Refund'}
                     </Button>
                   )}
-                  {booking.payment_status === 'refund_pending' && (
+                  {booking.payment_status === PaymentStatus.RefundPending && (
                     <>
                       {onCompleteRefund && (
                         <Button
@@ -742,7 +740,7 @@ export function BookingDetailSheet({
                           size="sm"
                           className="bg-purple-600 hover:bg-purple-700 h-8 text-xs"
                         >
-                          {actionLoading?.refund ? 'กำลังดำเนินการ...' : 'คืนเงินแล้ว'}
+                          {actionLoading?.refund ? 'Processing...' : 'Refund Complete'}
                         </Button>
                       )}
                       {onCancelRefund && (
@@ -753,7 +751,7 @@ export function BookingDetailSheet({
                           variant="outline"
                           className="h-8 text-xs"
                         >
-                          ยกเลิกการคืนเงิน
+                          Cancel Refund
                         </Button>
                       )}
                     </>
@@ -762,11 +760,11 @@ export function BookingDetailSheet({
               )}
 
               {/* ── Payment link (unpaid only) ── */}
-              {booking.payment_status === 'unpaid' && (
+              {booking.payment_status === PaymentStatus.Unpaid && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Link2 className="h-3.5 w-3.5" />
-                    ลิงก์ชำระเงิน
+                    Payment Link
                   </span>
                   <Button
                     onClick={handleCopyPaymentLink}
@@ -777,12 +775,12 @@ export function BookingDetailSheet({
                     {copiedLink ? (
                       <>
                         <Check className="h-3 w-3 mr-1" />
-                        คัดลอกแล้ว
+                        Copied
                       </>
                     ) : (
                       <>
                         <Copy className="h-3 w-3 mr-1" />
-                        คัดลอกลิงก์
+                        Copy Link
                       </>
                     )}
                   </Button>
@@ -790,14 +788,14 @@ export function BookingDetailSheet({
               )}
             </div>
 
-            {/* Section 7: หมายเหตุ (moved after payment) */}
+            {/* Section 7: Notes (moved after payment) */}
             {booking.notes && (
               <>
                 <div className="h-px bg-border" />
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                     <FileText className="h-4 w-4 text-tinedy-blue" />
-                    หมายเหตุ
+                    Notes
                   </div>
                   <p className="pl-1 text-sm text-muted-foreground whitespace-pre-wrap">
                     {booking.notes}
@@ -806,7 +804,7 @@ export function BookingDetailSheet({
               </>
             )}
 
-            {/* Section 8: รีวิว (completed only) */}
+            {/* Section 8: Review (completed only) */}
             {(booking.staff_id || booking.team_id) &&
               booking.status === BookingStatus.Completed && (
                 <>
@@ -814,7 +812,7 @@ export function BookingDetailSheet({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                       <Star className="h-4 w-4 text-yellow-500" />
-                      รีวิวบริการ
+                      Service Review
                     </div>
                     <div className="pl-1 space-y-2">
                       <div className="flex items-center gap-1">
@@ -848,12 +846,12 @@ export function BookingDetailSheet({
                           size="sm"
                           className="h-8 text-xs w-full"
                         >
-                          {savingReview ? 'กำลังบันทึก...' : review ? 'อัพเดทรีวิว' : 'บันทึกรีวิว'}
+                          {savingReview ? 'Saving...' : review ? 'Update Review' : 'Save Review'}
                         </Button>
                       )}
                       {review && (
                         <p className="text-xs text-muted-foreground">
-                          อัพเดทล่าสุด: {formatDate(review.created_at)}
+                          Last updated: {formatDate(review.created_at)}
                         </p>
                       )}
                     </div>
@@ -867,7 +865,7 @@ export function BookingDetailSheet({
             {/* Left: Delete + Archive */}
             <PermissionAwareDeleteButton
               resource="bookings"
-              itemName={`การจองของ ${booking.customers?.full_name || 'ลูกค้า'} วันที่ ${formatDate(booking.booking_date)}`}
+              itemName={`Booking for ${booking.customers?.full_name || 'Customer'} on ${formatDate(booking.booking_date)}`}
               onDelete={() => {
                 onDelete(booking.id)
                 onClose()
@@ -883,7 +881,7 @@ export function BookingDetailSheet({
               variant="default"
               size="default"
               buttonVariant="outline"
-              cancelText="เก็บในคลัง"
+              cancelText="Archive"
               className="h-9 text-xs"
             />
 
@@ -894,14 +892,14 @@ export function BookingDetailSheet({
                 disabled={isFinalStatus}
                 title={
                   isFinalStatus
-                    ? 'ไม่สามารถแก้ไขการจองที่เสร็จสิ้น/ยกเลิกแล้ว'
+                    ? 'Cannot edit completed or cancelled bookings'
                     : undefined
                 }
                 size="sm"
                 className="h-9 text-xs"
               >
                 <Edit className="h-3.5 w-3.5 mr-1.5" />
-                แก้ไข →
+                Edit →
               </Button>
             )}
           </div>

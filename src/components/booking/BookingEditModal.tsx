@@ -33,7 +33,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { getErrorMessage } from '@/lib/error-utils'
 import { AppSheet } from '@/components/ui/app-sheet'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
-import { useBookingWizard, validateFullState } from '@/hooks/use-booking-wizard'
+import { useBookingWizard, validateEditState } from '@/hooks/use-booking-wizard'
 import { useConflictDetection } from '@/hooks/use-conflict-detection'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { SmartPriceField, SmartPriceFieldSkeleton } from './BookingWizard/SmartPriceField'
@@ -104,17 +104,16 @@ export function BookingEditModal({
 
   const { checkConflicts, clearConflicts } = useConflictDetection()
 
-  // Seed wizard with booking data (FM1-E fallbacks)
-  const initialState = booking ? buildInitialState(booking) : undefined
-  const { state, dispatch } = useBookingWizard({ initialState })
+  // No initialState prop — SEED useEffect handles seeding to avoid double-initialization.
+  const { state, dispatch } = useBookingWizard()
 
-  // Re-seed wizard whenever booking changes (handles case where component mounts with booking=null
-  // then receives a booking — useReducer initializer only runs once on mount)
+  // Seed wizard whenever booking changes.
+  // Deps on full booking object (not just booking?.id) to prevent stale data.
   useEffect(() => {
     if (booking?.id) {
       dispatch({ type: 'SEED', overrides: buildInitialState(booking) })
     }
-  }, [booking?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [booking]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync status from booking when it changes
   useEffect(() => {
@@ -128,30 +127,31 @@ export function BookingEditModal({
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async (updateData: Record<string, unknown>) => {
-      if (!booking?.id) throw new Error('ไม่พบ ID การจอง')
+      if (!booking?.id) throw new Error('Booking ID not found')
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
         .eq('id', booking.id)
 
-      if (error) throw new Error(`ไม่สามารถแก้ไขการจองได้: ${getErrorMessage(error)}`)
+      if (error) throw new Error(`Failed to update booking: ${getErrorMessage(error)}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-      toast.success('แก้ไขการจองสำเร็จ')
+      toast.success('Booking updated successfully')
       onOpenChange(false)
       clearConflicts()
       onSuccess?.()
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'ไม่สามารถแก้ไขการจองได้')
+      toast.error(err instanceof Error ? err.message : 'Unable to update booking')
     },
   })
 
   async function handleSubmit() {
-    const errors = validateFullState(state)
+    // Edit mode: validate only Steps 2+3 — customer is already bound to the booking
+    const errors = validateEditState(state)
     if (Object.keys(errors).length > 0) {
-      toast.error('กรุณากรอกข้อมูลให้ครบถ้วน')
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -210,13 +210,13 @@ export function BookingEditModal({
     <AppSheet
       open={open}
       onOpenChange={handleClose}
-      title="แก้ไขการจอง"
+      title="Edit Booking"
       size="md"
     >
       <DashboardErrorBoundary
         fallback={
           <div className="flex items-center justify-center h-full p-6 text-center">
-            <p className="text-sm text-muted-foreground">เกิดข้อผิดพลาด กรุณาปิดและลองใหม่</p>
+            <p className="text-sm text-muted-foreground">An error occurred. Please close and try again.</p>
           </div>
         }
       >
@@ -255,7 +255,7 @@ export function BookingEditModal({
 
             {/* Pricing */}
             <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">บริการและราคา</p>
+              <p className="text-sm font-medium text-muted-foreground">Service & Pricing</p>
               {packagesLoading ? (
                 <SmartPriceFieldSkeleton />
               ) : (
@@ -272,13 +272,13 @@ export function BookingEditModal({
 
             {/* Date & Time */}
             <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">วันและเวลา</p>
+              <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
               <DateRangePicker state={state} dispatch={dispatch} />
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="edit-start" className="text-xs text-muted-foreground">
-                    เวลาเริ่มต้น <span className="text-destructive">*</span>
+                    Start Time <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="edit-start"
@@ -295,7 +295,7 @@ export function BookingEditModal({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-end" className="text-xs text-muted-foreground">
-                    เวลาสิ้นสุด
+                    End Time
                   </Label>
                   <Input
                     id="edit-end"
@@ -307,7 +307,7 @@ export function BookingEditModal({
                     className={endBeforeStart ? 'border-yellow-400' : undefined}
                   />
                   {endBeforeStart && (
-                    <p className="text-xs text-yellow-600">⚠️ เวลาสิ้นสุดน้อยกว่าเวลาเริ่มต้น</p>
+                    <p className="text-xs text-yellow-600">⚠️ End time is before start time</p>
                   )}
                 </div>
               </div>
@@ -317,7 +317,7 @@ export function BookingEditModal({
 
             {/* Status */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium">สถานะ</Label>
+              <Label className="text-sm font-medium">Status</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger>
                   <SelectValue />
@@ -344,14 +344,14 @@ export function BookingEditModal({
               disabled={updateMutation.isPending}
               className="flex-1"
             >
-              ยกเลิก
+              Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={updateMutation.isPending}
               className="flex-1 bg-tinedy-blue hover:bg-tinedy-blue/90"
             >
-              {updateMutation.isPending ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>
@@ -360,10 +360,10 @@ export function BookingEditModal({
         <ConfirmDialog
           open={showConflictDialog}
           onOpenChange={setShowConflictDialog}
-          title="พบตารางงานที่ขัดแย้ง"
-          description="การจองนี้ขัดแย้งกับงานที่มีอยู่ ต้องการบันทึกต่อหรือไม่?"
-          confirmLabel="บันทึกต่อ"
-          cancelLabel="ยกเลิก"
+          title="Schedule Conflict Detected"
+          description="This booking conflicts with an existing one. Save anyway?"
+          confirmLabel="Save Anyway"
+          cancelLabel="Cancel"
           onConfirm={() => {
             if (pendingUpdate) {
               updateMutation.mutate(pendingUpdate)

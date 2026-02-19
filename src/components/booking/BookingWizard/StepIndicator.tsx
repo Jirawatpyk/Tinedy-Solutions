@@ -10,7 +10,7 @@ interface StepIndicatorProps {
   labels?: string[]
 }
 
-const DEFAULT_LABELS = ['ลูกค้า', 'บริการ', 'นัดหมาย', 'ยืนยัน']
+const DEFAULT_LABELS = ['Customer', 'Service', 'Assignment', 'Confirm']
 
 export function StepIndicator({
   currentStep,

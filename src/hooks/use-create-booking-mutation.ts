@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { getErrorMessage } from '@/lib/error-utils'
-import type { PriceMode } from '@/types/booking'
+import { BookingStatus, PaymentStatus, type PriceMode } from '@/types/booking'
 
 // ============================================================================
 // TYPES
@@ -88,7 +88,7 @@ async function createCustomer(data: NewCustomerData): Promise<string> {
     .select('id')
     .single()
 
-  if (error) throw new Error(`ไม่สามารถสร้างลูกค้าได้: ${getErrorMessage(error)}`)
+  if (error) throw new Error(`Failed to create customer: ${getErrorMessage(error)}`)
   return customer.id
 }
 
@@ -118,8 +118,8 @@ async function createSingleBooking(
     state: data.state ?? null,
     zip_code: data.zip_code ?? null,
     notes: data.notes ?? null,
-    status: 'pending' as const,
-    payment_status: 'unpaid' as const,
+    status: BookingStatus.Pending,
+    payment_status: PaymentStatus.Unpaid,
     payment_method: null,
   }
 
@@ -129,7 +129,7 @@ async function createSingleBooking(
     .select('id')
     .single()
 
-  if (error) throw new Error(`ไม่สามารถสร้างการจองได้: ${getErrorMessage(error)}`)
+  if (error) throw new Error(`Failed to create booking: ${getErrorMessage(error)}`)
   return booking.id
 }
 
@@ -143,25 +143,41 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
   } else if (data.customer_id) {
     customerId = data.customer_id
   } else {
-    throw new Error('กรุณาเลือกลูกค้าหรือกรอกข้อมูลลูกค้าใหม่')
+    throw new Error('Please select a customer or enter new customer details')
   }
 
-  // Step 2: Create booking(s)
+  // Step 2: Create booking(s) with best-effort rollback on partial failure
   const bookingIds: string[] = []
 
-  if (data.recurring_dates && data.recurring_dates.length > 0) {
-    // H1: Always create the primary booking_date first
-    const primaryId = await createSingleBooking(customerId, data, data.booking_date)
-    bookingIds.push(primaryId)
-    // M1: Batch recurring dates in parallel (not sequential)
-    const recurringIds = await Promise.all(
-      data.recurring_dates.map((date) => createSingleBooking(customerId, data, date))
-    )
-    bookingIds.push(...recurringIds)
-  } else {
-    // Single booking
-    const id = await createSingleBooking(customerId, data, data.booking_date)
-    bookingIds.push(id)
+  try {
+    if (data.recurring_dates && data.recurring_dates.length > 0) {
+      // H1: Always create the primary booking_date first
+      const primaryId = await createSingleBooking(customerId, data, data.booking_date)
+      bookingIds.push(primaryId)
+      // Batch recurring dates in parallel
+      const recurringIds = await Promise.all(
+        data.recurring_dates.map((date) => createSingleBooking(customerId, data, date))
+      )
+      bookingIds.push(...recurringIds)
+    } else {
+      // Single booking
+      const id = await createSingleBooking(customerId, data, data.booking_date)
+      bookingIds.push(id)
+    }
+  } catch (error) {
+    // Best-effort rollback: delete any bookings already committed to avoid orphans
+    if (bookingIds.length > 0) {
+      // Best-effort: Supabase PromiseLike requires async/await, not .catch()
+      const { error: rollbackError } = await supabase
+        .from('bookings')
+        .delete()
+        .in('id', bookingIds)
+      if (rollbackError) {
+        // Rollback failure is non-fatal — log for ops visibility
+        console.error('[useCreateBookingMutation] Rollback failed for bookingIds:', bookingIds, rollbackError)
+      }
+    }
+    throw error
   }
 
   return { bookingIds, customerId }

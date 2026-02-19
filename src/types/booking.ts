@@ -61,7 +61,8 @@ export const PaymentStatus = {
   PendingVerification: 'pending_verification',
   Paid: 'paid',
   Partial: 'partial',
-  Refunded: 'refunded'
+  RefundPending: 'refund_pending',
+  Refunded: 'refunded',
 } as const
 
 export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus]

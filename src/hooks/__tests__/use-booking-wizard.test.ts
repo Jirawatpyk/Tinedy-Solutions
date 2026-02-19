@@ -162,11 +162,11 @@ describe('useBookingWizard reducer', () => {
       act(() => {
         result.current.dispatch({
           type: 'SET_VALIDATION_ERRORS',
-          errors: { job_name: 'กรุณาระบุชื่องาน', booking_date: 'กรุณาเลือกวันที่' },
+          errors: { job_name: 'Please enter a job name', booking_date: 'Please select a date' },
         })
       })
-      expect(result.current.state.validationErrors.job_name).toBe('กรุณาระบุชื่องาน')
-      expect(result.current.state.validationErrors.booking_date).toBe('กรุณาเลือกวันที่')
+      expect(result.current.state.validationErrors.job_name).toBe('Please enter a job name')
+      expect(result.current.state.validationErrors.booking_date).toBe('Please select a date')
     })
   })
 

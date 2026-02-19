@@ -49,7 +49,7 @@ function SectionHeader({
           onClick={() => dispatch({ type: 'GOTO_STEP', step })}
         >
           <Pencil className="h-3 w-3" />
-          แก้ไข
+          Edit
         </Button>
       )}
     </div>
@@ -93,20 +93,20 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
 
   const assignmentDisplay =
     assignmentType === 'none'
-      ? 'ยังไม่กำหนด'
+      ? 'Unassigned'
       : assignmentType === 'staff'
       ? staffName ?? staff_id ?? '-'
       : teamName ?? team_id ?? '-'
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 4: ยืนยันการจอง</h2>
+      <h2 className="text-base font-semibold" tabIndex={-1}>Step 4: Confirm Booking</h2>
 
       {/* Customer section */}
       <div className="space-y-2">
         <SectionHeader
           icon={<User className="h-3.5 w-3.5" />}
-          title="ลูกค้า"
+          title="Customer"
           onEdit
           step={1}
           dispatch={dispatch}
@@ -114,7 +114,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
         <div className="pl-5 text-sm">
           {isNewCustomer ? (
             <div>
-              <p className="font-medium">{newCustomerData.full_name} <Badge variant="secondary" className="text-xs ml-1">ลูกค้าใหม่</Badge></p>
+              <p className="font-medium">{newCustomerData.full_name} <Badge variant="secondary" className="text-xs ml-1">New</Badge></p>
               <p className="text-muted-foreground">{newCustomerData.phone}</p>
               {newCustomerData.email && (
                 <p className="text-muted-foreground">{newCustomerData.email}</p>
@@ -126,7 +126,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
               <p className="text-muted-foreground">{customer.phone}</p>
             </div>
           ) : (
-            <p className="text-muted-foreground">ยังไม่ได้เลือก</p>
+            <p className="text-muted-foreground">Not selected</p>
           )}
         </div>
       </div>
@@ -137,7 +137,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
       <div className="space-y-2">
         <SectionHeader
           icon={<Package className="h-3.5 w-3.5" />}
-          title="บริการ"
+          title="Service"
           onEdit
           step={2}
           dispatch={dispatch}
@@ -148,16 +148,16 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
           ) : selectedPackage ? (
             <p className="font-medium">{selectedPackage.name}</p>
           ) : (
-            <p className="text-muted-foreground">ยังไม่ได้เลือก</p>
+            <p className="text-muted-foreground">Not selected</p>
           )}
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-tinedy-blue">{formatCurrency(displayPrice)}</span>
             {price_mode === PriceMode.Override && (
-              <Badge variant="secondary" className="text-xs">ปรับราคา</Badge>
+              <Badge variant="secondary" className="text-xs">Override</Badge>
             )}
           </div>
-          {area_sqm && <p className="text-xs text-muted-foreground">พื้นที่ {area_sqm} ตร.ม.</p>}
-          {frequency && <p className="text-xs text-muted-foreground">{frequency} ครั้ง/เดือน</p>}
+          {area_sqm && <p className="text-xs text-muted-foreground">{area_sqm} sqm</p>}
+          {frequency && <p className="text-xs text-muted-foreground">{frequency} time(s)/month</p>}
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
       <div className="space-y-2">
         <SectionHeader
           icon={<Calendar className="h-3.5 w-3.5" />}
-          title="วันเวลา"
+          title="Date & Time"
           onEdit
           step={2}
           dispatch={dispatch}
@@ -184,7 +184,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
       <div className="space-y-2">
         <SectionHeader
           icon={<MapPin className="h-3.5 w-3.5" />}
-          title="นัดหมาย"
+          title="Assignment"
           onEdit
           step={3}
           dispatch={dispatch}
@@ -202,7 +202,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
           <div className="space-y-2">
             <SectionHeader
               icon={<StickyNote className="h-3.5 w-3.5" />}
-              title="หมายเหตุ"
+              title="Notes"
               onEdit
               step={3}
               dispatch={dispatch}

@@ -2,8 +2,8 @@
  * Step1Customer — Customer search Combobox + new customer expand panel
  *
  * Features:
- * - EC-U1: 0 results → "ไม่พบลูกค้า" + [➕ เพิ่มลูกค้าใหม่] CTA (pre-fills name)
- * - EC-U5: After SELECT_CUSTOMER → read-only display + [× เปลี่ยน] button
+ * - EC-U1: 0 results → "No customers found" + [➕ Add New Customer] CTA (pre-fills name)
+ * - EC-U5: After SELECT_CUSTOMER → read-only display + [× Change] button
  * - New customer panel: name, phone, email fields only
  */
 
@@ -78,7 +78,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
   if (customer && !isNewCustomer) {
     return (
       <div className="space-y-4">
-        <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 1: เลือกลูกค้า</h2>
+        <h2 className="text-base font-semibold" tabIndex={-1}>Step 1: Select Customer</h2>
         <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-full bg-tinedy-blue/10 flex items-center justify-center shrink-0">
@@ -96,7 +96,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
             className="shrink-0 text-muted-foreground"
           >
             <X className="h-3.5 w-3.5 mr-1" />
-            เปลี่ยน
+            Change
           </Button>
         </div>
         {validationErrors.customer && (
@@ -108,15 +108,15 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 1: เลือกลูกค้า</h2>
+      <h2 className="text-base font-semibold" tabIndex={-1}>Step 1: Select Customer</h2>
 
       {/* Customer search — inline (no Popover portal to avoid Sheet event conflicts) */}
       {!isNewCustomer && (
         <div className="space-y-1" ref={searchContainerRef}>
-          <Label className="text-sm">ค้นหาลูกค้า</Label>
+          <Label className="text-sm">Search Customer</Label>
           <div className="relative">
             <Input
-              placeholder="ค้นหาชื่อ, เบอร์, อีเมล..."
+              placeholder="Search by name, phone, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pr-8"
@@ -128,19 +128,19 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
 
           {/* H3: Hint when only 1 char typed */}
           {search.length === 1 && (
-            <p className="text-xs text-muted-foreground px-1">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา</p>
+            <p className="text-xs text-muted-foreground px-1">Type at least 2 characters to search</p>
           )}
 
           {/* Results dropdown */}
           {search.length >= 2 && (
             <div className="border rounded-md bg-background shadow-sm">
               {isLoading && (
-                <p className="py-3 text-center text-sm text-muted-foreground">กำลังค้นหา...</p>
+                <p className="py-3 text-center text-sm text-muted-foreground">Searching...</p>
               )}
 
               {!isLoading && customers.length === 0 && (
                 <p className="py-3 text-center text-sm text-muted-foreground">
-                  ไม่พบลูกค้า "{search}"
+                  No customers found for "{search}"
                 </p>
               )}
 
@@ -176,7 +176,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">หรือ</span>
+            <span className="bg-background px-2 text-muted-foreground">or</span>
           </div>
         </div>
       )}
@@ -188,7 +188,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
           onClick={handleAddNew}
         >
           <UserPlus className="h-4 w-4" />
-          เพิ่มลูกค้าใหม่
+          Add New Customer
         </Button>
       )}
 
@@ -196,7 +196,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
       {isNewCustomer && (
         <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">ข้อมูลลูกค้าใหม่</p>
+            <p className="text-sm font-medium">New Customer</p>
             <Button
               variant="ghost"
               size="sm"
@@ -204,18 +204,18 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
               className="text-muted-foreground"
             >
               <X className="h-3.5 w-3.5 mr-1" />
-              ยกเลิก
+              Cancel
             </Button>
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="new_name" className="text-xs text-muted-foreground">
-              ชื่อ-นามสกุล <span className="text-destructive">*</span>
+              Full Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="new_name"
               ref={nameInputRef}
-              placeholder="กรอกชื่อ-นามสกุล"
+              placeholder="Enter full name"
               value={newCustomerData.full_name}
               onChange={(e) =>
                 dispatch({ type: 'UPDATE_NEW_CUSTOMER', field: 'full_name', value: e.target.value })
@@ -229,7 +229,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
 
           <div className="space-y-1">
             <Label htmlFor="new_phone" className="text-xs text-muted-foreground">
-              เบอร์โทรศัพท์ <span className="text-destructive">*</span>
+              Phone <span className="text-destructive">*</span>
             </Label>
             <Input
               id="new_phone"
@@ -248,7 +248,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
 
           <div className="space-y-1">
             <Label htmlFor="new_email" className="text-xs text-muted-foreground">
-              อีเมล (ไม่บังคับ)
+              Email (optional)
             </Label>
             <Input
               id="new_email"

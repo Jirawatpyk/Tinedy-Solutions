@@ -13,6 +13,7 @@
 
 import { memo } from 'react'
 import type { ReactNode } from 'react'
+import { PriceMode } from '@/types/booking'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +54,7 @@ export interface CustomerBooking {
   id: string
   booking_date: string
   end_date?: string | null
+  price_mode?: string | null
   job_name?: string | null
   start_time: string
   end_time: string
@@ -329,14 +331,23 @@ const BookingHistorySection = memo(function BookingHistorySection({
                         {/* 3. Service Type Badge + Package Name */}
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            <Badge
-                              variant="outline"
-                              className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
-                            >
-                              {booking.service?.service_type ||
-                                booking.service_packages?.service_type ||
-                                'N/A'}
-                            </Badge>
+                            {booking.price_mode === PriceMode.Custom ? (
+                              <Badge
+                                variant="secondary"
+                                className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
+                              >
+                                Custom Job
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
+                              >
+                                {booking.service?.service_type ||
+                                  booking.service_packages?.service_type ||
+                                  'N/A'}
+                              </Badge>
+                            )}
                             <span className="truncate">
                               {booking.job_name ||
                                 booking.service?.name ||

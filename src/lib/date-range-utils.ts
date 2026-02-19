@@ -14,7 +14,7 @@
  */
 
 import { format, differenceInDays } from 'date-fns'
-import { th } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 
 /**
  * Minimal booking shape required by overlap functions
@@ -33,31 +33,31 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 /**
- * Format a single date as Thai short string: "19 ก.พ."
+ * Format a single date as English short string: "19 Feb"
  */
-function formatThaiDate(dateStr: string, includeYear = false): string {
+function formatShortDate(dateStr: string, includeYear = false): string {
   const date = parseLocalDate(dateStr)
   if (includeYear) {
-    return format(date, 'd MMM yyyy', { locale: th })
+    return format(date, 'd MMM yyyy', { locale: enUS })
   }
-  return format(date, 'd MMM', { locale: th })
+  return format(date, 'd MMM', { locale: enUS })
 }
 
 /**
  * Format a date range as a Thai string.
  *
  * Rules:
- * - Single day (end_date = null OR end_date = booking_date): "19 ก.พ."
- * - Same-month range: "19–20 ก.พ."
- * - Cross-month, same-year range: "28 ก.พ. – 2 มี.ค."
- * - Cross-year range: "31 ธ.ค. – 1 ม.ค. 2027" (year shown on end date)
+ * - Single day (end_date = null OR end_date = booking_date): "19 Feb"
+ * - Same-month range: "19–20 Feb"
+ * - Cross-month, same-year range: "28 Feb – 2 Mar"
+ * - Cross-year range: "31 Dec – 1 Jan 2027" (year shown on end date)
  *
  * @example
- * formatDateRange('2026-02-19', null)             // "19 ก.พ."
- * formatDateRange('2026-02-19', '2026-02-19')     // "19 ก.พ."
- * formatDateRange('2026-02-19', '2026-02-20')     // "19–20 ก.พ."
- * formatDateRange('2026-02-28', '2026-03-02')     // "28 ก.พ. – 2 มี.ค."
- * formatDateRange('2026-12-31', '2027-01-01')     // "31 ธ.ค. – 1 ม.ค. 2027"
+ * formatDateRange('2026-02-19', null)             // "19 Feb"
+ * formatDateRange('2026-02-19', '2026-02-19')     // "19 Feb"
+ * formatDateRange('2026-02-19', '2026-02-20')     // "19–20 Feb"
+ * formatDateRange('2026-02-28', '2026-03-02')     // "28 Feb – 2 Mar"
+ * formatDateRange('2026-12-31', '2027-01-01')     // "31 Dec – 1 Jan 2027"
  */
 export function formatDateRange(start: string, end: string | null | undefined): string {
   // Defensive: empty start string → return empty (should not happen with proper DB data)
@@ -65,7 +65,7 @@ export function formatDateRange(start: string, end: string | null | undefined): 
 
   // Single day: no end_date or end_date equals start
   if (!end || end === start) {
-    return formatThaiDate(start)
+    return formatShortDate(start)
   }
 
   const startDate = parseLocalDate(start)
@@ -78,18 +78,18 @@ export function formatDateRange(start: string, end: string | null | undefined): 
 
   // Cross-year: show year on end date
   if (startYear !== endYear) {
-    return `${formatThaiDate(start)} – ${formatThaiDate(end, true)}`
+    return `${formatShortDate(start)} – ${formatShortDate(end, true)}`
   }
 
-  // Same month, same year: "19–20 ก.พ."
+  // Same month, same year: "19–20 Feb"
   if (startMonth === endMonth) {
     const startDay = format(startDate, 'd')
-    const endPart = format(endDate, 'd MMM', { locale: th })
+    const endPart = format(endDate, 'd MMM', { locale: enUS })
     return `${startDay}–${endPart}`
   }
 
-  // Cross-month, same year: "28 ก.พ. – 2 มี.ค."
-  return `${formatThaiDate(start)} – ${formatThaiDate(end)}`
+  // Cross-month, same year: "28 Feb – 2 Mar"
+  return `${formatShortDate(start)} – ${formatShortDate(end)}`
 }
 
 /**

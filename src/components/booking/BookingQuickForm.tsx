@@ -70,7 +70,7 @@ export function BookingQuickForm({
     const errors = validateFullState(state)
     if (Object.keys(errors).length > 0) {
       dispatch({ type: 'SET_VALIDATION_ERRORS', errors })
-      toast.error('กรุณากรอกข้อมูลให้ครบถ้วน')
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -108,11 +108,11 @@ export function BookingQuickForm({
         notes: state.notes || undefined,
       })
 
-      toast.success('สร้างการจองสำเร็จ')
+      toast.success('Booking created successfully')
       dispatch({ type: 'RESET' })
       onSuccess?.()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถสร้างการจองได้'
+      const message = err instanceof Error ? err.message : 'Unable to create booking'
       toast.error(message)
     } finally {
       dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
@@ -142,7 +142,7 @@ export function BookingQuickForm({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                โหมดแนะนำ ทีละขั้นตอน เหมาะสำหรับผู้ใช้ใหม่
+                Step-by-step guided mode for new users
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -158,7 +158,7 @@ export function BookingQuickForm({
 
         {/* Step 2: Service & pricing */}
         <div className="space-y-4">
-          <p className="text-sm font-medium text-muted-foreground">บริการและราคา</p>
+          <p className="text-sm font-medium text-muted-foreground">Service & Pricing</p>
           {packagesLoading ? (
             <SmartPriceFieldSkeleton />
           ) : (
@@ -173,13 +173,13 @@ export function BookingQuickForm({
 
         {/* Date & Time */}
         <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">วันและเวลา</p>
+          <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
           <DateRangePicker state={state} dispatch={dispatch} />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="qs-start" className="text-xs text-muted-foreground">
-                เวลาเริ่มต้น <span className="text-destructive">*</span>
+                Start Time <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="qs-start"
@@ -194,7 +194,7 @@ export function BookingQuickForm({
             </div>
             <div className="space-y-1">
               <Label htmlFor="qs-end" className="text-xs text-muted-foreground">
-                เวลาสิ้นสุด
+                End Time
               </Label>
               <Input
                 id="qs-end"
@@ -206,7 +206,7 @@ export function BookingQuickForm({
                 className={endBeforeStart ? 'border-yellow-400' : undefined}
               />
               {endBeforeStart && (
-                <p className="text-xs text-yellow-600">⚠️ เวลาสิ้นสุดน้อยกว่าเวลาเริ่มต้น</p>
+                <p className="text-xs text-yellow-600">⚠️ End time is before start time</p>
               )}
             </div>
           </div>
@@ -226,14 +226,14 @@ export function BookingQuickForm({
           disabled={state.isSubmitting}
           className="flex-1"
         >
-          ยกเลิก
+          Cancel
         </Button>
         <Button
           onClick={handleSubmit}
           disabled={state.isSubmitting}
           className="flex-1 bg-tinedy-blue hover:bg-tinedy-blue/90"
         >
-          {state.isSubmitting ? 'กำลังบันทึก...' : 'สร้างการจอง'}
+          {state.isSubmitting ? 'Saving...' : 'Create Booking'}
         </Button>
       </div>
     </div>

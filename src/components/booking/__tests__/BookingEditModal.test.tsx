@@ -94,7 +94,7 @@ describe('BookingEditModal', () => {
   })
 
   describe('Rendering', () => {
-    it('should render modal with Thai title when open', () => {
+    it('should render modal with English title when open', () => {
       const Wrapper = createWrapper()
       render(
         <BookingEditModal
@@ -105,7 +105,7 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      expect(screen.getByText('แก้ไขการจอง')).toBeInTheDocument()
+      expect(screen.getByText('Edit Booking')).toBeInTheDocument()
     })
 
     it('should not render modal content when closed', () => {
@@ -119,10 +119,10 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      expect(screen.queryByText('แก้ไขการจอง')).not.toBeInTheDocument()
+      expect(screen.queryByText('Edit Booking')).not.toBeInTheDocument()
     })
 
-    it('should render status selector with Thai labels', () => {
+    it('should render status selector with English label', () => {
       const Wrapper = createWrapper()
       render(
         <BookingEditModal
@@ -133,10 +133,10 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      expect(screen.getByText('สถานะ')).toBeInTheDocument()
+      expect(screen.getByText('Status')).toBeInTheDocument()
     })
 
-    it('should render action buttons with Thai labels', () => {
+    it('should render action buttons with English labels', () => {
       const Wrapper = createWrapper()
       render(
         <BookingEditModal
@@ -147,8 +147,8 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      expect(screen.getByRole('button', { name: 'ยกเลิก' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'บันทึกการแก้ไข' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument()
     })
 
     it('should render with null booking without crashing', () => {
@@ -181,7 +181,7 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      await user.click(screen.getByRole('button', { name: 'ยกเลิก' }))
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(mockOnOpenChange).toHaveBeenCalledWith(false)
     })
 
@@ -196,8 +196,8 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      expect(screen.getByText('บริการและราคา')).toBeInTheDocument()
-      expect(screen.getByText('วันและเวลา')).toBeInTheDocument()
+      expect(screen.getByText('Service & Pricing')).toBeInTheDocument()
+      expect(screen.getByText('Date & Time')).toBeInTheDocument()
     })
   })
 
@@ -213,7 +213,7 @@ describe('BookingEditModal', () => {
         />,
         { wrapper: Wrapper }
       )
-      const startInput = screen.getByLabelText(/เวลาเริ่มต้น/i) as HTMLInputElement
+      const startInput = screen.getByLabelText(/Start Time/i) as HTMLInputElement
       expect(startInput.value).toBe('09:30')
     })
 
@@ -229,7 +229,7 @@ describe('BookingEditModal', () => {
         { wrapper: Wrapper }
       )
       // Status section should be present
-      expect(screen.getByText('สถานะ')).toBeInTheDocument()
+      expect(screen.getByText('Status')).toBeInTheDocument()
     })
   })
 })

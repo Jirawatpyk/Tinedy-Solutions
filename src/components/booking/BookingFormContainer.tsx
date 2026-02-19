@@ -57,14 +57,14 @@ export function BookingFormContainer({
     <AppSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="สร้างการจอง"
+      title="New Booking"
       size="md"
     >
       <DashboardErrorBoundary
         fallback={
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-6">
             <p className="text-sm text-muted-foreground">
-              เกิดข้อผิดพลาด กรุณาปิดและลองใหม่
+              An error occurred. Please close and try again.
             </p>
           </div>
         }

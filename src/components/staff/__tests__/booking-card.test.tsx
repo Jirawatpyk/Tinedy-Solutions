@@ -115,7 +115,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText(/25 Dec 2025/)).toBeInTheDocument()
+      expect(screen.getByText(/25 Dec/)).toBeInTheDocument()
     })
 
     it('should not display booking date when showDate is false', () => {

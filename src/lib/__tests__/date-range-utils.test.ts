@@ -9,27 +9,27 @@ import {
 
 describe('formatDateRange', () => {
   it('single day (null end_date)', () => {
-    expect(formatDateRange('2026-02-19', null)).toBe('19 ก.พ.')
+    expect(formatDateRange('2026-02-19', null)).toBe('19 Feb')
   })
 
   it('single day (same end_date as start)', () => {
-    expect(formatDateRange('2026-02-19', '2026-02-19')).toBe('19 ก.พ.')
+    expect(formatDateRange('2026-02-19', '2026-02-19')).toBe('19 Feb')
   })
 
   it('same-month range', () => {
-    expect(formatDateRange('2026-02-19', '2026-02-20')).toBe('19–20 ก.พ.')
+    expect(formatDateRange('2026-02-19', '2026-02-20')).toBe('19–20 Feb')
   })
 
   it('cross-month same-year range', () => {
-    expect(formatDateRange('2026-02-28', '2026-03-02')).toBe('28 ก.พ. – 2 มี.ค.')
+    expect(formatDateRange('2026-02-28', '2026-03-02')).toBe('28 Feb – 2 Mar')
   })
 
   it('cross-year range shows year on end date', () => {
-    expect(formatDateRange('2026-12-31', '2027-01-01')).toBe('31 ธ.ค. – 1 ม.ค. 2027')
+    expect(formatDateRange('2026-12-31', '2027-01-01')).toBe('31 Dec – 1 Jan 2027')
   })
 
   it('undefined end_date treated as single day', () => {
-    expect(formatDateRange('2026-02-19', undefined)).toBe('19 ก.พ.')
+    expect(formatDateRange('2026-02-19', undefined)).toBe('19 Feb')
   })
 })
 

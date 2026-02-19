@@ -66,7 +66,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
     const errors = validateFullState(state)
     if (Object.keys(errors).length > 0) {
       dispatch({ type: 'GOTO_STEP', step: 1 })
-      toast.error('กรุณากรอกข้อมูลให้ครบถ้วน')
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -110,11 +110,11 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
         recurring_pattern: state.isRecurring ? state.recurringPattern : undefined,
       })
 
-      toast.success('สร้างการจองสำเร็จ')
+      toast.success('Booking created successfully')
       dispatch({ type: 'RESET' })
       onSuccess?.()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถสร้างการจองได้'
+      const message = err instanceof Error ? err.message : 'Unable to create booking'
       toast.error(message)
     } finally {
       dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
@@ -157,7 +157,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
             }}
             disabled={state.isSubmitting}
           >
-            {state.step === 1 ? 'ยกเลิก' : 'ย้อนกลับ'}
+            {state.step === 1 ? 'Cancel' : 'Back'}
           </Button>
           {onSwitchToQuick && (
             <TooltipProvider>
@@ -174,7 +174,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
                     Quick
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>สลับเป็น Quick Mode</TooltipContent>
+                <TooltipContent>Switch to Quick Mode</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
@@ -186,14 +186,14 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
             disabled={state.isSubmitting}
             className="bg-tinedy-blue hover:bg-tinedy-blue/90"
           >
-            {state.isSubmitting ? 'กำลังบันทึก...' : 'สร้างการจอง'}
+            {state.isSubmitting ? 'Saving...' : 'Create Booking'}
           </Button>
         ) : (
           <Button
             onClick={() => dispatch({ type: 'NEXT_STEP' })}
             className="bg-tinedy-blue hover:bg-tinedy-blue/90"
           >
-            ถัดไป
+            Next
           </Button>
         )}
       </div>

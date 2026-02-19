@@ -123,7 +123,7 @@ export type WizardAction =
   | { type: 'SET_VALIDATION_ERRORS'; errors: Partial<Record<string, string>> }
   | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
   | { type: 'RESET' }
-  | { type: 'SEED'; overrides: Partial<WizardState> }
+  | { type: 'SEED'; overrides: Partial<Omit<WizardState, 'step' | 'mode' | 'isSubmitting' | 'validationErrors'>> }
 
 // ============================================================================
 // INITIAL STATE
@@ -243,11 +243,23 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
 }
 
 /**
- * Full state validation for Submit button (RT7)
+ * Full state validation for Submit button (RT7) — used in Create flow.
+ * Validates all 3 steps including customer selection (Step 1).
  */
 export function validateFullState(state: WizardState): Partial<Record<string, string>> {
   return {
     ...validateStep(state, 1),
+    ...validateStep(state, 2),
+    ...validateStep(state, 3),
+  }
+}
+
+/**
+ * Edit-mode validation — skips Step 1 (customer is already bound to the booking).
+ * Used in BookingEditModal where customer_id is immutable.
+ */
+export function validateEditState(state: WizardState): Partial<Record<string, string>> {
+  return {
     ...validateStep(state, 2),
     ...validateStep(state, 3),
   }

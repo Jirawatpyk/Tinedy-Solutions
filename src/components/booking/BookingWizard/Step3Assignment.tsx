@@ -3,7 +3,7 @@
  *
  * Features:
  * - Staff / Team / None radio selector
- * - A10: "ใช้ที่อยู่เดียวกับลูกค้า" checkbox — disabled if customer has no address
+ * - A10: "Use customer address" checkbox — disabled if customer has no address
  * - Address form (pre-filled from customer or manual entry)
  * - Notes field
  * - A3: Loading skeleton for staff/team dropdowns
@@ -57,11 +57,11 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 3: นัดหมาย</h2>
+      <h2 className="text-base font-semibold" tabIndex={-1}>Step 3: Assignment</h2>
 
       {/* Assignment type */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">มอบหมายให้</Label>
+        <Label className="text-sm font-medium">Assign To</Label>
         <RadioGroup
           value={assignmentType}
           onValueChange={(val) =>
@@ -75,19 +75,19 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
           <div className="flex items-center gap-2">
             <RadioGroupItem value="none" id="assign-none" />
             <Label htmlFor="assign-none" className="cursor-pointer text-sm text-muted-foreground">
-              ยังไม่กำหนด
+              Unassigned
             </Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="staff" id="assign-staff" />
             <Label htmlFor="assign-staff" className="cursor-pointer text-sm flex items-center gap-1">
-              <User className="h-3.5 w-3.5" /> พนักงาน
+              <User className="h-3.5 w-3.5" /> Staff
             </Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="team" id="assign-team" />
             <Label htmlFor="assign-team" className="cursor-pointer text-sm flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> ทีม
+              <Users className="h-3.5 w-3.5" /> Team
             </Label>
           </div>
         </RadioGroup>
@@ -96,9 +96,9 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
       {/* Staff selector */}
       {assignmentType === 'staff' && (
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">เลือกพนักงาน</Label>
+          <Label className="text-xs text-muted-foreground">Select Staff</Label>
           {staffLoading ? (
-            <div className="h-10 bg-muted rounded-md animate-pulse" aria-label="กำลังโหลด..." />
+            <div className="h-10 bg-muted rounded-md animate-pulse" aria-label="Loading..." />
           ) : (
             <Select
               value={staff_id ?? ''}
@@ -107,7 +107,7 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="เลือกพนักงาน" />
+                <SelectValue placeholder="Select staff" />
               </SelectTrigger>
               <SelectContent>
                 {staffList.map((s) => (
@@ -124,9 +124,9 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
       {/* Team selector */}
       {assignmentType === 'team' && (
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">เลือกทีม</Label>
+          <Label className="text-xs text-muted-foreground">Select Team</Label>
           {teamsLoading ? (
-            <div className="h-10 bg-muted rounded-md animate-pulse" aria-label="กำลังโหลด..." />
+            <div className="h-10 bg-muted rounded-md animate-pulse" aria-label="Loading..." />
           ) : (
             <Select
               value={team_id ?? ''}
@@ -135,7 +135,7 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="เลือกทีม" />
+                <SelectValue placeholder="Select team" />
               </SelectTrigger>
               <SelectContent>
                 {teams.map((t) => (
@@ -153,7 +153,7 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
-          <Label className="text-sm font-medium">ที่อยู่งาน</Label>
+          <Label className="text-sm font-medium">Service Address</Label>
         </div>
 
         {/* A10: Customer address checkbox — disabled if no customer address */}
@@ -173,12 +173,12 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
             htmlFor="use-customer-address"
             className={`text-sm cursor-pointer ${!customerHasAddress ? 'text-muted-foreground' : ''}`}
           >
-            ใช้ที่อยู่เดียวกับลูกค้า
+            Use customer address
           </Label>
         </div>
         {!customerHasAddress && customer && (
           <p className="text-xs text-muted-foreground ml-6">
-            ลูกค้าไม่มีที่อยู่บันทึกไว้ กรุณากรอกด้านล่าง
+            Customer has no saved address. Please enter below.
           </p>
         )}
 
@@ -186,11 +186,11 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
         <div className="space-y-2">
           <div className="space-y-1">
             <Label htmlFor="address" className="text-xs text-muted-foreground">
-              ที่อยู่ <span className="text-destructive">*</span>
+              Address <span className="text-destructive">*</span>
             </Label>
             <Input
               id="address"
-              placeholder="บ้านเลขที่ ถนน ซอย"
+              placeholder="Street address"
               value={address}
               onChange={(e) =>
                 dispatch({ type: 'SET_ADDRESS', field: 'address', value: e.target.value })
@@ -206,11 +206,11 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label htmlFor="city" className="text-xs text-muted-foreground">
-                เมือง/เขต <span className="text-destructive">*</span>
+                City/District <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="city"
-                placeholder="กรุงเทพ"
+                placeholder="Bangkok"
                 value={city}
                 onChange={(e) =>
                   dispatch({ type: 'SET_ADDRESS', field: 'city', value: e.target.value })
@@ -224,7 +224,7 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
             </div>
             <div className="space-y-1">
               <Label htmlFor="zip_code" className="text-xs text-muted-foreground">
-                รหัสไปรษณีย์
+                Zip Code
               </Label>
               <Input
                 id="zip_code"
@@ -243,11 +243,11 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
       {/* Notes */}
       <div className="space-y-1">
         <Label htmlFor="notes" className="text-sm font-medium">
-          หมายเหตุ (ไม่บังคับ)
+          Notes (optional)
         </Label>
         <Textarea
           id="notes"
-          placeholder="ข้อมูลเพิ่มเติม..."
+          placeholder="Additional information..."
           value={notes}
           onChange={(e) => dispatch({ type: 'SET_NOTES', notes: e.target.value })}
           rows={3}

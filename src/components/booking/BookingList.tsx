@@ -202,7 +202,7 @@ function BookingListComponent({
                               Archived
                             </Badge>
                           )}
-                          {/* Mobile: Status badge บนขวา */}
+                          {/* Mobile: Status badge top-right */}
                           <div className="sm:hidden flex-shrink-0 ml-auto">
                             {getStatusBadge(booking.status)}
                           </div>
@@ -214,9 +214,9 @@ function BookingListComponent({
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
                             {booking.price_mode === PriceMode.Custom ? (
-                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">งานพิเศษ</Badge>
+                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">Custom Job</Badge>
                             ) : (
-                              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
+                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                                 {booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type}
                               </Badge>
                             )}
@@ -243,7 +243,7 @@ function BookingListComponent({
                       </div>
                       {/* Right Section: Price, Badges, Actions (Desktop) */}
                       <div className="hidden sm:flex sm:flex-col items-end gap-3 sm:gap-4 flex-shrink-0">
-                        {/* Price - บนสุด */}
+                        {/* Price - top */}
                         <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                           {formatCurrency(Number(booking.total_price))}
                         </p>
@@ -252,7 +252,7 @@ function BookingListComponent({
                           {getStatusBadge(booking.status)}
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
-                        {/* Status dropdown + Delete button - ล่างสุด */}
+                        {/* Status dropdown + Delete button - bottom */}
                         <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
                             <Button
@@ -303,7 +303,7 @@ function BookingListComponent({
                         </div>
                       </div>
 
-                      {/* Mobile: ราคาและ Payment Status ข้างล่าง เหมือน Recurring Group */}
+                      {/* Mobile: Price and Payment Status row at bottom (matches Recurring Group layout) */}
                       <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-tinedy-dark">

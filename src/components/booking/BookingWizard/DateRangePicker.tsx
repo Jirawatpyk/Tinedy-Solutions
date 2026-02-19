@@ -5,7 +5,7 @@
  * - Toggle switch for single vs multi-day
  * - EC-D6: Warning banner when range > 90 days (non-blocking)
  * - EC-D7: Resetting multi-day clears end_date via reducer
- * - Shows live "X วัน" badge when multi-day selected
+ * - Shows live "X days" badge when multi-day selected
  */
 
 import { differenceInDays } from 'date-fns'
@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
+
+/** Warn admin when booking duration exceeds this threshold (non-blocking) */
+const MAX_BOOKING_DAYS_WARNING = 90
 
 interface DateRangePickerProps {
   state: WizardState
@@ -33,7 +36,7 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
         ) + 1
       : null
 
-  const isOver90Days = dayCount !== null && dayCount > 90
+  const isOver90Days = dayCount !== null && dayCount > MAX_BOOKING_DAYS_WARNING
 
   function handleToggleMultiDay(checked: boolean) {
     dispatch({ type: 'TOGGLE_MULTI_DAY', isMultiDay: checked })
@@ -43,13 +46,13 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
     <div className="space-y-3">
       {/* Multi-day toggle */}
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">วันที่</Label>
+        <Label className="text-sm font-medium">Date</Label>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">หลายวัน</span>
+          <span className="text-xs text-muted-foreground">Multi-day</span>
           <Switch
             checked={isMultiDay}
             onCheckedChange={handleToggleMultiDay}
-            aria-label="เปิดใช้งานการจองหลายวัน"
+            aria-label="Enable multi-day booking"
           />
         </div>
       </div>
@@ -59,7 +62,7 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
         <div className="space-y-1">
           <div className="h-5 flex items-center justify-between">
             <Label htmlFor="booking_date" className="text-xs text-muted-foreground">
-              {isMultiDay ? 'วันเริ่มต้น' : 'วันที่'}
+              {isMultiDay ? 'Start Date' : 'Date'}
             </Label>
           </div>
           <Input
@@ -79,11 +82,11 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
           <div className="space-y-1">
             <div className="h-5 flex items-center justify-between">
               <Label htmlFor="end_date" className="text-xs text-muted-foreground">
-                วันสิ้นสุด
+                End Date
               </Label>
               {dayCount !== null && dayCount > 0 && (
                 <span className="text-xs font-semibold text-tinedy-blue bg-tinedy-blue/10 px-2 py-0.5 rounded-full">
-                  {dayCount} วัน
+                  {dayCount} days
                 </span>
               )}
             </div>
@@ -108,7 +111,7 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
       {isOver90Days && (
         <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-xs text-yellow-800">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <span>⚠️ ระยะเวลานานกว่า 90 วัน — กรุณาตรวจสอบ</span>
+          <span>⚠️ Duration exceeds 90 days — please verify</span>
         </div>
       )}
     </div>

@@ -34,6 +34,9 @@ import { SmartPriceField, SmartPriceFieldSkeleton } from './SmartPriceField'
 import { DateRangePicker } from './DateRangePicker'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
 
+/** Available options for recurring occurrence count */
+const RECURRING_OCCURRENCE_OPTIONS = [1, 2, 3, 4, 6, 12] as const
+
 interface Step2ServiceScheduleProps {
   state: WizardState
   dispatch: React.Dispatch<WizardAction>
@@ -54,12 +57,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
   const { data: packagesV2 = [], isLoading: packagesLoading } = useQuery(packageQueryOptions.v2)
 
   // Local state for recurring UI only
-  // H2: Lazy init — restore from recurringDates.length so back-navigation doesn't reset
-  const [occurrences, setOccurrences] = useState(() =>
-    recurringPattern === 'auto_monthly' && recurringDates.length > 0
-      ? recurringDates.length
-      : 3
-  )
+  const [occurrences, setOccurrences] = useState(3)
   const [newDateInput, setNewDateInput] = useState('')
 
   // Auto-generate monthly dates when booking_date, occurrences, or pattern changes
@@ -70,7 +68,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
       format(addMonths(base, i + 1), 'yyyy-MM-dd')
     )
     dispatch({ type: 'SET_RECURRING_DATES', dates })
-  }, [isRecurring, recurringPattern, booking_date, occurrences]) // dispatch is stable — excluded intentionally
+  }, [isRecurring, recurringPattern, booking_date, occurrences]) // dispatch omitted: useReducer dispatch is referentially stable (safe per React docs)
 
   // End-before-start warning — single-day only (multi-day allows overnight spans)
   const endBeforeStart = !isMultiDay && start_time && end_time && end_time < start_time
@@ -88,7 +86,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
 
   return (
     <div className="space-y-5">
-      <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 2: บริการและวันเวลา</h2>
+      <h2 className="text-base font-semibold" tabIndex={-1}>Step 2: Service &amp; Schedule</h2>
 
       {/* Pricing section */}
       {packagesLoading ? (
@@ -109,7 +107,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="start_time" className="text-xs text-muted-foreground">
-            เวลาเริ่มต้น <span className="text-destructive">*</span>
+            Start Time <span className="text-destructive">*</span>
           </Label>
           <Input
             id="start_time"
@@ -124,7 +122,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
         </div>
         <div className="space-y-1">
           <Label htmlFor="end_time" className="text-xs text-muted-foreground">
-            เวลาสิ้นสุด
+            End Time
           </Label>
           <div className="relative">
             <Input
@@ -141,7 +139,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
             )}
           </div>
           {endBeforeStart && (
-            <p className="text-xs text-yellow-600">⚠️ เวลาสิ้นสุดน้อยกว่าเวลาเริ่มต้น</p>
+            <p className="text-xs text-yellow-600">⚠️ End time is before start time</p>
           )}
         </div>
       </div>
@@ -149,9 +147,9 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
       {/* Recurring toggle */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="text-sm">การจองซ้ำ</Label>
+          <Label className="text-sm">Recurring</Label>
           {isMultiDay && (
-            <p className="text-xs text-muted-foreground">การจองหลายวันไม่รองรับการทำซ้ำ</p>
+            <p className="text-xs text-muted-foreground">Multi-day bookings do not support recurring</p>
           )}
         </div>
         <TooltipProvider>
@@ -164,12 +162,12 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                   onCheckedChange={(checked) =>
                     dispatch({ type: 'TOGGLE_RECURRING', isRecurring: checked })
                   }
-                  aria-label="เปิดใช้งานการจองซ้ำ"
+                  aria-label="Enable recurring booking"
                 />
               </span>
             </TooltipTrigger>
             {isMultiDay && (
-              <TooltipContent>การจองหลายวันไม่รองรับการทำซ้ำ</TooltipContent>
+              <TooltipContent>Multi-day bookings do not support recurring</TooltipContent>
             )}
           </Tooltip>
         </TooltipProvider>
@@ -180,7 +178,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
         <div className="space-y-4 pl-4 border-l-2 border-primary/20">
           {/* Pattern selector */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">รูปแบบการทำซ้ำ</Label>
+            <Label className="text-xs text-muted-foreground">Repeat Pattern</Label>
             <RadioGroup
               value={recurringPattern}
               onValueChange={(v) => {
@@ -193,13 +191,13 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="auto_monthly" id="rp-auto" />
                 <Label htmlFor="rp-auto" className="cursor-pointer text-sm">
-                  ทุกเดือน (อัตโนมัติ)
+                  Monthly (auto)
                 </Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="manual" id="rp-manual" />
                 <Label htmlFor="rp-manual" className="cursor-pointer text-sm">
-                  เลือกวันเอง
+                  Pick dates manually
                 </Label>
               </div>
             </RadioGroup>
@@ -210,7 +208,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                  จำนวนครั้ง
+                  Occurrences
                 </Label>
                 <Select
                   value={String(occurrences)}
@@ -220,20 +218,20 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4, 6, 12].map((n) => (
+                    {RECURRING_OCCURRENCE_OPTIONS.map((n) => (
                       <SelectItem key={n} value={String(n)}>
-                        {n} ครั้ง
+                        {n} {n === 1 ? 'time' : 'times'}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               {!booking_date ? (
-                <p className="text-xs text-muted-foreground">เลือกวันเริ่มต้นก่อนเพื่อดูตัวอย่าง</p>
+                <p className="text-xs text-muted-foreground">Select a start date to preview</p>
               ) : recurringDates.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs text-muted-foreground">
-                    วันที่จะจอง ({recurringDates.length} ครั้ง)
+                    Booking dates ({recurringDates.length} occurrences)
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {recurringDates.map((d) => (
@@ -250,14 +248,13 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
           {/* Manual — date input + removable list */}
           {recurringPattern === 'manual' && (
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">เพิ่มวันที่</Label>
+              <Label className="text-xs text-muted-foreground">Add Date</Label>
               <div className="flex gap-2">
                 <Input
                   type="date"
                   value={newDateInput}
                   min={booking_date || undefined}
                   onChange={(e) => setNewDateInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddDate()}
                   className="h-9 flex-1"
                 />
                 <Button
@@ -267,7 +264,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                   onClick={handleAddDate}
                   disabled={!newDateInput}
                   className="h-9 px-3"
-                  aria-label="เพิ่มวันที่"
+                  aria-label="Add date"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
@@ -275,7 +272,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
               {recurringDates.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs text-muted-foreground">
-                    วันที่เลือก ({recurringDates.length} วัน)
+                    Selected dates ({recurringDates.length} days)
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {recurringDates.map((d) => (
@@ -289,7 +286,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                           type="button"
                           onClick={() => handleRemoveDate(d)}
                           className="hover:text-destructive transition-colors ml-0.5"
-                          aria-label={`ลบวันที่ ${d}`}
+                          aria-label={`Remove date ${d}`}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -299,7 +296,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                 </div>
               )}
               {recurringDates.length === 0 && (
-                <p className="text-xs text-muted-foreground">ยังไม่ได้เลือกวันที่เพิ่มเติม</p>
+                <p className="text-xs text-muted-foreground">No additional dates selected</p>
               )}
             </div>
           )}

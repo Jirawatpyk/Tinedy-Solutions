@@ -135,7 +135,7 @@ export function SmartPriceField({
     <div className="space-y-4">
       {/* Mode selector */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">ประเภทการคิดราคา</Label>
+        <Label className="text-sm font-medium">Pricing Type</Label>
         <RadioGroup value={price_mode} onValueChange={handleModeChange} className="flex gap-4">
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Package} id="mode-package" />
@@ -143,7 +143,7 @@ export function SmartPriceField({
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Override} id="mode-override" />
-            <Label htmlFor="mode-override" className="cursor-pointer text-sm">ปรับราคา</Label>
+            <Label htmlFor="mode-override" className="cursor-pointer text-sm">Override</Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Custom} id="mode-custom" />
@@ -160,7 +160,7 @@ export function SmartPriceField({
             <div className="h-10 bg-muted rounded-md animate-pulse" />
           ) : packages.length === 0 ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground text-center">
-              ยังไม่มี Service Package กรุณาเพิ่มใน Settings ก่อน
+              No service packages found. Please add one in Settings first.
             </div>
           ) : (
             <Select
@@ -171,7 +171,7 @@ export function SmartPriceField({
               }}
             >
               <SelectTrigger className={cn(validationErrors.package_v2_id && 'border-destructive')}>
-                <SelectValue placeholder="เลือก Package" />
+                <SelectValue placeholder="Select package" />
               </SelectTrigger>
               <SelectContent>
                 {packages.map((pkg) => (
@@ -197,11 +197,11 @@ export function SmartPriceField({
       {price_mode === PriceMode.Custom && (
         <div className="space-y-1">
           <Label htmlFor="job_name" className="text-xs text-muted-foreground">
-            ชื่องาน <span className="text-destructive">*</span>
+            Job Name <span className="text-destructive">*</span>
           </Label>
           <Input
             id="job_name"
-            placeholder="เช่น ทำความสะอาดโรงงาน"
+            placeholder="e.g. Factory deep clean"
             value={job_name}
             onChange={(e) => dispatch({ type: 'SET_JOB_NAME', name: e.target.value })}
             className={cn(validationErrors.job_name && 'border-destructive')}
@@ -216,13 +216,13 @@ export function SmartPriceField({
       <div className={price_mode === PriceMode.Custom ? 'space-y-1' : 'grid grid-cols-2 gap-3'}>
         <div className="space-y-1">
           <Label htmlFor="area_sqm" className="text-xs text-muted-foreground">
-            พื้นที่ (ตร.ม.)
+            Area (sqm)
           </Label>
           <Input
             id="area_sqm"
             type="number"
             min={1}
-            placeholder="เช่น 120"
+            placeholder="e.g. 120"
             value={area_sqm ?? ''}
             onChange={(e) => {
               const val = e.target.value ? Number(e.target.value) : null
@@ -231,13 +231,13 @@ export function SmartPriceField({
           />
           {areaOutOfRange && (
             <p className="text-xs text-destructive">
-              ⚠️ พื้นที่ {area_sqm} ตร.ม. เกินขอบเขตที่กำหนดใน package นี้
+              ⚠️ Area {area_sqm} sqm is outside the range defined for this package
             </p>
           )}
         </div>
         {price_mode !== PriceMode.Custom && (
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">ความถี่ต่อเดือน</Label>
+            <Label className="text-xs text-muted-foreground">Frequency / Month</Label>
             <Select
               value={frequency?.toString() ?? 'none'}
               onValueChange={(val) => {
@@ -246,14 +246,14 @@ export function SmartPriceField({
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="ไม่ระบุ" />
+                <SelectValue placeholder="Unspecified" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">ไม่ระบุ</SelectItem>
-                <SelectItem value="1">1 ครั้ง</SelectItem>
-                <SelectItem value="2">2 ครั้ง</SelectItem>
-                <SelectItem value="4">4 ครั้ง</SelectItem>
-                <SelectItem value="8">8 ครั้ง</SelectItem>
+                <SelectItem value="none">Unspecified</SelectItem>
+                <SelectItem value="1">1 time</SelectItem>
+                <SelectItem value="2">2 times</SelectItem>
+                <SelectItem value="4">4 times</SelectItem>
+                <SelectItem value="8">8 times</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -264,13 +264,13 @@ export function SmartPriceField({
       {price_mode === PriceMode.Override && (
         <div className="space-y-1">
           <Label htmlFor="custom_price" className="text-xs text-muted-foreground">
-            ราคาที่ต้องการ (฿) <span className="text-destructive">*</span>
+            Custom Price (฿) <span className="text-destructive">*</span>
           </Label>
           <Input
             id="custom_price"
             type="number"
             min={0}
-            placeholder="ระบุราคา"
+            placeholder="Enter price"
             value={custom_price ?? ''}
             onChange={(e) => {
               const val = e.target.value === '' ? null : Number(e.target.value)
@@ -280,7 +280,7 @@ export function SmartPriceField({
           />
           {selectedPkg?.pricing_model !== 'tiered' && selectedPkg?.base_price != null && (
             <p className="text-xs text-muted-foreground">
-              ราคา package เดิม: {formatCurrency(selectedPkg.base_price)}
+              Package price: {formatCurrency(selectedPkg.base_price)}
             </p>
           )}
           {validationErrors.custom_price && (
@@ -293,13 +293,13 @@ export function SmartPriceField({
       {price_mode === PriceMode.Custom && (
         <div className="space-y-1">
           <Label htmlFor="custom_price_job" className="text-xs text-muted-foreground">
-            ราคา (฿) <span className="text-destructive">*</span>
+            Price (฿) <span className="text-destructive">*</span>
           </Label>
           <Input
             id="custom_price_job"
             type="number"
             min={0}
-            placeholder="ระบุราคา (0 = ฟรี)"
+            placeholder="Enter price (0 = free)"
             value={custom_price ?? ''}
             onChange={(e) => {
               const val = e.target.value === '' ? null : Number(e.target.value)
@@ -315,16 +315,16 @@ export function SmartPriceField({
 
       {/* Total price display */}
       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-        <span className="text-sm text-muted-foreground">ราคารวม</span>
+        <span className="text-sm text-muted-foreground">Total Price</span>
         <div className="flex items-center gap-2">
           {price_mode === PriceMode.Override && custom_price !== null && (
-            <Badge variant="secondary" className="text-xs">ปรับราคา</Badge>
+            <Badge variant="secondary" className="text-xs">Override</Badge>
           )}
           {price_mode === PriceMode.Custom && (
             <Badge variant="secondary" className="text-xs">Custom</Badge>
           )}
           {isCalculating ? (
-            <span className="text-sm text-muted-foreground animate-pulse">กำลังคำนวณ...</span>
+            <span className="text-sm text-muted-foreground animate-pulse">Calculating...</span>
           ) : (
             <span className="text-lg font-bold text-tinedy-blue">
               {formatCurrency(price_mode === PriceMode.Package ? total_price : custom_price ?? 0)}
@@ -337,14 +337,14 @@ export function SmartPriceField({
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>เปลี่ยนเป็น Custom Job?</AlertDialogTitle>
+            <AlertDialogTitle>Switch to Custom Job?</AlertDialogTitle>
             <AlertDialogDescription>
-              เปลี่ยนจะล้างข้อมูล Package ที่เลือกไว้ — ยืนยัน?
+              This will clear the selected package — confirm?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingMode(null)}>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmModeSwitch}>ยืนยัน</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setPendingMode(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmModeSwitch}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
