@@ -223,7 +223,8 @@ export function AdminReports() {
       payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
-      service_type: b.service_packages?.service_type,
+      service_type: b.service_packages_v2?.service_type ?? b.service_packages?.service_type,
+      price_mode: b.price_mode,
     })),
     [filteredBookings]
   )
@@ -293,7 +294,8 @@ export function AdminReports() {
       payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
-      service_type: b.service_packages?.service_type,
+      service_type: b.service_packages_v2?.service_type ?? b.service_packages?.service_type,
+      price_mode: b.price_mode,
     })),
     [bookings]
   )
@@ -331,6 +333,7 @@ export function AdminReports() {
     () => [
       { name: 'Cleaning', value: serviceTypeRevenue.cleaning, color: '#2e4057' },
       { name: 'Training', value: serviceTypeRevenue.training, color: '#8fb996' },
+      { name: 'Custom', value: serviceTypeRevenue.custom, color: '#e7d188' },
     ].filter(item => item.value > 0),
     [serviceTypeRevenue]
   )

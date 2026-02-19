@@ -52,6 +52,7 @@ interface BookingMetrics {
 interface ServiceTypeRevenue {
   cleaning: number
   training: number
+  custom: number
 }
 
 interface StatusBreakdownItem {
@@ -345,7 +346,7 @@ function RevenueBookingsTabComponent({
                   </PieChart>
                 </ResponsiveContainer>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4">
                   <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
                     <p className="text-xs sm:text-sm text-muted-foreground">Cleaning</p>
                     <p className="text-base sm:text-lg font-bold text-tinedy-dark">
@@ -358,6 +359,14 @@ function RevenueBookingsTabComponent({
                       {formatCurrency(serviceTypeRevenue.training)}
                     </p>
                   </div>
+                  {serviceTypeRevenue.custom > 0 && (
+                    <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-md">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Custom</p>
+                      <p className="text-base sm:text-lg font-bold text-tinedy-dark">
+                        {formatCurrency(serviceTypeRevenue.custom)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

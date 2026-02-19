@@ -26,7 +26,8 @@ import { useConflictDetection } from '@/hooks/use-conflict-detection'
 import { useCalendarActions } from './use-calendar-actions'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import { isSameDay } from 'date-fns'
+import { format } from 'date-fns'
+import { bookingOverlapsDate, bookingOverlapsRange } from '@/lib/date-range-utils'
 
 /**
  * Main hook for calendar page
@@ -122,10 +123,8 @@ export function useCalendarData() {
    */
   const getBookingsForDate = useMemo(() => {
     return (date: Date): Booking[] => {
-      return bookings.filter((booking) => {
-        const bookingDate = new Date(booking.booking_date)
-        return isSameDay(bookingDate, date)
-      })
+      const dateStr = format(date, 'yyyy-MM-dd')
+      return bookings.filter((booking) => bookingOverlapsDate(booking, dateStr))
     }
   }, [bookings])
 
@@ -146,13 +145,11 @@ export function useCalendarData() {
 
     // Date range selected
     if (dateControls.selectedDateRange) {
-      return bookings.filter((booking) => {
-        const bookingDate = new Date(booking.booking_date)
-        return (
-          bookingDate >= dateControls.selectedDateRange!.start &&
-          bookingDate <= dateControls.selectedDateRange!.end
-        )
-      })
+      const rangeStart = format(dateControls.selectedDateRange.start, 'yyyy-MM-dd')
+      const rangeEnd = format(dateControls.selectedDateRange.end, 'yyyy-MM-dd')
+      return bookings.filter((booking) =>
+        bookingOverlapsRange(booking, rangeStart, rangeEnd)
+      )
     }
 
     // Filters active (preset, search, staff, team)

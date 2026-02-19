@@ -16,6 +16,8 @@ export type BookingForAnalytics = Booking | {
   customer_id?: string
   customers?: { id: string } | null
   service_packages?: { service_type?: string } | null
+  service_packages_v2?: { service_type?: string } | null
+  price_mode?: string | null
 }
 
 export interface RevenueMetrics {
@@ -206,7 +208,7 @@ export const generateChartData = (
  */
 export const getRevenueByServiceType = (
   bookings: BookingForAnalytics[]
-): { cleaning: number; training: number } => {
+): { cleaning: number; training: number; custom: number } => {
   const paidBookings = bookings.filter((b: BookingForAnalytics) => {
     const paymentStatus = (b as { payment_status?: string }).payment_status
     return paymentStatus === 'paid'
@@ -214,21 +216,30 @@ export const getRevenueByServiceType = (
 
   const cleaning = paidBookings
     .filter((b) => {
-      // Support both nested (service_packages.service_type) and flat (service_type) structures
-      const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
+      const serviceType = (b as { service_type?: string }).service_type
+        || (b as { service_packages_v2?: { service_type?: string } | null }).service_packages_v2?.service_type
+        || b.service_packages?.service_type
       return serviceType === 'cleaning'
     })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
   const training = paidBookings
     .filter((b) => {
-      // Support both nested (service_packages.service_type) and flat (service_type) structures
-      const serviceType = (b as { service_type?: string }).service_type || b.service_packages?.service_type
+      const serviceType = (b as { service_type?: string }).service_type
+        || (b as { service_packages_v2?: { service_type?: string } | null }).service_packages_v2?.service_type
+        || b.service_packages?.service_type
       return serviceType === 'training'
     })
     .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
 
-  return { cleaning, training }
+  const custom = paidBookings
+    .filter((b) => {
+      const priceMode = (b as { price_mode?: string | null }).price_mode
+      return priceMode === 'custom' || priceMode === 'override'
+    })
+    .reduce((sum: number, b: BookingForAnalytics) => sum + Number(b.total_price), 0)
+
+  return { cleaning, training, custom }
 }
 
 /**
