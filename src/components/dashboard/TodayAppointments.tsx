@@ -19,7 +19,6 @@ interface TodayBooking {
   zip_code: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
   package_v2_id?: string | null
   notes: string | null
   payment_status?: string

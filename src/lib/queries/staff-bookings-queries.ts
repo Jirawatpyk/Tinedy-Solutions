@@ -39,9 +39,13 @@ export interface StaffBooking {
   customer_id: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
   package_v2_id: string | null
   created_at: string
+  // Multi-Day & Custom Pricing (V2)
+  end_date?: string | null
+  job_name?: string | null
+  custom_price?: number | null
+  price_override?: boolean
   // Package V2 specific fields
   area_sqm?: number | null
   frequency?: 1 | 2 | 4 | 8 | null
@@ -387,7 +391,10 @@ export async function fetchStaffBookingsToday(
         )
       )
     `)
-    .eq('booking_date', todayStr)
+    // T2.4: Multi-day fix — a booking is "today" if booking_date <= today AND effectiveEndDate >= today
+    // This catches multi-day bookings started on a previous day that are still running today
+    .lte('booking_date', todayStr)
+    .or(`end_date.is.null.and.booking_date.gte.${todayStr},end_date.gte.${todayStr}`)
     .is('deleted_at', null) // Exclude archived bookings
     .order('start_time', { ascending: true })
 

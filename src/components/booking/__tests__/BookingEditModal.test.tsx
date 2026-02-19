@@ -102,7 +102,6 @@ describe('BookingEditModal', () => {
     zip_code: '10110',
     staff_id: 'staff-1',
     team_id: null,
-    service_package_id: 'service-1',
     notes: 'Test notes',
     payment_status: 'unpaid',
     customers: {
@@ -130,8 +129,7 @@ describe('BookingEditModal', () => {
 
   beforeEach(() => {
     mockFormData = {
-      service_package_id: 'service-1',
-      booking_date: '2025-10-28',
+        booking_date: '2025-10-28',
       start_time: '10:00:00',
       end_time: '12:00:00',
       total_price: 1500,
@@ -276,7 +274,6 @@ describe('BookingEditModal', () => {
       })
 
       mockFormData = {
-        service_package_id: booking.service_package_id,
         booking_date: booking.booking_date,
         start_time: booking.start_time,
         total_price: booking.total_price,
@@ -468,7 +465,6 @@ describe('BookingEditModal', () => {
       const user = userEvent.setup()
       mockFormData.booking_date = '2025-10-28'
       mockFormData.start_time = '10:00:00'
-      mockFormData.service_package_id = 'service-1'
 
       // Act
       render(<BookingEditModal {...getDefaultProps()} assignmentType="staff" editForm={mockEditForm()} />)

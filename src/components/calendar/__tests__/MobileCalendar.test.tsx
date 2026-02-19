@@ -37,7 +37,6 @@ const createMockBooking = (overrides: Partial<Booking> = {}): Booking => ({
   customer_id: 'customer-1',
   staff_id: 'staff-1',
   team_id: null,
-  service_package_id: 'service-1',
   booking_date: '2025-01-15',
   start_time: '09:00:00',
   end_time: '10:00:00',

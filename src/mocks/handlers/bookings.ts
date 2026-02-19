@@ -176,7 +176,7 @@ export const createBookingHandler = http.post('*/rest/v1/bookings', async ({ req
   const body = (await request.json()) as Partial<MockBooking>
 
   // Validate required fields
-  if (!body.customer_id || !body.service_package_id || !body.booking_date) {
+  if (!body.customer_id || !body.booking_date) {
     return HttpResponse.json(
       { error: 'Missing required fields', code: 'PGRST301' },
       { status: 400 }

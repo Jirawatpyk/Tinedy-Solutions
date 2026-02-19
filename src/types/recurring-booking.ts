@@ -68,7 +68,6 @@ export interface RecurringBookingBase {
  */
 export interface RecurringBookingRecord extends RecurringBookingBase {
   customer_id: string
-  service_package_id: string
   payment_status?: string
   area_sqm?: number | null
   frequency?: number | null
@@ -85,7 +84,6 @@ export interface RecurringGroupInput {
   /** ข้อมูล booking พื้นฐาน (ไม่รวม dates และ id) */
   baseBooking: {
     customer_id: string
-    service_package_id: string | null
     start_time: string
     end_time: string | null
     status: string

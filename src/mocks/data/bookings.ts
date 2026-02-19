@@ -11,10 +11,10 @@
 export interface MockBooking {
   id: string
   customer_id: string
-  service_package_id: string
   staff_id: string | null
   team_id: string | null
   booking_date: string
+  end_date: string | null
   start_time: string
   end_time: string
   status: string
@@ -24,6 +24,7 @@ export interface MockBooking {
   zip_code: string
   notes: string | null
   price: number
+  total_price?: number
   payment_status: string
   payment_method: string | null
   payment_slip_url: string | null
@@ -31,6 +32,11 @@ export interface MockBooking {
   updated_at: string
   deleted_at: string | null
   deleted_by: string | null
+  // V2 pricing fields
+  package_v2_id?: string | null
+  job_name?: string | null
+  custom_price?: number | null
+  price_override?: boolean
   [key: string]: unknown
 }
 
@@ -49,7 +55,7 @@ export const mockBookings: MockBooking[] = [
   {
     id: 'booking-001',
     customer_id: 'customer-001',
-    service_package_id: 'service-001',
+    package_v2_id: 'pkg-v2-001',
     staff_id: 'staff-001',
     team_id: null,
     booking_date: new Date().toISOString().split('T')[0],
@@ -74,7 +80,7 @@ export const mockBookings: MockBooking[] = [
   {
     id: 'booking-002',
     customer_id: 'customer-002',
-    service_package_id: 'service-002',
+    package_v2_id: 'pkg-v2-002',
     staff_id: null,
     team_id: 'team-001',
     booking_date: new Date().toISOString().split('T')[0],
@@ -99,7 +105,7 @@ export const mockBookings: MockBooking[] = [
   {
     id: 'booking-003',
     customer_id: 'customer-001',
-    service_package_id: 'service-001',
+    package_v2_id: 'pkg-v2-001',
     staff_id: 'staff-002',
     team_id: null,
     booking_date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // +1 day
@@ -124,7 +130,7 @@ export const mockBookings: MockBooking[] = [
   {
     id: 'booking-004',
     customer_id: 'customer-003',
-    service_package_id: 'service-003',
+    package_v2_id: 'pkg-v2-001',
     staff_id: 'staff-001',
     team_id: null,
     booking_date: new Date(Date.now() - 604800000).toISOString().split('T')[0], // -7 days
@@ -149,7 +155,7 @@ export const mockBookings: MockBooking[] = [
   {
     id: 'booking-005',
     customer_id: 'customer-002',
-    service_package_id: 'service-001',
+    package_v2_id: 'pkg-v2-001',
     staff_id: 'staff-002',
     team_id: null,
     booking_date: '2025-01-10',
@@ -184,10 +190,11 @@ export function createMockBooking(overrides?: Partial<MockBooking>): MockBooking
   const defaultBooking: MockBooking = {
     id: `booking-${Date.now()}`,
     customer_id: 'customer-001',
-    service_package_id: 'service-001',
+    package_v2_id: 'pkg-v2-001',
     staff_id: 'staff-001',
     team_id: null,
     booking_date: new Date().toISOString().split('T')[0],
+    end_date: null,
     start_time: '09:00:00',
     end_time: '11:00:00',
     status: 'pending',
@@ -204,6 +211,9 @@ export function createMockBooking(overrides?: Partial<MockBooking>): MockBooking
     updated_at: new Date().toISOString(),
     deleted_at: null,
     deleted_by: null,
+    job_name: null,
+    custom_price: null,
+    price_override: false,
   }
 
   return { ...defaultBooking, ...overrides }

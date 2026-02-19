@@ -47,7 +47,7 @@ import {
  * const result = await createRecurringGroup({
  *   baseBooking: {
  *     customer_id: 'uuid-123',
- *     service_package_id: 'uuid-456',
+ *     package_v2_id: 'uuid-456',
  *     start_time: '09:00:00',
  *     end_time: '12:00:00',
  *     status: 'pending',

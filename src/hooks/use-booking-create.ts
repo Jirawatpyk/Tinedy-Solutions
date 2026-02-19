@@ -148,7 +148,6 @@ export function useBookingCreate({
       booking_date: '',
       start_time: '',
       end_time: '',
-      service_package_id: '',
       package_v2_id: '',
       total_price: 0,
       area_sqm: undefined,
@@ -301,7 +300,7 @@ export function useBookingCreate({
   // --- Submission helpers ---
 
   const buildBaseBookingData = async (data: BookingCreateFormData) => {
-    const selectedPkg = servicePackages.find(pkg => pkg.id === data.service_package_id || pkg.id === data.package_v2_id)
+    const selectedPkg = servicePackages.find(pkg => pkg.id === data.package_v2_id)
     let calculatedEndTime = data.end_time || ''
 
     if (selectedPkg && selectedPkg.duration_minutes) {
@@ -330,8 +329,7 @@ export function useBookingCreate({
       customerId = newCustomer.id
     }
 
-    const servicePackageId = data.service_package_id || data.package_v2_id
-    if (!servicePackageId) {
+    if (!data.package_v2_id) {
       const validationError = getValidationErrorMessage()
       toast({
         title: validationError.title,
@@ -354,7 +352,6 @@ export function useBookingCreate({
       calculatedEndTime,
       baseBooking: {
         customer_id: customerId!,
-        service_package_id: data.service_package_id || null,
         start_time: data.start_time || '',
         end_time: calculatedEndTime || null,
         total_price: data.total_price || 0,
@@ -423,9 +420,7 @@ export function useBookingCreate({
       const fullAddress = [baseBooking.baseBooking.address, baseBooking.baseBooking.city, baseBooking.baseBooking.state, baseBooking.baseBooking.zip_code]
         .filter(part => part && String(part).trim()).join(', ')
 
-      const selectedPkg = servicePackages.find(pkg =>
-        pkg.id === baseBooking.baseBooking.service_package_id || pkg.id === baseBooking.baseBooking.package_v2_id
-      )
+      const selectedPkg = servicePackages.find(pkg => pkg.id === baseBooking.baseBooking.package_v2_id)
 
       const recurringEmailData: RecurringBookingEmailData = {
         groupId: result.groupId,

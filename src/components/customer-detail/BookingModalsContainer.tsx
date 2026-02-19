@@ -52,8 +52,8 @@ interface BookingModalsContainerProps {
   isCreateAvailabilityModalOpen: boolean
   onCloseCreateAvailability: () => void
   onOpenCreateAvailability: () => void
-  createFormData: { booking_date?: string; start_time?: string; end_time?: string; service_package_id?: string; package_v2_id?: string } | null
-  onBeforeOpenCreateAvailability: (formData: { booking_date?: string; start_time?: string; end_time?: string; service_package_id?: string; package_v2_id?: string }) => void
+  createFormData: { booking_date?: string; start_time?: string; end_time?: string; package_v2_id?: string } | null
+  onBeforeOpenCreateAvailability: (formData: { booking_date?: string; start_time?: string; end_time?: string; package_v2_id?: string }) => void
   onSelectCreateStaff: (staffId: string) => void
   onSelectCreateTeam: (teamId: string) => void
 
@@ -109,9 +109,9 @@ interface BookingModalsContainerProps {
   selectedEditTeamId: string
 
   // Edit availability modal
-  editFormData: { booking_date?: string; start_time?: string; end_time?: string; service_package_id?: string; package_v2_id?: string } | null
+  editFormData: { booking_date?: string; start_time?: string; end_time?: string; package_v2_id?: string } | null
   onOpenEditAvailability: () => void
-  onBeforeOpenEditAvailability: (formData: { booking_date?: string; start_time?: string; end_time?: string; service_package_id?: string; package_v2_id?: string }) => void
+  onBeforeOpenEditAvailability: (formData: { booking_date?: string; start_time?: string; end_time?: string; package_v2_id?: string }) => void
   onCloseEditAvailability: () => void
   onSelectEditStaff: (staffId: string) => void
   onSelectEditTeam: (teamId: string) => void
@@ -252,7 +252,7 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
       />
 
       {/* Staff Availability Modal (for Create) */}
-      {createFormData && (createFormData.service_package_id || createFormData.package_v2_id) && (createRecurringDates.length > 0 || createFormData.booking_date) && createFormData.start_time && (
+      {createFormData && createFormData.package_v2_id && (createRecurringDates.length > 0 || createFormData.booking_date) && createFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isCreateAvailabilityModalOpen}
           onClose={onCloseCreateAvailability}
@@ -261,7 +261,7 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
           dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
           startTime={createFormData.start_time}
           endTime={createFormData.end_time || ''}
-          servicePackageId={createFormData.service_package_id || createFormData.package_v2_id || ''}
+          servicePackageId={createFormData.package_v2_id || ''}
           onSelectStaff={onSelectCreateStaff}
           onSelectTeam={onSelectCreateTeam}
         />
@@ -365,7 +365,7 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
       )}
 
       {/* Staff Availability Modal - Edit */}
-      {editFormData && (editFormData.service_package_id || editFormData.package_v2_id) && editFormData.booking_date && editFormData.start_time && (
+      {editFormData && editFormData.package_v2_id && editFormData.booking_date && editFormData.start_time && (
         <StaffAvailabilityModal
           isOpen={isEditBookingAvailabilityOpen}
           onClose={onCloseEditAvailability}
@@ -375,9 +375,9 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
           date={editFormData.booking_date || ''}
           startTime={editFormData.start_time || ''}
           endTime={editFormData.end_time || ''}
-          servicePackageId={editFormData.service_package_id || editFormData.package_v2_id || ''}
+          servicePackageId={editFormData.package_v2_id || ''}
           servicePackageName={
-            servicePackages.find(pkg => pkg.id === (editFormData.service_package_id || editFormData.package_v2_id))?.name
+            servicePackages.find(pkg => pkg.id === editFormData.package_v2_id)?.name
           }
           currentAssignedStaffId={editBookingFormState.staff_id}
           currentAssignedTeamId={editBookingFormState.team_id}

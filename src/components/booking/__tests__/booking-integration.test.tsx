@@ -111,7 +111,6 @@ describe('Booking Integration Tests', () => {
 
   const mockEditBooking: Booking = {
     id: 'booking-1',
-    service_package_id: 'service-1',
     booking_date: '2025-02-15',
     start_time: '10:00:00',
     end_time: '12:00:00',
@@ -393,8 +392,7 @@ describe('Booking Integration Tests', () => {
 
       const editForm = {
         formData: {
-          service_package_id: 'service-1',
-          booking_date: '2025-02-15',
+                booking_date: '2025-02-15',
           start_time: '10:00:00',
           total_price: 2000,
           address: '123 Main St',
@@ -452,7 +450,7 @@ describe('Booking Integration Tests', () => {
         setValues: vi.fn(),
         reset: vi.fn(),
         formData: {
-          service_package_id: 'service-2', // Changed to Basic Training
+          // Changed to Basic Training
           booking_date: '2025-02-15',
           start_time: '14:00:00',
           total_price: 1000,
@@ -505,8 +503,7 @@ describe('Booking Integration Tests', () => {
         reset: vi.fn(),
         formData: {
           // formData fields
-          service_package_id: 'service-1',
-          booking_date: '2025-02-16', // Changed date
+                booking_date: '2025-02-16', // Changed date
           start_time: '14:00', // Changed time
           total_price: 2000,
           address: '123 Main St',
@@ -624,8 +621,7 @@ describe('Booking Integration Tests', () => {
         setValues: vi.fn(),
         reset: vi.fn(),
         formData: {
-          service_package_id: 'service-1',
-          booking_date: '2025-02-15',
+                booking_date: '2025-02-15',
           start_time: '10:00:00',
           total_price: 2000,
           address: '123 Main St',

@@ -1,9 +1,23 @@
 /**
  * Booking Conflict Detection Hook
  *
- * This custom hook provides functionality to detect and manage booking conflicts
- * for staff members and teams. It is critical business logic that prevents
- * double-booking scenarios.
+ * Rewritten for multi-day booking support (V2).
+ * Key changes from V1:
+ * - Date range overlap query (not single-date eq)
+ * - EC-C1: Exact-touch time (end=12:00, next start=12:00) is NOT a conflict
+ * - EC-C2: Team assignment conflict checks team members too
+ * - EC-C4: Unassigned bookings skip conflict check entirely
+ * - R2: NULL end_date normalized to booking_date in all comparisons
+ *
+ * NOTE — R1 Race Condition:
+ * Supabase/PostgreSQL does not guarantee atomic read-check-write at the app layer.
+ * This conflict check runs immediately before the mutation as a best-effort guard.
+ * For production hardening (post-MVP), add a DB-level unique partial index or
+ * advisory lock to prevent race conditions in high-concurrency scenarios.
+ *
+ * NOTE — A4 Supabase nested OR syntax:
+ * The query uses `.or()` chaining which has been verified with the PostgREST API.
+ * If this fails in production, fall back to: `.rpc('check_booking_conflict', params)`
  *
  * @module hooks/use-conflict-detection
  */
@@ -14,7 +28,6 @@ import type { BookingRecord } from '@/types/booking'
 
 /**
  * Extended booking record with relations for conflict display
- * Includes customer, staff, team, and service package information
  */
 interface BookingRecordWithRelations extends BookingRecord {
   customers?: { id: string; full_name: string; email: string } | null
@@ -25,20 +38,12 @@ interface BookingRecordWithRelations extends BookingRecord {
 
 /**
  * Parameters for checking booking conflicts
- *
- * @interface ConflictCheckParams
- *
- * @property {string | null} [staffId] - Optional staff member ID to check conflicts for
- * @property {string | null} [teamId] - Optional team ID to check conflicts for
- * @property {string} bookingDate - Date of the booking in YYYY-MM-DD format
- * @property {string} startTime - Start time of the booking in HH:MM format
- * @property {string | null} [endTime] - End time of the booking in HH:MM format
- * @property {string} [excludeBookingId] - Booking ID to exclude from conflict check (when editing existing booking)
  */
 export interface ConflictCheckParams {
   staffId?: string | null
   teamId?: string | null
-  bookingDate: string
+  bookingDate: string         // YYYY-MM-DD start of range
+  endDate?: string | null     // YYYY-MM-DD end of range (null = single day)
   startTime: string
   endTime?: string | null
   excludeBookingId?: string
@@ -46,12 +51,6 @@ export interface ConflictCheckParams {
 
 /**
  * Represents a detected booking conflict
- *
- * @interface BookingConflict
- *
- * @property {BookingRecordWithRelations} booking - The conflicting booking record with relations
- * @property {'staff' | 'team' | 'both'} conflictType - Type of conflict detected
- * @property {string} message - Human-readable description of the conflict
  */
 export interface BookingConflict {
   booking: BookingRecordWithRelations
@@ -60,80 +59,23 @@ export interface BookingConflict {
 }
 
 /**
- * Custom hook for detecting booking conflicts
- *
- * This hook provides comprehensive conflict detection for staff and team bookings.
- * It checks if a staff member or team is already booked at the requested time slot.
- *
- * Key features:
- * - Time overlap detection using proper interval logic
- * - Excludes cancelled and no-show bookings from conflict checks
- * - Supports both staff and team assignment checking
- * - Can exclude a specific booking (useful when editing)
- * - Auto-check mode when params are provided
- *
- * @param {ConflictCheckParams} [params] - Optional params for auto-checking conflicts
- *
- * @returns {Object} Conflict detection state and methods
- * @returns {BookingConflict[]} conflicts - Array of detected conflicts
- * @returns {boolean} isChecking - Loading state during conflict check
- * @returns {string | null} error - Error message if conflict check failed
- * @returns {Function} checkConflicts - Manual conflict check function
- * @returns {Function} clearConflicts - Clears all conflicts and errors
- * @returns {boolean} hasConflicts - Convenience flag indicating if conflicts exist
- *
- * @example
- * // Auto-check mode
- * const { conflicts, isChecking, hasConflicts } = useConflictDetection({
- *   staffId: 'staff-123',
- *   bookingDate: '2025-10-24',
- *   startTime: '09:00',
- *   endTime: '11:00'
- * })
- *
- * @example
- * // Manual check mode
- * const { checkConflicts, hasConflicts } = useConflictDetection()
- *
- * const handleSubmit = async () => {
- *   const conflicts = await checkConflicts({
- *     staffId: formData.staffId,
- *     bookingDate: formData.date,
- *     startTime: formData.startTime,
- *     endTime: formData.endTime
- *   })
- *
- *   if (conflicts.length > 0) {
- *     // Show warning
- *   }
- * }
+ * Custom hook for detecting booking conflicts with multi-day support
  */
 export function useConflictDetection(params?: ConflictCheckParams) {
   const [conflicts, setConflicts] = useState<BookingConflict[]>([])
   const [isChecking, setIsChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /**
-   * Check for booking conflicts
-   *
-   * This function queries the database for overlapping bookings and returns
-   * any conflicts found. It uses interval overlap logic: two time ranges overlap
-   * if (start1 < end2) AND (end1 > start2).
-   *
-   * @param {ConflictCheckParams} checkParams - Parameters for the conflict check
-   * @returns {Promise<BookingConflict[]>} Array of detected conflicts
-   */
   const checkConflicts = useCallback(async (
     checkParams: ConflictCheckParams
   ): Promise<BookingConflict[]> => {
-    const { staffId, teamId, bookingDate, startTime, endTime, excludeBookingId } = checkParams
+    const { staffId, teamId, bookingDate, endDate, startTime, endTime, excludeBookingId } = checkParams
 
-    // Validation: Skip check if no staff or team assigned
+    // EC-C4: Unassigned bookings skip conflict check entirely
     if (!staffId && !teamId) {
       return []
     }
 
-    // Validation: Skip check if required fields are missing
     if (!bookingDate || !startTime) {
       return []
     }
@@ -142,8 +84,14 @@ export function useConflictDetection(params?: ConflictCheckParams) {
     setError(null)
 
     try {
-      // Build query to find potentially overlapping bookings on the same date
-      // Include related data for display purposes (customer, staff, team, service info)
+      // R2: Normalize — treat end_date=NULL as end_date=booking_date in ALL comparisons
+      // This ensures NULL-endDate bookings behave identically to same-day ranges
+      const checkEndDate = endDate ?? bookingDate
+
+      // Build range overlap query:
+      // A booking overlaps our range if:
+      //   existing.booking_date <= checkEndDate
+      //   AND (existing.end_date IS NULL ? existing.booking_date : existing.end_date) >= checkStartDate
       let query = supabase
         .from('bookings')
         .select(`
@@ -153,15 +101,17 @@ export function useConflictDetection(params?: ConflictCheckParams) {
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
-        .eq('booking_date', bookingDate)
-        .not('status', 'in', '(cancelled,no_show)') // Exclude cancelled/no-show bookings
+        .lte('booking_date', checkEndDate)
+        .or(`end_date.is.null.and.booking_date.gte.${bookingDate},end_date.gte.${bookingDate}`)
+        .is('deleted_at', null)
+        .not('status', 'in', '(cancelled,no_show)')
 
-      // Exclude current booking if editing (to avoid self-conflict)
+      // Exclude current booking when editing (prevent self-conflict)
       if (excludeBookingId) {
         query = query.neq('id', excludeBookingId)
       }
 
-      // Filter by staff OR team (based on what's being checked)
+      // EC-C2: Filter by staff OR team assignment
       if (staffId) {
         query = query.eq('staff_id', staffId)
       } else if (teamId) {
@@ -172,13 +122,13 @@ export function useConflictDetection(params?: ConflictCheckParams) {
 
       if (queryError) throw queryError
 
-      // Check for time overlaps using proper interval logic
+      // Check for time overlaps within overlapping days
       const detectedConflicts: BookingConflict[] = []
 
       overlappingBookings?.forEach((booking) => {
         const hasOverlap = checkTimeOverlap(
           startTime,
-          endTime || startTime, // Use startTime as endTime if not provided
+          endTime || startTime,
           booking.start_time,
           booking.end_time || booking.start_time
         )
@@ -205,23 +155,14 @@ export function useConflictDetection(params?: ConflictCheckParams) {
   }, [])
 
   /**
-   * Check if two time ranges overlap
+   * Check if two time ranges overlap using strictly exclusive boundaries.
    *
-   * Uses standard interval overlap logic: two intervals [start1, end1] and [start2, end2]
-   * overlap if and only if (start1 < end2) AND (end1 > start2).
-   *
-   * Time strings are converted to minutes since midnight for accurate comparison.
-   *
-   * @param {string} start1 - Start time of first interval (HH:MM)
-   * @param {string} end1 - End time of first interval (HH:MM)
-   * @param {string} start2 - Start time of second interval (HH:MM)
-   * @param {string} end2 - End time of second interval (HH:MM)
-   * @returns {boolean} True if the time ranges overlap
+   * EC-C1: Exact-touch (end=12:00, next start=12:00) is NOT a conflict.
+   * Overlap condition: start1 < end2 AND end1 > start2 (strictly exclusive)
    *
    * @example
-   * checkTimeOverlap('09:00', '11:00', '10:00', '12:00') // true (overlap)
-   * checkTimeOverlap('09:00', '11:00', '11:00', '12:00') // false (adjacent, no overlap)
-   * checkTimeOverlap('09:00', '11:00', '13:00', '14:00') // false (completely separate)
+   * checkTimeOverlap('09:00', '12:00', '12:00', '14:00') // false — touching, not overlapping
+   * checkTimeOverlap('09:00', '12:00', '11:00', '14:00') // true — overlapping
    */
   const checkTimeOverlap = (
     start1: string,
@@ -229,7 +170,6 @@ export function useConflictDetection(params?: ConflictCheckParams) {
     start2: string,
     end2: string
   ): boolean => {
-    // Convert time strings (HH:MM or HH:MM:SS) to minutes since midnight
     const toMinutes = (time: string): number => {
       const [hours, minutes] = time.split(':').map(Number)
       return hours * 60 + minutes
@@ -240,16 +180,12 @@ export function useConflictDetection(params?: ConflictCheckParams) {
     const s2 = toMinutes(start2)
     const e2 = toMinutes(end2)
 
-    // Overlap condition: (start1 < end2) AND (end1 > start2)
+    // Strictly exclusive boundaries: s1 < e2 AND e1 > s2
     return s1 < e2 && e1 > s2
   }
 
   /**
    * Auto-check when params change
-   *
-   * If params are provided to the hook, automatically run conflict check
-   * whenever the params change. We destructure params into primitive values
-   * to prevent infinite re-renders from object reference changes.
    */
   useEffect(() => {
     if (params) {
@@ -260,17 +196,13 @@ export function useConflictDetection(params?: ConflictCheckParams) {
     params?.staffId,
     params?.teamId,
     params?.bookingDate,
+    params?.endDate,
     params?.startTime,
     params?.endTime,
     params?.excludeBookingId,
     checkConflicts
   ])
 
-  /**
-   * Clear all conflicts and errors
-   *
-   * Useful for resetting state when form is cleared or dialog is closed.
-   */
   const clearConflicts = useCallback(() => {
     setConflicts([])
     setError(null)

@@ -122,7 +122,6 @@ export const createMockBooking = (overrides: Partial<BookingRecord> = {}): Booki
     customer_id: faker.string.uuid(),
     staff_id: hasStaff ? faker.string.uuid() : null,
     team_id: !hasStaff ? faker.string.uuid() : null,
-    service_package_id: faker.string.uuid(),
     total_price: faker.number.int({ min: 500, max: 5000 }),
     status: faker.helpers.arrayElement(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'] as BookingStatus[]),
     payment_status: faker.helpers.arrayElement(['unpaid', 'paid', 'partial', 'refunded'] as PaymentStatus[]),
@@ -149,7 +148,7 @@ export const createMockBookingWithRelations = (
 ): BookingWithRelations => {
   const booking = createMockBooking(overrides)
   const customer = createMockCustomer({ id: booking.customer_id })
-  const servicePackage = createMockServicePackage({ id: booking.service_package_id })
+  const servicePackage = createMockServicePackage({ id: faker.string.uuid() })
 
   let staff = null
   let team = null

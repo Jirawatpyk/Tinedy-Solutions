@@ -83,16 +83,13 @@ export function AdminServicePackages() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('service_package_id, package_v2_id')
+        .select('package_v2_id')
         .is('deleted_at', null)
 
       if (error) throw error
 
       const counts: Record<string, number> = {}
       data.forEach((booking) => {
-        if (booking.service_package_id) {
-          counts[booking.service_package_id] = (counts[booking.service_package_id] || 0) + 1
-        }
         if (booking.package_v2_id) {
           counts[booking.package_v2_id] = (counts[booking.package_v2_id] || 0) + 1
         }

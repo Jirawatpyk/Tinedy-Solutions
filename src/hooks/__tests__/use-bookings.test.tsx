@@ -63,7 +63,6 @@ const mockBookings = [
   {
     id: '1',
     customer_id: 'cust-1',
-    service_package_id: 'pkg-1',
     booking_date: '2025-12-01',
     start_time: '10:00',
     end_time: '12:00',
@@ -82,7 +81,6 @@ const mockBookings = [
   {
     id: '2',
     customer_id: 'cust-2',
-    service_package_id: 'pkg-2',
     booking_date: '2025-12-02',
     start_time: '14:00',
     end_time: '16:00',

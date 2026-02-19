@@ -33,7 +33,6 @@ const createMockBooking = (overrides: Partial<BookingWithService> = {}): Booking
   created_at: '2025-10-20T10:00:00Z',
   customer_id: 'customer-1',
   staff_id: 'staff-1',
-  service_package_id: 'package-1',
   package_v2_id: null,
   recurring_group_id: null,
   recurring_sequence: undefined,
