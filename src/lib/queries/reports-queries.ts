@@ -39,6 +39,12 @@ export interface BookingWithService {
   recurring_pattern?: string | null
   is_recurring?: boolean
   parent_booking_id?: string | null
+  // V2 pricing fields (S-01)
+  price_mode?: string | null
+  job_name?: string | null
+  custom_price?: number | null
+  price_override?: boolean
+  end_date?: string | null
   service_packages: { name: string; service_type: string } | null
   service_packages_v2?: { name: string; service_type: string } | null
 }
@@ -126,11 +132,15 @@ export async function fetchReportsBookings(): Promise<BookingWithService[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const servicePackages = booking.service_packages || (booking as any).service_packages_v2
 
+    const normalizedV2 = booking.service_packages_v2
     return {
       ...booking,
       service_packages: Array.isArray(servicePackages)
         ? servicePackages[0] || null
-        : servicePackages
+        : servicePackages,
+      service_packages_v2: Array.isArray(normalizedV2)
+        ? normalizedV2[0] || null
+        : normalizedV2,
     }
   })
 

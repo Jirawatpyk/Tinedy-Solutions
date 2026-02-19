@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PaymentMethodSkeleton } from '@/components/skeletons/lazy-loading-skeletons'
 import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -37,8 +38,7 @@ export function PaymentPage() {
         .select(`
           *,
           customers (id, full_name, email, phone),
-          service_packages (name, service_type),
-          service_packages_v2 (name, service_type)
+          service_packages_v2:package_v2_id (name, service_type)
         `)
         .eq('id', bookingId)
         .single()
@@ -60,8 +60,7 @@ export function PaymentPage() {
           .select(`
             *,
             customers (id, full_name, email, phone),
-            service_packages (name, service_type),
-            service_packages_v2 (name, service_type)
+            service_packages_v2:package_v2_id (name, service_type)
           `)
           .eq('recurring_group_id', data.recurring_group_id)
           .order('booking_date')
@@ -186,9 +185,9 @@ export function PaymentPage() {
                   <p className="text-sm text-muted-foreground mb-1">Service</p>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      {(booking.service_packages?.service_type || booking.service_packages_v2?.service_type) || 'Service'}
+                      {booking.service_packages_v2?.service_type ?? 'Service'}
                     </Badge>
-                    <p className="font-medium">{booking.service_packages?.name || booking.service_packages_v2?.name}</p>
+                    <p className="font-medium">{booking.job_name ?? booking.service_packages_v2?.name ?? 'ไม่ระบุบริการ'}</p>
                   </div>
                 </div>
 
@@ -218,7 +217,7 @@ export function PaymentPage() {
                       <p className="text-sm text-muted-foreground mb-1">Date</p>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">{formatDate(booking.booking_date)}</p>
+                        <p className="font-medium">{formatDateRange(booking.booking_date, booking.end_date)}</p>
                       </div>
                     </div>
                     <div>

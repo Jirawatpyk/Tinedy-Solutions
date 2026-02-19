@@ -36,10 +36,11 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
   const { customers, isLoading, search, setSearch } = useCustomerSearch()
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  // Focus name input when new customer panel opens
+  // Focus name input when new customer panel opens (M3: rAF is more reliable than setTimeout)
   useEffect(() => {
     if (isNewCustomer) {
-      setTimeout(() => nameInputRef.current?.focus(), 100)
+      const raf = requestAnimationFrame(() => nameInputRef.current?.focus())
+      return () => cancelAnimationFrame(raf)
     }
   }, [isNewCustomer])
 

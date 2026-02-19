@@ -9,7 +9,7 @@
  * - validateFullState pure function (RT7)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useBookingWizard, validateFullState, createInitialState } from '../use-booking-wizard'
 import { PriceMode } from '@/types/booking'
@@ -67,13 +67,14 @@ describe('validateFullState', () => {
 
 describe('useBookingWizard reducer', () => {
   describe('SET_PRICE_MODE', () => {
-    it('switching to custom clears package_v2_id', () => {
+    it('switching to custom clears package_v2_id and selectedPackage (G4 fix)', () => {
       const { result } = renderHook(() => useBookingWizard())
       act(() => {
         result.current.dispatch({ type: 'SET_PRICE_MODE', mode: PriceMode.Custom })
       })
       expect(result.current.state.price_mode).toBe('custom')
       expect(result.current.state.package_v2_id).toBeNull()
+      expect(result.current.state.selectedPackage).toBeNull()
     })
 
     it('switching to package resets total_price to 0', () => {
@@ -152,6 +153,20 @@ describe('useBookingWizard reducer', () => {
         result.current.dispatch({ type: 'SET_END_TIME', time: '14:00', manual: true })
       })
       expect(result.current.state.endTimeManuallySet).toBe(true)
+    })
+  })
+
+  describe('SET_VALIDATION_ERRORS (H2 fix)', () => {
+    it('sets validation errors in state for Quick mode inline display', () => {
+      const { result } = renderHook(() => useBookingWizard())
+      act(() => {
+        result.current.dispatch({
+          type: 'SET_VALIDATION_ERRORS',
+          errors: { job_name: 'กรุณาระบุชื่องาน', booking_date: 'กรุณาเลือกวันที่' },
+        })
+      })
+      expect(result.current.state.validationErrors.job_name).toBe('กรุณาระบุชื่องาน')
+      expect(result.current.state.validationErrors.booking_date).toBe('กรุณาเลือกวันที่')
     })
   })
 

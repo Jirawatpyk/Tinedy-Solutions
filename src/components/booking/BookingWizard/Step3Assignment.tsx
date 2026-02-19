@@ -40,7 +40,6 @@ export function Step3Assignment({ state, dispatch }: Step3AssignmentProps) {
     useCustomerAddress,
     address,
     city,
-    state: stateField,
     zip_code,
     notes,
     customer,

@@ -228,10 +228,14 @@ export function AdminReports() {
     [filteredBookings]
   )
 
-  // Calculate top service packages by booking count
+  // Calculate top service packages by booking count (G1 Fix: include custom jobs)
   const topPackages = useMemo(() => {
     const packageCounts = filteredBookings.reduce((acc, booking) => {
-      const packageName = booking.service_packages?.name
+      // G1 Fix: custom jobs appear as "งานพิเศษ: {job_name}" instead of being hidden
+      const packageName =
+        booking.price_mode === 'custom'
+          ? `งานพิเศษ: ${booking.job_name ?? 'ไม่ระบุ'}`
+          : (booking.service_packages_v2?.name ?? booking.service_packages?.name)
       if (packageName) {
         acc[packageName] = (acc[packageName] || 0) + 1
       }

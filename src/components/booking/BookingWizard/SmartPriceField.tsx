@@ -13,7 +13,6 @@ import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -36,12 +35,12 @@ import {
 import { cn } from '@/lib/utils'
 import { PriceMode } from '@/types/booking'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
-import type { UnifiedServicePackage } from '@/lib/queries/package-queries'
+import type { ServicePackageV2WithTiers } from '@/lib/queries/package-queries'
 
 interface SmartPriceFieldProps {
   state: WizardState
   dispatch: React.Dispatch<WizardAction>
-  packages: UnifiedServicePackage[]
+  packages: ServicePackageV2WithTiers[]
   packagesLoading?: boolean
 }
 
@@ -158,8 +157,8 @@ export function SmartPriceField({
         </div>
       )}
 
-      {/* Area & Frequency */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Area & Frequency — frequency hidden for Custom mode (spec T4.0 / Sally UX) */}
+      <div className={price_mode === PriceMode.Custom ? 'space-y-1' : 'grid grid-cols-2 gap-3'}>
         <div className="space-y-1">
           <Label htmlFor="area_sqm" className="text-xs text-muted-foreground">
             พื้นที่ (ตร.ม.)
@@ -176,27 +175,29 @@ export function SmartPriceField({
             }}
           />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">ความถี่ต่อเดือน</Label>
-          <Select
-            value={frequency?.toString() ?? 'none'}
-            onValueChange={(val) => {
-              const freq = val === 'none' ? null : (Number(val) as 1 | 2 | 4 | 8)
-              dispatch({ type: 'SET_FREQUENCY', frequency: freq })
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="ไม่ระบุ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">ไม่ระบุ</SelectItem>
-              <SelectItem value="1">1 ครั้ง</SelectItem>
-              <SelectItem value="2">2 ครั้ง</SelectItem>
-              <SelectItem value="4">4 ครั้ง</SelectItem>
-              <SelectItem value="8">8 ครั้ง</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {price_mode !== PriceMode.Custom && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">ความถี่ต่อเดือน</Label>
+            <Select
+              value={frequency?.toString() ?? 'none'}
+              onValueChange={(val) => {
+                const freq = val === 'none' ? null : (Number(val) as 1 | 2 | 4 | 8)
+                dispatch({ type: 'SET_FREQUENCY', frequency: freq })
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="ไม่ระบุ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">ไม่ระบุ</SelectItem>
+                <SelectItem value="1">1 ครั้ง</SelectItem>
+                <SelectItem value="2">2 ครั้ง</SelectItem>
+                <SelectItem value="4">4 ครั้ง</SelectItem>
+                <SelectItem value="8">8 ครั้ง</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Override price input */}
@@ -263,11 +264,7 @@ export function SmartPriceField({
             <Badge variant="secondary" className="text-xs">Custom</Badge>
           )}
           <span className="text-lg font-bold text-tinedy-blue">
-            {price_mode === PriceMode.Package
-              ? formatCurrency(total_price)
-              : price_mode === PriceMode.Override
-              ? formatCurrency(custom_price ?? 0)
-              : formatCurrency(custom_price ?? 0)}
+            {formatCurrency(price_mode === PriceMode.Package ? total_price : custom_price ?? 0)}
           </span>
         </div>
       </div>

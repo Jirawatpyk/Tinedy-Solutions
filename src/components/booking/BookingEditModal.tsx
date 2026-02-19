@@ -26,8 +26,6 @@ import {
 } from '@/components/ui/select'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
-import { staffQueryOptions } from '@/lib/queries/staff-queries'
-import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { getErrorMessage } from '@/lib/error-utils'

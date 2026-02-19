@@ -16,6 +16,8 @@
 import { toast } from 'sonner'
 import { Zap, Map } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
   Tooltip,
@@ -64,9 +66,10 @@ export function BookingQuickForm({
     state.start_time && state.end_time && state.end_time < state.start_time
 
   async function handleSubmit() {
-    // RT7: Full re-validate
+    // RT7: Full re-validate — dispatch errors so inline field errors appear (H2 fix)
     const errors = validateFullState(state)
     if (Object.keys(errors).length > 0) {
+      dispatch({ type: 'SET_VALIDATION_ERRORS', errors })
       toast.error('กรุณากรอกข้อมูลให้ครบถ้วน')
       return
     }
@@ -175,32 +178,32 @@ export function BookingQuickForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label htmlFor="qs-start" className="text-xs text-muted-foreground">
+              <Label htmlFor="qs-start" className="text-xs text-muted-foreground">
                 เวลาเริ่มต้น <span className="text-destructive">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 id="qs-start"
                 type="time"
                 value={state.start_time}
                 onChange={(e) => dispatch({ type: 'SET_START_TIME', time: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={state.validationErrors.start_time ? 'border-destructive' : undefined}
               />
               {state.validationErrors.start_time && (
                 <p className="text-xs text-destructive">{state.validationErrors.start_time}</p>
               )}
             </div>
             <div className="space-y-1">
-              <label htmlFor="qs-end" className="text-xs text-muted-foreground">
+              <Label htmlFor="qs-end" className="text-xs text-muted-foreground">
                 เวลาสิ้นสุด
-              </label>
-              <input
+              </Label>
+              <Input
                 id="qs-end"
                 type="time"
                 value={state.end_time}
                 onChange={(e) =>
                   dispatch({ type: 'SET_END_TIME', time: e.target.value, manual: true })
                 }
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={endBeforeStart ? 'border-yellow-400' : undefined}
               />
               {endBeforeStart && (
                 <p className="text-xs text-yellow-600">⚠️ เวลาสิ้นสุดน้อยกว่าเวลาเริ่มต้น</p>

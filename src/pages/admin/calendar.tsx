@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { BookingDetailModal } from './booking-detail-modal'
+import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { BookingFormContainer } from '@/components/booking/BookingFormContainer'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { CalendarCell } from '@/components/calendar/CalendarCell'
@@ -327,7 +327,7 @@ export function AdminCalendar() {
       </div>
 
       {/* Booking Detail Modal */}
-      <BookingDetailModal
+      <BookingDetailSheet
         booking={calendar.modalControls.selectedBooking as Booking | null}
         isOpen={calendar.modalControls.isDetailOpen}
         onClose={() => calendar.modalControls.setIsDetailOpen(false)}

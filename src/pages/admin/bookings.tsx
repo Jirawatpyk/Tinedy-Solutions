@@ -6,7 +6,7 @@ import { AdminOnly } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Plus } from 'lucide-react'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
-import { BookingDetailModal } from './booking-detail-modal'
+import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   BookingCreateFlow,
@@ -15,7 +15,7 @@ import {
   RecurringBookingManager,
 } from '@/components/bookings'
 import { useBookingsPage } from '@/hooks/use-bookings-page'
-import { calculateEndTime, formatTime } from '@/lib/booking-utils'
+import { formatTime } from '@/lib/booking-utils'
 
 export function AdminBookings() {
   const {
@@ -23,7 +23,6 @@ export function AdminBookings() {
     dispatch,
     loading,
     refresh,
-    servicePackages,
     staffList,
     teams,
     filters,
@@ -42,8 +41,6 @@ export function AdminBookings() {
     goToLast,
     goToPage,
     metadata,
-    editForm,
-    createForm,
     conflicts,
     proceedWithConflictOverride,
     cancelConflictOverride,
@@ -61,9 +58,6 @@ export function AdminBookings() {
     handleVerifyRecurringGroup,
     openBookingDetail,
     openEditBooking,
-    setCreateRecurringDates,
-    setCreateRecurringPattern,
-    toast,
   } = useBookingsPage()
 
   if (loading) {
@@ -232,7 +226,7 @@ export function AdminBookings() {
       />
 
       {/* Booking Detail Modal */}
-      <BookingDetailModal
+      <BookingDetailSheet
         booking={state.selectedBooking}
         isOpen={state.isDetailOpen}
         onClose={() => dispatch({ type: 'CLOSE_DETAIL' })}

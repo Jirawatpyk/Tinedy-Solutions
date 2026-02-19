@@ -17,7 +17,7 @@
 
 import { useReducer, useCallback, useEffect } from 'react'
 import type { CustomerSearchResult } from '@/hooks/use-customer-search'
-import type { UnifiedServicePackage } from '@/lib/queries/package-queries'
+import type { ServicePackageV2WithTiers } from '@/lib/queries/package-queries'
 import type { PriceMode } from '@/types/booking'
 
 // ============================================================================
@@ -45,7 +45,7 @@ export interface WizardState {
 
   // Step 2: Service & Schedule
   package_v2_id: string | null
-  selectedPackage: UnifiedServicePackage | null
+  selectedPackage: ServicePackageV2WithTiers | null
   price_mode: PriceMode
   total_price: number
   custom_price: number | null
@@ -99,7 +99,7 @@ export type WizardAction =
   | { type: 'CLEAR_CUSTOMER' }
   | { type: 'SET_NEW_CUSTOMER'; isNewCustomer: boolean }
   | { type: 'UPDATE_NEW_CUSTOMER'; field: keyof NewCustomerFormData; value: string }
-  | { type: 'SELECT_PACKAGE'; package: UnifiedServicePackage | null }
+  | { type: 'SELECT_PACKAGE'; package: ServicePackageV2WithTiers | null }
   | { type: 'SET_PRICE_MODE'; mode: PriceMode }
   | { type: 'SET_TOTAL_PRICE'; price: number }
   | { type: 'SET_CUSTOM_PRICE'; price: number | null }
@@ -120,6 +120,7 @@ export type WizardAction =
   | { type: 'TOGGLE_RECURRING'; isRecurring: boolean }
   | { type: 'SET_RECURRING_DATES'; dates: string[] }
   | { type: 'SET_RECURRING_PATTERN'; pattern: 'auto_monthly' | 'manual' }
+  | { type: 'SET_VALIDATION_ERRORS'; errors: Partial<Record<string, string>> }
   | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
   | { type: 'RESET' }
 
@@ -368,6 +369,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           ...state,
           price_mode: 'custom',
           package_v2_id: null,
+          selectedPackage: null,
           total_price: 0,
           custom_price: null,
         }
@@ -489,6 +491,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'SET_RECURRING_PATTERN':
       return { ...state, recurringPattern: action.pattern }
+
+    case 'SET_VALIDATION_ERRORS':
+      return { ...state, validationErrors: action.errors }
 
     case 'SET_SUBMITTING':
       return { ...state, isSubmitting: action.isSubmitting }

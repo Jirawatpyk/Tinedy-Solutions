@@ -32,7 +32,8 @@ import {
   getPaymentStatusLabel,
 } from '@/components/common/StatusBadge'
 import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
-import { formatDate, formatBookingId } from '@/lib/utils'
+import { formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import {
   FileText,
@@ -51,6 +52,8 @@ import type { RecurringGroup } from '@/types/recurring-booking'
 export interface CustomerBooking {
   id: string
   booking_date: string
+  end_date?: string | null
+  job_name?: string | null
   start_time: string
   end_time: string
   status: string
@@ -337,16 +340,17 @@ const BookingHistorySection = memo(function BookingHistorySection({
                                 'N/A'}
                             </Badge>
                             <span className="truncate">
-                              {booking.service?.name ||
+                              {booking.job_name ||
+                                booking.service?.name ||
                                 booking.service_packages?.name ||
-                                'N/A'}
+                                'ไม่ระบุ'}
                             </span>
                           </span>
                         </div>
 
                         {/* 4. Date + Time */}
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          {formatDate(booking.booking_date)} &bull;{' '}
+                          {formatDateRange(booking.booking_date, booking.end_date)} &bull;{' '}
                           {formatTime(booking.start_time)} -{' '}
                           {booking.end_time
                             ? formatTime(booking.end_time)

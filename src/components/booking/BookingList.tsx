@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
-import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
+import { PriceMode } from '@/types/booking'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
@@ -213,16 +215,20 @@ function BookingListComponent({
                         </div>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
-                              {booking.service_packages?.service_type}
-                            </Badge>
+                            {booking.price_mode === PriceMode.Custom ? (
+                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">งานพิเศษ</Badge>
+                            ) : (
+                              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
+                                {booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type}
+                              </Badge>
+                            )}
                             <span className="truncate">
-                              {booking.service_packages?.name}
+                              {booking.job_name ?? booking.service_packages?.name ?? booking.service_packages_v2?.name}
                             </span>
                           </span>
                         </div>
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                          {formatDateRange(booking.booking_date, booking.end_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </div>
                         {booking.profiles && (
                           <p className="text-xs sm:text-sm text-tinedy-blue flex items-center gap-1">

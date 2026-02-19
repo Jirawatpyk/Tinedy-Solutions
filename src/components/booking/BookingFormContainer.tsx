@@ -59,7 +59,6 @@ export function BookingFormContainer({
       onOpenChange={onOpenChange}
       title="สร้างการจอง"
       size="md"
-      aria-label="สร้างการจอง"
     >
       <DashboardErrorBoundary
         fallback={

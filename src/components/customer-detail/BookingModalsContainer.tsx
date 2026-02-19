@@ -5,7 +5,7 @@ import type { Booking } from '@/types/booking'
 import { BookingFormContainer } from '@/components/booking/BookingFormContainer'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
-import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   Dialog,
@@ -189,7 +189,7 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
 
       {/* Booking Detail Modal */}
       {selectedBookingId && (
-        <BookingDetailModal
+        <BookingDetailSheet
           booking={bookings.find(b => b.id === selectedBookingId) ?? null}
           isOpen={isBookingDetailModalOpen}
           onClose={onCloseDetailModal}

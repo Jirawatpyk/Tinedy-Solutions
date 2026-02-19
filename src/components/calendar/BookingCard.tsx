@@ -12,6 +12,7 @@ import React from 'react'
 import { Clock, User, Briefcase, Users, AlertTriangle, Calendar, DollarSign, CreditCard } from 'lucide-react'
 import { formatTime } from '@/lib/booking-utils'
 import { formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
@@ -111,11 +112,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             <span className="text-xs text-muted-foreground truncate">
-              {new Date(booking.booking_date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
+              {formatDateRange(booking.booking_date, booking.end_date)}
             </span>
           </div>
           <span className="text-[10px] text-muted-foreground">
@@ -181,7 +178,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
         <div className="flex items-center gap-2">
           <Briefcase className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           <span className="truncate">
-            {booking.service_packages?.name || 'N/A'}
+            {booking.job_name ?? booking.service_packages?.name ?? booking.service_packages_v2?.name ?? 'N/A'}
           </span>
         </div>
 

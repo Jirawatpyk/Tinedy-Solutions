@@ -77,8 +77,11 @@ const createMockBooking = (overrides: Partial<Booking> = {}): Booking => ({
   team_id: null,
   notes: 'Test notes',
   payment_status: 'unpaid',
-  payment_method: null,
-  updated_at: '2025-10-28T10:00:00Z',
+  payment_method: undefined,
+  customers: null,
+  service_packages: null,
+  profiles: null,
+  teams: null,
   ...overrides,
 })
 

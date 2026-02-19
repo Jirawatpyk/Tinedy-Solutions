@@ -9,7 +9,13 @@ export interface BookingWithService {
   customer_id: string
   staff_id: string | null
   package_v2_id?: string | null
+  price_mode?: string | null
+  job_name?: string | null
   service_packages: {
+    name: string
+    service_type: string
+  } | null
+  service_packages_v2?: {
     name: string
     service_type: string
   } | null

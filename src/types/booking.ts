@@ -137,6 +137,7 @@ export interface BookingRecord {
   notes: string | null
   created_at?: string
   updated_at: string
+  deleted_at?: string | null
   // V2 Tiered Pricing Fields
   area_sqm?: number | null
   frequency?: 1 | 2 | 4 | 8 | null
@@ -247,7 +248,7 @@ export interface Booking {
   frequency?: 1 | 2 | 4 | 8 | null
   notes: string | null
   payment_status?: string
-  payment_method?: string
+  payment_method?: string | null
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
@@ -258,6 +259,7 @@ export interface Booking {
   end_date?: string | null
   job_name?: string | null
   custom_price?: number | null
+  price_mode?: PriceMode
   price_override?: boolean
   // Recurring Bookings Fields
   recurring_group_id?: string | null
@@ -296,7 +298,7 @@ export interface BookingBase {
   id: string
   status: string
   payment_status?: string
-  payment_method?: string
+  payment_method?: string | null
   total_price?: number
   amount_paid?: number
   payment_date?: string

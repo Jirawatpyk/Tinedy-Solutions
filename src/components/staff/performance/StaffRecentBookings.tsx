@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatTime, TEAMS_WITH_LEAD_ALIASED_QUERY } from '@/lib/booking-utils'
-import { formatDate, formatCurrency, formatBookingId } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
 import { useBookingDetailModal } from '@/hooks/use-booking-detail-modal'
-import { BookingDetailModal } from '@/pages/admin/booking-detail-modal'
+import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { BOOKING_STATUS_LABELS } from '@/constants/booking-status'
 import { supabase } from '@/lib/supabase'
@@ -122,6 +123,9 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
         .select(`
           id,
           booking_date,
+          end_date,
+          job_name,
+          price_mode,
           start_time,
           end_time,
           status,
@@ -339,11 +343,11 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
                     </span>
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                    {booking.service_packages?.name || 'Unknown Service'}
+                    {(booking as { job_name?: string | null }).job_name ?? booking.service_packages?.name ?? 'Unknown Service'}
                   </p>
                   <div className="flex items-center gap-1.5 sm:gap-2 mt-1 text-[10px] sm:text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    <span>{formatDate(booking.booking_date)}</span>
+                    <span>{formatDateRange(booking.booking_date, (booking as { end_date?: string | null }).end_date)}</span>
                     <span>•</span>
                     <span>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
                   </div>
@@ -363,7 +367,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
       </CardContent>
 
       {/* Booking Detail Modal */}
-      <BookingDetailModal {...modal.modalProps} />
+      <BookingDetailSheet {...modal.modalProps} />
 
       {/* Status Change Confirmation Dialog */}
       {modal.selectedBooking && modal.pendingStatusChange && (
