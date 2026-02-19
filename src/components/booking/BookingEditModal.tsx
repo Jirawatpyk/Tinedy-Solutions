@@ -359,9 +359,16 @@ export function BookingEditModal({
         {/* Conflict dialog */}
         <ConfirmDialog
           open={showConflictDialog}
-          onOpenChange={setShowConflictDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowConflictDialog(false)
+              setPendingUpdate(null)
+              clearConflicts()
+            }
+          }}
           title="Schedule Conflict Detected"
-          description="This booking conflicts with an existing one. Save anyway?"
+          description="A schedule conflict was detected for the selected staff or team."
+          variant="warning"
           confirmLabel="Save Anyway"
           cancelLabel="Cancel"
           onConfirm={() => {

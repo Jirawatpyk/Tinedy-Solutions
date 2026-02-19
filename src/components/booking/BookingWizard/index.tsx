@@ -7,6 +7,8 @@
  * - Calls validateFullState before final submit (RT7)
  * - Shows toast success/error messages
  * - A2: Wrapped in ErrorBoundary by BookingFormContainer
+ * - FM1-C: Conflict detection at submit (Step 4). Recurring: primary date
+ *   only, non-blocking warn. Unassigned bookings skip check (EC-C4).
  *
  * Props:
  * - userId: for localStorage mode preference (R5)
@@ -14,7 +16,7 @@
  * - onCancel: callback to close sheet
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,9 +28,13 @@ import {
 } from '@/components/ui/tooltip'
 import { useBookingWizard, validateFullState } from '@/hooks/use-booking-wizard'
 import { useCreateBookingMutation } from '@/hooks/use-create-booking-mutation'
+import type { BookingInsertData } from '@/hooks/use-create-booking-mutation'
 import { useQuery } from '@tanstack/react-query'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
+import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
+import { PriceMode } from '@/types/booking'
 import { StepIndicator } from './StepIndicator'
 import { Step1Customer } from './Step1Customer'
 import { Step2ServiceSchedule } from './Step2ServiceSchedule'
@@ -45,6 +51,10 @@ interface BookingWizardProps {
 export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: BookingWizardProps) {
   const { state, dispatch } = useBookingWizard({ userId })
   const mutation = useCreateBookingMutation()
+  const { checkConflicts, clearConflicts } = useConflictDetection()
+
+  const [showConflictDialog, setShowConflictDialog] = useState(false)
+  const [pendingSubmitData, setPendingSubmitData] = useState<BookingInsertData | null>(null)
 
   // Ref for step heading focus (accessibility: focus moves to h2 on step change)
   const stepHeadingRef = useRef<HTMLDivElement>(null)
@@ -61,6 +71,23 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
   const staffName = staffList.find((s) => s.id === state.staff_id)?.full_name
   const teamName = teams.find((t) => t.id === state.team_id)?.name
 
+  // Executes the booking mutation after validation and conflict checks pass.
+  async function doSubmit(bookingData: BookingInsertData) {
+    dispatch({ type: 'SET_SUBMITTING', isSubmitting: true })
+    try {
+      await mutation.mutateAsync(bookingData)
+      toast.success('Booking created successfully')
+      dispatch({ type: 'RESET' })
+      clearConflicts()
+      onSuccess?.()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to create booking'
+      toast.error(message)
+    } finally {
+      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
+    }
+  }
+
   async function handleSubmit() {
     // RT7: Full re-validate before submit
     const errors = validateFullState(state)
@@ -70,54 +97,68 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
       return
     }
 
-    dispatch({ type: 'SET_SUBMITTING', isSubmitting: true })
-
-    try {
-      await mutation.mutateAsync({
-        customer_id: state.customer?.id,
-        isNewCustomer: state.isNewCustomer,
-        newCustomerData: state.isNewCustomer
-          ? {
-              full_name: state.newCustomerData.full_name,
-              phone: state.newCustomerData.phone,
-              email: state.newCustomerData.email || undefined,
-            }
+    const bookingData: BookingInsertData = {
+      customer_id: state.customer?.id,
+      isNewCustomer: state.isNewCustomer,
+      newCustomerData: state.isNewCustomer
+        ? {
+            full_name: state.newCustomerData.full_name,
+            phone: state.newCustomerData.phone,
+            email: state.newCustomerData.email || undefined,
+          }
+        : undefined,
+      booking_date: state.booking_date,
+      end_date: state.end_date,
+      start_time: state.start_time,
+      end_time: state.end_time || undefined,
+      package_v2_id: state.package_v2_id,
+      price_mode: state.price_mode,
+      total_price:
+        state.price_mode === PriceMode.Package ? state.total_price : state.custom_price ?? 0,
+      custom_price: state.custom_price,
+      price_override: state.price_mode === PriceMode.Override,
+      job_name: state.job_name || null,
+      area_sqm: state.area_sqm,
+      frequency: state.frequency,
+      staff_id: state.staff_id,
+      team_id: state.team_id,
+      address: state.address,
+      city: state.city,
+      state: state.state,
+      zip_code: state.zip_code,
+      notes: state.notes || undefined,
+      recurring_dates:
+        state.isRecurring && state.recurringDates.length > 0
+          ? state.recurringDates
           : undefined,
-        booking_date: state.booking_date,
-        end_date: state.end_date,
-        start_time: state.start_time,
-        end_time: state.end_time || undefined,
-        package_v2_id: state.package_v2_id,
-        price_mode: state.price_mode,
-        total_price:
-          state.price_mode === 'package' ? state.total_price : state.custom_price ?? 0,
-        custom_price: state.custom_price,
-        price_override: state.price_mode === 'override',
-        job_name: state.job_name || null,
-        area_sqm: state.area_sqm,
-        frequency: state.frequency,
-        staff_id: state.staff_id,
-        team_id: state.team_id,
-        address: state.address,
-        city: state.city,
-        state: state.state,
-        zip_code: state.zip_code,
-        notes: state.notes || undefined,
-        recurring_dates:
-          state.isRecurring && state.recurringDates.length > 0
-            ? state.recurringDates
-            : undefined,
-        recurring_pattern: state.isRecurring ? state.recurringPattern : undefined,
-      })
+      recurring_pattern: state.isRecurring ? state.recurringPattern : undefined,
+    }
 
-      toast.success('Booking created successfully')
-      dispatch({ type: 'RESET' })
-      onSuccess?.()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to create booking'
-      toast.error(message)
-    } finally {
-      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
+    // FM1-C: Conflict check at submit time. Recurring → primary date only (non-blocking warn).
+    // EC-C4: Unassigned bookings skip this check inside useConflictDetection.
+    const conflicts = await checkConflicts({
+      staffId: state.staff_id,
+      teamId: state.team_id,
+      bookingDate: state.booking_date,
+      endDate: state.end_date,
+      startTime: state.start_time,
+      endTime: state.end_time,
+    })
+
+    if (conflicts.length > 0) {
+      setPendingSubmitData(bookingData)
+      setShowConflictDialog(true)
+      return
+    }
+
+    await doSubmit(bookingData)
+  }
+
+  function handleConflictDialogOpenChange(open: boolean) {
+    if (!open) {
+      setShowConflictDialog(false)
+      setPendingSubmitData(null)
+      clearConflicts()
     }
   }
 
@@ -197,6 +238,29 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
           </Button>
         )}
       </div>
+
+      {/* FM1-C: Schedule conflict warning — non-blocking, user can proceed */}
+      <ConfirmDialog
+        open={showConflictDialog}
+        onOpenChange={handleConflictDialogOpenChange}
+        title="Schedule Conflict Detected"
+        description="A schedule conflict was detected for the selected staff or team."
+        warningMessage={
+          state.isRecurring
+            ? 'Note: Only the first occurrence date was checked — other dates may also have conflicts.'
+            : undefined
+        }
+        variant="warning"
+        confirmLabel="Create Anyway"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          if (pendingSubmitData) {
+            await doSubmit(pendingSubmitData)
+          }
+          setShowConflictDialog(false)
+          setPendingSubmitData(null)
+        }}
+      />
     </div>
   )
 }
