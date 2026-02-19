@@ -41,7 +41,7 @@ import { DateRangePicker } from './BookingWizard/DateRangePicker'
 import { Step3Assignment } from './BookingWizard/Step3Assignment'
 import { PriceMode, BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import { getAllStatusOptions } from '@/lib/booking-utils'
+import { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
 
 interface BookingEditModalProps {
   open: boolean
@@ -323,8 +323,8 @@ export function BookingEditModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAllStatusOptions().map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  {getAvailableStatuses(booking?.status ?? status).map((s) => (
+                    <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
