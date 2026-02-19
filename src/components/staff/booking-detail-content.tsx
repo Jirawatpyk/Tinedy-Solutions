@@ -29,6 +29,7 @@ import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
 import { formatFullAddress, calculateDuration } from '@/lib/booking-utils'
+import { bookingDurationDays } from '@/lib/date-range-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { BookingTimelineSkeleton } from '@/components/staff/skeletons'
 import { useBookingReview, useBookingTeamMembers } from '@/hooks/use-booking-details'
@@ -82,7 +83,7 @@ export function BookingDetailContent({
   }, [booking.notes])
 
   // Data fetching hooks
-  const { review } = useBookingReview(booking.id, true)
+  const { review } = useBookingReview(booking.id, booking.status === BookingStatus.Completed)
   const { teamMembers } = useBookingTeamMembers(
     booking.team_id,
     booking.created_at,
@@ -148,8 +149,11 @@ export function BookingDetailContent({
   const canMarkCompleted = booking.status === BookingStatus.InProgress
   const hasNotesChanged = notes !== (booking.notes || '')
 
-  // Calculate duration string
-  const durationStr = calculateDuration(booking.start_time, booking.end_time)
+  // Calculate duration — multi-day shows "X วัน", single-day shows hours
+  const totalDays = bookingDurationDays({ booking_date: booking.booking_date, end_date: booking.end_date })
+  const durationStr = totalDays > 1
+    ? `${totalDays} วัน`
+    : calculateDuration(booking.start_time, booking.end_time)
 
   // Check if there are more details to show
   const hasTeamInfo = booking.team_id && booking.teams
@@ -166,6 +170,7 @@ export function BookingDetailContent({
           startTime={booking.start_time}
           endTime={booking.end_time}
           date={booking.booking_date}
+          endDate={booking.end_date}
           status={booking.status}
         />
 
@@ -177,7 +182,7 @@ export function BookingDetailContent({
 
         {/* Service Summary */}
         <BookingServiceSummary
-          serviceName={booking.service_packages?.name}
+          serviceName={booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name}
           duration={durationStr}
           price={booking.service_packages?.price}
           teamName={booking.teams?.name}

@@ -98,7 +98,7 @@ export const TodayAppointmentsList = ({
                 <SelectValue placeholder="Booking" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Booking</SelectItem>
+                <SelectItem value="all">All Bookings</SelectItem>
                 {Object.entries(BOOKING_STATUS_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}

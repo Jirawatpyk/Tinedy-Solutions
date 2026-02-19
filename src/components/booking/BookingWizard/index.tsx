@@ -129,7 +129,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
       <StepIndicator currentStep={state.step} />
 
       {/* Step content */}
-      <div className="flex-1 overflow-y-auto px-1 pb-4" ref={stepHeadingRef}>
+      <div className="flex-1 overflow-y-auto px-6 pb-4" ref={stepHeadingRef}>
         {state.step === 1 && <Step1Customer state={state} dispatch={dispatch} />}
         {state.step === 2 && <Step2ServiceSchedule state={state} dispatch={dispatch} />}
         {state.step === 3 && <Step3Assignment state={state} dispatch={dispatch} />}
@@ -144,7 +144,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex items-center justify-between gap-3 pt-4 border-t">
+      <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-6 border-t">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

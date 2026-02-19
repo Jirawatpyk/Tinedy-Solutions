@@ -38,10 +38,13 @@ export interface CalendarEvent {
   customer_phone: string
   customer_avatar: string | null
   service_name: string
+  service_type: string
   service_price: number
   service_duration: number
   notes: string | null
   booking_id: string
+  end_date?: string | null   // YYYY-MM-DD, null = single-day
+  job_name?: string | null   // Custom job description for price_mode='custom'
   address: string
   city: string
   state: string
@@ -85,6 +88,8 @@ interface BookingData {
   recurring_sequence: number | null
   recurring_total: number | null
   created_at: string // Added for membership period filtering
+  end_date?: string | null
+  job_name?: string | null
   customers: Array<{
     full_name: string
     phone: string
@@ -98,15 +103,19 @@ interface BookingData {
     name: string
     duration_minutes: number
     price: number
+    service_type: string
   }> | {
     name: string
     duration_minutes: number
     price: number
+    service_type: string
   } | null
   service_packages_v2?: Array<{
     name: string
+    service_type: string
   }> | {
     name: string
+    service_type: string
   } | null
   profiles: Array<{
     full_name: string
@@ -209,9 +218,9 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
   const startDate = new Date(booking.booking_date)
   startDate.setHours(startHours, startMinutes, 0, 0)
 
-  // Use end_time from booking
+  // Use end_time from booking — for multi-day bookings, end is on end_date (not booking_date)
   const [endHours, endMinutes] = booking.end_time.split(':').map(Number)
-  const endDate = new Date(booking.booking_date)
+  const endDate = new Date(`${booking.end_date || booking.booking_date}T00:00:00`)
   endDate.setHours(endHours, endMinutes, 0, 0)
 
   // Calculate actual duration
@@ -232,18 +241,21 @@ function transformToCalendarEvent(booking: BookingData): CalendarEvent {
 
   return {
     id: booking.id,
-    title: `${customer?.full_name || 'Unknown'} - ${servicePackage?.name || 'Unknown Service'}`,
+    title: `${customer?.full_name || 'Unknown'} - ${booking.job_name || servicePackage?.name || 'Unknown Service'}`,
     start: startDate,
     end: endDate,
     status: booking.status,
     customer_name: customer?.full_name || 'Unknown Customer',
     customer_phone: customer?.phone || '',
     customer_avatar: customer?.avatar_url || null,
-    service_name: servicePackage?.name || 'Unknown Service',
+    service_name: booking.job_name || servicePackage?.name || 'Unknown Service',
+    service_type: servicePackage?.service_type || 'cleaning',
     service_price: isServicePackageV1(servicePackage) ? servicePackage.price : 0,
     service_duration: actualDurationMinutes,
     notes: booking.notes,
     booking_id: booking.id,
+    end_date: booking.end_date ?? null,
+    job_name: booking.job_name ?? null,
     address: booking.address || '',
     city: booking.city || '',
     state: booking.state || '',
@@ -319,9 +331,11 @@ export async function fetchStaffCalendarEvents(
         recurring_sequence,
         recurring_total,
         created_at,
+        end_date,
+        job_name,
         customers (full_name, phone, avatar_url),
-        service_packages (name, duration_minutes, price),
-        service_packages_v2:package_v2_id (name),
+        service_packages (name, duration_minutes, price, service_type),
+        service_packages_v2:package_v2_id (name, service_type),
         profiles!bookings_staff_id_fkey (full_name),
         teams (
           id,

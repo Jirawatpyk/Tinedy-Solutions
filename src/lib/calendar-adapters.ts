@@ -10,6 +10,7 @@
  */
 
 import { format } from 'date-fns'
+import { getDatesBetween } from '@/lib/date-range-utils'
 import type { Booking } from '@/types/booking'
 import type { CalendarEvent } from '@/lib/queries/staff-calendar-queries'
 import type { StaffBooking } from '@/lib/queries/staff-bookings-queries'
@@ -41,6 +42,8 @@ export function calendarEventToBooking(event: CalendarEvent): Booking {
     staff_id: event.staff_id,
     team_id: event.team_id,
     booking_date: format(event.start, 'yyyy-MM-dd'),
+    end_date: event.end_date ?? null,
+    job_name: event.job_name ?? null,
     start_time: format(event.start, 'HH:mm:ss'),
     end_time: format(event.end, 'HH:mm:ss'),
     status: event.status,
@@ -61,7 +64,7 @@ export function calendarEventToBooking(event: CalendarEvent): Booking {
     },
     service_packages: {
       name: event.service_name,
-      service_type: 'cleaning',
+      service_type: event.service_type,
     },
     profiles: event.staff_name
       ? { full_name: event.staff_name }
@@ -99,18 +102,21 @@ export function bookingToCalendarEvent(booking: Booking): CalendarEvent {
 
   return {
     id: booking.id,
-    title: `${booking.customers?.full_name || 'Unknown'} - ${booking.service_packages?.name || 'Unknown Service'}`,
+    title: `${booking.customers?.full_name || 'Unknown'} - ${booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name ?? 'Unknown Service'}`,
     start: startDate,
     end: endDate,
     status: booking.status,
     customer_name: booking.customers?.full_name || 'Unknown Customer',
     customer_phone: booking.customers?.phone || '',
     customer_avatar: null,
-    service_name: booking.service_packages?.name || 'Unknown Service',
+    service_name: booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name ?? 'Unknown Service',
+    service_type: booking.service_packages?.service_type || 'cleaning',
     service_price: booking.total_price,
-    service_duration: 60, // Default duration
+    service_duration: 60, // Default duration (minutes) — Booking doesn't carry duration_minutes directly
     notes: booking.notes,
     booking_id: booking.id,
+    end_date: booking.end_date ?? null,
+    job_name: booking.job_name ?? null,
     address: booking.address || '',
     city: booking.city || '',
     state: booking.state || '',
@@ -148,16 +154,22 @@ export function bookingsToCalendarEvents(bookings: Booking[]): CalendarEvent[] {
 /**
  * Group bookings by date key (yyyy-MM-dd)
  *
- * Creates a Map for efficient lookup by date
+ * Multi-day bookings are indexed under every date they span,
+ * so a Feb 19–21 booking appears in Feb 19, Feb 20, and Feb 21 cells.
  */
 export function groupBookingsByDate(bookings: Booking[]): Map<string, Booking[]> {
   const map = new Map<string, Booking[]>()
 
   for (const booking of bookings) {
-    const dateKey = booking.booking_date
-    const existing = map.get(dateKey) || []
-    existing.push(booking)
-    map.set(dateKey, existing)
+    const dates = booking.end_date
+      ? getDatesBetween(booking.booking_date, booking.end_date)
+      : [booking.booking_date]
+
+    for (const dateKey of dates) {
+      const existing = map.get(dateKey) || []
+      existing.push(booking)
+      map.set(dateKey, existing)
+    }
   }
 
   return map
@@ -203,6 +215,8 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
   return {
     id: event.booking_id,
     booking_date: format(event.start, 'yyyy-MM-dd'),
+    end_date: event.end_date ?? null,
+    job_name: event.job_name ?? null,
     start_time: format(event.start, 'HH:mm:ss'), // Must be HH:mm:ss format
     end_time: format(event.end, 'HH:mm:ss'),     // Must be HH:mm:ss format
     status: event.status,
@@ -231,7 +245,7 @@ export function calendarEventToStaffBooking(event: CalendarEvent): StaffBooking 
     service_packages: {
       id: '',
       name: event.service_name,
-      service_type: 'cleaning',
+      service_type: event.service_type,
       duration_minutes: event.service_duration,
       price: event.service_price,
     },

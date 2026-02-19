@@ -9,7 +9,7 @@
  * UX: Switching Package→Custom shows confirm dialog if fields filled (spec req 1)
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils'
 import { PriceMode } from '@/types/booking'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
 import type { ServicePackageV2WithTiers } from '@/lib/queries/package-queries'
+import { calculatePricing } from '@/lib/pricing-utils'
 
 interface SmartPriceFieldProps {
   state: WizardState
@@ -52,8 +53,10 @@ export function SmartPriceField({
 }: SmartPriceFieldProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingMode, setPendingMode] = useState<typeof PriceMode[keyof typeof PriceMode] | null>(null)
+  const [areaOutOfRange, setAreaOutOfRange] = useState(false)
+  const [isCalculating, setIsCalculating] = useState(false)
 
-  const { price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, validationErrors } = state
+  const { price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, start_time, endTimeManuallySet, validationErrors } = state
 
   // Confirm before switching to custom if package already selected
   function handleModeChange(newMode: string) {
@@ -75,6 +78,58 @@ export function SmartPriceField({
   }
 
   const selectedPkg = packages.find((p) => p.id === package_v2_id)
+
+  // Auto-calculate price (and end_time) for tiered packages when area/frequency changes
+  useEffect(() => {
+    // M1: Only run for Package mode + tiered packages
+    if (price_mode !== PriceMode.Package || !package_v2_id || selectedPkg?.pricing_model !== 'tiered') {
+      setAreaOutOfRange(false)
+      setIsCalculating(false)
+      return
+    }
+    if (!area_sqm || area_sqm <= 0) {
+      dispatch({ type: 'SET_TOTAL_PRICE', price: 0 })
+      setAreaOutOfRange(false)
+      setIsCalculating(false)
+      return
+    }
+
+    // H1: Stale-result guard — ignore responses from superseded requests
+    let cancelled = false
+    setIsCalculating(true)
+
+    calculatePricing(package_v2_id, area_sqm, frequency ?? 1)
+      .then((result) => {
+        if (cancelled) return
+        if (result.found) {
+          dispatch({ type: 'SET_TOTAL_PRICE', price: result.price })
+          setAreaOutOfRange(false)
+          // Auto-calc end_time from tier's estimated_hours (R7: only if not manually set)
+          if (result.estimated_hours && !endTimeManuallySet && start_time) {
+            const durationMins = Math.round(result.estimated_hours * 60)
+            const [h, m] = start_time.split(':').map(Number)
+            const totalMins = h * 60 + m + durationMins
+            const endH = Math.floor(totalMins / 60) % 24
+            const endM = totalMins % 60
+            const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+            dispatch({ type: 'SET_END_TIME', time: endTime, manual: false })
+          }
+        } else {
+          dispatch({ type: 'SET_TOTAL_PRICE', price: 0 })
+          setAreaOutOfRange(true)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        dispatch({ type: 'SET_TOTAL_PRICE', price: 0 })
+        setAreaOutOfRange(false)
+      })
+      .finally(() => {
+        if (!cancelled) setIsCalculating(false)
+      })
+
+    return () => { cancelled = true }
+  }, [package_v2_id, area_sqm, frequency, price_mode, selectedPkg?.pricing_model, start_time, endTimeManuallySet])
 
   return (
     <div className="space-y-4">
@@ -122,7 +177,7 @@ export function SmartPriceField({
                 {packages.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>
                     <span className="font-medium">{pkg.name}</span>
-                    {pkg.base_price != null && (
+                    {pkg.pricing_model !== 'tiered' && pkg.base_price != null && (
                       <span className="ml-2 text-muted-foreground">
                         {formatCurrency(pkg.base_price)}
                       </span>
@@ -174,6 +229,11 @@ export function SmartPriceField({
               dispatch({ type: 'SET_AREA_SQM', area: val })
             }}
           />
+          {areaOutOfRange && (
+            <p className="text-xs text-destructive">
+              ⚠️ พื้นที่ {area_sqm} ตร.ม. เกินขอบเขตที่กำหนดใน package นี้
+            </p>
+          )}
         </div>
         {price_mode !== PriceMode.Custom && (
           <div className="space-y-1">
@@ -218,7 +278,7 @@ export function SmartPriceField({
             }}
             className={cn(validationErrors.custom_price && 'border-destructive')}
           />
-          {selectedPkg?.base_price != null && (
+          {selectedPkg?.pricing_model !== 'tiered' && selectedPkg?.base_price != null && (
             <p className="text-xs text-muted-foreground">
               ราคา package เดิม: {formatCurrency(selectedPkg.base_price)}
             </p>
@@ -263,9 +323,13 @@ export function SmartPriceField({
           {price_mode === PriceMode.Custom && (
             <Badge variant="secondary" className="text-xs">Custom</Badge>
           )}
-          <span className="text-lg font-bold text-tinedy-blue">
-            {formatCurrency(price_mode === PriceMode.Package ? total_price : custom_price ?? 0)}
-          </span>
+          {isCalculating ? (
+            <span className="text-sm text-muted-foreground animate-pulse">กำลังคำนวณ...</span>
+          ) : (
+            <span className="text-lg font-bold text-tinedy-blue">
+              {formatCurrency(price_mode === PriceMode.Package ? total_price : custom_price ?? 0)}
+            </span>
+          )}
         </div>
       </div>
 

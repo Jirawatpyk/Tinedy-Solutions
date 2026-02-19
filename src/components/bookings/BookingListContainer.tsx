@@ -114,7 +114,7 @@ function BookingListContainerComponent({
   restoreRecurringGroup,
   handleVerifyPayment,
   handleVerifyRecurringGroup,
-  showArchived,
+  showArchived: _showArchived,
   handleStatusChange,
   getStatusBadge,
   getPaymentStatusBadge,
@@ -160,7 +160,6 @@ function BookingListContainerComponent({
           onRestoreRecurringGroup={restoreRecurringGroup}
           onVerifyPayment={handleVerifyPayment}
           onVerifyRecurringGroup={handleVerifyRecurringGroup}
-          showArchived={showArchived}
           onStatusChange={handleStatusChange}
           formatTime={formatTime}
           getStatusBadge={getStatusBadge}

@@ -29,7 +29,7 @@ import type { BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { RecurringPattern as RecurringPatternValues } from '@/types/recurring-booking'
 import type { RecurringGroup, RecurringPattern } from '@/types/recurring-booking'
-import type { CustomerStats, CustomerBooking, CombinedItem } from '@/components/customer-detail'
+import type { CustomerStats, CustomerBooking, HistoryCombinedItem } from '@/components/customer-detail'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
 interface Team {
@@ -451,7 +451,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     })
   }, [bookings, state.searchQuery, state.statusFilter, state.paymentStatusFilter])
 
-  const combinedItems = useMemo((): CombinedItem[] => {
+  const combinedItems = useMemo((): HistoryCombinedItem[] => {
     const recurring: RecurringGroup[] = []
     const standalone: typeof filteredBookings = []
     const processedGroupIds = new Set<string>()
@@ -486,7 +486,7 @@ export function useCustomerDetail(customerId: string | undefined) {
       }
     })
 
-    const combined: CombinedItem[] = [
+    const combined: HistoryCombinedItem[] = [
       ...recurring.map(group => ({
         type: 'group' as const,
         data: group,
@@ -516,7 +516,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     let bookingsSoFar = 0
     const targetStart = (state.currentPage - 1) * itemsPerPage
     const targetEnd = targetStart + itemsPerPage
-    const result: CombinedItem[] = []
+    const result: HistoryCombinedItem[] = []
 
     for (const item of combinedItems) {
       const itemBookingsCount = item.type === 'group' ? (item.data as RecurringGroup).bookings.length : 1

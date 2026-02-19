@@ -18,6 +18,7 @@ import type { Booking } from '@/types/booking'
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_CARD_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { StatusBadgeEditor } from './StatusBadgeEditor'
 import { Badge } from '@/components/ui/badge'
+import { getBookingStatusLabel } from '@/components/common/StatusBadge'
 
 interface BookingCardProps {
   booking: Booking
@@ -57,8 +58,8 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
       })}`,
       `from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`,
       `for ${booking.customers?.full_name || 'Unknown customer'}`,
-      `service: ${booking.service_packages?.name || 'Unknown service'}`,
-      `status: ${booking.status.replace('_', ' ')}`
+      `service: ${booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name ?? 'Unknown service'}`,
+      `status: ${getBookingStatusLabel(booking.status)}`
     ]
 
     if (booking.payment_status) {
@@ -131,7 +132,7 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
 
           {/* Booking Status Badge with Inline Editor */}
           {onStatusChange && !disableStatusEdit && !isFinalState ? (
-            <div onClick={(e) => e.stopPropagation()} aria-label={`Change booking status from ${booking.status.replace('_', ' ')}`}>
+            <div onClick={(e) => e.stopPropagation()} aria-label={`Change booking status from ${getBookingStatusLabel(booking.status)}`}>
               <StatusBadgeEditor
                 currentStatus={booking.status}
                 onStatusChange={handleStatusChange}
@@ -142,9 +143,9 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
             <Badge
               variant="outline"
               className={`text-[10px] font-medium uppercase px-1.5 py-0.5 ${BOOKING_STATUS_COLORS[booking.status as keyof typeof BOOKING_STATUS_COLORS] || 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20'}`}
-              aria-label={`Booking status: ${booking.status.replace('_', ' ')}`}
+              aria-label={`Booking status: ${getBookingStatusLabel(booking.status)}`}
             >
-              {booking.status.replace('_', ' ')}
+              {getBookingStatusLabel(booking.status)}
             </Badge>
           )}
         </div>
@@ -208,10 +209,8 @@ const BookingCardComponent: React.FC<BookingCardProps> = ({
 
 // Memoize component เพื่อป้องกัน re-render ถ้า booking ไม่เปลี่ยน
 export const BookingCard = React.memo(BookingCardComponent, (prevProps, nextProps) => {
-  // เปรียบเทียบ booking id (ถ้า id เหมือนกันและ reference เหมือนกัน = ไม่ต้อง re-render)
   return (
-    prevProps.booking.id === nextProps.booking.id &&
-    prevProps.booking === nextProps.booking && // Reference equality check
+    prevProps.booking === nextProps.booking && // Reference equality (implies same id)
     prevProps.hasConflict === nextProps.hasConflict &&
     prevProps.conflictCount === nextProps.conflictCount &&
     prevProps.onStatusChange === nextProps.onStatusChange &&

@@ -7,20 +7,11 @@
  * - New customer panel: name, phone, email fields only
  */
 
-import { useState, useRef, useEffect } from 'react'
-import { Search, UserPlus, X, User } from 'lucide-react'
+import { useRef, useEffect, useCallback } from 'react'
+import { UserPlus, X, User } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useCustomerSearch } from '@/hooks/use-customer-search'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
@@ -32,9 +23,9 @@ interface Step1CustomerProps {
 
 export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
   const { customer, isNewCustomer, newCustomerData, validationErrors } = state
-  const [open, setOpen] = useState(false)
   const { customers, isLoading, search, setSearch } = useCustomerSearch()
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
 
   // Focus name input when new customer panel opens (M3: rAF is more reliable than setTimeout)
   useEffect(() => {
@@ -44,9 +35,28 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
     }
   }, [isNewCustomer])
 
+  // M4: Close dropdown on click-outside or Escape
+  const closeDropdown = useCallback(() => setSearch(''), [setSearch])
+  useEffect(() => {
+    if (search.length < 2) return
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        closeDropdown()
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeDropdown()
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [search.length, closeDropdown])
+
   function handleSelectCustomer(selected: (typeof customers)[0]) {
     dispatch({ type: 'SELECT_CUSTOMER', customer: selected })
-    setOpen(false)
     setSearch('')
   }
 
@@ -56,7 +66,6 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
     if (search && !newCustomerData.full_name) {
       dispatch({ type: 'UPDATE_NEW_CUSTOMER', field: 'full_name', value: search })
     }
-    setOpen(false)
     setSearch('')
   }
 
@@ -101,80 +110,59 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
     <div className="space-y-4">
       <h2 className="text-base font-semibold" tabIndex={-1}>ขั้นตอนที่ 1: เลือกลูกค้า</h2>
 
-      {/* Customer search Combobox */}
+      {/* Customer search — inline (no Popover portal to avoid Sheet event conflicts) */}
       {!isNewCustomer && (
-        <div className="space-y-1">
+        <div className="space-y-1" ref={searchContainerRef}>
           <Label className="text-sm">ค้นหาลูกค้า</Label>
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-start font-normal"
-              >
-                <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-muted-foreground">ค้นหาชื่อ, เบอร์, อีเมล...</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0" align="start">
-              <Command shouldFilter={false}>
-                <CommandInput
-                  placeholder="พิมพ์เพื่อค้นหา..."
-                  value={search}
-                  onValueChange={setSearch}
-                />
-                <CommandList>
-                  {isLoading && (
-                    <div className="py-3 text-center text-sm text-muted-foreground">
-                      กำลังค้นหา...
-                    </div>
-                  )}
+          <div className="relative">
+            <Input
+              placeholder="ค้นหาชื่อ, เบอร์, อีเมล..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pr-8"
+            />
+            {isLoading && (
+              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">...</span>
+            )}
+          </div>
 
-                  {/* EC-U1: Empty state with CTA */}
-                  {!isLoading && search.length >= 2 && customers.length === 0 && (
-                    <CommandEmpty>
-                      <div className="py-4 flex flex-col items-center gap-2">
-                        <p className="text-sm text-muted-foreground">ไม่พบลูกค้า "{search}"</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAddNew}
-                          className="gap-1"
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                          เพิ่มลูกค้าใหม่
-                        </Button>
-                      </div>
-                    </CommandEmpty>
-                  )}
+          {/* H3: Hint when only 1 char typed */}
+          {search.length === 1 && (
+            <p className="text-xs text-muted-foreground px-1">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา</p>
+          )}
 
-                  {!isLoading && search.length < 2 && (
-                    <div className="py-3 text-center text-xs text-muted-foreground">
-                      พิมพ์อย่างน้อย 2 ตัวอักษร
-                    </div>
-                  )}
+          {/* Results dropdown */}
+          {search.length >= 2 && (
+            <div className="border rounded-md bg-background shadow-sm">
+              {isLoading && (
+                <p className="py-3 text-center text-sm text-muted-foreground">กำลังค้นหา...</p>
+              )}
 
-                  {customers.length > 0 && (
-                    <CommandGroup heading="ลูกค้า">
-                      {customers.map((c) => (
-                        <CommandItem
-                          key={c.id}
-                          value={c.id}
-                          onSelect={() => handleSelectCustomer(c)}
-                        >
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-medium text-sm">{c.full_name}</span>
-                            <span className="text-xs text-muted-foreground">{c.phone}</span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+              {!isLoading && customers.length === 0 && (
+                <p className="py-3 text-center text-sm text-muted-foreground">
+                  ไม่พบลูกค้า "{search}"
+                </p>
+              )}
+
+              {customers.length > 0 && (
+                <ul className="max-h-48 overflow-y-auto py-1">
+                  {customers.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex flex-col min-w-0"
+                        onClick={() => handleSelectCustomer(c)}
+                      >
+                        <span className="font-medium text-sm">{c.full_name}</span>
+                        <span className="text-xs text-muted-foreground">{c.phone}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {validationErrors.customer && (
             <p className="text-xs text-destructive">{validationErrors.customer}</p>
           )}
@@ -197,7 +185,7 @@ export function Step1Customer({ state, dispatch }: Step1CustomerProps) {
         <Button
           variant="outline"
           className="w-full gap-2"
-          onClick={() => dispatch({ type: 'SET_NEW_CUSTOMER', isNewCustomer: true })}
+          onClick={handleAddNew}
         >
           <UserPlus className="h-4 w-4" />
           เพิ่มลูกค้าใหม่

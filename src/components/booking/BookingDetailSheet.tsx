@@ -137,7 +137,11 @@ export function BookingDetailSheet({
 
   // Fetch team members when expanded
   const fetchTeamMembers = useCallback(async () => {
-    if (!booking?.team_id || !booking?.created_at) return
+    if (!booking?.team_id) return
+    if (!booking?.created_at) {
+      console.warn('[BookingDetailSheet] Cannot fetch team members: booking.created_at is undefined', { bookingId: booking?.id })
+      return
+    }
 
     setLoadingTeamMembers(true)
     try {
@@ -324,8 +328,6 @@ export function BookingDetailSheet({
     }
   }
 
-  const handleClose = () => onClose()
-
   // ── Helpers ──────────────────────────────────────────────────────────────
   const isCustomMode = booking?.price_mode === PriceMode.Custom
   const isOverrideMode = booking?.price_mode === PriceMode.Override
@@ -369,7 +371,7 @@ export function BookingDetailSheet({
   return (
     <AppSheet
       open={isOpen}
-      onOpenChange={(open) => !open && handleClose()}
+      onOpenChange={(open) => !open && onClose()}
       title="รายละเอียดการจอง"
       size="md"
     >
@@ -412,7 +414,7 @@ export function BookingDetailSheet({
           </div>
 
           {/* ── Zone 2: Body (scrollable) ─────────────────────────────────── */}
-          <div className="flex-1 overflow-y-auto pb-20 px-4 py-4 space-y-5">
+          <div className="flex-1 overflow-y-auto pb-6 px-4 py-4 space-y-5">
 
             {/* Section 1: ลูกค้า */}
             <div className="space-y-2">
@@ -422,7 +424,6 @@ export function BookingDetailSheet({
               </div>
               <div className="flex items-start gap-3 pl-1">
                 <Avatar className="h-9 w-9 flex-shrink-0">
-                  <AvatarImage src={undefined} />
                   <AvatarFallback className="bg-tinedy-blue/10 text-tinedy-blue text-xs">
                     {booking.customers?.full_name?.slice(0, 2).toUpperCase() ?? 'N/A'}
                   </AvatarFallback>
@@ -724,9 +725,8 @@ export function BookingDetailSheet({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="cash">เงินสด</SelectItem>
-                          <SelectItem value="card">บัตรเครดิต</SelectItem>
-                          <SelectItem value="bank_transfer">โอนเงิน</SelectItem>
-                          <SelectItem value="line_pay">LINE Pay</SelectItem>
+                          <SelectItem value="credit_card">บัตรเครดิต</SelectItem>
+                          <SelectItem value="transfer">โอนเงิน</SelectItem>
                           <SelectItem value="promptpay">PromptPay</SelectItem>
                         </SelectContent>
                       </Select>

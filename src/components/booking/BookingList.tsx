@@ -49,7 +49,6 @@ interface BookingListProps {
   onVerifyPayment?: (bookingId: string) => void
   /** Verify payment for entire recurring group */
   onVerifyRecurringGroup?: (recurringGroupId: string) => void
-  showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
   getStatusBadge: (status: string) => React.ReactElement
@@ -92,7 +91,6 @@ function BookingListComponent({
   onRestoreRecurringGroup,
   onVerifyPayment,
   onVerifyRecurringGroup,
-  showArchived: _showArchived,
   onStatusChange,
   formatTime,
   getStatusBadge,
@@ -406,7 +404,11 @@ export const BookingList = React.memo(BookingListComponent, (prevProps, nextProp
     prevProps.currentPage === nextProps.currentPage &&
     prevProps.totalPages === nextProps.totalPages &&
     prevProps.itemsPerPage === nextProps.itemsPerPage &&
-    prevProps.metadata === nextProps.metadata
+    prevProps.metadata === nextProps.metadata &&
+    prevProps.onStatusChange === nextProps.onStatusChange &&
+    prevProps.onDeleteBooking === nextProps.onDeleteBooking &&
+    prevProps.onBookingClick === nextProps.onBookingClick &&
+    prevProps.onToggleSelect === nextProps.onToggleSelect
   )
 })
 
