@@ -380,7 +380,7 @@ export function BookingDetailSheet({
       ) : (
         <div className="flex flex-col h-full">
           {/* ── Zone 1: Hero Band (sticky, no scroll) ─────────────────────── */}
-          <div className="flex-shrink-0 border-b bg-background px-4 py-3 max-h-[30dvh] overflow-hidden space-y-2">
+          <div className="flex-shrink-0 border-b bg-background px-4 py-2 max-h-[30dvh] overflow-hidden space-y-2">
             {/* Row 1: Date range + time + multi-day badge */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
               <Clock className="h-3.5 w-3.5 flex-shrink-0" />

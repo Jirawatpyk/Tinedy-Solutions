@@ -78,7 +78,7 @@ export function ResponsiveSheet({
           </div>
         )}
         {(title || description) && (
-          <SheetHeader className={cn('px-6 pb-4 flex-shrink-0', !isMobile && 'pt-6', isMobile && 'text-center')}>
+          <SheetHeader className={cn('px-6 pb-1 flex-shrink-0', !isMobile && 'pt-3', isMobile && 'text-center')}>
             {title && (
               <SheetTitle className={cn(icon && 'flex items-center gap-2', isMobile && 'justify-center')}>
                 {icon}
