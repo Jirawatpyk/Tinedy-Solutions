@@ -349,12 +349,13 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     // ---- Step 2: Service & Schedule ----
     case 'SELECT_PACKAGE': {
       const pkg = action.package
+      // Preserve Override mode when clearing package — don't fall back to Package
       if (!pkg) {
         return {
           ...state,
           package_v2_id: null,
           selectedPackage: null,
-          price_mode: PriceMode.Package,
+          price_mode: state.price_mode === PriceMode.Override ? PriceMode.Override : PriceMode.Package,
           total_price: 0,
         }
       }
@@ -364,14 +365,16 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ? state.end_time
         : calcEndTime(state.start_time, pkg.duration_minutes)
 
+      // Preserve Override mode — don't force back to Package
+      const isOverride = state.price_mode === PriceMode.Override
       return {
         ...state,
         package_v2_id: pkg.id,
         selectedPackage: pkg,
-        price_mode: PriceMode.Package,
-        total_price: pkg.base_price ?? 0,
+        price_mode: isOverride ? PriceMode.Override : PriceMode.Package,
+        total_price: isOverride ? state.total_price : (pkg.base_price ?? 0),
         custom_price: null,
-        price_override: false,
+        price_override: isOverride,
         end_time: newEndTime,
       }
     }

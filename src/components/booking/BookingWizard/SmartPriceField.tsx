@@ -81,8 +81,10 @@ export function SmartPriceField({
 
   // Auto-calculate price (and end_time) for tiered packages when area/frequency changes
   useEffect(() => {
-    // M1: Only run for Package mode + tiered packages
-    if (price_mode !== PriceMode.Package || !package_v2_id || selectedPkg?.pricing_model !== 'tiered') {
+    // M1: Run for Package + Override modes with tiered packages
+    // Override also needs end_time auto-calc from tier's estimated_hours
+    const isPackageOrOverride = price_mode === PriceMode.Package || price_mode === PriceMode.Override
+    if (!isPackageOrOverride || !package_v2_id || selectedPkg?.pricing_model !== 'tiered') {
       setAreaOutOfRange(false)
       setIsCalculating(false)
       return
@@ -102,7 +104,10 @@ export function SmartPriceField({
       .then((result) => {
         if (cancelled) return
         if (result.found) {
-          dispatch({ type: 'SET_TOTAL_PRICE', price: result.price })
+          // Override mode: don't overwrite the admin's manually set price
+          if (price_mode !== PriceMode.Override) {
+            dispatch({ type: 'SET_TOTAL_PRICE', price: result.price })
+          }
           setAreaOutOfRange(false)
           // Auto-calc end_time from tier's estimated_hours (R7: only if not manually set)
           if (result.estimated_hours && !endTimeManuallySet && start_time) {
