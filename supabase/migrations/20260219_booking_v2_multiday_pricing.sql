@@ -2,12 +2,14 @@
 -- Created: 2026-02-19
 -- Story: S-01
 
--- Multi-day booking support
+-- Multi-day booking support + V2 pricing fields (S-01 + G2)
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS end_date DATE,
   ADD COLUMN IF NOT EXISTS job_name TEXT,
   ADD COLUMN IF NOT EXISTS custom_price DECIMAL(10,2),
-  ADD COLUMN IF NOT EXISTS price_override BOOLEAN NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS price_override BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS price_mode TEXT NOT NULL DEFAULT 'package'
+    CHECK (price_mode IN ('package', 'override', 'custom'));
 
 -- Constraint: end_date must be >= booking_date
 ALTER TABLE bookings

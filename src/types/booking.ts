@@ -153,6 +153,7 @@ export interface BookingRecord {
   end_date?: string | null          // YYYY-MM-DD, null = single-day booking
   job_name?: string | null          // Custom job description (required when price_mode = 'custom')
   custom_price?: number | null      // Manual price when price_mode = 'override' or 'custom'
+  price_mode?: PriceMode            // How total_price is calculated
   price_override?: boolean          // true when admin manually changed auto-calculated price
   // Team Earnings Calculation
   team_member_count?: number | null

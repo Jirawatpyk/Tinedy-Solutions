@@ -3,23 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BookingDetailModal } from './booking-detail-modal'
-import { BookingCreateModal, BookingEditModal } from '@/components/booking'
-import { StaffAvailabilityModal } from '@/components/booking/staff-availability-modal'
+import { BookingFormContainer } from '@/components/booking/BookingFormContainer'
+import { BookingEditModal } from '@/components/booking/BookingEditModal'
 import { CalendarCell } from '@/components/calendar/CalendarCell'
 import { BookingListSidebar } from '@/components/calendar/BookingListSidebar'
 import { CalendarFilters } from '@/components/calendar/filters/CalendarFilters'
 import { MobileCalendar } from '@/components/calendar/MobileCalendar'
 import { CalendarErrorBoundary } from '@/components/calendar/CalendarErrorBoundary'
-import type { PackageSelectionData } from '@/components/service-packages'
-import type { RecurringPattern } from '@/types/recurring-booking'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { BookingFormState } from '@/hooks/use-booking-form'
-import { useServicePackages } from '@/hooks/use-service-packages'
-import { useStaffList } from '@/hooks/use-staff'
-import { useTeamsList } from '@/hooks/use-teams'
 import { useCalendarData } from '@/hooks/calendar'
-import { useToast } from '@/hooks/use-toast'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import {
   ChevronLeft,
@@ -30,9 +23,8 @@ import { format } from 'date-fns'
 import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminCalendar() {
-  // ========== Calendar Data Hook (replaces 20+ useState calls) ==========
+  // ========== Calendar Data Hook ==========
   const calendar = useCalendarData()
-  const { toast } = useToast()
 
   // ========== Create bookingsByDate Map for Mobile Calendar ==========
   const bookingsByDate = useMemo(() => {
@@ -47,77 +39,12 @@ export function AdminCalendar() {
     return map
   }, [calendar.bookingData.bookings])
 
-  // ========== Local Modal States (NOT in hook - UI-only) ==========
+  // ========== Local Modal States ==========
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedCreateDate, setSelectedCreateDate] = useState<string>('')
-  const [createAssignmentType, setCreateAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [createFormData, setCreateFormData] = useState<BookingFormState>({})
-  const [isCreateAvailabilityOpen, setIsCreateAvailabilityOpen] = useState(false)
-
-  const [editAssignmentType, setEditAssignmentType] = useState<'staff' | 'team' | 'none'>('none')
-  const [editFormData, setEditFormData] = useState<BookingFormState>({})
-  const [isEditAvailabilityOpen, setIsEditAvailabilityOpen] = useState(false)
-
-  // Package Selection State
-  const [createPackageSelection, setCreatePackageSelection] = useState<PackageSelectionData | null>(null)
-  const [editPackageSelection, setEditPackageSelection] = useState<PackageSelectionData | null>(null)
-
-  // Recurring Bookings State
-  const [createRecurringDates, setCreateRecurringDates] = useState<string[]>([])
-  const [createRecurringPattern, setCreateRecurringPattern] = useState<RecurringPattern>('auto-monthly' as RecurringPattern)
-
-  // ========== External Data (not from calendar hook) ==========
-  const { packages: servicePackages } = useServicePackages()
-  const { staffList } = useStaffList({ role: 'staff', enableRealtime: false })
-  const { teamsList: teams } = useTeamsList({ enableRealtime: false })
-
-  // ========== Helper Functions (keep local - not in hooks) ==========
-
-  // Calculate end time from start time and duration
-  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-    if (!startTime) return ''
-    const [hours, minutes] = startTime.split(':').map(Number)
-    const totalMinutes = hours * 60 + minutes + durationMinutes
-    const endHours = Math.floor(totalMinutes / 60) % 24
-    const endMinutes = totalMinutes % 60
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
-  }
-
-  // Local Form Helpers (for modal components)
-  const createForm = {
-    formData: createFormData,
-    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
-      setCreateFormData((prev: BookingFormState) => ({ ...prev, [field]: value }))
-    },
-    setValues: (values: Partial<BookingFormState>) => {
-      setCreateFormData((prev: BookingFormState) => ({ ...prev, ...values }))
-    },
-    reset: () => {
-      setCreateFormData({})
-      setCreateAssignmentType('none')
-    }
-  }
-
-  const editForm = {
-    formData: editFormData,
-    handleChange: <K extends keyof BookingFormState>(field: K, value: BookingFormState[K]) => {
-      setEditFormData((prev: BookingFormState) => ({ ...prev, [field]: value }))
-    },
-    setValues: (values: Partial<BookingFormState>) => {
-      setEditFormData((prev: BookingFormState) => ({ ...prev, ...values }))
-    },
-    reset: () => {
-      setEditFormData({})
-      setEditAssignmentType('none')
-    }
-  }
 
   // ========== Modal Handlers (keep local - open/close modals) ==========
 
-  const handleCreateBooking = (date: Date) => {
-    const formattedDate = format(date, 'yyyy-MM-dd')
-    setSelectedCreateDate(formattedDate)
-    setCreateFormData({ booking_date: formattedDate })
+  const handleCreateBooking = (_date: Date) => {
     setIsCreateOpen(true)
   }
 
@@ -127,72 +54,6 @@ export function AdminCalendar() {
   }
 
   const handleEditBooking = (booking: Booking) => {
-    // Populate edit form with booking data
-    setEditFormData({
-      booking_date: booking.booking_date,
-      start_time: booking.start_time,
-      end_time: booking.end_time,
-      address: booking.address,
-      city: booking.city,
-      state: booking.state,
-      zip_code: booking.zip_code,
-      notes: booking.notes || undefined,
-      total_price: booking.total_price,
-      staff_id: booking.staff_id || '',
-      team_id: booking.team_id || '',
-      status: booking.status,
-    })
-
-    // Set assignment type based on booking data
-    if (booking.staff_id) {
-      setEditAssignmentType('staff')
-    } else if (booking.team_id) {
-      setEditAssignmentType('team')
-    } else {
-      setEditAssignmentType('none')
-    }
-
-    // Set package selection for PackageSelector component
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ('package_v2_id' in booking && (booking as any).package_v2_id) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const packageId = (booking as any).package_v2_id
-
-      // หา package จาก unified packages (รวม V1 + V2 แล้ว)
-      const pkg = servicePackages.find(p => p.id === packageId)
-
-      if (pkg) {
-        // Check if this is a V2 Tiered Pricing package
-        const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (isTiered && 'area_sqm' in booking && 'frequency' in booking && (booking as any).area_sqm && (booking as any).frequency) {
-          // V2 Tiered Pricing - restore area and frequency
-          setEditPackageSelection({
-            packageId: pkg.id,
-            pricingModel: 'tiered',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            areaSqm: Number((booking as any).area_sqm) || 0,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            frequency: ((booking as any).frequency as 1 | 2 | 4 | 8) || 1,
-            price: booking.total_price || 0,
-            requiredStaff: 1, // Will be recalculated by PackageSelector
-            packageName: pkg.name,
-          })
-        } else {
-          // Fixed Pricing (V1 หรือ V2)
-          setEditPackageSelection({
-            packageId: pkg.id,
-            pricingModel: 'fixed',
-            price: Number(pkg.base_price || booking.total_price || 0),
-            requiredStaff: 1,
-            packageName: pkg.name,
-            estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
-          })
-        }
-      }
-    }
-
     calendar.modalControls.setSelectedBooking(booking)
     calendar.modalControls.setIsEditOpen(true)
     calendar.modalControls.setIsDetailOpen(false)
@@ -489,193 +350,23 @@ export function AdminCalendar() {
       />
 
       {/* Create Booking Modal */}
-      <BookingCreateModal
-        isOpen={isCreateOpen && !isCreateAvailabilityOpen}
-        onClose={() => {
-          setIsCreateOpen(false)
-          setSelectedCreateDate('')
-          setCreatePackageSelection(null)
-          setCreateRecurringDates([])
-          createForm.reset()
-        }}
+      <BookingFormContainer
+        open={isCreateOpen}
+        onOpenChange={(open) => { if (!open) setIsCreateOpen(false) }}
         onSuccess={() => {
           calendar.bookingData.refetchBookings()
-          setCreatePackageSelection(null)
-          setCreateRecurringDates([])
         }}
-        servicePackages={servicePackages}
-        staffMembers={staffList}
-        teams={teams}
-        onOpenAvailabilityModal={() => {
-          setIsCreateAvailabilityOpen(true)
-        }}
-        onBeforeOpenAvailability={(formData) => {
-          // Sync form data from BookingCreateModal to createForm before opening availability modal
-          createForm.setValues({
-            booking_date: formData.booking_date || '',
-            start_time: formData.start_time || '',
-            end_time: formData.end_time || '',
-            package_v2_id: formData.package_v2_id || '',
-            staff_id: formData.staff_id || '',
-            team_id: formData.team_id || '',
-            total_price: formData.total_price || 0,
-            area_sqm: formData.area_sqm || null,
-            frequency: formData.frequency || null,
-          })
-        }}
-        assignmentType={createAssignmentType}
-        setAssignmentType={setCreateAssignmentType}
-        calculateEndTime={calculateEndTime}
-        packageSelection={createPackageSelection}
-        setPackageSelection={setCreatePackageSelection}
-        defaultDate={selectedCreateDate}
-        defaultStaffId={createForm.formData.staff_id}
-        defaultTeamId={createForm.formData.team_id}
-        recurringDates={createRecurringDates}
-        setRecurringDates={setCreateRecurringDates}
-        recurringPattern={createRecurringPattern}
-        setRecurringPattern={setCreateRecurringPattern}
       />
 
       {/* Edit Booking Modal */}
       {calendar.modalControls.selectedBooking && (
         <BookingEditModal
-          isOpen={calendar.modalControls.isEditOpen && !isEditAvailabilityOpen}
-          onClose={() => {
-            calendar.modalControls.setIsEditOpen(false)
-            editForm.reset()
-          }}
+          open={calendar.modalControls.isEditOpen}
+          onOpenChange={(open) => { if (!open) calendar.modalControls.setIsEditOpen(false) }}
           booking={calendar.modalControls.selectedBooking as Booking}
           onSuccess={() => {
             calendar.bookingData.refetchBookings()
-            setEditPackageSelection(null) // Clear selection after success
           }}
-          servicePackages={servicePackages}
-          staffMembers={staffList}
-          teams={teams}
-          onOpenAvailabilityModal={() => {
-            setIsEditAvailabilityOpen(true)
-          }}
-          onBeforeOpenAvailability={(formData) => {
-            // Sync form data from BookingEditModal to editForm before opening availability modal
-            editForm.setValues({
-              booking_date: formData.booking_date || '',
-              start_time: formData.start_time || '',
-              end_time: formData.end_time || '',
-              package_v2_id: formData.package_v2_id || '',
-              staff_id: formData.staff_id || '',
-              team_id: formData.team_id || '',
-              total_price: formData.total_price || 0,
-              area_sqm: formData.area_sqm || null,
-              frequency: formData.frequency || null,
-            })
-          }}
-          editForm={editForm}
-          assignmentType={editAssignmentType}
-          onAssignmentTypeChange={setEditAssignmentType}
-          calculateEndTime={calculateEndTime}
-          packageSelection={editPackageSelection}
-          setPackageSelection={setEditPackageSelection}
-          defaultStaffId={editForm.formData.staff_id}
-          defaultTeamId={editForm.formData.team_id}
-        />
-      )}
-
-      {/* Staff Availability Modal - Create */}
-      {createFormData.package_v2_id && createFormData.booking_date && createFormData.start_time && (
-        <StaffAvailabilityModal
-          isOpen={isCreateAvailabilityOpen}
-          onClose={() => {
-            setIsCreateAvailabilityOpen(false)
-            setIsCreateOpen(true)
-          }}
-          assignmentType={createAssignmentType === 'staff' ? 'individual' : 'team'}
-          onSelectStaff={(staffId) => {
-            createForm.handleChange('staff_id', staffId)
-            createForm.handleChange('team_id', '') // Clear team when staff is selected
-            setIsCreateAvailabilityOpen(false)
-            setIsCreateOpen(true)
-            toast({
-              title: 'Staff Selected',
-              description: 'Staff member has been assigned to the booking',
-            })
-          }}
-          onSelectTeam={(teamId) => {
-            createForm.handleChange('team_id', teamId)
-            createForm.handleChange('staff_id', '') // Clear staff when team is selected
-            setIsCreateAvailabilityOpen(false)
-            setIsCreateOpen(true)
-            toast({
-              title: 'Team Selected',
-              description: 'Team has been assigned to the booking',
-            })
-          }}
-          date={createRecurringDates.length === 0 ? (createFormData.booking_date || '') : undefined}
-          dates={createRecurringDates.length > 0 ? createRecurringDates : undefined}
-          startTime={createFormData.start_time || ''}
-          endTime={
-            createFormData.package_v2_id && createFormData.start_time
-              ? calculateEndTime(
-                  createFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === createFormData.package_v2_id)?.duration_minutes || 0
-                )
-              : createFormData.end_time || ''
-          }
-          servicePackageId={createFormData.package_v2_id || ''}
-          servicePackageName={
-            servicePackages.find(pkg => pkg.id === createFormData.package_v2_id)?.name ||
-            createPackageSelection?.packageName
-          }
-        />
-      )}
-
-      {/* Staff Availability Modal - Edit */}
-      {editFormData.package_v2_id && editFormData.booking_date && editFormData.start_time && (
-        <StaffAvailabilityModal
-          isOpen={isEditAvailabilityOpen}
-          onClose={() => {
-            setIsEditAvailabilityOpen(false)
-            calendar.modalControls.setIsEditOpen(true)
-          }}
-          assignmentType={editAssignmentType === 'staff' ? 'individual' : 'team'}
-          onSelectStaff={(staffId) => {
-            editForm.handleChange('staff_id', staffId)
-            editForm.handleChange('team_id', '') // Clear team when staff is selected
-            setIsEditAvailabilityOpen(false)
-            calendar.modalControls.setIsEditOpen(true)
-            toast({
-              title: 'Staff Selected',
-              description: 'Staff member has been assigned to the booking',
-            })
-          }}
-          onSelectTeam={(teamId) => {
-            editForm.handleChange('team_id', teamId)
-            editForm.handleChange('staff_id', '') // Clear staff when team is selected
-            setIsEditAvailabilityOpen(false)
-            calendar.modalControls.setIsEditOpen(true)
-            toast({
-              title: 'Team Selected',
-              description: 'Team has been assigned to the booking',
-            })
-          }}
-          date={editFormData.booking_date || ''}
-          startTime={editFormData.start_time || ''}
-          endTime={
-            editFormData.package_v2_id && editFormData.start_time
-              ? calculateEndTime(
-                  editFormData.start_time,
-                  servicePackages.find(pkg => pkg.id === editFormData.package_v2_id)?.duration_minutes || 0
-                )
-              : editFormData.end_time || ''
-          }
-          servicePackageId={editFormData.package_v2_id || ''}
-          servicePackageName={
-            servicePackages.find(pkg => pkg.id === editFormData.package_v2_id)?.name ||
-            editPackageSelection?.packageName
-          }
-          currentAssignedStaffId={editFormData.staff_id}
-          currentAssignedTeamId={editFormData.team_id}
-          excludeBookingId={calendar.modalControls.selectedBooking?.id}
         />
       )}
 

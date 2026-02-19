@@ -217,24 +217,6 @@ export function AdminBookings() {
         isDialogOpen={state.isDialogOpen}
         onCloseDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: false })}
         onSuccess={refresh}
-        servicePackages={servicePackages}
-        staffList={staffList}
-        teams={teams}
-        createForm={createForm}
-        createAssignmentType={state.createAssignmentType}
-        setCreateAssignmentType={(t) => dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: t })}
-        createPackageSelection={state.createPackageSelection}
-        setCreatePackageSelection={(s) => dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: s })}
-        createRecurringDates={state.createRecurringDates}
-        setCreateRecurringDates={setCreateRecurringDates}
-        createRecurringPattern={state.createRecurringPattern}
-        setCreateRecurringPattern={setCreateRecurringPattern}
-        isAvailabilityModalOpen={state.isAvailabilityModalOpen}
-        onCloseAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: false })}
-        onOpenAvailability={() => dispatch({ type: 'SET_AVAILABILITY_MODAL', payload: true })}
-        onReopenDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}
-        calculateEndTime={calculateEndTime}
-        toast={toast}
       />
 
       {/* Filters */}
@@ -280,25 +262,6 @@ export function AdminBookings() {
         onCloseEdit={() => dispatch({ type: 'SET_EDIT_OPEN', payload: false })}
         onSuccess={refresh}
         selectedBooking={state.selectedBooking}
-        servicePackages={servicePackages}
-        staffList={staffList}
-        teams={teams}
-        editForm={editForm}
-        editAssignmentType={state.editAssignmentType}
-        setEditAssignmentType={(t) => dispatch({ type: 'SET_EDIT_ASSIGNMENT_TYPE', payload: t })}
-        editPackageSelection={state.editPackageSelection}
-        setEditPackageSelection={(s) => dispatch({ type: 'SET_EDIT_PACKAGE_SELECTION', payload: s })}
-        isEditAvailabilityModalOpen={state.isEditAvailabilityModalOpen}
-        onCloseEditAvailability={() => {
-          dispatch({ type: 'SET_EDIT_AVAILABILITY_MODAL', payload: false })
-          dispatch({ type: 'SET_EDIT_OPEN', payload: true })
-        }}
-        onOpenEditAvailability={() => {
-          dispatch({ type: 'SET_EDIT_OPEN', payload: false })
-          dispatch({ type: 'SET_EDIT_AVAILABILITY_MODAL', payload: true })
-        }}
-        calculateEndTime={calculateEndTime}
-        toast={toast}
       />
 
       {/* Status Change Confirmation Dialog */}

@@ -393,8 +393,9 @@ export async function fetchStaffBookingsToday(
     `)
     // T2.4: Multi-day fix — a booking is "today" if booking_date <= today AND effectiveEndDate >= today
     // This catches multi-day bookings started on a previous day that are still running today
+    // Security: todayStr is derived from new Date() (server-controlled) — not user input
     .lte('booking_date', todayStr)
-    .or(`end_date.is.null.and.booking_date.gte.${todayStr},end_date.gte.${todayStr}`)
+    .or(`and(end_date.is.null,booking_date.gte.${todayStr}),end_date.gte.${todayStr}`)
     .is('deleted_at', null) // Exclude archived bookings
     .order('start_time', { ascending: true })
 

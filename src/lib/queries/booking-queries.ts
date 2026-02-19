@@ -120,7 +120,7 @@ export async function fetchBookingsByDateRange(
     // A booking overlaps [startDate, endDate] if:
     //   booking_date <= endDate AND (end_date IS NULL ? booking_date : end_date) >= startDate
     .lte('booking_date', endDate)
-    .or(`end_date.is.null.and.booking_date.gte.${startDate},end_date.gte.${startDate}`)
+    .or(`and(end_date.is.null,booking_date.gte.${startDate}),end_date.gte.${startDate}`)
     .order('booking_date')
     .order('start_time')
 

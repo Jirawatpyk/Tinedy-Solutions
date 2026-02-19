@@ -60,6 +60,9 @@ function formatThaiDate(dateStr: string, includeYear = false): string {
  * formatDateRange('2026-12-31', '2027-01-01')     // "31 ธ.ค. – 1 ม.ค. 2027"
  */
 export function formatDateRange(start: string, end: string | null | undefined): string {
+  // Defensive: empty start string → return empty (should not happen with proper DB data)
+  if (!start) return ''
+
   // Single day: no end_date or end_date equals start
   if (!end || end === start) {
     return formatThaiDate(start)

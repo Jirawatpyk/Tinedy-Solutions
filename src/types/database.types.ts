@@ -134,6 +134,7 @@ export type Database = {
           total_price: number
           job_name: string | null
           custom_price: number | null
+          price_mode: 'package' | 'override' | 'custom'
           price_override: boolean
           notes: string | null
           address: string
@@ -156,6 +157,7 @@ export type Database = {
           total_price: number
           job_name?: string | null
           custom_price?: number | null
+          price_mode?: 'package' | 'override' | 'custom'
           price_override?: boolean
           notes?: string | null
           address: string
@@ -178,6 +180,7 @@ export type Database = {
           total_price?: number
           job_name?: string | null
           custom_price?: number | null
+          price_mode?: 'package' | 'override' | 'custom'
           price_override?: boolean
           notes?: string | null
           address?: string
