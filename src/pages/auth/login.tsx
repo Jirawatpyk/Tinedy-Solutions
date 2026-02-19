@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
 import logoVertical from '@/assets/logo/logo-vertical.svg'
 import { loginSchema, type LoginFormData } from '@/schemas'
@@ -45,8 +45,6 @@ export function LoginPage() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { toast } = useToast()
-
   const RATE_LIMIT_MS = 2000 // 2 seconds between attempts
 
   // React Hook Form with Zod validation
@@ -63,10 +61,8 @@ export function LoginPage() {
     // Rate limiting check
     const now = Date.now()
     if (now - lastAttempt < RATE_LIMIT_MS) {
-      toast({
-        title: 'Please wait',
+      toast.error('Please wait', {
         description: 'Please wait a moment before trying again',
-        variant: 'destructive',
       })
       return
     }
@@ -75,10 +71,7 @@ export function LoginPage() {
 
     try {
       const profile = await signIn(data.email, data.password)
-      toast({
-        title: 'Success',
-        description: 'Welcome to Tinedy CRM',
-      })
+      toast.success('Welcome to Tinedy CRM')
 
       // Use helper function for navigation
       const navigationPath = getNavigationPath(profile?.role, location.state?.from?.pathname)
@@ -87,10 +80,8 @@ export function LoginPage() {
       // Clear password for security
       reset({ email: data.email, password: '' })
 
-      toast({
-        title: 'Sign in failed',
+      toast.error('Sign in failed', {
         description: error instanceof Error ? error.message : 'Failed to sign in',
-        variant: 'destructive',
       })
     }
   }

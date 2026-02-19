@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { getLoadErrorMessage } from '@/lib/error-messages'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
@@ -56,8 +56,6 @@ export function AdminCustomers() {
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
-  const { toast } = useToast()
-
   // Initialize optimistic delete hook
   const deleteOps = useOptimisticDelete({
     table: 'customers',
@@ -98,13 +96,9 @@ export function AdminCustomers() {
   useEffect(() => {
     if (customersError) {
       const errorMessage = getLoadErrorMessage('customer')
-      toast({
-        title: errorMessage.title,
-        description: customersError,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: customersError })
     }
-  }, [customersError, toast])
+  }, [customersError])
 
   const deleteCustomer = async (customerId: string) => {
     deleteOps.permanentDelete.mutate({ id: customerId })

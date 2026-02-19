@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Crown, UserPlus, Users } from 'lucide-react'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { getInitials } from '@/lib/string-utils'
 
@@ -33,7 +33,6 @@ interface TeamMembersListProps {
 
 
 export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersListProps) {
-  const { toast } = useToast()
 
   // Sort members: Team lead first, then others
   const sortedMembers = [...(team.members || [])].sort((a, b) => {
@@ -71,22 +70,16 @@ export function TeamMembersList({ team, onUpdate, onAddMember }: TeamMembersList
         if (updateError) throw updateError
       }
 
-      toast({
-        title: 'Success',
-        description: isTeamLead
-          ? 'Team lead removed. Please assign a new team lead.'
-          : 'Member removed successfully',
-      })
+      toast.success(isTeamLead
+        ? 'Team lead removed. Please assign a new team lead.'
+        : 'Member removed successfully'
+      )
 
       onUpdate()
     } catch (error) {
       console.error('Error removing member:', error)
       const errorMsg = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

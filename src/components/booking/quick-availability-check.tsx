@@ -26,7 +26,7 @@ import { RecurringScheduleSelector } from './RecurringScheduleSelector'
 import { useServicePackages, type UnifiedServicePackage } from '@/hooks/use-service-packages'
 import { calculatePricing } from '@/lib/pricing-utils'
 import { format } from 'date-fns'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import type { RecurringPattern } from '@/types/recurring-booking'
 import { RecurringPattern as Pattern } from '@/types/recurring-booking'
 import type { BookingFrequency } from '@/types/service-package-v2'
@@ -35,7 +35,6 @@ const logger = createLogger('QuickAvailabilityCheck')
 
 export function QuickAvailabilityCheck() {
   const navigate = useNavigate()
-  const { toast } = useToast()
   const dialog = useModalState()
   const resultsModal = useModalState()
 
@@ -131,11 +130,7 @@ export function QuickAvailabilityCheck() {
     const isRecurring = frequency > 1
     if (isRecurring) {
       if (recurringDates.length === 0) {
-        toast({
-          title: 'Error',
-          description: 'Please select at least one date for recurring booking',
-          variant: 'destructive'
-        })
+        toast.error('Please select at least one date for recurring booking')
         return
       }
     } else {
@@ -370,10 +365,7 @@ export function QuickAvailabilityCheck() {
             })
 
             // Show success message
-            toast({
-              title: 'Staff Selected',
-              description: 'Redirecting to create booking...',
-            })
+            toast('Staff Selected', { description: 'Redirecting to create booking...' })
 
             // Navigate with state - with recurring support
             navigate('/admin/bookings', {
@@ -405,10 +397,7 @@ export function QuickAvailabilityCheck() {
             const isRecurring = frequency > 1
 
             // Show success message
-            toast({
-              title: 'Team Selected',
-              description: 'Redirecting to create booking...',
-            })
+            toast('Team Selected', { description: 'Redirecting to create booking...' })
 
             // Navigate with state - with recurring support
             navigate('/admin/bookings', {

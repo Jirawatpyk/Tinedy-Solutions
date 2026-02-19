@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
 import {
@@ -70,7 +70,6 @@ export function CustomerFormDialog({
   onSuccess,
   customer = null,
 }: CustomerFormDialogProps) {
-  const { toast } = useToast()
   const isEditMode = !!customer
 
   const form = useForm<CustomerFormData>({
@@ -134,19 +133,13 @@ export function CustomerFormDialog({
 
         if (error) throw error
 
-        toast({
-          title: 'Success',
-          description: 'Customer updated successfully',
-        })
+        toast.success('Customer updated successfully')
       } else {
         const { error } = await supabase.from('customers').insert(cleanedData)
 
         if (error) throw error
 
-        toast({
-          title: 'Success',
-          description: 'Customer created successfully',
-        })
+        toast.success('Customer created successfully')
       }
 
       onClose()
@@ -154,11 +147,7 @@ export function CustomerFormDialog({
     } catch (error) {
       logger.error('Error saving customer', { error, isEditMode }, { context: 'CustomerFormDialog' })
       const errorMessage = mapErrorToUserMessage(error, 'customer')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 

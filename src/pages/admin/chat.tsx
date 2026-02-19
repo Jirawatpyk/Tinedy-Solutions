@@ -4,13 +4,12 @@ import { useAuth } from '@/contexts/auth-context'
 import { UserList } from '@/components/chat/user-list'
 import { ChatArea } from '@/components/chat/chat-area'
 import { NewChatModal } from '@/components/chat/new-chat-modal'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import type { Profile } from '@/types/chat'
 import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminChat() {
   const { user } = useAuth()
-  const { toast } = useToast()
   const [newChatModalOpen, setNewChatModalOpen] = useState(false)
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
@@ -50,27 +49,16 @@ export function AdminChat() {
         await sendMessage(selectedUser.id, message)
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send message. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to send message. Please try again.')
     }
   }
 
   const handleDeleteConversation = async (userId: string) => {
     try {
       await deleteConversation(userId)
-      toast({
-        title: 'Success',
-        description: 'Conversation deleted successfully',
-      })
+      toast.success('Conversation deleted successfully')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Could not delete conversation. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error('Could not delete conversation. Please try again.')
     }
   }
 
@@ -86,11 +74,7 @@ export function AdminChat() {
       setAvailableUsers(usersWithoutConversation)
       setNewChatModalOpen(true)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Could not load user list',
-        variant: 'destructive',
-      })
+      toast.error('Could not load user list')
     } finally {
       setIsLoadingUsers(false)
     }

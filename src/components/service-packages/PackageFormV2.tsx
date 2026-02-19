@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { TierEditor, type TierFormData } from './TierEditor'
 import { Save, X } from 'lucide-react'
 import {
@@ -65,7 +65,6 @@ export function PackageFormV2({
   onCancel,
   showCancel = true,
 }: PackageFormV2Props) {
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [loadingTiers, setLoadingTiers] = useState(false)
@@ -122,16 +121,12 @@ export function PackageFormV2({
       return tierData
     } catch (error) {
       console.error('Error loading tiers:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load pricing tiers',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load pricing tiers')
       return []
     } finally {
       setLoadingTiers(false)
     }
-  }, [toast])
+  }, [])
 
   // Load package data when editing
   useEffect(() => {
@@ -182,11 +177,7 @@ export function PackageFormV2({
         try {
           validateTiersNoOverlap(data.tiers)
         } catch (error) {
-          toast({
-            title: 'Error',
-            description: error instanceof Error ? error.message : 'Area ranges overlap',
-            variant: 'destructive',
-          })
+          toast.error(error instanceof Error ? error.message : 'Area ranges overlap')
           setLoading(false)
           return
         }
@@ -230,10 +221,7 @@ export function PackageFormV2({
           }
         }
 
-        toast({
-          title: 'Success',
-          description: 'Package updated successfully',
-        })
+        toast.success('Package updated successfully')
       } else {
         // Create new package
         const { data: newPackage, error } = await supabase
@@ -252,10 +240,7 @@ export function PackageFormV2({
           await insertTiers(packageId)
         }
 
-        toast({
-          title: 'Success',
-          description: 'New package created successfully',
-        })
+        toast.success('New package created successfully')
       }
 
       // Invalidate all package queries to refetch data across the app
@@ -264,11 +249,7 @@ export function PackageFormV2({
       onSuccess?.(packageId)
     } catch (error) {
       console.error('Error saving package:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save data',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Failed to save data')
     } finally {
       setLoading(false)
     }

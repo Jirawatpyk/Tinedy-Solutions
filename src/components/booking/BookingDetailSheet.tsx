@@ -50,7 +50,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
@@ -129,7 +129,6 @@ export function BookingDetailSheet({
     Array<{ id: string; full_name: string; avatar_url: string | null }>
   >([])
   const [loadingTeamMembers, setLoadingTeamMembers] = useState(false)
-  const { toast } = useToast()
 
   const resetReview = useCallback(() => {
     setReview(null)
@@ -198,11 +197,7 @@ export function BookingDetailSheet({
       }
     } catch (error) {
       console.error('Error fetching review:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load review data',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load review data')
     }
   }, [booking, resetReview, toast])
 
@@ -221,11 +216,7 @@ export function BookingDetailSheet({
       !booking?.customers?.id ||
       rating === 0
     ) {
-      toast({
-        title: 'Cannot save review',
-        description: 'Please select a rating and ensure booking has assigned staff or team',
-        variant: 'destructive',
-      })
+      toast.error('Cannot save review', { description: 'Please select a rating and ensure booking has assigned staff or team' })
       return
     }
 
@@ -240,7 +231,7 @@ export function BookingDetailSheet({
 
         if (error) throw error
 
-        toast({ title: 'Review Updated', description: 'The review has been updated successfully' })
+        toast.success('The review has been updated successfully')
       } else {
         const reviewData: {
           booking_id: string
@@ -264,13 +255,13 @@ export function BookingDetailSheet({
 
         if (error) throw error
 
-        toast({ title: 'Review Saved', description: 'The review has been saved successfully' })
+        toast.success('The review has been saved successfully')
       }
 
       await fetchReview()
     } catch (error) {
       console.error('Error saving review:', error)
-      toast({ title: 'Error', description: 'Failed to save review', variant: 'destructive' })
+      toast.error('Failed to save review')
     } finally {
       setSavingReview(false)
     }
@@ -285,11 +276,11 @@ export function BookingDetailSheet({
       .writeText(paymentLink)
       .then(() => {
         setCopiedLink(true)
-        toast({ title: 'Copied!', description: 'Payment link copied to clipboard' })
+        toast.success('Payment link copied to clipboard')
         setTimeout(() => setCopiedLink(false), CLIPBOARD_FEEDBACK_MS)
       })
       .catch(() => {
-        toast({ title: 'Error', description: 'Failed to copy link', variant: 'destructive' })
+        toast.error('Failed to copy link')
       })
   }, [booking, toast])
 
@@ -313,16 +304,10 @@ export function BookingDetailSheet({
         throw new Error(data?.error || 'Failed to send reminder')
       }
 
-      toast({
-        title: 'Reminder Sent!',
-        description: `Email sent to ${booking.customers.email}`,
-      })
+      toast.success('Reminder Sent!', { description: `Email sent to ${booking.customers.email}` })
     } catch (error) {
-      toast({
-        title: 'Failed to Send Reminder',
-        description:
-          error instanceof Error ? error.message : 'An error occurred while sending the email',
-        variant: 'destructive',
+      toast.error('Failed to Send Reminder', {
+        description: error instanceof Error ? error.message : 'An error occurred while sending the email',
       })
     } finally {
       setSendingReminder(false)

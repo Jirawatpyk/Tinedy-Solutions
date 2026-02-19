@@ -33,13 +33,12 @@ import {
   LogOut,
   User,
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { formatRole } from '@/lib/role-utils'
 
 export default function StaffProfile() {
   const navigate = useNavigate()
   const { signOut } = useAuth()
-  const { toast } = useToast()
   const {
     staffProfile,
     error,
@@ -62,11 +61,7 @@ export default function StaffProfile() {
       await signOut()
       navigate('/login')
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to sign out. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to sign out. Please try again.')
     }
   }
 

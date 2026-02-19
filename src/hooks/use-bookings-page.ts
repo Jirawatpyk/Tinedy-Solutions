@@ -17,7 +17,7 @@ import { useBulkActions } from '@/hooks/use-bulk-actions'
 import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { useBookings } from '@/hooks/use-bookings'
 import { useStaffList } from '@/hooks/use-staff'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/use-service-packages'
 import { usePaymentActions } from '@/hooks/use-payment-actions'
@@ -176,7 +176,6 @@ function bookingsPageReducer(state: BookingsPageState, action: BookingsPageActio
 
 export function useBookingsPage() {
   const location = useLocation()
-  const { toast } = useToast()
   const [state, dispatch] = useReducer(bookingsPageReducer, initialState)
 
   // Data hooks
@@ -382,9 +381,9 @@ export function useBookingsPage() {
   useEffect(() => {
     if (bookingsError) {
       const errorMessage = getLoadErrorMessage('booking')
-      toast({ title: errorMessage.title, description: bookingsError, variant: 'destructive' })
+      toast.error(errorMessage.title, { description: bookingsError })
     }
-  }, [bookingsError, toast])
+  }, [bookingsError])
 
   useEffect(() => {
     goToPage(1)
@@ -498,7 +497,7 @@ export function useBookingsPage() {
     try {
       const { error } = await supabase.from('bookings').insert(state.pendingBookingData)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking created successfully (conflict overridden)' })
+      toast.success('Booking created successfully (conflict overridden)')
       dispatch({ type: 'SET_DIALOG_OPEN', payload: false })
       dispatch({ type: 'SET_CONFLICT_DIALOG', payload: false })
       resetForm()
@@ -507,9 +506,9 @@ export function useBookingsPage() {
       refresh()
     } catch (_error) {
       const errorMsg = getBookingConflictError()
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingBookingData, toast, resetForm, clearConflicts, refresh])
+  }, [state.pendingBookingData, resetForm, clearConflicts, refresh])
 
   const cancelConflictOverride = useCallback(() => {
     dispatch({ type: 'SET_CONFLICT_DIALOG', payload: false })
@@ -523,17 +522,17 @@ export function useBookingsPage() {
       const result = await deleteRecurringBookings(state.pendingRecurringBooking.id, scope)
       if (!result.success) {
         const errorMsg = getRecurringBookingError('delete')
-        toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+        toast.error(errorMsg.title, { description: errorMsg.description })
         return
       }
-      toast({ title: 'Success', description: `Deleted ${result.deletedCount} booking(s) successfully` })
+      toast.success(`Deleted ${result.deletedCount} booking(s) successfully`)
       dispatch({ type: 'CLOSE_RECURRING_DIALOG' })
       refresh()
     } catch (_error) {
       const errorMsg = getRecurringBookingError('delete')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingRecurringBooking, toast, refresh])
+  }, [state.pendingRecurringBooking, refresh])
 
   const handleRecurringArchive = useCallback(async (scope: RecurringEditScope) => {
     if (!state.pendingRecurringBooking) return
@@ -570,14 +569,14 @@ export function useBookingsPage() {
         const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: bookingId })
         if (!error) archivedCount++
       }
-      toast({ title: 'Success', description: `Archived ${archivedCount} booking(s) successfully` })
+      toast.success(`Archived ${archivedCount} booking(s) successfully`)
       dispatch({ type: 'CLOSE_RECURRING_DIALOG' })
       refresh()
     } catch (_error) {
       const errorMsg = getArchiveErrorMessage()
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingRecurringBooking, toast, refresh])
+  }, [state.pendingRecurringBooking, refresh])
 
   const deleteBooking = useCallback(async (bookingId: string) => {
     try {
@@ -588,35 +587,35 @@ export function useBookingsPage() {
       }
       const { error } = await supabase.from('bookings').delete().eq('id', bookingId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking deleted successfully' })
+      toast.success('Booking deleted successfully')
       refresh()
     } catch (_error) {
       const errorMsg = getDeleteErrorMessage('booking')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [bookings, toast, refresh])
+  }, [bookings, refresh])
 
   const archiveBooking = useCallback(async (bookingId: string) => {
     try {
       const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: bookingId })
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking archived successfully' })
+      toast.success('Booking archived successfully')
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to archive booking', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to archive booking')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const restoreBooking = useCallback(async (bookingId: string) => {
     try {
       const { error } = await supabase.from('bookings').update({ deleted_at: null, deleted_by: null }).eq('id', bookingId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking restored successfully' })
+      toast.success('Booking restored successfully')
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to restore booking', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to restore booking')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const restoreRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -624,19 +623,19 @@ export function useBookingsPage() {
         .from('bookings').select('id').eq('recurring_group_id', groupId).not('deleted_at', 'is', null)
       if (fetchError) throw fetchError
       if (!groupBookings || groupBookings.length === 0) {
-        toast({ title: 'Info', description: 'No archived bookings found in this group to restore' }); return
+        toast('No archived bookings found in this group to restore'); return
       }
       let restoredCount = 0
       for (const booking of groupBookings) {
         const { error } = await supabase.from('bookings').update({ deleted_at: null, deleted_by: null }).eq('id', booking.id)
         if (!error) restoredCount++
       }
-      toast({ title: 'Success', description: `Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully` })
+      toast.success(`Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully`)
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to restore recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to restore recurring group')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const archiveRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -644,19 +643,19 @@ export function useBookingsPage() {
         .from('bookings').select('id').eq('recurring_group_id', groupId).is('deleted_at', null)
       if (fetchError) throw fetchError
       if (!groupBookings || groupBookings.length === 0) {
-        toast({ title: 'Info', description: 'No active bookings found in this group to archive' }); return
+        toast('No active bookings found in this group to archive'); return
       }
       let archivedCount = 0
       for (const booking of groupBookings) {
         const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: booking.id })
         if (!error) archivedCount++
       }
-      toast({ title: 'Success', description: `Archived ${archivedCount} booking(s) successfully` })
+      toast.success(`Archived ${archivedCount} booking(s) successfully`)
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to archive recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to archive recurring group')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const deleteRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -673,24 +672,21 @@ export function useBookingsPage() {
       }
       dispatch({ type: 'OPEN_RECURRING_DIALOG', payload: { action: 'delete', booking: processedBooking as Booking } })
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to delete recurring group')
     }
-  }, [toast])
+  }, [])
 
   const handleVerifyRecurringGroup = useCallback(async (recurringGroupId: string) => {
     try {
       const { verifyPayment } = await import('@/services/payment-service')
       const result = await verifyPayment({ bookingId: '', recurringGroupId })
       if (!result.success) throw new Error(result.error)
-      toast({
-        title: 'Success',
-        description: result.count > 1 ? `${result.count} bookings verified successfully` : 'Payment verified successfully',
-      })
+      toast.success(result.count > 1 ? `${result.count} bookings verified successfully` : 'Payment verified successfully')
       refresh()
     } catch (_error) {
-      toast({ title: 'Error', description: 'Failed to verify payment', variant: 'destructive' })
+      toast.error('Failed to verify payment')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const openBookingDetail = useCallback((booking: Booking) => {
     dispatch({ type: 'OPEN_DETAIL', payload: booking })

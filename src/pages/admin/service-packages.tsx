@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { usePermissions } from '@/hooks/use-permissions'
 import { usePackageActions } from '@/hooks/use-package-actions'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
@@ -43,8 +43,6 @@ const ITEMS_PER_LOAD = 12
 
 export function AdminServicePackages() {
   const { can, canDelete } = usePermissions()
-  const { toast } = useToast()
-
   // State
   const [showArchived, setShowArchived] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -125,9 +123,9 @@ export function AdminServicePackages() {
   // Error toast
   useEffect(() => {
     if (queryError?.message) {
-      toast({ title: 'Error', description: queryError.message, variant: 'destructive' })
+      toast.error(queryError.message)
     }
-  }, [queryError?.message, toast])
+  }, [queryError?.message])
 
   // Reset display count when filters change
   useEffect(() => {

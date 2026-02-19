@@ -7,7 +7,7 @@ import { Edit } from 'lucide-react'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { PageHeader } from '@/components/common/PageHeader'
 import { useCustomerDetail } from '@/hooks/use-customer-detail'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import type { Booking } from '@/types/booking'
 
 import {
@@ -20,8 +20,6 @@ import {
 
 export function AdminCustomerDetail() {
   const { id } = useParams<{ id: string }>()
-  const { toast } = useToast()
-
   const {
     state,
     dispatch,
@@ -139,10 +137,7 @@ export function AdminCustomerDetail() {
         onAddNote={() => dispatch({ type: 'OPEN_MODAL', modal: 'note' })}
         onCopyLineId={() => {
           navigator.clipboard.writeText(customer.line_id || '')
-          toast({
-            title: 'LINE ID Copied',
-            description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.`,
-          })
+          toast('LINE ID Copied', { description: `"${customer.line_id}" copied to clipboard. Search in LINE app to start chat.` })
         }}
       />
 

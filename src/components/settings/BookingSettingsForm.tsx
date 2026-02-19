@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
@@ -34,8 +34,6 @@ interface BookingSettingsFormProps {
 }
 
 export function BookingSettingsForm({ initialData, settingsId, onSuccess }: BookingSettingsFormProps) {
-  const { toast } = useToast()
-
   const form = useForm<BookingSettingsFormData>({
     resolver: zodResolver(BookingSettingsSchema),
     defaultValues: {
@@ -61,19 +59,12 @@ export function BookingSettingsForm({ initialData, settingsId, onSuccess }: Book
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Booking settings saved successfully',
-      })
+      toast.success('Booking settings saved successfully')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

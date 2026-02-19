@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { TeamCard } from '@/components/teams/team-card'
@@ -130,19 +130,13 @@ export function AdminTeams() {
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
-  const { toast } = useToast()
-
   // Error handling for teams loading
   useEffect(() => {
     if (teamsError) {
       const errorMessage = getLoadErrorMessage('team')
-      toast({
-        title: errorMessage.title,
-        description: teamsError,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: teamsError })
     }
-  }, [teamsError, toast])
+  }, [teamsError])
 
   // Filter teams with useMemo for better performance
   const filteredTeams = useMemo(() => {
@@ -193,13 +187,9 @@ export function AdminTeams() {
       setAvailableStaff(data || [])
     } catch (error) {
       console.error('Error loading staff:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load available staff',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load available staff')
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     loadAvailableStaff()
@@ -240,12 +230,11 @@ export function AdminTeams() {
         }
       }
 
-      toast({
-        title: 'Success',
-        description: transformedData.team_lead_id
+      toast.success(
+        transformedData.team_lead_id
           ? 'Team created and team lead added as member'
-          : 'Team created successfully',
-      })
+          : 'Team created successfully'
+      )
 
       setDialogOpen(false)
       createTeamForm.reset()
@@ -253,11 +242,7 @@ export function AdminTeams() {
     } catch (error) {
       console.error('Error creating team:', error)
       const errorMessage = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
@@ -302,12 +287,11 @@ export function AdminTeams() {
         }
       }
 
-      toast({
-        title: 'Success',
-        description: transformedData.team_lead_id && !editingTeam.members?.some((m) => m.id === transformedData.team_lead_id)
+      toast.success(
+        transformedData.team_lead_id && !editingTeam.members?.some((m) => m.id === transformedData.team_lead_id)
           ? 'Team updated and team lead added as member'
-          : 'Team updated successfully',
-      })
+          : 'Team updated successfully'
+      )
 
       setDialogOpen(false)
       setEditingTeam(null)
@@ -316,11 +300,7 @@ export function AdminTeams() {
     } catch (error) {
       console.error('Error updating team:', error)
       const errorMessage = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
@@ -349,10 +329,8 @@ export function AdminTeams() {
 
       if (activeMember) {
         // Already an active member - don't add again
-        toast({
-          title: 'Already a Member',
+        toast.error('Already a Member', {
           description: 'This staff member is already in the team.',
-          variant: 'destructive',
         })
         return
       }
@@ -370,10 +348,7 @@ export function AdminTeams() {
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Member added successfully',
-      })
+      toast.success('Member added successfully')
 
       setMemberDialogOpen(false)
       addMemberForm.reset()
@@ -384,20 +359,14 @@ export function AdminTeams() {
       // Check if this is a unique constraint violation (duplicate active member)
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === '23505' || errorObj?.message?.includes('unique')) {
-        toast({
-          title: 'Already a Member',
+        toast.error('Already a Member', {
           description: 'This staff member is already in the team.',
-          variant: 'destructive',
         })
         return
       }
 
       const errorMessage = getTeamMemberError('add')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
@@ -438,12 +407,11 @@ export function AdminTeams() {
         if (updateError) throw updateError
       }
 
-      toast({
-        title: 'Success',
-        description: isTeamLead
+      toast.success(
+        isTeamLead
           ? 'Team lead removed. Please assign a new team lead.'
-          : 'Member removed successfully',
-      })
+          : 'Member removed successfully'
+      )
 
       setShowRemoveConfirm(false)
       setPendingRemove(null)
@@ -451,11 +419,7 @@ export function AdminTeams() {
     } catch (error) {
       console.error('Error removing member:', error)
       const errorMessage = getTeamMemberError('remove')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     } finally {
       setIsRemoving(false)
     }

@@ -13,7 +13,13 @@ interface BookingForExport {
   payment_status?: string
   payment_date?: string | null
   created_at: string
+  price_mode?: string | null
+  job_name?: string | null
   service_packages?: {
+    name: string
+    service_type: string
+  } | null
+  service_packages_v2?: {
     name: string
     service_type: string
   } | null
@@ -216,7 +222,10 @@ export const exportRevenueAllToExcel = (
   // ========== Sheet 5: Top Service Packages ==========
   const packageMap: Record<string, { count: number; revenue: number }> = {}
   filteredBookings.forEach(b => {
-    const packageName = b.service_packages?.name || 'Unknown'
+    // G1 Fix: custom jobs grouped as single "Custom" entry (matches reports.tsx logic)
+    const packageName = b.price_mode === 'custom'
+      ? 'Custom'
+      : (b.service_packages_v2?.name ?? b.service_packages?.name ?? 'Unknown')
     if (!packageMap[packageName]) {
       packageMap[packageName] = { count: 0, revenue: 0 }
     }

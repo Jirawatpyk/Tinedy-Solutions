@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
@@ -34,7 +34,6 @@ interface GeneralSettingsFormProps {
 }
 
 export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: GeneralSettingsFormProps) {
-  const { toast } = useToast()
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(initialData?.business_logo_url || null)
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false)
@@ -67,19 +66,12 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'General settings saved successfully',
-      })
+      toast.success('General settings saved successfully')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 
@@ -90,11 +82,7 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
     // Validate file
     const validation = validateLogoFile(file)
     if (!validation.valid) {
-      toast({
-        title: 'Invalid File',
-        description: validation.error,
-        variant: 'destructive',
-      })
+      toast.error('Invalid File', { description: validation.error })
       return
     }
 
@@ -130,18 +118,11 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
 
       setLogoUrl(publicUrl)
 
-      toast({
-        title: 'Logo Uploaded',
-        description: 'Business logo has been updated successfully',
-      })
+      toast.success('Business logo has been updated successfully')
     } catch (error) {
       console.error('Error uploading logo:', error)
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setUploadingLogo(false)
       if (fileInputRef.current) {
@@ -162,17 +143,10 @@ export function GeneralSettingsForm({ initialData, settingsId, onSuccess }: Gene
       setLogoUrl(null)
       setShowRemoveLogoDialog(false)
 
-      toast({
-        title: 'Logo Removed',
-        description: 'Business logo has been removed',
-      })
+      toast.success('Business logo has been removed')
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

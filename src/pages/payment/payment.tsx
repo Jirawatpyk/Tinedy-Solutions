@@ -10,7 +10,7 @@ import { PaymentMethodSkeleton } from '@/components/skeletons/lazy-loading-skele
 import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import { formatDateRange } from '@/lib/date-range-utils'
 import { CheckCircle2, Calendar, Clock, MapPin, Upload, QrCode } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 // Lazy load payment components to reduce initial bundle size
 const PromptPayQR = lazy(() =>
@@ -25,7 +25,6 @@ type PaymentMethod = 'promptpay' | 'slip' | null
 export function PaymentPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [recurringBookings, setRecurringBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,11 +75,7 @@ export function PaymentPage() {
       }
     } catch (error) {
       console.error('Error fetching booking:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load booking details. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load booking details. Please try again.')
     } finally {
       setLoading(false)
     }

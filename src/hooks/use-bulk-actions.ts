@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { formatFullAddress, getValidTransitions } from '@/lib/booking-utils'
@@ -48,7 +48,6 @@ export function useBulkActions({
   onSuccess,
 }: UseBulkActionsProps): UseBulkActionsReturn {
   const queryClient = useQueryClient()
-  const { toast } = useToast()
   const { canDelete } = usePermissions()
   const [selectedBookings, setSelectedBookings] = useState<string[]>([])
   const [bulkStatus, setBulkStatus] = useState('')
@@ -103,10 +102,8 @@ export function useBulkActions({
 
     if (invalidBookings.length > 0) {
       const invalidStatuses = [...new Set(invalidBookings.map(b => b.status))].join(', ')
-      toast({
-        title: 'Invalid Status Transition',
+      toast.error('Invalid Status Transition', {
         description: `Cannot change ${invalidBookings.length} booking(s) with status "${invalidStatuses}" to "${bulkStatus}". Please check the status workflow.`,
-        variant: 'destructive',
       })
       return
     }
@@ -115,8 +112,7 @@ export function useBulkActions({
     const bookingsToUpdate = selectedBookingsData.filter(b => b.status !== bulkStatus)
 
     if (bookingsToUpdate.length === 0) {
-      toast({
-        title: 'No Changes',
+      toast('No Changes', {
         description: 'All selected bookings are already in this status.',
       })
       return
@@ -130,20 +126,13 @@ export function useBulkActions({
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: `Updated ${bookingsToUpdate.length} booking(s) to ${bulkStatus}`,
-      })
+      toast.success(`Updated ${bookingsToUpdate.length} booking(s) to ${bulkStatus}`)
       setSelectedBookings([])
       setBulkStatus('')
       onSuccess()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 
@@ -200,12 +189,11 @@ export function useBulkActions({
       }
 
       // STEP 4: Show single success toast
-      toast({
-        title: 'Success',
-        description: hasDeletePermission
+      toast.success(
+        hasDeletePermission
           ? `Permanently deleted ${count} booking${count > 1 ? 's' : ''}`
-          : `Archived ${count} booking${count > 1 ? 's' : ''}`,
-      })
+          : `Archived ${count} booking${count > 1 ? 's' : ''}`
+      )
 
       // STEP 5: Clean up and trigger refetch
       setSelectedBookings([])
@@ -218,15 +206,11 @@ export function useBulkActions({
       }
 
       const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setIsDeleting(false)
     }
-  }, [selectedBookings, queryClient, toast, onSuccess, canDelete])
+  }, [selectedBookings, queryClient, onSuccess, canDelete])
 
   const handleBulkExport = () => {
     if (selectedBookings.length === 0) return
@@ -290,10 +274,7 @@ export function useBulkActions({
     const fileName = `bookings-${new Date().toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(workbook, fileName)
 
-    toast({
-      title: 'Success',
-      description: `Exported ${selectedBookings.length} bookings to Excel`,
-    })
+    toast.success(`Exported ${selectedBookings.length} bookings to Excel`)
   }
 
   return {

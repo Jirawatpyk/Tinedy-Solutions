@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { CreditCard, Save } from 'lucide-react'
@@ -36,8 +36,6 @@ interface PaymentSettingsFormProps {
 }
 
 export function PaymentSettingsForm({ initialData, settingsId, onSuccess }: PaymentSettingsFormProps) {
-  const { toast } = useToast()
-
   const form = useForm<PaymentSettingsFormData>({
     resolver: zodResolver(PaymentSettingsSchema),
     defaultValues: {
@@ -57,19 +55,12 @@ export function PaymentSettingsForm({ initialData, settingsId, onSuccess }: Paym
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Payment settings saved successfully',
-      })
+      toast.success('Payment settings saved successfully')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

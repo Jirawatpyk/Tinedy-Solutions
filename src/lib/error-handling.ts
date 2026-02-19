@@ -8,7 +8,7 @@
  * - Error recovery strategies
  */
 
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
   getSupabaseErrorMessage,
   isPermissionError,
@@ -122,11 +122,7 @@ function reportError(error: Error, context?: ErrorContext, severity: ErrorSeveri
  * Show error toast to user
  */
 function showErrorToast(message: string, description?: string) {
-  toast({
-    variant: 'destructive',
-    title: message,
-    description,
-  })
+  toast.error(message, { description })
 }
 
 /**

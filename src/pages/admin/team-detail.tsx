@@ -31,7 +31,7 @@ import { Edit, ArrowLeft } from 'lucide-react'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { PageHeader } from '@/components/common/PageHeader'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { TeamDetailHeader } from '@/components/teams/team-detail/TeamDetailHeader'
 import { TeamDetailStats } from '@/components/teams/team-detail/TeamDetailStats'
 import { TeamMembersList } from '@/components/teams/team-detail/TeamMembersList'
@@ -80,7 +80,6 @@ interface TeamStats {
 export function AdminTeamDetail() {
   const { teamId } = useParams<{ teamId: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
   const queryClient = useQueryClient()
 
   // Both admin and manager use /admin routes
@@ -163,11 +162,7 @@ export function AdminTeamDetail() {
 
       if (teamError) throw teamError
       if (!teamData) {
-        toast({
-          title: 'Error',
-          description: 'Team not found',
-          variant: 'destructive',
-        })
+        toast.error('Team not found')
         navigate(`${basePath}/teams`)
         return
       }
@@ -204,16 +199,12 @@ export function AdminTeamDetail() {
     } catch (error) {
       console.error('Error loading team:', error)
       const errorMsg = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setLoading(false)
     }
-     
-  }, [teamId, navigate, toast])
+
+  }, [teamId, navigate])
 
   const loadTeamStats = async (teamId: string) => {
     try {
@@ -271,13 +262,9 @@ export function AdminTeamDetail() {
       setAvailableStaff(data || [])
     } catch (error) {
       console.error('Error loading staff:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load available staff',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load available staff')
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     loadAvailableStaff()
@@ -321,10 +308,7 @@ export function AdminTeamDetail() {
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Team updated successfully',
-      })
+      toast.success('Team updated successfully')
 
       setDialogOpen(false)
       updateTeamForm.reset()
@@ -332,11 +316,7 @@ export function AdminTeamDetail() {
     } catch (error) {
       console.error('Error updating team:', error)
       const errorMessage = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
@@ -359,10 +339,8 @@ export function AdminTeamDetail() {
 
       if (activeMember) {
         // Already an active member - don't add again
-        toast({
-          title: 'Already a Member',
+        toast.error('Already a Member', {
           description: 'This staff member is already in the team.',
-          variant: 'destructive',
         })
         return
       }
@@ -380,10 +358,7 @@ export function AdminTeamDetail() {
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Member added successfully',
-      })
+      toast.success('Member added successfully')
 
       setMemberDialogOpen(false)
       addMemberForm.reset()
@@ -394,20 +369,14 @@ export function AdminTeamDetail() {
       // Check if this is a unique constraint violation (duplicate active member)
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === '23505' || errorObj?.message?.includes('unique')) {
-        toast({
-          title: 'Already a Member',
+        toast.error('Already a Member', {
           description: 'This staff member is already in the team.',
-          variant: 'destructive',
         })
         return
       }
 
       const errorMsg = mapErrorToUserMessage(error, 'team')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 
@@ -526,10 +495,7 @@ export function AdminTeamDetail() {
 
                 if (error) throw error
 
-                toast({
-                  title: 'Success',
-                  description: 'Team deleted successfully',
-                })
+                toast.success('Team deleted successfully')
 
                 navigate(`${basePath}/teams`)
               }}

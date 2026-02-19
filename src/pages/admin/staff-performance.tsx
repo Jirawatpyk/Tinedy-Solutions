@@ -11,7 +11,7 @@ import { StaffPerformanceCharts } from '@/components/staff/performance/StaffPerf
 import { StaffRecentBookings } from '@/components/staff/performance/StaffRecentBookings'
 import { ErrorBoundary, SectionErrorBoundary } from '@/components/ErrorBoundary'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { getDeleteErrorMessage } from '@/lib/error-messages'
 import { useEffect, useState } from 'react'
 import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
@@ -19,8 +19,6 @@ import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEdit
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
-
   // Both admin and manager use /admin routes
   const basePath = '/admin'
 
@@ -79,21 +77,14 @@ export function AdminStaffPerformance() {
         throw new Error(data?.error || data?.details || 'Failed to delete user')
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Staff member deleted successfully',
-      })
+      toast.success(data.message || 'Staff member deleted successfully')
 
       // Navigate back to staff list
       navigate(`${basePath}/staff`)
     } catch (error) {
       console.error('[Delete Staff] Error:', error)
       const errorMessage = getDeleteErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 

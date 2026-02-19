@@ -12,7 +12,7 @@
 import { useState, useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { usePaymentActions } from '@/hooks/use-payment-actions'
@@ -106,7 +106,6 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     closeDetailModal,
   } = params
 
-  const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
   // Loading states
@@ -179,16 +178,14 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
     // Validate transition using shared utility from useBookingStatusManager
     const availableStatuses = getAvailableStatuses(booking.status)
     if (!availableStatuses.includes(newStatus)) {
-      toast({
-        title: 'Invalid Status Transition',
+      toast.error('Invalid Status Transition', {
         description: `Cannot change from "${booking.status}" to "${newStatus}".`,
-        variant: 'destructive',
       })
       return
     }
 
     await handleStatusChange(bookingId, booking.status, newStatus)
-  }, [bookings, handleStatusChange, toast, getAvailableStatuses])
+  }, [bookings, handleStatusChange, getAvailableStatuses])
 
   /**
    * Mark booking as paid
@@ -260,10 +257,7 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Booking deleted successfully',
-      })
+      toast.success('Booking deleted successfully')
 
       closeDetailModal()
 
@@ -271,15 +265,11 @@ export function useCalendarActions(params: UseCalendarActionsParams): UseCalenda
       await refetchBookings()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setIsDeleting(false)
     }
-  }, [toast, closeDetailModal, refetchBookings])
+  }, [closeDetailModal, refetchBookings])
 
   /**
    * Soft delete (archive) booking

@@ -13,7 +13,7 @@
 
 import { useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import type { ServicePackage, ServicePackageV2WithTiers } from '@/types'
 import type { PackageFormV1Data } from '@/components/service-packages'
@@ -48,7 +48,6 @@ interface UsePackageActionsReturn {
  */
 export function usePackageActions(options: UsePackageActionsOptions = {}): UsePackageActionsReturn {
   const { onSuccess } = options
-  const { toast } = useToast()
   const { user } = useAuth()
 
   // V1 Form Submit
@@ -77,25 +76,21 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
             .eq('id', editingPackage.id)
 
           if (error) throw error
-          toast({ title: 'Success', description: 'Package updated successfully' })
+          toast.success('Package updated successfully')
         } else {
           const { error } = await supabase.from('service_packages').insert(packageData)
           if (error) throw error
-          toast({ title: 'Success', description: 'Package created successfully' })
+          toast.success('Package created successfully')
         }
 
         onSuccess?.()
         return true
       } catch {
-        toast({
-          title: 'Error',
-          description: 'Failed to save package',
-          variant: 'destructive',
-        })
+        toast.error('Failed to save package')
         return false
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // V1 Toggle Active
@@ -108,20 +103,13 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
           .eq('id', pkg.id)
 
         if (error) throw error
-        toast({
-          title: 'Success',
-          description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
-        })
+        toast.success(`Package ${!pkg.is_active ? 'activated' : 'deactivated'}`)
         onSuccess?.()
       } catch {
-        toast({
-          title: 'Error',
-          description: 'Failed to update package status',
-          variant: 'destructive',
-        })
+        toast.error('Failed to update package status')
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // V1 Delete
@@ -130,27 +118,19 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
       try {
         const { error } = await supabase.from('service_packages').delete().eq('id', id)
         if (error) throw error
-        toast({ title: 'Success', description: 'Package deleted successfully' })
+        toast.success('Package deleted successfully')
         onSuccess?.()
       } catch (error) {
         console.error('Delete package error:', error)
         const dbError = error as { code?: string }
         if (dbError.code === '23503') {
-          toast({
-            title: 'Error',
-            description: 'Cannot delete package that has existing bookings',
-            variant: 'destructive',
-          })
+          toast.error('Cannot delete package that has existing bookings')
         } else {
-          toast({
-            title: 'Error',
-            description: error instanceof Error ? error.message : 'Failed to delete package',
-            variant: 'destructive',
-          })
+          toast.error(error instanceof Error ? error.message : 'Failed to delete package')
         }
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // V2 Toggle Active
@@ -163,20 +143,13 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
           .eq('id', pkg.id)
 
         if (error) throw error
-        toast({
-          title: 'Success',
-          description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
-        })
+        toast.success(`Package ${!pkg.is_active ? 'activated' : 'deactivated'}`)
         onSuccess?.()
       } catch {
-        toast({
-          title: 'Error',
-          description: 'Failed to update package status',
-          variant: 'destructive',
-        })
+        toast.error('Failed to update package status')
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // V2 Delete
@@ -191,10 +164,8 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
         if (countError) throw countError
 
         if (bookingCount && bookingCount > 0) {
-          toast({
-            title: 'Cannot Delete',
+          toast.error('Cannot Delete', {
             description: `This package has ${bookingCount} booking(s). Cannot delete packages with existing bookings.`,
-            variant: 'destructive',
           })
           return
         }
@@ -206,27 +177,19 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
           .eq('id', id)
 
         if (packageError) throw packageError
-        toast({ title: 'Success', description: 'Package deleted successfully' })
+        toast.success('Package deleted successfully')
         onSuccess?.()
       } catch (error) {
         console.error('Delete V2 package error:', error)
         const dbError = error as { code?: string }
         if (dbError.code === '23503') {
-          toast({
-            title: 'Error',
-            description: 'Cannot delete package that has existing bookings',
-            variant: 'destructive',
-          })
+          toast.error('Cannot delete package that has existing bookings')
         } else {
-          toast({
-            title: 'Error',
-            description: error instanceof Error ? error.message : 'Failed to delete package',
-            variant: 'destructive',
-          })
+          toast.error(error instanceof Error ? error.message : 'Failed to delete package')
         }
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // Archive (soft delete)
@@ -242,18 +205,14 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
           .eq('id', pkg.id)
 
         if (error) throw error
-        toast({ title: 'Success', description: 'Package archived successfully' })
+        toast.success('Package archived successfully')
         onSuccess?.()
       } catch (error) {
         console.error('Archive package error:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to archive package',
-          variant: 'destructive',
-        })
+        toast.error('Failed to archive package')
       }
     },
-    [toast, onSuccess, user?.id]
+    [onSuccess, user?.id]
   )
 
   // Restore
@@ -266,18 +225,14 @@ export function usePackageActions(options: UsePackageActionsOptions = {}): UsePa
           .eq('id', pkg.id)
 
         if (error) throw error
-        toast({ title: 'Success', description: 'Package restored successfully' })
+        toast.success('Package restored successfully')
         onSuccess?.()
       } catch (error) {
         console.error('Restore package error:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to restore package',
-          variant: 'destructive',
-        })
+        toast.error('Failed to restore package')
       }
     },
-    [toast, onSuccess]
+    [onSuccess]
   )
 
   // Unified Delete

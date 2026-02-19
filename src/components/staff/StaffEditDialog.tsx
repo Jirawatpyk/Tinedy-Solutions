@@ -23,7 +23,7 @@ import { TagInput } from '@/components/ui/tag-input'
 import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/common'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
@@ -55,7 +55,6 @@ export function StaffEditDialog({
   onSuccess,
 }: StaffEditDialogProps) {
   const { profile } = useAuth()
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<StaffUpdateFormData>({
@@ -156,20 +155,13 @@ export function StaffEditDialog({
         }
       }
 
-      toast({
-        title: 'Success',
-        description: 'Staff member updated successfully',
-      })
+      toast.success('Staff member updated successfully')
 
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
       const errorMessage = mapErrorToUserMessage(error, 'staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     } finally {
       setIsSubmitting(false)
     }

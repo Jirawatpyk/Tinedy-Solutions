@@ -27,7 +27,7 @@ import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { BookingStatus } from '@/types/booking'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { formatFullAddress, calculateDuration } from '@/lib/booking-utils'
 import { bookingDurationDays } from '@/lib/date-range-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
@@ -75,7 +75,6 @@ export function BookingDetailContent({
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const { toast } = useToast()
 
   // Sync notes state when booking.notes changes (e.g., from realtime updates)
   useEffect(() => {
@@ -96,16 +95,9 @@ export function BookingDetailContent({
     setIsSaving(true)
     try {
       await onAddNotes(booking.id, notes.trim())
-      toast({
-        title: 'Saved',
-        description: 'Notes saved successfully',
-      })
+      toast.success('Notes saved successfully')
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to save notes',
-        variant: 'destructive',
-      })
+      toast.error('Failed to save notes')
     } finally {
       setIsSaving(false)
     }
@@ -118,11 +110,7 @@ export function BookingDetailContent({
       await onStartProgress(booking.id)
       onClose()
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to start task',
-        variant: 'destructive',
-      })
+      toast.error('Failed to start task')
     } finally {
       setIsStarting(false)
     }
@@ -135,11 +123,7 @@ export function BookingDetailContent({
       await onMarkCompleted(booking.id)
       onClose()
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to mark as completed',
-        variant: 'destructive',
-      })
+      toast.error('Failed to mark as completed')
     } finally {
       setIsMarking(false)
     }

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Lock, Eye, EyeOff } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 
 interface ChangePasswordSheetProps {
@@ -27,7 +27,6 @@ export function ChangePasswordSheet({
   onOpenChange,
   onChangePassword,
 }: ChangePasswordSheetProps) {
-  const { toast } = useToast()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -38,19 +37,15 @@ export function ChangePasswordSheet({
     e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Passwords Do Not Match',
+      toast.error('Passwords Do Not Match', {
         description: 'Please enter the same password in both fields',
-        variant: 'destructive',
       })
       return
     }
 
     if (newPassword.length < 8) {
-      toast({
-        title: 'Password Too Short',
+      toast.error('Password Too Short', {
         description: 'Password must be at least 8 characters long',
-        variant: 'destructive',
       })
       return
     }
@@ -61,10 +56,8 @@ export function ChangePasswordSheet({
     const hasNumber = /[0-9]/.test(newPassword)
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      toast({
-        title: 'Weak Password',
+      toast.error('Weak Password', {
         description: 'Password must contain uppercase, lowercase, and numbers',
-        variant: 'destructive',
       })
       return
     }
@@ -72,20 +65,13 @@ export function ChangePasswordSheet({
     try {
       setIsSubmitting(true)
       await onChangePassword(newPassword)
-      toast({
-        title: 'Password Changed',
-        description: 'Your password has been updated successfully',
-      })
+      toast.success('Your password has been updated successfully')
       setNewPassword('')
       setConfirmPassword('')
       onOpenChange(false)
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setIsSubmitting(false)
     }

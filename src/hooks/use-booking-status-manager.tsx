@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { ReactElement, Dispatch, SetStateAction } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
@@ -51,7 +51,6 @@ export function useBookingStatusManager<T extends BookingBase>({
   setSelectedBooking,
   onSuccess,
 }: UseBookingStatusManagerProps<T>): UseBookingStatusManagerReturn {
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null)
@@ -115,10 +114,8 @@ export function useBookingStatusManager<T extends BookingBase>({
 
     // Check if transition is valid
     if (!isValidTransition(currentStatus, newStatus)) {
-      toast({
-        title: 'Invalid Status Transition',
+      toast.error('Invalid Status Transition', {
         description: `Cannot change from "${currentStatus}" to "${newStatus}". Please follow the workflow: ${getValidTransitions(currentStatus).join(', ')}`,
-        variant: 'destructive',
       })
       return
     }
@@ -178,10 +175,7 @@ export function useBookingStatusManager<T extends BookingBase>({
       if (error) throw error
 
       // 6. Show success toast
-      toast({
-        title: 'Success',
-        description: `Status changed to ${getStatusLabel(newStatus)}`,
-      })
+      toast.success(`Status changed to ${getStatusLabel(newStatus)}`)
 
       // 7. Trigger background refetch to sync with server
       onSuccess()
@@ -199,16 +193,12 @@ export function useBookingStatusManager<T extends BookingBase>({
       }
 
       const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       // 9. Clear loading state
       setIsUpdatingStatus(false)
     }
-  }, [pendingStatusChange, selectedBooking, setSelectedBooking, queryClient, toast, onSuccess, updateBookingStatusInCache])
+  }, [pendingStatusChange, selectedBooking, setSelectedBooking, queryClient, onSuccess, updateBookingStatusInCache])
 
   // Cancel status change
   const cancelStatusChange = () => {

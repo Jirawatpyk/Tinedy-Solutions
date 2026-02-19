@@ -7,14 +7,14 @@ import { NotificationPrompt } from '@/components/notifications/notification-prom
 import { BookingTabs, type TabValue } from '@/components/staff/booking-tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import { BookingListSection } from '@/components/staff/dashboard'
 import { StaffHeader } from '@/components/staff/staff-header'
 import { ResponsiveSheet } from '@/components/ui/responsive-sheet'
 import { BookingDetailContent } from '@/components/staff/booking-detail-content'
 import { PullToRefresh } from '@/components/staff/pull-to-refresh'
-import { UndoToastAction, UNDO_DURATION_MS } from '@/components/staff/undo-toast'
+import { UNDO_DURATION_MS } from '@/components/staff/undo-toast'
 
 export default function StaffDashboard() {
   const {
@@ -46,7 +46,6 @@ export default function StaffDashboard() {
   const [completedLimit, setCompletedLimit] = useState(6)
   const [searchInput, setSearchInput] = useState('')
   const searchQuery = useDebounce(searchInput, 300)
-  const { toast } = useToast()
 
   // Undo debounce tracking (prevents rapid double-tap on same booking)
   const undoingRef = useRef<string | null>(null)
@@ -102,16 +101,9 @@ export default function StaffDashboard() {
         startProgress(bookingId),
         new Promise(resolve => setTimeout(resolve, 300))
       ])
-      toast({
-        title: 'Started',
-        description: 'Task has been started successfully',
-      })
+      toast.success('Task has been started successfully')
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Could not start the task',
-        variant: 'destructive',
-      })
+      toast.error('Could not start the task')
     } finally {
       setStartingBookingId(null)
     }
@@ -129,47 +121,32 @@ export default function StaffDashboard() {
       const capturedBookingId = bookingId
 
       // Show undo toast (WR4-2, WR4-3)
-      const { dismiss } = toast({
-        title: 'Completed',
-        description: 'Marked as completed',
-        duration: UNDO_DURATION_MS, // F12 fix: Use shared constant
-        action: (
-          <UndoToastAction
-            onUndo={async () => {
-              // Guard: component unmounted or already processing this booking
-              if (!isMountedRef.current || undoingRef.current === capturedBookingId) return
-              undoingRef.current = capturedBookingId
-              dismiss()
-              try {
-                await revertToInProgress(capturedBookingId)
-                if (isMountedRef.current) {
-                  toast({
-                    title: 'Reverted',
-                    description: 'Task moved back to In Progress',
-                  })
-                }
-              } catch (error) {
-                logger.error('Failed to revert booking', { bookingId: capturedBookingId, error }, { context: 'StaffDashboard' })
-                if (isMountedRef.current) {
-                  toast({
-                    title: 'Error',
-                    description: 'Could not undo. Please try again.',
-                    variant: 'destructive',
-                  })
-                }
-              } finally {
-                undoingRef.current = null
+      toast('Marked as completed', {
+        duration: UNDO_DURATION_MS,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            // Guard: component unmounted or already processing this booking
+            if (!isMountedRef.current || undoingRef.current === capturedBookingId) return
+            undoingRef.current = capturedBookingId
+            try {
+              await revertToInProgress(capturedBookingId)
+              if (isMountedRef.current) {
+                toast.success('Task moved back to In Progress')
               }
-            }}
-          />
-        ),
+            } catch (error) {
+              logger.error('Failed to revert booking', { bookingId: capturedBookingId, error }, { context: 'StaffDashboard' })
+              if (isMountedRef.current) {
+                toast.error('Could not undo. Please try again.')
+              }
+            } finally {
+              undoingRef.current = null
+            }
+          },
+        },
       })
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Could not mark task as completed',
-        variant: 'destructive',
-      })
+      toast.error('Could not mark task as completed')
     } finally {
       setCompletingBookingId(null)
     }

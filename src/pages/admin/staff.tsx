@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users, UserPlus } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -68,8 +68,6 @@ export function AdminStaff() {
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
 
-  const { toast } = useToast()
-
   // React Hook Form - Create Form (uses base schema, transforms on submit)
   const createForm = useForm<StaffCreateFormData>({
     resolver: zodResolver(StaffCreateSchema),
@@ -112,13 +110,9 @@ export function AdminStaff() {
   useEffect(() => {
     if (staffError) {
       const errorMessage = getLoadErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: staffError,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: staffError })
     }
-  }, [staffError, toast])
+  }, [staffError])
 
   const onCreateSubmit = async (data: StaffCreateFormData) => {
     try {
@@ -182,21 +176,14 @@ export function AdminStaff() {
         throw new Error(errorMsg)
       }
 
-      toast({
-        title: 'Success',
-        description: 'Staff member created successfully',
-      })
+      toast.success('Staff member created successfully')
 
       setIsDialogOpen(false)
       resetForm()
       refresh()
     } catch (error) {
       const errorMessage = mapErrorToUserMessage(error, 'staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
@@ -204,11 +191,7 @@ export function AdminStaff() {
     try {
       // ป้องกันการลบโปรไฟล์ตัวเอง
       if (user?.id === staffId) {
-        toast({
-          title: 'Cannot delete your own profile',
-          description: 'You cannot delete your own account. Please contact another administrator.',
-          variant: 'destructive',
-        })
+        toast.error('Cannot delete your own profile', { description: 'You cannot delete your own account. Please contact another administrator.' })
         return
       }
 
@@ -227,19 +210,12 @@ export function AdminStaff() {
         throw new Error(data?.error || data?.details || 'Failed to delete user')
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Staff member deleted successfully',
-      })
+      toast.success(data.message || 'Staff member deleted successfully')
       refresh()
     } catch (error) {
       console.error('[Delete Staff] Caught error:', error)
       const errorMessage = getDeleteErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
