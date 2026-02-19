@@ -55,8 +55,6 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
 
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingSubmitData, setPendingSubmitData] = useState<BookingInsertData | null>(null)
-  // true = exact same start_time → DB unique constraint will block; disable "Create Anyway"
-  const [conflictIsExact, setConflictIsExact] = useState(false)
 
   // Ref for step heading focus (accessibility: focus moves to h2 on step change)
   const stepHeadingRef = useRef<HTMLDivElement>(null)
@@ -148,14 +146,18 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
     })
 
     if (conflicts.length > 0) {
-      // Detect exact duplicate: same booking_date + start_time → DB unique constraint blocks it
+      // Exact duplicate: same booking_date + start_time → DB unique constraint will block it.
+      // Show toast instead of dialog — no override possible.
       const isExact = conflicts.some(
         (c) =>
           c.booking.booking_date === state.booking_date &&
           c.booking.start_time?.slice(0, 5) === state.start_time
       )
+      if (isExact) {
+        toast.error('This staff already has a booking at this exact start time. Please choose a different time or staff.')
+        return
+      }
       setPendingSubmitData(bookingData)
-      setConflictIsExact(isExact)
       setShowConflictDialog(true)
       return
     }
@@ -167,7 +169,6 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
     if (!open) {
       setShowConflictDialog(false)
       setPendingSubmitData(null)
-      setConflictIsExact(false)
       clearConflicts()
     }
   }
@@ -249,25 +250,20 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
         )}
       </div>
 
-      {/* FM1-C: Schedule conflict warning — non-blocking unless exact duplicate */}
+      {/* FM1-C: Schedule conflict warning — non-blocking overlap only */}
       <ConfirmDialog
         open={showConflictDialog}
         onOpenChange={handleConflictDialogOpenChange}
         title="Schedule Conflict Detected"
-        description={
-          conflictIsExact
-            ? 'This staff already has a booking at the exact same start time. This cannot be overridden — please choose a different time or staff.'
-            : 'A schedule conflict was detected for the selected staff or team.'
-        }
+        description="A schedule conflict was detected for the selected staff or team."
         warningMessage={
-          !conflictIsExact && state.isRecurring
+          state.isRecurring
             ? 'Note: Only the first occurrence date was checked — other dates may also have conflicts.'
             : undefined
         }
         variant="warning"
         confirmLabel="Create Anyway"
-        cancelLabel={conflictIsExact ? 'Go Back' : 'Cancel'}
-        disableConfirm={conflictIsExact}
+        cancelLabel="Cancel"
         onConfirm={async () => {
           if (pendingSubmitData) {
             await doSubmit(pendingSubmitData)

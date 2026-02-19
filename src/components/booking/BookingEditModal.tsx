@@ -101,7 +101,6 @@ export function BookingEditModal({
   const [status, setStatus] = useState<string>(booking?.status ?? BookingStatus.Pending)
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingUpdate, setPendingUpdate] = useState<Record<string, unknown> | null>(null)
-  const [conflictIsExact, setConflictIsExact] = useState(false)
 
   const { checkConflicts, clearConflicts } = useConflictDetection()
 
@@ -195,8 +194,11 @@ export function BookingEditModal({
           c.booking.booking_date === state.booking_date &&
           c.booking.start_time?.slice(0, 5) === state.start_time
       )
+      if (isExact) {
+        toast.error('This staff already has a booking at this exact start time. Please choose a different time or staff.')
+        return
+      }
       setPendingUpdate(updateData)
-      setConflictIsExact(isExact)
       setShowConflictDialog(true)
       return
     }
@@ -208,7 +210,6 @@ export function BookingEditModal({
     onOpenChange(false)
     clearConflicts()
     setPendingUpdate(null)
-    setConflictIsExact(false)
   }
 
   const endBeforeStart =
@@ -371,20 +372,14 @@ export function BookingEditModal({
             if (!open) {
               setShowConflictDialog(false)
               setPendingUpdate(null)
-              setConflictIsExact(false)
               clearConflicts()
             }
           }}
           title="Schedule Conflict Detected"
-          description={
-            conflictIsExact
-              ? 'This staff already has a booking at the exact same start time. This cannot be overridden — please choose a different time or staff.'
-              : 'A schedule conflict was detected for the selected staff or team.'
-          }
+          description="A schedule conflict was detected for the selected staff or team."
           variant="warning"
           confirmLabel="Save Anyway"
-          cancelLabel={conflictIsExact ? 'Go Back' : 'Cancel'}
-          disableConfirm={conflictIsExact}
+          cancelLabel="Cancel"
           onConfirm={() => {
             if (pendingUpdate) {
               updateMutation.mutate(pendingUpdate)
