@@ -193,7 +193,7 @@ export function BookingEditModal({
   }
 
   const endBeforeStart =
-    state.start_time && state.end_time && state.end_time < state.start_time
+    !state.isMultiDay && state.start_time && state.end_time && state.end_time < state.start_time
 
   return (
     <AppSheet
@@ -211,7 +211,7 @@ export function BookingEditModal({
       >
         <div className="flex flex-col h-full">
           {/* Scrollable form */}
-          <div className="flex-1 overflow-y-auto space-y-5 pb-20">
+          <div className="flex-1 overflow-y-auto space-y-5 px-4 py-4 pb-20">
             {/* Pricing */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-muted-foreground">บริการและราคา</p>
@@ -299,7 +299,7 @@ export function BookingEditModal({
           </div>
 
           {/* EC-S3: Sticky footer */}
-          <div className="sticky bottom-0 bg-background border-t pt-4 flex gap-2">
+          <div className="sticky bottom-0 bg-background border-t px-4 pt-4 pb-4 flex gap-2">
             <Button
               variant="outline"
               onClick={handleClose}
