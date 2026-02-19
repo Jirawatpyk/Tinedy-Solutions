@@ -35,6 +35,7 @@ import { AppSheet } from '@/components/ui/app-sheet'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { useBookingWizard, validateEditState } from '@/hooks/use-booking-wizard'
 import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import type { BookingConflict } from '@/hooks/use-conflict-detection'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { SmartPriceField, SmartPriceFieldSkeleton } from './BookingWizard/SmartPriceField'
 import { DateRangePicker } from './BookingWizard/DateRangePicker'
@@ -179,14 +180,21 @@ export function BookingEditModal({
     }
 
     // Check conflicts (excludes self)
-    const conflicts = await checkConflicts({
-      staffId: state.staff_id,
-      teamId: state.team_id,
-      bookingDate: state.booking_date,
-      startTime: state.start_time,
-      endTime: state.end_time,
-      excludeBookingId: booking?.id,
-    })
+    // M3: Wrap in try/catch — re-thrown errors must be handled here
+    let conflicts: BookingConflict[] = []
+    try {
+      conflicts = await checkConflicts({
+        staffId: state.staff_id,
+        teamId: state.team_id,
+        bookingDate: state.booking_date,
+        startTime: state.start_time,
+        endTime: state.end_time,
+        excludeBookingId: booking?.id,
+      })
+    } catch {
+      toast.error('Could not verify schedule availability. Please try again.')
+      return
+    }
 
     if (conflicts.length > 0) {
       const isExact = conflicts.some(

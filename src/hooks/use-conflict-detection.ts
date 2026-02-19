@@ -15,9 +15,10 @@
  * For production hardening (post-MVP), add a DB-level unique partial index or
  * advisory lock to prevent race conditions in high-concurrency scenarios.
  *
- * NOTE — A4 Supabase nested OR syntax:
- * The query uses `.or()` chaining which has been verified with the PostgREST API.
- * If this fails in production, fall back to: `.rpc('check_booking_conflict', params)`
+ * NOTE — A4 Date range filter (JS-side):
+ * The reverse overlap direction (effectiveEnd >= bookingDate) is evaluated in JS after
+ * fetching, to avoid PostgREST nested AND-inside-OR syntax issues.
+ * If query volume grows, migrate to: `.rpc('check_booking_conflict', params)`
  *
  * @module hooks/use-conflict-detection
  */
@@ -88,10 +89,15 @@ export function useConflictDetection(params?: ConflictCheckParams) {
       // This ensures NULL-endDate bookings behave identically to same-day ranges
       const checkEndDate = endDate ?? bookingDate
 
+      // M2: Practical lower bound — no booking spans more than 1 year.
+      // Prevents fetching the full history of a busy staff member.
+      const lowerBoundDate = new Date(bookingDate + 'T00:00:00')
+      lowerBoundDate.setFullYear(lowerBoundDate.getFullYear() - 1)
+      const queryLowerBound = lowerBoundDate.toISOString().split('T')[0]
+
       // Build range overlap query:
-      // Fetch all bookings for the staff/team that START on or before our range end.
-      // The reverse direction (effective end >= our start) is checked in JS below to
-      // avoid PostgREST nested AND-inside-OR syntax issues (A4).
+      // Fetch bookings for the staff/team that START within [lowerBound, checkEndDate].
+      // The reverse direction (effective end >= bookingDate) is checked in JS below (A4).
       let query = supabase
         .from('bookings')
         .select(`
@@ -101,6 +107,7 @@ export function useConflictDetection(params?: ConflictCheckParams) {
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
+        .gte('booking_date', queryLowerBound)
         .lte('booking_date', checkEndDate)
         .is('deleted_at', null)
         .not('status', 'in', '(cancelled,no_show)')
@@ -154,7 +161,9 @@ export function useConflictDetection(params?: ConflictCheckParams) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to check conflicts'
       setError(errorMessage)
       console.error('[useConflictDetection] Error:', err)
-      return []
+      // M3: Re-throw so callers can show a user-facing error instead of silently
+      // proceeding with an unverified schedule (which risks DB constraint errors).
+      throw err
     } finally {
       setIsChecking(false)
     }
@@ -195,7 +204,8 @@ export function useConflictDetection(params?: ConflictCheckParams) {
    */
   useEffect(() => {
     if (params) {
-      checkConflicts(params)
+      // Catch re-thrown errors — error state is already set inside checkConflicts
+      checkConflicts(params).catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

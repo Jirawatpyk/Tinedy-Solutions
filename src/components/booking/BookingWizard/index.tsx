@@ -33,6 +33,7 @@ import { useQuery } from '@tanstack/react-query'
 import { staffQueryOptions } from '@/lib/queries/staff-queries'
 import { teamQueryOptions } from '@/lib/queries/team-queries'
 import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import type { BookingConflict } from '@/hooks/use-conflict-detection'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 import { PriceMode } from '@/types/booking'
 import { StepIndicator } from './StepIndicator'
@@ -89,11 +90,15 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
   }
 
   async function handleSubmit() {
+    // H1: Lock button immediately — prevents double-submit during async conflict check
+    dispatch({ type: 'SET_SUBMITTING', isSubmitting: true })
+
     // RT7: Full re-validate before submit
     const errors = validateFullState(state)
     if (Object.keys(errors).length > 0) {
       dispatch({ type: 'GOTO_STEP', step: 1 })
       toast.error('Please fill in all required fields')
+      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
       return
     }
 
@@ -136,18 +141,26 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
 
     // FM1-C: Conflict check at submit time. Recurring → primary date only (non-blocking warn).
     // EC-C4: Unassigned bookings skip this check inside useConflictDetection.
-    const conflicts = await checkConflicts({
-      staffId: state.staff_id,
-      teamId: state.team_id,
-      bookingDate: state.booking_date,
-      endDate: state.end_date,
-      startTime: state.start_time,
-      endTime: state.end_time,
-    })
+    let conflicts: BookingConflict[] = []
+    try {
+      conflicts = await checkConflicts({
+        staffId: state.staff_id,
+        teamId: state.team_id,
+        bookingDate: state.booking_date,
+        endDate: state.end_date,
+        startTime: state.start_time,
+        endTime: state.end_time,
+      })
+    } catch {
+      // M3: Query failed — block submit rather than silently proceeding
+      toast.error('Could not verify schedule availability. Please try again.')
+      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
+      return
+    }
 
     if (conflicts.length > 0) {
-      // Exact duplicate: same booking_date + start_time → DB unique constraint will block it.
-      // Show toast instead of dialog — no override possible.
+      // Exact duplicate: same booking_date + start_time → DB unique constraint blocks it.
+      // Show toast instead of dialog — no override is possible.
       const isExact = conflicts.some(
         (c) =>
           c.booking.booking_date === state.booking_date &&
@@ -155,13 +168,16 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick }: 
       )
       if (isExact) {
         toast.error('This staff already has a booking at this exact start time. Please choose a different time or staff.')
+        dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
         return
       }
       setPendingSubmitData(bookingData)
       setShowConflictDialog(true)
+      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false })
       return
     }
 
+    // No conflicts — doSubmit manages isSubmitting from here (also used by dialog confirm path)
     await doSubmit(bookingData)
   }
 
