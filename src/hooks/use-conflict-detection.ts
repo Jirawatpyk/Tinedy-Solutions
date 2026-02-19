@@ -89,9 +89,9 @@ export function useConflictDetection(params?: ConflictCheckParams) {
       const checkEndDate = endDate ?? bookingDate
 
       // Build range overlap query:
-      // A booking overlaps our range if:
-      //   existing.booking_date <= checkEndDate
-      //   AND (existing.end_date IS NULL ? existing.booking_date : existing.end_date) >= checkStartDate
+      // Fetch all bookings for the staff/team that START on or before our range end.
+      // The reverse direction (effective end >= our start) is checked in JS below to
+      // avoid PostgREST nested AND-inside-OR syntax issues (A4).
       let query = supabase
         .from('bookings')
         .select(`
@@ -102,7 +102,6 @@ export function useConflictDetection(params?: ConflictCheckParams) {
           teams (name)
         `)
         .lte('booking_date', checkEndDate)
-        .or(`end_date.is.null.and.booking_date.gte.${bookingDate},end_date.gte.${bookingDate}`)
         .is('deleted_at', null)
         .not('status', 'in', '(cancelled,no_show)')
 
@@ -118,14 +117,21 @@ export function useConflictDetection(params?: ConflictCheckParams) {
         query = query.eq('team_id', teamId)
       }
 
-      const { data: overlappingBookings, error: queryError } = await query
+      const { data: fetchedBookings, error: queryError } = await query
 
       if (queryError) throw queryError
+
+      // R2: JS-side filter — keep only bookings whose effective end date >= our start date.
+      // COALESCE(end_date, booking_date) >= bookingDate — avoids PostgREST nested AND-in-OR.
+      const overlappingBookings = (fetchedBookings ?? []).filter((booking) => {
+        const effectiveEnd = booking.end_date ?? booking.booking_date
+        return effectiveEnd >= bookingDate
+      })
 
       // Check for time overlaps within overlapping days
       const detectedConflicts: BookingConflict[] = []
 
-      overlappingBookings?.forEach((booking) => {
+      overlappingBookings.forEach((booking) => {
         const hasOverlap = checkTimeOverlap(
           startTime,
           endTime || startTime,
