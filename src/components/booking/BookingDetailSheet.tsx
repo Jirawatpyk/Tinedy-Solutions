@@ -451,6 +451,8 @@ export function BookingDetailSheet({
               </div>
             </div>
 
+            <div className="h-px bg-border" />
+
             {/* Section 2: บริการ */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
@@ -482,84 +484,89 @@ export function BookingDetailSheet({
               </div>
             </div>
 
-            {/* Section 3: ผู้รับผิดชอบ */}
+            {/* Section 3: ผู้รับผิดชอบ (conditional + own divider) */}
             {(booking.profiles || booking.teams) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
-                  <Users className="h-4 w-4 text-tinedy-blue" />
-                  ผู้รับผิดชอบ
-                </div>
-                <div className="pl-1 space-y-2">
-                  {booking.profiles && (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarFallback className="text-[10px] bg-tinedy-blue/10 text-tinedy-blue">
-                          {booking.profiles.full_name?.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{booking.profiles.full_name}</span>
-                    </div>
-                  )}
-                  {booking.teams && (
-                    <div className="space-y-2">
+              <>
+                <div className="h-px bg-border" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
+                    <Users className="h-4 w-4 text-tinedy-blue" />
+                    ผู้รับผิดชอบ
+                  </div>
+                  <div className="pl-1 space-y-2">
+                    {booking.profiles && (
                       <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5 text-tinedy-green flex-shrink-0" />
-                        <span className="text-sm font-medium">{booking.teams.name}</span>
-                        {booking.team_member_count != null && booking.team_member_count > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-secondary/80"
-                            onClick={toggleTeamMembers}
-                          >
-                            {booking.team_member_count} คน
-                            <ChevronDown
-                              className={`h-3 w-3 ml-0.5 transition-transform ${showTeamMembers ? 'rotate-180' : ''}`}
-                            />
-                          </Badge>
-                        )}
+                        <Avatar className="h-7 w-7 flex-shrink-0">
+                          <AvatarFallback className="text-[10px] bg-tinedy-blue/10 text-tinedy-blue">
+                            {booking.profiles.full_name?.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{booking.profiles.full_name}</span>
                       </div>
-                      {booking.teams.team_lead && (
-                        <div className="flex items-center gap-1.5 pl-5">
-                          <Crown className="h-3 w-3 text-amber-600 flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground">
-                            หัวหน้าทีม: {booking.teams.team_lead.full_name}
-                          </span>
-                        </div>
-                      )}
-                      {showTeamMembers && (
-                        <div className="pl-5 border-l-2 border-tinedy-green/30 space-y-1.5">
-                          <Label className="text-muted-foreground text-xs">
-                            สมาชิก (ณ เวลาสร้าง)
-                          </Label>
-                          {loadingTeamMembers ? (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              กำลังโหลด...
-                            </div>
-                          ) : teamMembers.length > 0 ? (
-                            <div className="space-y-1">
-                              {teamMembers.map((member) => (
-                                <div key={member.id} className="flex items-center gap-2">
-                                  <Avatar className="h-5 w-5">
-                                    <AvatarImage src={member.avatar_url || undefined} />
-                                    <AvatarFallback className="text-[9px] bg-tinedy-green/20 text-tinedy-green">
-                                      {member.full_name?.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-xs">{member.full_name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">ไม่พบสมาชิก</p>
+                    )}
+                    {booking.teams && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-3.5 w-3.5 text-tinedy-green flex-shrink-0" />
+                          <span className="text-sm font-medium">{booking.teams.name}</span>
+                          {booking.team_member_count != null && booking.team_member_count > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-secondary/80"
+                              onClick={toggleTeamMembers}
+                            >
+                              {booking.team_member_count} คน
+                              <ChevronDown
+                                className={`h-3 w-3 ml-0.5 transition-transform ${showTeamMembers ? 'rotate-180' : ''}`}
+                              />
+                            </Badge>
                           )}
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {booking.teams.team_lead && (
+                          <div className="flex items-center gap-1.5 pl-5">
+                            <Crown className="h-3 w-3 text-amber-600 flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground">
+                              หัวหน้าทีม: {booking.teams.team_lead.full_name}
+                            </span>
+                          </div>
+                        )}
+                        {showTeamMembers && (
+                          <div className="pl-5 border-l-2 border-tinedy-green/30 space-y-1.5">
+                            <Label className="text-muted-foreground text-xs">
+                              สมาชิก (ณ เวลาสร้าง)
+                            </Label>
+                            {loadingTeamMembers ? (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                กำลังโหลด...
+                              </div>
+                            ) : teamMembers.length > 0 ? (
+                              <div className="space-y-1">
+                                {teamMembers.map((member) => (
+                                  <div key={member.id} className="flex items-center gap-2">
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarImage src={member.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[9px] bg-tinedy-green/20 text-tinedy-green">
+                                        {member.full_name?.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-xs">{member.full_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">ไม่พบสมาชิก</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
+
+            <div className="h-px bg-border" />
 
             {/* Section 4: ที่อยู่ */}
             <div className="space-y-2">
@@ -587,22 +594,9 @@ export function BookingDetailSheet({
               </div>
             </div>
 
-            {/* Section 5: หมายเหตุ */}
-            {booking.notes && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
-                  <FileText className="h-4 w-4 text-tinedy-blue" />
-                  หมายเหตุ
-                </div>
-                <p className="pl-1 text-sm text-muted-foreground whitespace-pre-wrap">
-                  {booking.notes}
-                </p>
-              </div>
-            )}
-
             <div className="h-px bg-border" />
 
-            {/* Section 6: สถานะ + ส่งเตือน */}
+            {/* Section 5: สถานะ + ส่งเตือน */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Booking status change */}
@@ -646,7 +640,7 @@ export function BookingDetailSheet({
 
             <div className="h-px bg-border" />
 
-            {/* Section 7: การชำระเงิน */}
+            {/* Section 6: การชำระเงิน (moved up — more prominent) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
                 <CreditCard className="h-4 w-4 text-tinedy-blue" />
@@ -770,45 +764,51 @@ export function BookingDetailSheet({
                   </div>
                 )}
 
-                {/* Payment link (unpaid only) */}
+                {/* Payment link (unpaid only) — clean copy button, no URL display */}
                 {booking.payment_status === 'unpaid' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs flex items-center gap-1">
-                      <Link2 className="h-3 w-3" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Link2 className="h-3.5 w-3.5" />
                       ลิงก์ชำระเงิน
-                    </Label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${window.location.origin}/payment/${booking.parent_booking_id || booking.id}`}
-                        className="flex-1 px-2.5 py-1.5 border rounded-md text-xs bg-tinedy-off-white/50 font-mono truncate"
-                        onClick={(e) => e.currentTarget.select()}
-                        aria-label="Payment link URL"
-                      />
-                      <Button
-                        onClick={handleCopyPaymentLink}
-                        variant={copiedLink ? 'default' : 'outline'}
-                        size="sm"
-                        className={`h-8 text-xs flex-shrink-0 ${copiedLink ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                      >
-                        {copiedLink ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 mr-1" />
-                            คัดลอกแล้ว
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5 mr-1" />
-                            คัดลอก
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    </span>
+                    <Button
+                      onClick={handleCopyPaymentLink}
+                      variant={copiedLink ? 'default' : 'outline'}
+                      size="sm"
+                      className={`h-7 text-xs ${copiedLink ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    >
+                      {copiedLink ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          คัดลอกแล้ว
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          คัดลอกลิงก์
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Section 7: หมายเหตุ (moved after payment) */}
+            {booking.notes && (
+              <>
+                <div className="h-px bg-border" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-tinedy-dark">
+                    <FileText className="h-4 w-4 text-tinedy-blue" />
+                    หมายเหตุ
+                  </div>
+                  <p className="pl-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                    {booking.notes}
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Section 8: รีวิว (completed only) */}
             {(booking.staff_id || booking.team_id) &&
