@@ -119,7 +119,7 @@ async function createSingleBooking(
     zip_code: data.zip_code ?? null,
     notes: data.notes ?? null,
     status: 'pending' as const,
-    payment_status: 'pending' as const,
+    payment_status: 'unpaid' as const,
     payment_method: null,
   }
 

@@ -57,9 +57,11 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
       <div className={cn('grid gap-3', isMultiDay ? 'grid-cols-2' : 'grid-cols-1')}>
         {/* Start date */}
         <div className="space-y-1">
-          <Label htmlFor="booking_date" className="text-xs text-muted-foreground">
-            {isMultiDay ? 'วันเริ่มต้น' : 'วันที่'}
-          </Label>
+          <div className="h-5 flex items-center justify-between">
+            <Label htmlFor="booking_date" className="text-xs text-muted-foreground">
+              {isMultiDay ? 'วันเริ่มต้น' : 'วันที่'}
+            </Label>
+          </div>
           <Input
             id="booking_date"
             type="date"
@@ -75,7 +77,7 @@ export function DateRangePicker({ state, dispatch }: DateRangePickerProps) {
         {/* End date — only when multi-day */}
         {isMultiDay && (
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
+            <div className="h-5 flex items-center justify-between">
               <Label htmlFor="end_date" className="text-xs text-muted-foreground">
                 วันสิ้นสุด
               </Label>
