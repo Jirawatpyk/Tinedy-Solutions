@@ -101,6 +101,7 @@ export function BookingEditModal({
   const [status, setStatus] = useState<string>(booking?.status ?? BookingStatus.Pending)
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [pendingUpdate, setPendingUpdate] = useState<Record<string, unknown> | null>(null)
+  const [conflictIsExact, setConflictIsExact] = useState(false)
 
   const { checkConflicts, clearConflicts } = useConflictDetection()
 
@@ -189,7 +190,13 @@ export function BookingEditModal({
     })
 
     if (conflicts.length > 0) {
+      const isExact = conflicts.some(
+        (c) =>
+          c.booking.booking_date === state.booking_date &&
+          c.booking.start_time?.slice(0, 5) === state.start_time
+      )
       setPendingUpdate(updateData)
+      setConflictIsExact(isExact)
       setShowConflictDialog(true)
       return
     }
@@ -201,6 +208,7 @@ export function BookingEditModal({
     onOpenChange(false)
     clearConflicts()
     setPendingUpdate(null)
+    setConflictIsExact(false)
   }
 
   const endBeforeStart =
@@ -363,14 +371,20 @@ export function BookingEditModal({
             if (!open) {
               setShowConflictDialog(false)
               setPendingUpdate(null)
+              setConflictIsExact(false)
               clearConflicts()
             }
           }}
           title="Schedule Conflict Detected"
-          description="A schedule conflict was detected for the selected staff or team."
+          description={
+            conflictIsExact
+              ? 'This staff already has a booking at the exact same start time. This cannot be overridden — please choose a different time or staff.'
+              : 'A schedule conflict was detected for the selected staff or team.'
+          }
           variant="warning"
           confirmLabel="Save Anyway"
-          cancelLabel="Cancel"
+          cancelLabel={conflictIsExact ? 'Go Back' : 'Cancel'}
+          disableConfirm={conflictIsExact}
           onConfirm={() => {
             if (pendingUpdate) {
               updateMutation.mutate(pendingUpdate)
