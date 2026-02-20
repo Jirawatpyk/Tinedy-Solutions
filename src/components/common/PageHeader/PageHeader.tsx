@@ -19,8 +19,8 @@ export interface PageHeaderProps {
 
 function PageHeaderComponent({ title, subtitle, backHref, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4", className)}>
-      <div className="flex items-center gap-4 min-w-0">
+    <div className={cn("flex items-center justify-between gap-2", className)}>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {backHref && (
           <Link
             to={backHref}
@@ -32,10 +32,10 @@ function PageHeaderComponent({ title, subtitle, backHref, actions, className }: 
         )}
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-display font-bold text-tinedy-dark truncate">{title}</h1>
-          {subtitle && <p className="text-muted-foreground mt-1 line-clamp-2">{subtitle}</p>}
+          {subtitle && <p className="text-muted-foreground mt-1 truncate">{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
     </div>
   )
 }

@@ -154,8 +154,8 @@ export function AdminCustomers() {
           subtitle="Manage your customer database"
           actions={
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              New Customer
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Customer</span>
             </Button>
           }
         />
@@ -225,7 +225,7 @@ export function AdminCustomers() {
                 />
                 <label
                   htmlFor="show-archived-customers"
-                  className="text-sm font-medium cursor-pointer"
+                  className="hidden sm:block text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>
@@ -235,8 +235,8 @@ export function AdminCustomers() {
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={openCreateDialog}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              New Customer
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Customer</span>
             </Button>
           </>
         }

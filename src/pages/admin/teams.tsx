@@ -216,8 +216,8 @@ export function AdminTeams() {
           subtitle="Manage teams and team members"
           actions={
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              New Team
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Team</span>
             </Button>
           }
         />
@@ -297,15 +297,15 @@ export function AdminTeams() {
                 />
                 <label
                   htmlFor="show-archived"
-                  className="text-sm font-medium cursor-pointer"
+                  className="hidden sm:block text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>
               </div>
             </AdminOnly>
             <Button onClick={() => setIsCreateSheetOpen(true)} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
-              <Plus className="h-4 w-4 mr-2" />
-              New Team
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Team</span>
             </Button>
           </>
         }

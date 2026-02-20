@@ -81,8 +81,8 @@ const PackageHeaderComponent = function PackageHeader({
   onArchive,
 }: PackageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div className="flex items-center gap-4 min-w-0">
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link
           to={backHref}
           className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "flex-shrink-0")}
@@ -100,7 +100,7 @@ const PackageHeaderComponent = function PackageHeader({
 
       {/* Action Buttons - Based on permissions.ts */}
       <PermissionGuard requires={{ mode: 'action', action: 'update', resource: 'service_packages' }}>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Toggle Active - Mobile: icon with tooltip, Desktop: full button */}
           <SimpleTooltip content={packageData.is_active ? 'Deactivate' : 'Activate'}>
             <Button

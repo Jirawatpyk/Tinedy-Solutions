@@ -51,9 +51,9 @@ export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({
   const canDelete = user?.id !== staff.id
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex items-center justify-between gap-2">
       {/* Left: Back + Avatar + Name */}
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link
           to={`${basePath}/staff`}
           className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "flex-shrink-0")}
@@ -87,7 +87,7 @@ export const StaffPerformanceHeader = memo(function StaffPerformanceHeader({
       </div>
 
       {/* Right: Action buttons */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {canEdit && onEdit && (
           <>
             {/* Mobile: icon only with tooltip */}

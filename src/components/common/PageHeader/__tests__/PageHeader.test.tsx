@@ -37,6 +37,13 @@ describe('PageHeader', () => {
       expect(subtitle).toHaveClass('text-muted-foreground')
     })
 
+    it('subtitle truncates on overflow', () => {
+      renderWithRouter(<PageHeader title="Test" subtitle="Test Description" />)
+
+      const subtitle = screen.getByText('Test Description')
+      expect(subtitle).toHaveClass('truncate')
+    })
+
     it('does not render subtitle element when not provided', () => {
       const { container } = renderWithRouter(<PageHeader title="Test" />)
 
@@ -130,23 +137,24 @@ describe('PageHeader', () => {
       )
 
       const wrapper = container.firstChild
-      expect(wrapper).toHaveClass('flex', 'flex-col', 'sm:flex-row', 'gap-4')
+      expect(wrapper).toHaveClass('flex', 'items-center', 'justify-between', 'gap-2')
     })
   })
 
-  describe('responsive behavior', () => {
-    it('has responsive flex direction classes', () => {
+  describe('layout behavior', () => {
+    it('always uses flex-row layout (no mobile stack)', () => {
       const { container } = renderWithRouter(<PageHeader title="Test" />)
 
       const wrapper = container.firstChild
-      expect(wrapper).toHaveClass('flex-col', 'sm:flex-row')
+      expect(wrapper).toHaveClass('flex', 'items-center', 'justify-between')
+      expect(wrapper).not.toHaveClass('flex-col', 'sm:flex-row')
     })
 
-    it('has responsive alignment classes', () => {
+    it('actions stay right-aligned via justify-between', () => {
       const { container } = renderWithRouter(<PageHeader title="Test" />)
 
       const wrapper = container.firstChild
-      expect(wrapper).toHaveClass('sm:items-center', 'sm:justify-between')
+      expect(wrapper).toHaveClass('justify-between')
     })
 
     it('has responsive title sizing', () => {

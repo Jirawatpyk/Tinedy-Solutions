@@ -145,8 +145,8 @@ export function AdminStaff() {
           subtitle="Manage your team members"
           actions={
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              New Staff
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Staff</span>
             </Button>
           }
         />

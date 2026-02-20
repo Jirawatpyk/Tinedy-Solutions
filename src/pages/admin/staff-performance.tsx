@@ -91,12 +91,19 @@ export function AdminStaffPerformance() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 sm:h-8 w-48 sm:w-64" />
-            <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
+        {/* Header skeleton — mirrors StaffPerformanceHeader layout */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Skeleton className="h-9 w-9 rounded-md flex-shrink-0" />
+            <Skeleton className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex-shrink-0" />
+            <div className="space-y-2 min-w-0">
+              <Skeleton className="h-6 sm:h-8 w-48 sm:w-64" />
+              <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Skeleton className="h-8 w-8 sm:h-9 sm:w-16" />
+            <Skeleton className="h-8 w-8 sm:h-9 sm:w-20" />
           </div>
         </div>
 

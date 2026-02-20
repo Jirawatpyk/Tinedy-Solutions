@@ -88,8 +88,8 @@ export function AdminCustomerDetail() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title={customer.full_name}
-        subtitle="View and manage customer details"
+        title="Customer Profile"
+        subtitle={customer.full_name}
         backHref={`${basePath}/customers`}
         actions={
           <>
