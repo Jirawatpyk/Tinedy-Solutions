@@ -7,6 +7,7 @@ import { useSettings } from '@/hooks/use-settings'
 import { supabase } from '@/lib/supabase'
 import { Loader2, AlertCircle, Upload, Image as ImageIcon, X, CheckCircle2 } from 'lucide-react'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
+import { sendPaymentConfirmation } from '@/lib/email'
 import generatePayload from 'promptpay-qr'
 import { toDataURL } from 'qrcode'
 
@@ -181,13 +182,9 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
 
       // Send payment confirmation email if auto-verified
       if (autoVerify) {
-        try {
-          await supabase.functions.invoke('send-payment-confirmation', {
-            body: { bookingId }
-          })
-        } catch (emailError) {
+        sendPaymentConfirmation({ bookingId }).catch((emailError) => {
           console.warn('Failed to send confirmation email:', emailError)
-        }
+        })
       }
 
       setUploaded(true)

@@ -50,6 +50,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { sendBookingReminder } from '@/lib/email'
 import { toast } from 'sonner'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
@@ -290,18 +291,10 @@ export function BookingDetailSheet({
     setSendingReminder(true)
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-booking-reminder', {
-        body: { bookingId: booking.id },
-      })
+      const result = await sendBookingReminder({ bookingId: booking.id })
 
-      if (error) {
-        console.error('Edge Function Error:', error)
-        throw new Error(error.message || 'Failed to call Edge Function')
-      }
-
-      if (!data?.success) {
-        console.error('Email send failed:', data)
-        throw new Error(data?.error || 'Failed to send reminder')
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send reminder')
       }
 
       toast.success('Reminder Sent!', { description: `Email sent to ${booking.customers.email}` })

@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { BookingStatus, PaymentStatus, type PriceMode } from '@/types/booking'
 import { RecurringPattern } from '@/types/recurring-booking'
 import { createRecurringGroup } from '@/lib/recurring-booking-service'
+import { sendBookingConfirmation, sendRecurringBookingConfirmation } from '@/lib/email'
 
 // ============================================================================
 // TYPES
@@ -209,6 +210,18 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
     // Single booking
     const id = await createSingleBooking(customerId, data, data.booking_date)
     bookingIds.push(id)
+  }
+
+  // Fire confirmation email non-blocking — never throw or block booking creation
+  // Reminder is sent manually by admin (Auto-Reminder via queue planned as separate feature)
+  const primaryId = bookingIds[0]
+  if (primaryId) {
+    const isRecurring = data.recurring_dates && data.recurring_dates.length > 0
+    if (isRecurring) {
+      sendRecurringBookingConfirmation({ bookingId: primaryId }).catch(() => {})
+    } else {
+      sendBookingConfirmation({ bookingId: primaryId }).catch(() => {})
+    }
   }
 
   return { bookingIds, customerId }

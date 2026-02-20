@@ -1,105 +1,18 @@
 import { supabase } from './supabase';
-import { BookingStatus } from '@/types/booking';
 
-// Shared interfaces
-export interface BookingEmailData {
-  bookingId: string;
-  customerName: string;
-  customerEmail: string;
-  serviceName: string;
-  bookingDate: string;
-  startTime: string;
-  endTime: string;
-  totalPrice: number;
-  location?: string;
-  notes?: string;
-  staffName?: string;
-}
-
-export interface PaymentEmailData extends BookingEmailData {
-  paymentLink: string;
-}
-
-export interface RecurringBookingEmailData {
-  groupId: string;
-  bookingIds: string[];
-  customerName: string;
-  customerEmail: string;
-  serviceName: string;
-  bookingDates: { date: string; sequence: number }[];
-  startTime: string;
-  endTime: string;
-  totalPrice: number;
-  pricePerBooking: number;
-  location: string;
-  paymentLink: string;
-  staffName?: string;
-  notes?: string;
-  frequency: number;
-}
-
-// Queue email in database
-async function queueEmail(
-  bookingId: string,
-  emailType: string,
-  recipientEmail: string,
-  recipientName: string,
-  subject: string,
-  htmlContent: string,
-  scheduledAt?: Date
-) {
-  try {
-    const { error } = await supabase.from('email_queue').insert({
-      booking_id: bookingId,
-      email_type: emailType,
-      recipient_email: recipientEmail,
-      recipient_name: recipientName,
-      subject,
-      html_content: htmlContent,
-      scheduled_at: scheduledAt?.toISOString(),
-      status: BookingStatus.Pending,
-    });
-
-    if (error) {
-      console.error('Failed to queue email:', error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error queuing email:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-// Note: Email sending is now handled by Edge Functions
+// Note: Email sending is handled by Edge Functions
 // This avoids CORS issues and keeps API keys secure on the server
 
 // ============================================================================
 // 1. BOOKING CONFIRMATION EMAIL
+// Edge function is self-contained — fetches all data by bookingId
 // ============================================================================
-export async function sendBookingConfirmation(data: PaymentEmailData) {
+export async function sendBookingConfirmation({ bookingId }: { bookingId: string }) {
   try {
-    // Call Edge Function instead of sending directly from browser
     const { data: result, error } = await supabase.functions.invoke('send-booking-confirmation', {
-      body: data
+      body: { bookingId }
     });
-
-    if (error) {
-      console.error('Edge function error:', error);
-      throw error;
-    }
-
-    // Queue email for tracking
-    await queueEmail(
-      data.bookingId,
-      'booking_confirmation',
-      data.customerEmail,
-      data.customerName,
-      `Booking Confirmed - ${data.serviceName}`,
-      '', // HTML not needed as Edge Function handles it
-    );
-
+    if (error) throw error;
     return { success: true, data: result };
   } catch (error) {
     console.error('Failed to send booking confirmation:', error);
@@ -108,127 +21,65 @@ export async function sendBookingConfirmation(data: PaymentEmailData) {
 }
 
 // ============================================================================
-// 2. PAYMENT LINK EMAIL
+// 2. BOOKING REMINDER EMAIL
+// Edge function is self-contained — fetches all data by bookingId
 // ============================================================================
-export async function sendPaymentLink(data: PaymentEmailData) {
-  // Queue email for tracking
-  await queueEmail(
-    data.bookingId,
-    'payment_link',
-    data.customerEmail,
-    data.customerName,
-    `Payment Required - ${data.serviceName}`,
-    '', // HTML handled by template
-  );
-
-  // Note: This should be sent via Edge Function in production
-  return { success: true };
+export async function sendBookingReminder({ bookingId }: { bookingId: string }) {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('send-booking-reminder', {
+      body: { bookingId }
+    });
+    if (error) throw error;
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to send booking reminder:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 // ============================================================================
 // 3. PAYMENT CONFIRMATION EMAIL
+// Edge function handles both single and recurring bookings by bookingId
 // ============================================================================
-export async function sendPaymentConfirmation(data: BookingEmailData) {
-  // Queue email for tracking
-  await queueEmail(
-    data.bookingId,
-    'payment_confirmation',
-    data.customerEmail,
-    data.customerName,
-    `Payment Confirmed - ${data.serviceName}`,
-    '',
-  );
-
-  // Note: This should be sent via Edge Function in production
-  return { success: true };
-}
-
-// ============================================================================
-// 4. PAYMENT REMINDER EMAIL
-// ============================================================================
-export async function sendPaymentReminder(data: PaymentEmailData) {
-  // Queue email for tracking
-  await queueEmail(
-    data.bookingId,
-    'payment_reminder',
-    data.customerEmail,
-    data.customerName,
-    `Payment Reminder - ${data.serviceName}`,
-    '',
-  );
-
-  // Note: This should be sent via Edge Function in production
-  return { success: true };
-}
-
-// ============================================================================
-// 5. BOOKING REMINDER EMAIL
-// ============================================================================
-export async function sendBookingReminder(data: BookingEmailData) {
-  // Schedule for 1 day before booking
-  const bookingDate = new Date(data.bookingDate);
-  const reminderDate = new Date(bookingDate);
-  reminderDate.setDate(reminderDate.getDate() - 1);
-  reminderDate.setHours(10, 0, 0, 0); // Send at 10 AM
-
-  // Queue email for scheduled sending
-  await queueEmail(
-    data.bookingId,
-    'booking_reminder',
-    data.customerEmail,
-    data.customerName,
-    `Reminder: Your ${data.serviceName} Appointment Tomorrow`,
-    '',
-    reminderDate
-  );
-
-  // Note: Scheduled emails should be processed by Edge Function cron job
-  return { success: true };
-}
-
-// ============================================================================
-// 6. BOOKING RESCHEDULED EMAIL
-// ============================================================================
-export async function sendBookingRescheduled(data: BookingEmailData & { oldDate: string; oldTime: string }) {
-  // Queue email for tracking
-  await queueEmail(
-    data.bookingId,
-    'booking_rescheduled',
-    data.customerEmail,
-    data.customerName,
-    `Booking Rescheduled - ${data.serviceName}`,
-    '',
-  );
-
-  // Note: This should be sent via Edge Function in production
-  return { success: true };
-}
-
-// ============================================================================
-// 7. RECURRING BOOKING CONFIRMATION EMAIL
-// ============================================================================
-export async function sendRecurringBookingConfirmation(data: RecurringBookingEmailData) {
+export async function sendPaymentConfirmation({ bookingId }: { bookingId: string }) {
   try {
-    // Call Edge Function for recurring booking confirmation
-    const { data: result, error } = await supabase.functions.invoke('send-recurring-booking-confirmation', {
-      body: data
+    const { data: result, error } = await supabase.functions.invoke('send-payment-confirmation', {
+      body: { bookingId }
     });
+    if (error) throw error;
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to send payment confirmation:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
-    if (error) {
-      console.error('Edge function error:', error);
-      throw error;
-    }
+// ============================================================================
+// 4. REFUND CONFIRMATION EMAIL
+// ============================================================================
+export async function sendRefundConfirmation({ bookingId }: { bookingId: string }) {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('send-refund-confirmation', {
+      body: { bookingId }
+    });
+    if (error) throw error;
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to send refund confirmation:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
-    // Queue email for tracking (use parent booking ID)
-    await queueEmail(
-      data.bookingIds[0], // parent booking
-      'recurring_booking_confirmation',
-      data.customerEmail,
-      data.customerName,
-      `Recurring Booking Confirmed - ${data.serviceName} (${data.frequency} times)`,
-      '', // HTML not needed as Edge Function handles it
-    );
-
+// ============================================================================
+// 5. RECURRING BOOKING CONFIRMATION EMAIL
+// Edge function is self-contained — fetches all sessions by bookingId (primary)
+// ============================================================================
+export async function sendRecurringBookingConfirmation({ bookingId }: { bookingId: string }) {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('send-recurring-booking-confirmation', {
+      body: { bookingId }
+    });
+    if (error) throw error;
     return { success: true, data: result };
   } catch (error) {
     console.error('Failed to send recurring booking confirmation:', error);

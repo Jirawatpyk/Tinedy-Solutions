@@ -17,41 +17,21 @@ interface BookingData {
   state?: string
   zip_code?: string
   recurring_group_id?: string
-  customers: {
-    full_name: string
-    email: string
-  }
-  service_packages?: {
-    name: string
-  } | null
-  service_packages_v2?: {
-    name: string
-  } | null
-  profiles?: {
-    full_name: string
-  } | null
+  customers: { full_name: string; email: string }
+  service_packages_v2?: { name: string } | null
+  profiles?: { full_name: string } | null
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log('=== send-payment-confirmation started ===')
-
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    console.log('RESEND_API_KEY exists:', !!RESEND_API_KEY)
-
-    if (!RESEND_API_KEY) {
-      console.error('RESEND_API_KEY is not set')
-      throw new Error('RESEND_API_KEY is not set')
-    }
+    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set')
 
     const { bookingId } = await req.json()
-    console.log('Received bookingId:', bookingId)
-
     if (!bookingId) {
       return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
         status: 400,
@@ -59,24 +39,15 @@ serve(async (req) => {
       })
     }
 
-    // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-      throw new Error('Supabase configuration is missing')
-    }
+    if (!supabaseUrl || !supabaseKey) throw new Error('Supabase configuration is missing')
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Fetch business settings from database
-    console.log('Fetching business settings...')
+    // Business settings
     let fromName = 'Tinedy CRM'
     let fromEmail = 'bookings@resend.dev'
     let businessPhone = ''
@@ -84,18 +55,11 @@ serve(async (req) => {
     let businessLogoUrl = 'https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png'
 
     try {
-      const { data: settings, error: settingsError } = await supabase
+      const { data: settings } = await supabase
         .from('settings')
         .select('business_name, business_email, business_phone, business_address, business_logo_url')
         .limit(1)
         .maybeSingle()
-
-      if (settingsError) {
-        console.warn('Settings fetch error:', settingsError)
-      } else {
-        console.log('Settings fetched:', !!settings)
-      }
-
       if (settings) {
         fromName = settings.business_name || fromName
         fromEmail = settings.business_email || fromEmail
@@ -103,13 +67,9 @@ serve(async (req) => {
         businessAddress = settings.business_address || businessAddress
         businessLogoUrl = settings.business_logo_url || businessLogoUrl
       }
-    } catch (error) {
-      console.warn('Failed to fetch settings, using defaults:', error)
-      // Continue with default values
-    }
+    } catch { /* continue with defaults */ }
 
     // Fetch booking data
-    console.log('Fetching booking data...')
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
       .select(`
@@ -124,7 +84,6 @@ serve(async (req) => {
         zip_code,
         recurring_group_id,
         customers (full_name, email),
-        service_packages (name),
         service_packages_v2 (name),
         profiles:staff_id (full_name)
       `)
@@ -132,70 +91,31 @@ serve(async (req) => {
       .single()
 
     if (fetchError || !booking) {
-      console.error('Error fetching booking:', fetchError)
       return new Response(JSON.stringify({ error: 'Booking not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Booking fetched successfully')
-    const bookingData = booking as unknown as BookingData
+    const b = booking as unknown as BookingData
+    const serviceName = b.service_packages_v2?.name ?? 'Service'
+    const staffName = b.profiles?.full_name ?? undefined
+    const location = [b.address, b.city, b.state, b.zip_code].filter(Boolean).join(', ') || undefined
 
-    // Get service name from either service_packages or service_packages_v2
-    const serviceName = bookingData.service_packages?.name || bookingData.service_packages_v2?.name || 'Service'
-
-    // Get staff name if available
-    const staffName = bookingData.profiles?.full_name || undefined
-
-    // Get location if available (address, city, state, zip_code)
-    const location = [bookingData.address, bookingData.city, bookingData.state, bookingData.zip_code]
-      .filter(Boolean)
-      .join(', ') || undefined
-
-    // Check if this is a recurring booking
     let emailHtml: string
 
-    if (bookingData.recurring_group_id) {
-      // Fetch all bookings in the recurring group
-      const { data: groupBookings, error: groupError } = await supabase
+    if (b.recurring_group_id) {
+      const { data: groupBookings } = await supabase
         .from('bookings')
         .select('id, booking_date, start_time, end_time, total_price')
-        .eq('recurring_group_id', bookingData.recurring_group_id)
+        .eq('recurring_group_id', b.recurring_group_id)
         .order('booking_date')
 
-      if (groupError || !groupBookings || groupBookings.length === 0) {
-        console.warn('Failed to fetch group bookings, falling back to single booking display')
-        // Fallback to single booking
-        const bookingDate = new Date(bookingData.booking_date)
-        const formattedDate = bookingDate.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
-
-        emailHtml = generatePaymentConfirmationEmail({
-          customerName: bookingData.customers.full_name,
-          serviceName,
-          formattedDate,
-          startTime: bookingData.start_time,
-          endTime: bookingData.end_time,
-          staffName,
-          location,
-          totalPrice: bookingData.total_price,
-          fromName,
-          businessPhone,
-          businessAddress,
-          businessLogoUrl,
-        })
-      } else {
-        // Generate recurring booking email
-        const totalPrice = groupBookings.reduce((sum: number, b: BookingData) => sum + Number(b.total_price || 0), 0)
+      if (groupBookings && groupBookings.length > 0) {
+        const totalPrice = groupBookings.reduce((sum, gb) => sum + Number(gb.total_price || 0), 0)
         const pricePerBooking = Number(groupBookings[0].total_price || 0)
-
         emailHtml = generateRecurringPaymentConfirmationEmail({
-          customerName: bookingData.customers.full_name,
+          customerName: b.customers.full_name,
           serviceName,
           bookings: groupBookings,
           staffName,
@@ -208,26 +128,32 @@ serve(async (req) => {
           businessAddress,
           businessLogoUrl,
         })
+      } else {
+        emailHtml = generatePaymentConfirmationEmail({
+          customerName: b.customers.full_name,
+          serviceName,
+          formattedDate: formatDate(b.booking_date),
+          startTime: b.start_time?.slice(0, 5) ?? '',
+          endTime: b.end_time?.slice(0, 5) ?? '',
+          staffName,
+          location,
+          totalPrice: b.total_price ?? 0,
+          fromName,
+          businessPhone,
+          businessAddress,
+          businessLogoUrl,
+        })
       }
     } else {
-      // Single booking - original flow
-      const bookingDate = new Date(bookingData.booking_date)
-      const formattedDate = bookingDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-
       emailHtml = generatePaymentConfirmationEmail({
-        customerName: bookingData.customers.full_name,
+        customerName: b.customers.full_name,
         serviceName,
-        formattedDate,
-        startTime: bookingData.start_time,
-        endTime: bookingData.end_time,
+        formattedDate: formatDate(b.booking_date),
+        startTime: b.start_time?.slice(0, 5) ?? '',
+        endTime: b.end_time?.slice(0, 5) ?? '',
         staffName,
         location,
-        totalPrice: bookingData.total_price,
+        totalPrice: b.total_price ?? 0,
         fromName,
         businessPhone,
         businessAddress,
@@ -235,72 +161,50 @@ serve(async (req) => {
       })
     }
 
-    // Send email via Resend
-    console.log('Sending email to:', bookingData.customers.email)
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
-        to: bookingData.customers.email,
-        subject: `Payment Confirmed - ${serviceName}`,
+        to: b.customers.email,
+        subject: `Payment Confirmed — ${serviceName}`,
         html: emailHtml,
       }),
     })
 
-    console.log('Email API response status:', emailResponse.status)
     const emailResult = await emailResponse.json()
-
-    if (!emailResponse.ok) {
-      console.error('Resend error:', emailResult)
-      throw new Error(emailResult.message || 'Failed to send email')
-    }
-
-    console.log('Payment confirmation email sent successfully:', emailResult.id)
+    if (!emailResponse.ok) throw new Error(emailResult.message || 'Failed to send email')
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        emailId: emailResult.id,
-        message: 'Payment confirmation email sent successfully',
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ success: true, emailId: emailResult.id, message: 'Payment confirmation email sent successfully' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error in send-payment-confirmation:', error)
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
-/**
- * Generate single payment confirmation email
- *
- * Email Color Palette:
- * - Primary: #4F46E5 (Indigo-600) - Headers, buttons, accents
- * - Success: #10b981 (Green-500) - Payment success
- * - Warning: #f59e0b (Yellow-500) - Notes section
- * - Text: #333, #1f2937, #4b5563, #6b7280, #9ca3af
- * - Background: #f5f5f5, #ffffff, #f8f9fa, #f9fafb
- * - Border: #e5e7eb
- *
- * Business Info Section:
- * - business-name: text-align: center (centered business name)
- * - contact-item: justify-content: flex-start (left-aligned phone/address)
- */
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+}
+
+// ============================================================================
+// EMAIL TEMPLATES — Tinedy Brand (inline CSS for email client compatibility)
+// Color Palette:
+//   tinedy-blue:      #2e4057  (header bg, borders, labels)
+//   tinedy-green:     #8fb996  (amount paid highlight, success banner)
+//   tinedy-yellow:    #e7d188  (notes section)
+//   tinedy-off-white: #f5f3ee  (info card bg, footer bg)
+//   tinedy-dark:      #2d241d  (body text)
+//   background:       #f0ede8
+// ============================================================================
+
 function generatePaymentConfirmationEmail(data: {
   customerName: string
   serviceName: string
@@ -315,203 +219,94 @@ function generatePaymentConfirmationEmail(data: {
   businessAddress: string
   businessLogoUrl: string
 }): string {
-  return `
-<!DOCTYPE html>
-<html>
+  const detailRows = [
+    { label: '📋 Service', value: data.serviceName },
+    { label: '📅 Date', value: data.formattedDate },
+    { label: '🕐 Time', value: `${data.startTime} – ${data.endTime}` },
+    ...(data.staffName ? [{ label: '👤 Staff', value: data.staffName }] : []),
+    ...(data.location ? [{ label: '📍 Location', value: data.location }] : []),
+  ]
+
+  const detailRowsHtml = detailRows.map(({ label, value }) => `
+    <tr>
+      <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">${label}</td>
+      <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${value}</td>
+    </tr>
+  `).join('')
+
+  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
+  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Payment Confirmed</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #10b981;
-    }
-    .header h1 {
-      color: #10b981;
-      margin: 0;
-      font-size: 28px;
-    }
-    .greeting {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .booking-details {
-      background-color: #f8f9fa;
-      border-left: 4px solid #4F46E5;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .detail-row {
-      display: flex;
-      margin: 12px 0;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #4F46E5;
-      min-width: 120px;
-    }
-    .detail-value {
-      color: #333;
-    }
-    .success-message {
-      background-color: #d1fae5;
-      border-left: 4px solid #10b981;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .business-info {
-      background-color: #f9fafb;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .business-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    .contact-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .contact-item span {
-      margin-left: 8px;
-    }
-    .footer-note {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${data.businessLogoUrl}"
-           alt="${data.fromName} Logo"
-           class="logo"
-           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
-      <h1>✅ Payment Confirmed!</h1>
-    </div>
+<body style="margin:0;padding:0;background-color:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
-    <div class="greeting">
-      Hi ${data.customerName},
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">✅ Payment Confirmed!</h1>
+              <p style="margin:8px 0 0;color:#8fb996;font-size:15px;">Your booking is fully confirmed.</p>
+            </td>
+          </tr>
 
-    <p>We've received your payment. Your booking is now fully confirmed!</p>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">We've received your payment. Your booking with <strong>${data.fromName}</strong> is now fully confirmed!</p>
 
-    <div class="booking-details">
-      <div class="detail-row">
-        <div class="detail-label">Service:</div>
-        <div class="detail-value">${data.serviceName}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Date:</div>
-        <div class="detail-value">${data.formattedDate}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Time:</div>
-        <div class="detail-value">${data.startTime} - ${data.endTime}</div>
-      </div>
-      ${data.staffName ? `
-      <div class="detail-row">
-        <div class="detail-label">Staff:</div>
-        <div class="detail-value">${data.staffName}</div>
-      </div>
-      ` : ''}
-      ${data.location ? `
-      <div class="detail-row">
-        <div class="detail-label">Location:</div>
-        <div class="detail-value">${data.location}</div>
-      </div>
-      ` : ''}
-      <div class="detail-row">
-        <div class="detail-label">Amount Paid:</div>
-        <div class="detail-value"><strong style="color: #10b981;">฿${data.totalPrice.toLocaleString()}</strong></div>
-      </div>
-    </div>
+              <!-- INFO CARD -->
+              <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  ${detailRowsHtml}
+                  <tr>
+                    <td style="padding:12px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;border-top:1px solid #e8e4df;vertical-align:top;">💰 Amount Paid</td>
+                    <td style="padding:12px 0 10px;font-size:22px;font-weight:700;color:#8fb996;border-top:1px solid #e8e4df;vertical-align:top;">฿${data.totalPrice.toLocaleString('th-TH')}</td>
+                  </tr>
+                </table>
+              </div>
 
-    <div class="success-message">
-      <p><strong>You're all set!</strong></p>
-      <p>We'll send you a reminder before your appointment.</p>
-    </div>
+              <!-- SUCCESS BANNER -->
+              <div style="background-color:#dff2e3;border-left:4px solid #8fb996;border-radius:4px;padding:16px 20px;margin:0 0 24px;">
+                <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">🎉 You're all set!</p>
+                <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">We'll send you a reminder before your appointment.</p>
+              </div>
 
-    <div class="footer">
-      <div class="business-info">
-        <div class="business-name">${data.fromName}</div>
-        ${data.businessPhone ? `
-        <div class="contact-item">
-          <span>📞</span>
-          <span>${data.businessPhone}</span>
-        </div>
-        ` : ''}
-        ${data.businessAddress ? `
-        <div class="contact-item">
-          <span>📍</span>
-          <span>${data.businessAddress}</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="footer-note">
-        Looking forward to seeing you!
-      </div>
-    </div>
-  </div>
+              <p style="margin:0;font-size:14px;color:#6b6b6b;line-height:1.6;">If you have any questions, please contact us.</p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 }
 
-/**
- * Generate recurring payment confirmation email
- * Uses same color palette as single payment email
- */
 function generateRecurringPaymentConfirmationEmail(data: {
   customerName: string
   serviceName: string
-  bookings: Array<{
-    id: string
-    booking_date: string
-    start_time: string
-    end_time: string
-    total_price: number
-  }>
+  bookings: Array<{ id: string; booking_date: string; start_time: string; end_time: string; total_price: number }>
   staffName?: string
   location?: string
   totalPrice: number
@@ -522,250 +317,116 @@ function generateRecurringPaymentConfirmationEmail(data: {
   businessAddress: string
   businessLogoUrl: string
 }): string {
-  const scheduleListHtml = data.bookings.map((booking, index) => {
-    const bookingDate = new Date(booking.booking_date)
-    const formattedDate = bookingDate.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  const scheduleRowsHtml = data.bookings.map((booking, index) => {
+    const formattedDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
     })
-
+    const bg = index % 2 === 0 ? '#f5f3ee' : '#ffffff'
     return `
-      <div style="padding: 12px; background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'}; border-radius: 4px; margin-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="font-weight: 600; color: #3b82f6; min-width: 32px;">#${index + 1}</span>
-          <span style="color: #1f2937;">📅 ${formattedDate}</span>
-        </div>
-        <div style="margin-left: 40px;">
-          <span style="color: #6b7280; font-size: 14px;">🕐 ${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}</span>
-        </div>
-      </div>
+      <tr>
+        <td style="padding:10px 12px;background-color:${bg};font-weight:700;color:#2e4057;font-size:14px;width:36px;">#${index + 1}</td>
+        <td style="padding:10px 12px;background-color:${bg};color:#2d241d;font-size:14px;">📅 ${formattedDate}</td>
+        <td style="padding:10px 12px;background-color:${bg};color:#6b6b6b;font-size:13px;">🕐 ${booking.start_time.slice(0, 5)} – ${booking.end_time.slice(0, 5)}</td>
+      </tr>
     `
   }).join('')
 
-  return `
-<!DOCTYPE html>
-<html>
+  const infoRows = [
+    { label: '📋 Service', value: data.serviceName },
+    ...(data.staffName ? [{ label: '👤 Staff', value: data.staffName }] : []),
+    ...(data.location ? [{ label: '📍 Location', value: data.location }] : []),
+  ]
+
+  const infoRowsHtml = infoRows.map(({ label, value }) => `
+    <tr>
+      <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">${label}</td>
+      <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${value}</td>
+    </tr>
+  `).join('')
+
+  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
+  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payment Confirmed - Recurring Booking</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #10b981;
-    }
-    .header h1 {
-      color: #10b981;
-      margin: 0;
-      font-size: 28px;
-    }
-    .header-subtitle {
-      color: #6b7280;
-      font-size: 14px;
-      margin-top: 8px;
-    }
-    .greeting {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .schedule-section {
-      background-color: #f8f9fa;
-      border-left: 4px solid #3b82f6;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .schedule-section h3 {
-      color: #1f2937;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 12px 0;
-      padding: 8px 0;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .detail-row:last-child {
-      border-bottom: none;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #4F46E5;
-    }
-    .detail-value {
-      color: #333;
-    }
-    .total-section {
-      background-color: #d1fae5;
-      border-left: 4px solid #10b981;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    .total-row.grand-total {
-      font-size: 16px;
-      font-weight: 700;
-      color: #10b981;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 2px solid #10b981;
-    }
-    .success-message {
-      background-color: #dbeafe;
-      border-left: 4px solid #3b82f6;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .business-info {
-      background-color: #f9fafb;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .business-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    .contact-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .contact-item span {
-      margin-left: 8px;
-    }
-    .footer-note {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Payment Confirmed</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${data.businessLogoUrl}"
-           alt="${data.fromName} Logo"
-           class="logo"
-           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
-      <h1>✅ Payment Confirmed!</h1>
-      <p class="header-subtitle">Recurring Booking - ${data.frequency} sessions</p>
-    </div>
+<body style="margin:0;padding:0;background-color:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
-    <div class="greeting">
-      Hi ${data.customerName},
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">✅ Payment Confirmed!</h1>
+              <p style="margin:8px 0 0;color:#8fb996;font-size:15px;font-weight:600;">Recurring Booking — ${data.frequency} sessions</p>
+            </td>
+          </tr>
 
-    <p>We've received your payment. Your ${data.frequency} recurring bookings are now fully confirmed!</p>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">We've received your payment. Your ${data.frequency} recurring sessions with <strong>${data.fromName}</strong> are fully confirmed!</p>
 
-    <div class="detail-row">
-      <div class="detail-label">Service:</div>
-      <div class="detail-value">${data.serviceName}</div>
-    </div>
-    ${data.staffName ? `
-    <div class="detail-row">
-      <div class="detail-label">Staff:</div>
-      <div class="detail-value">${data.staffName}</div>
-    </div>
-    ` : ''}
-    ${data.location ? `
-    <div class="detail-row">
-      <div class="detail-label">Location:</div>
-      <div class="detail-value">${data.location}</div>
-    </div>
-    ` : ''}
+              <!-- SERVICE INFO -->
+              <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">${infoRowsHtml}</table>
+              </div>
 
-    <div class="schedule-section">
-      <h3>📅 Your Schedule (${data.frequency} sessions)</h3>
-      ${scheduleListHtml}
-    </div>
+              <!-- SCHEDULE TABLE -->
+              <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#2e4057;">📅 Your Schedule (${data.frequency} sessions)</p>
+              <table width="100%" cellpadding="0" cellspacing="2" style="border-collapse:separate;border-spacing:0 4px;margin-bottom:24px;">
+                ${scheduleRowsHtml}
+              </table>
 
-    <div class="total-section">
-      <div class="total-row">
-        <div>Price per session:</div>
-        <div>฿${data.pricePerBooking.toLocaleString()}</div>
-      </div>
-      <div class="total-row">
-        <div>Number of sessions:</div>
-        <div>${data.frequency}</div>
-      </div>
-      <div class="total-row grand-total">
-        <div>Total Amount Paid:</div>
-        <div>฿${data.totalPrice.toLocaleString()}</div>
-      </div>
-    </div>
+              <!-- PRICING SUMMARY -->
+              <div style="background-color:#f5f3ee;border:1px solid #e8e4df;border-radius:8px;padding:20px 24px;margin:0 0 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:6px 0;color:#2d241d;font-size:14px;">Price per session</td>
+                    <td style="padding:6px 0;color:#2d241d;font-size:14px;text-align:right;">฿${data.pricePerBooking.toLocaleString('th-TH')}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;color:#2d241d;font-size:14px;">Sessions</td>
+                    <td style="padding:6px 0;color:#2d241d;font-size:14px;text-align:right;">× ${data.frequency}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0 6px;border-top:2px solid #2e4057;font-weight:700;color:#2e4057;font-size:15px;">Total Amount Paid</td>
+                    <td style="padding:12px 0 6px;border-top:2px solid #2e4057;font-weight:700;color:#8fb996;font-size:22px;text-align:right;">฿${data.totalPrice.toLocaleString('th-TH')}</td>
+                  </tr>
+                </table>
+              </div>
 
-    <div class="success-message">
-      <p><strong>You're all set!</strong></p>
-      <p>We'll send you a reminder before each appointment.</p>
-    </div>
+              <!-- SUCCESS BANNER -->
+              <div style="background-color:#dff2e3;border-left:4px solid #8fb996;border-radius:4px;padding:16px 20px;margin:0 0 24px;">
+                <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">🎉 You're all set!</p>
+                <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">We'll send you reminders before each appointment.</p>
+              </div>
 
-    <div class="footer">
-      <div class="business-info">
-        <div class="business-name">${data.fromName}</div>
-        ${data.businessPhone ? `
-        <div class="contact-item">
-          <span>📞</span>
-          <span>${data.businessPhone}</span>
-        </div>
-        ` : ''}
-        ${data.businessAddress ? `
-        <div class="contact-item">
-          <span>📍</span>
-          <span>${data.businessAddress}</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="footer-note">
-        Looking forward to seeing you!
-      </div>
-    </div>
-  </div>
+              <p style="margin:0;font-size:14px;color:#6b6b6b;line-height:1.6;">If you have any questions, please contact us.</p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 }

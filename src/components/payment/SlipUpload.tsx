@@ -8,6 +8,7 @@ import { useSettings } from '@/hooks/use-settings'
 import { supabase } from '@/lib/supabase'
 import { Upload, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
+import { sendPaymentConfirmation } from '@/lib/email'
 
 interface SlipUploadProps {
   bookingId: string
@@ -137,15 +138,9 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
 
       // Send payment confirmation email if auto-verified
       if (autoVerify) {
-        try {
-          // ✅ ทั้ง single และ recurring ให้ส่ง Payment Confirmation
-          await supabase.functions.invoke('send-payment-confirmation', {
-            body: { bookingId }
-          })
-        } catch (emailError) {
+        sendPaymentConfirmation({ bookingId }).catch((emailError) => {
           console.warn('Failed to send confirmation email:', emailError)
-          // Don't throw - payment is still successful
-        }
+        })
       }
 
       setUploaded(true)
