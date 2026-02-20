@@ -306,10 +306,11 @@ describe('useOptimisticDelete', () => {
 
   describe('Loading States', () => {
     it('should track loading state for soft delete', async () => {
+      let resolveFn!: (value: { data: null; error: null }) => void
       mockRpc.mockImplementation(
         () =>
           new Promise((resolve) => {
-            setTimeout(() => resolve({ data: null, error: null }), 50)
+            resolveFn = resolve
           })
       )
 
@@ -326,6 +327,8 @@ describe('useOptimisticDelete', () => {
         expect(result.current.softDelete.isLoading).toBe(true)
       })
 
+      // Resolve the pending RPC call
+      resolveFn({ data: null, error: null })
       await mutatePromise
 
       await waitFor(() => {

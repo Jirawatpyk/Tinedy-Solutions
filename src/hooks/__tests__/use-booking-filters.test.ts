@@ -16,6 +16,16 @@ vi.mock('../use-debounce', () => ({
   useDebounce: <T,>(value: T): T => value, // Return value immediately for testing
 }))
 
+// Mock getBangkokDateString to return a deterministic date
+const MOCK_TODAY = '2026-02-21'
+vi.mock('@/lib/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/utils')>()
+  return {
+    ...actual,
+    getBangkokDateString: () => MOCK_TODAY,
+  }
+})
+
 describe('useBookingFilters', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -377,7 +387,7 @@ describe('useBookingFilters', () => {
       it('should set dateFrom and dateTo to today', () => {
         // Arrange
         const { result } = renderHook(() => useBookingFilters())
-        const today = new Date().toISOString().split('T')[0]
+        const today = MOCK_TODAY
 
         // Act
         act(() => {

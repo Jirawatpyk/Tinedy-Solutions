@@ -60,7 +60,8 @@ serve(async (req) => {
       })
     }
 
-    const p = primary as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join types are not inferred in edge functions
+    const p = primary as Record<string, any>
     const customerName: string = p.customers?.full_name ?? 'Customer'
     const customerEmail: string = p.customers?.email ?? ''
     if (!customerEmail) {

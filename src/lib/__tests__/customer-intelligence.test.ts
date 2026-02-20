@@ -32,6 +32,7 @@ function mockStatsCall(rows: { total_price: number | null }[]) {
       ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         then: (
           resolve: (v: typeof result) => unknown,
           _reject?: (reason?: unknown) => unknown
@@ -40,9 +41,9 @@ function mockStatsCall(rows: { total_price: number | null }[]) {
   )
 }
 
-function mockUpdateCall() {
+function mockUpdateCall(updateError: { message: string } | null = null) {
   const update = vi.fn().mockReturnValue({
-    eq: vi.fn().mockResolvedValue({ error: null }),
+    eq: vi.fn().mockResolvedValue({ error: updateError }),
   })
   mockFrom.mockImplementationOnce(() => ({ update }) as any)
   return update
@@ -127,8 +128,9 @@ describe('checkAndUpdateCustomerIntelligence', () => {
 
     await checkAndUpdateCustomerIntelligence('cust-1')
 
-    // Only one call: customer fetch. No stats fetch, no update.
-    expect(mockFrom).toHaveBeenCalledTimes(1)
+    // Only customer fetch — no stats, no update
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers'])
   })
 
   it('adds "High Value" tag when spend reaches ฿15,000', async () => {
@@ -224,12 +226,53 @@ describe('checkAndUpdateCustomerIntelligence', () => {
     expect(callArgs.notes).toMatch(/^Prefers morning appointments\n\n\[Auto\]/)
   })
 
+  it('warns to console when update fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([{ total_price: 1000 }])
+    mockUpdateCall({ message: 'DB write failed' })
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[customer-intelligence] update failed:',
+      'DB write failed'
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('caps notes to 1000 chars with "..." prefix when existing notes are very long', async () => {
+    const longNotes = 'A'.repeat(950) // 950 chars of existing notes
+
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: longNotes,
+    })
+    mockStatsCall([{ total_price: 0 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    const callArgs = update.mock.calls[0][0] as { notes: string }
+    expect(callArgs.notes.length).toBeLessThanOrEqual(1000)
+    expect(callArgs.notes).toMatch(/^\.\.\.A+\n\n\[Auto\]/)
+  })
+
   it('getCustomerStats returns zeros when DB returns error', async () => {
     mockFrom.mockImplementationOnce(
       () =>
         ({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
           then: (
             resolve: (v: { data: null; error: { message: string } }) => unknown,
             _reject?: unknown

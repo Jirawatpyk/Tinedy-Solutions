@@ -60,7 +60,8 @@ serve(async (req) => {
       })
     }
 
-    const b = booking as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join types are not inferred in edge functions
+    const b = booking as Record<string, any>
     const customerName: string = b.customers?.full_name ?? 'Customer'
     const customerEmail: string = b.customers?.email ?? ''
     if (!customerEmail) {

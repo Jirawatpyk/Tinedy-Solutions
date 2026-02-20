@@ -16,6 +16,7 @@ export async function getCustomerStats(
     .eq('customer_id', customerId)
     .eq('status', 'completed')
     .eq('payment_status', 'paid')
+    .is('deleted_at', null)
 
   if (error || !data) return { paidBookings: 0, totalSpend: 0 }
 
@@ -73,10 +74,10 @@ export async function checkAndUpdateCustomerIntelligence(
     const separator = '\n\n'
     const maxPrefixLen = NOTES_MAX_LENGTH - separator.length - autoNote.length
     const existingNotes = customer.notes ?? ''
-    const trimmedPrefix =
-      existingNotes.length > maxPrefixLen
-        ? existingNotes.slice(existingNotes.length - maxPrefixLen)
-        : existingNotes
+    const wasTruncated = maxPrefixLen > 0 && existingNotes.length > maxPrefixLen
+    const trimmedPrefix = wasTruncated
+      ? '...' + existingNotes.slice(existingNotes.length - maxPrefixLen + 3)
+      : existingNotes
     const updatedNotes = trimmedPrefix ? `${trimmedPrefix}${separator}${autoNote}` : autoNote
 
     const { error: updateErr } = await supabase
