@@ -542,11 +542,12 @@ export function useBookingsPage() {
         }
       }
 
-      let archivedCount = 0
-      for (const bookingId of bookingIdsToArchive) {
-        const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: bookingId })
-        if (!error) archivedCount++
-      }
+      const archiveResults = await Promise.all(
+        bookingIdsToArchive.map((id) =>
+          supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: id })
+        )
+      )
+      const archivedCount = archiveResults.filter((r) => !r.error).length
       toast.success(`Archived ${archivedCount} booking(s) successfully`)
       dispatch({ type: 'CLOSE_RECURRING_DIALOG' })
       refresh()
@@ -603,11 +604,12 @@ export function useBookingsPage() {
       if (!groupBookings || groupBookings.length === 0) {
         toast('No archived bookings found in this group to restore'); return
       }
-      let restoredCount = 0
-      for (const booking of groupBookings) {
-        const { error } = await supabase.from('bookings').update({ deleted_at: null, deleted_by: null }).eq('id', booking.id)
-        if (!error) restoredCount++
-      }
+      const { error: restoreError } = await supabase
+        .from('bookings')
+        .update({ deleted_at: null, deleted_by: null })
+        .in('id', groupBookings.map((b) => b.id))
+      if (restoreError) throw restoreError
+      const restoredCount = groupBookings.length
       toast.success(`Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully`)
       refresh()
     } catch (error) {
@@ -623,11 +625,12 @@ export function useBookingsPage() {
       if (!groupBookings || groupBookings.length === 0) {
         toast('No active bookings found in this group to archive'); return
       }
-      let archivedCount = 0
-      for (const booking of groupBookings) {
-        const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: booking.id })
-        if (!error) archivedCount++
-      }
+      const archiveGroupResults = await Promise.all(
+        groupBookings.map((b) =>
+          supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: b.id })
+        )
+      )
+      const archivedCount = archiveGroupResults.filter((r) => !r.error).length
       toast.success(`Archived ${archivedCount} booking(s) successfully`)
       refresh()
     } catch (error) {
@@ -693,7 +696,7 @@ export function useBookingsPage() {
         if (isTiered && 'area_sqm' in booking && 'frequency' in booking && booking.area_sqm && booking.frequency) {
           dispatch({ type: 'SET_EDIT_PACKAGE_SELECTION', payload: {
             packageId: pkg.id, pricingModel: 'tiered', areaSqm: Number(booking.area_sqm) || 0,
-            frequency: (booking.frequency as 1 | 2 | 4 | 8) || 1, price: booking.total_price || 0,
+            frequency: (booking.frequency as number) || 1, price: booking.total_price || 0,
             requiredStaff: 1, packageName: pkg.name,
           }})
         } else {
@@ -706,9 +709,7 @@ export function useBookingsPage() {
       }
     }
 
-    setTimeout(() => {
-      dispatch({ type: 'OPEN_EDIT', payload: { booking, assignmentType } })
-    }, 0)
+    dispatch({ type: 'OPEN_EDIT', payload: { booking, assignmentType } })
   }, [editForm, servicePackages])
 
   return {
