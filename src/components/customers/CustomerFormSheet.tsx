@@ -348,33 +348,31 @@ export function CustomerFormSheet({
             {/* Corporate Information (Optional) */}
             <div className="border-t pt-4 space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground">Corporate Information (Optional)</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="company_name">Company Name</Label>
-                  <Input
-                    id="company_name"
-                    {...form.register('company_name')}
-                    placeholder="ABC Company Ltd."
-                  />
-                  {form.formState.errors.company_name && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.company_name.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tax_id">Tax ID</Label>
-                  <Input
-                    id="tax_id"
-                    {...form.register('tax_id')}
-                    placeholder="0-0000-00000-00-0"
-                  />
-                  {form.formState.errors.tax_id && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.tax_id.message}
-                    </p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_name">Company Name</Label>
+                <Input
+                  id="company_name"
+                  {...form.register('company_name')}
+                  placeholder="ABC Company Ltd."
+                />
+                {form.formState.errors.company_name && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.company_name.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tax_id">Tax ID</Label>
+                <Input
+                  id="tax_id"
+                  {...form.register('tax_id')}
+                  placeholder="0-0000-00000-00-0"
+                />
+                {form.formState.errors.tax_id && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.tax_id.message}
+                  </p>
+                )}
               </div>
             </div>
 
