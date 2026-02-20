@@ -328,16 +328,14 @@ export function CustomerFormSheet({
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Lock Toggle — Admin only, Edit mode only */}
-            {isEditMode && isAdmin && (
-              <div className="border-t pt-4">
+              {/* Lock Toggle — Admin only, Edit mode only, inside Relationship section */}
+              {isEditMode && isAdmin && (
                 <Controller
                   name="relationship_level_locked"
                   control={form.control}
                   render={({ field }) => (
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
                           <Lock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -357,8 +355,8 @@ export function CustomerFormSheet({
                     </div>
                   )}
                 />
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Tags Section */}
             <div className="border-t pt-4 space-y-2">

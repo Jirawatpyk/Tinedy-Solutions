@@ -115,7 +115,7 @@ export async function verifyPayment(
       if (booking?.customer_id) {
         await checkAndUpdateCustomerIntelligence(booking.customer_id)
       }
-    })()
+    })().catch(console.warn)
 
     return { success: true, count }
   } catch (error) {
@@ -208,7 +208,7 @@ export async function markAsPaid(
       if (booking?.customer_id) {
         await checkAndUpdateCustomerIntelligence(booking.customer_id)
       }
-    })()
+    })().catch(console.warn)
 
     return { success: true, count }
   } catch (error) {

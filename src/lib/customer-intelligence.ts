@@ -63,7 +63,7 @@ export async function checkAndUpdateCustomerIntelligence(
 
   // 7. If level changed — update level + tags + append auto-note
   if (newLevel !== currentLevel) {
-    const spendStr = totalSpend > 0 ? `, ฿${totalSpend.toLocaleString()} total spend` : ''
+    const spendStr = totalSpend > 0 ? `, ฿${totalSpend.toLocaleString('th-TH')} total spend` : ''
     const bookingStr = `${paidBookings} completed booking${paidBookings !== 1 ? 's' : ''}`
     const autoNote = `[Auto] ${getBangkokDateString()} — Relationship upgraded: ${currentLevel} → ${newLevel} (${bookingStr}${spendStr})`
     const updatedNotes = customer.notes ? `${customer.notes}\n\n${autoNote}` : autoNote

@@ -70,7 +70,7 @@ describe('checkAndUpdateCustomerIntelligence', () => {
     )
   })
 
-  it('upgrades regular → vip on 5th paid booking', async () => {
+  it('upgrades regular → vip on 5th paid booking and adds "Frequent Booker" tag', async () => {
     mockCustomerCall({
       relationship_level: 'regular',
       relationship_level_locked: false,
@@ -89,7 +89,10 @@ describe('checkAndUpdateCustomerIntelligence', () => {
     await checkAndUpdateCustomerIntelligence('cust-1')
 
     expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ relationship_level: 'vip' })
+      expect.objectContaining({
+        relationship_level: 'vip',
+        tags: expect.arrayContaining(['Frequent Booker']),
+      })
     )
   })
 
@@ -201,5 +204,43 @@ describe('checkAndUpdateCustomerIntelligence', () => {
 
     // Level unchanged, no auto-tags triggered → no update
     expect(mockFrom).toHaveBeenCalledTimes(2) // customer + stats only
+  })
+
+  it('appends auto-note after existing notes (does not overwrite)', async () => {
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: 'Prefers morning appointments',
+    })
+    mockStatsCall([{ total_price: 0 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    const callArgs = update.mock.calls[0][0] as { notes: string }
+    expect(callArgs.notes).toMatch(/^Prefers morning appointments\n\n\[Auto\]/)
+  })
+
+  it('getCustomerStats returns zeros when DB returns error', async () => {
+    mockFrom.mockImplementationOnce(
+      () =>
+        ({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          then: (
+            resolve: (v: { data: null; error: { message: string } }) => unknown,
+            _reject?: unknown
+          ) =>
+            Promise.resolve({ data: null, error: { message: 'DB error' } }).then(
+              resolve as any
+            ),
+        }) as any
+    )
+
+    const { getCustomerStats } = await import('@/lib/customer-intelligence')
+    const result = await getCustomerStats('cust-err')
+
+    expect(result).toEqual({ paidBookings: 0, totalSpend: 0 })
   })
 })
