@@ -117,15 +117,17 @@ export function TeamFormSheet({
               })
             if (memberError) {
               console.error('Error adding team lead as member:', memberError)
+              toast.warning('Team updated, but could not add team lead as member — please add them manually.')
             }
           }
         }
 
-        toast.success(
+        const leadAddedAsMember =
           transformedData.team_lead_id &&
-            !team.members?.some((m) => m.id === transformedData.team_lead_id)
-            ? 'Team updated and team lead added as member'
-            : 'Team updated successfully'
+          !team.members?.some((m) => m.id === transformedData.team_lead_id)
+        toast.success(leadAddedAsMember
+          ? 'Team updated and team lead added as member'
+          : 'Team updated successfully'
         )
       } else {
         const transformedData = TeamCreateTransformSchema.parse(data)
@@ -143,6 +145,7 @@ export function TeamFormSheet({
 
         if (teamError) throw teamError
 
+        let leadAdded = false
         if (transformedData.team_lead_id && newTeam) {
           const { error: memberError } = await supabase
             .from('team_members')
@@ -153,13 +156,15 @@ export function TeamFormSheet({
             })
           if (memberError) {
             console.error('Error adding team lead as member:', memberError)
+            toast.warning('Team created, but could not add team lead as member — please add them manually.')
+          } else {
+            leadAdded = true
           }
         }
 
-        toast.success(
-          transformedData.team_lead_id
-            ? 'Team created and team lead added as member'
-            : 'Team created successfully'
+        toast.success(leadAdded
+          ? 'Team created and team lead added as member'
+          : 'Team created successfully'
         )
       }
 

@@ -50,7 +50,9 @@ export function AdminTeams() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [isMemberSheetOpen, setIsMemberSheetOpen] = useState(false)
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
+  // Separate state prevents shared selectedTeam from cross-contaminating sheets
+  const [teamForEdit, setTeamForEdit] = useState<Team | null>(null)
+  const [teamForMember, setTeamForMember] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
@@ -196,12 +198,12 @@ export function AdminTeams() {
   }
 
   const openEditSheet = (team: Team) => {
-    setSelectedTeam(team)
+    setTeamForEdit(team)
     setIsEditSheetOpen(true)
   }
 
   const openMemberSheet = (team: Team) => {
-    setSelectedTeam(team)
+    setTeamForMember(team)
     setIsMemberSheetOpen(true)
   }
 
@@ -417,14 +419,14 @@ export function AdminTeams() {
       <TeamFormSheet
         open={isEditSheetOpen}
         onOpenChange={setIsEditSheetOpen}
-        team={selectedTeam as TeamForForm | null}
+        team={teamForEdit as TeamForForm | null}
         staffList={availableStaff}
         onSuccess={refresh}
       />
 
       {/* Add Member Sheet — use fresh team data from teams array to avoid stale members */}
-      {selectedTeam && (() => {
-        const freshTeam = teams.find(t => t.id === selectedTeam.id) ?? selectedTeam
+      {teamForMember && (() => {
+        const freshTeam = teams.find(t => t.id === teamForMember.id) ?? teamForMember
         return (
           <AddTeamMemberSheet
             open={isMemberSheetOpen}
