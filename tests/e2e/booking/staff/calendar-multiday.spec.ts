@@ -58,16 +58,19 @@ test.describe('Staff: Calendar Multi-Day View', () => {
     await expect(page.getByRole('button', { name: 'Today' }).first()).toBeVisible()
   })
 
-  test('should render calendar grid with multiple navigation buttons', async ({ page }) => {
+  test('should render calendar grid with day headers', async ({ page }) => {
     await loginAsStaff(page)
 
     await page.goto('/staff/calendar')
     await expect(page).toHaveURL(/\/staff\/calendar/)
 
-    // Multiple buttons render (Today + prev/next month arrows + day cells)
-    const buttons = page.getByRole('button')
-    const count = await buttons.count()
-    expect(count).toBeGreaterThan(2)
+    // Wait for calendar to fully render — Today button indicates calendar is loaded
+    await expect(page.getByRole('button', { name: 'Today' }).first()).toBeVisible()
+
+    // Verify calendar grid rendered with day-of-week headers
+    await expect(page.getByText('Sun').first()).toBeVisible()
+    await expect(page.getByText('Mon').first()).toBeVisible()
+    await expect(page.getByText('Sat').first()).toBeVisible()
   })
 
   test.skip('should show multi-day booking spanning multiple calendar cells', async () => {

@@ -34,10 +34,10 @@ test.describe('Admin: Booking V2 Wizard', () => {
     await page.getByRole('button', { name: /New Booking/i }).click()
 
     // AppSheet title
-    await expect(page.getByText('สร้างการจอง').first()).toBeVisible()
+    await expect(page.getByText('New Booking').first()).toBeVisible()
 
     // Wizard Step 1 heading (AC3.1: wizard UI)
-    await expect(page.getByText('ขั้นตอนที่ 1: เลือกลูกค้า').first()).toBeVisible()
+    await expect(page.getByText('Step 1: Select Customer').first()).toBeVisible()
   })
 
   test('should switch from Wizard to Quick Mode', async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe('Admin: Booking V2 Wizard', () => {
 
     await page.goto('/admin/bookings')
     await page.getByRole('button', { name: /New Booking/i }).click()
-    await expect(page.getByText('ขั้นตอนที่ 1: เลือกลูกค้า').first()).toBeVisible()
+    await expect(page.getByText('Step 1: Select Customer').first()).toBeVisible()
 
     // Click Quick Mode toggle (Zap icon + "Quick" label in wizard nav)
     await page.getByRole('button', { name: 'Quick' }).click()
@@ -68,7 +68,7 @@ test.describe('Admin: Booking V2 Wizard', () => {
     await page.getByRole('button', { name: 'Guided' }).click()
 
     // Step 1 heading restored
-    await expect(page.getByText('ขั้นตอนที่ 1: เลือกลูกค้า').first()).toBeVisible()
+    await expect(page.getByText('Step 1: Select Customer').first()).toBeVisible()
   })
 
   test('should show multi-day toggle in Quick Mode', async ({ page }) => {
@@ -81,11 +81,11 @@ test.describe('Admin: Booking V2 Wizard', () => {
     await page.getByRole('button', { name: 'Quick' }).click()
     await expect(page.getByText('Quick Mode').first()).toBeVisible()
 
-    // DateRangePicker "หลายวัน" label visible (AC3.3 / AC3.4: multi-day UI)
-    await expect(page.getByText('หลายวัน').first()).toBeVisible()
+    // DateRangePicker "Multi-day" label visible (AC3.3 / AC3.4: multi-day UI)
+    await expect(page.getByText('Multi-day').first()).toBeVisible()
 
     // Date section label visible
-    await expect(page.getByText('วันและเวลา').first()).toBeVisible()
+    await expect(page.getByText('Date & Time').first()).toBeVisible()
   })
 
   test.skip('should create multi-day booking via wizard (end-to-end)', async () => {
@@ -95,10 +95,10 @@ test.describe('Admin: Booking V2 Wizard', () => {
     //   - POST /bookings → returns created booking
     // Then:
     //   Step 1: select existing customer from Combobox
-    //   Step 2: select package, toggle หลายวัน, set booking_date + end_date
+    //   Step 2: select package, toggle Multi-day, set booking_date + end_date
     //   Step 3: skip assignment (assignmentType = 'none')
-    //   Step 4: verify "X วัน" badge, click สร้างการจอง
-    //   Assert: toast "สร้างการจองสำเร็จ" visible
+    //   Step 4: verify "X days" badge, click Create Booking
+    //   Assert: toast visible
   })
 
   test.skip('should create custom pricing booking via Quick Mode (end-to-end)', async () => {
