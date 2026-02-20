@@ -119,68 +119,66 @@ export function StaffFormSheet({ open, onOpenChange, onSuccess }: StaffFormSheet
       <div className="flex flex-col h-full">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-20">
-            {/* Email & Password */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input id="email" type="email" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
+            {/* Email */}
+            <Controller
+              name="email"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input id="email" type="email" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                </div>
+              )}
+            />
 
-              <Controller
-                name="password"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
-                    <Input id="password" type="password" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
-                  </div>
-                )}
-              />
-            </div>
+            {/* Password */}
+            <Controller
+              name="password"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input id="password" type="password" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+                </div>
+              )}
+            />
 
-            {/* Full Name & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Controller
-                name="full_name"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name *</Label>
-                    <Input id="full_name" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
+            {/* Full Name */}
+            <Controller
+              name="full_name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Full Name *</Label>
+                  <Input id="full_name" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                </div>
+              )}
+            />
 
-              <Controller
-                name="phone"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" type="tel" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
+            {/* Phone */}
+            <Controller
+              name="phone"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" type="tel" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                </div>
+              )}
+            />
 
             {/* Staff Number */}
             <Controller

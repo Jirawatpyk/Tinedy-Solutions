@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AppSheet } from '@/components/ui/app-sheet'
@@ -48,7 +48,6 @@ export function StaffEditSheet({
   onSuccess,
 }: StaffEditSheetProps) {
   const { profile } = useAuth()
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<StaffUpdateFormData>({
     resolver: zodResolver(StaffUpdateSchema),
@@ -62,25 +61,26 @@ export function StaffEditSheet({
     },
   })
 
-  // Reset form when sheet opens with staff data
+  // Sync form with staff data on open; clear on close to prevent stale data on next open
   useEffect(() => {
-    if (!staff || !open) return
-
-    form.reset({
-      full_name: staff.full_name,
-      phone: staff.phone || '',
-      role: staff.role,
-      staff_number: staff.staff_number || '',
-      skills: staff.skills || [],
-      password: '',
-    })
+    if (open && staff) {
+      form.reset({
+        full_name: staff.full_name,
+        phone: staff.phone || '',
+        role: staff.role,
+        staff_number: staff.staff_number || '',
+        skills: staff.skills || [],
+        password: '',
+      })
+    } else if (!open) {
+      form.reset({ full_name: '', phone: '', role: 'staff', staff_number: '', skills: [], password: '' })
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staff, open])
 
   const onSubmit = async (data: StaffUpdateFormData) => {
     if (!staff) return
 
-    setIsSubmitting(true)
     try {
       const updateData = StaffUpdateWithSkillsSchema.parse(data)
 
@@ -151,8 +151,6 @@ export function StaffEditSheet({
     } catch (error) {
       const errorMessage = mapErrorToUserMessage(error, 'staff')
       toast.error(errorMessage.title, { description: errorMessage.description })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -310,7 +308,7 @@ export function StaffEditSheet({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={form.formState.isSubmitting}
               className="flex-1"
             >
               Cancel
@@ -318,9 +316,9 @@ export function StaffEditSheet({
             <Button
               type="submit"
               className="flex-1 bg-tinedy-blue"
-              disabled={isSubmitting}
+              disabled={form.formState.isSubmitting}
             >
-              {isSubmitting ? 'Updating...' : 'Save Changes'}
+              {form.formState.isSubmitting ? 'Updating...' : 'Save Changes'}
             </Button>
           </div>
         </form>

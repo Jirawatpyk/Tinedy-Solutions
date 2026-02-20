@@ -34,6 +34,8 @@ export interface Staff {
   role: string
   phone?: string
   avatar_url?: string
+  staff_number?: string | null
+  skills?: string[] | null
 }
 
 interface BookingRawFromDB {
@@ -88,7 +90,7 @@ export function useStaffPerformance(staffId: string | undefined) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, phone, avatar_url')
+        .select('id, full_name, email, role, phone, avatar_url, staff_number, skills')
         .eq('id', staffId)
         .single()
 

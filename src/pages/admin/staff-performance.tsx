@@ -25,8 +25,8 @@ export function AdminStaffPerformance() {
   // Use custom hook for data fetching and stats calculation
   const { staff, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
 
-  // Edit dialog state
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  // Edit sheet state
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [staffForEdit, setStaffForEdit] = useState<StaffForEdit | null>(null)
 
   // Fetch additional counts for delete warning
@@ -163,10 +163,10 @@ export function AdminStaffPerformance() {
                   full_name: staff.full_name,
                   phone: staff.phone,
                   role: staff.role as 'admin' | 'manager' | 'staff',
-                  staff_number: undefined, // Will be fetched in dialog
-                  skills: undefined, // Will be fetched in dialog
+                  staff_number: staff.staff_number,
+                  skills: staff.skills,
                 })
-                setIsEditDialogOpen(true)
+                setIsEditSheetOpen(true)
               }
             }}
             onDelete={deleteStaff}
@@ -188,8 +188,8 @@ export function AdminStaffPerformance() {
 
       {/* Edit Staff Sheet */}
       <StaffEditSheet
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
         staff={staffForEdit}
         onSuccess={refresh}
       />
