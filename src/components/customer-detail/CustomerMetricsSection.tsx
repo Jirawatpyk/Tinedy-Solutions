@@ -1,6 +1,6 @@
 import { memo } from 'react'
-import { DollarSign, FileText, Clock, Users } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TrendingUp, CalendarCheck, Clock, UserCheck } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 export interface CustomerStats {
@@ -22,79 +22,110 @@ interface CustomerMetricsSectionProps {
   customerCreatedAt: string
 }
 
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+function formatTenure(days: number): string {
+  if (days < 30) return `${days}d`
+  if (days < 365) return `${Math.floor(days / 30)}mo`
+  const years = Math.floor(days / 365)
+  const months = Math.floor((days % 365) / 30)
+  return months > 0 ? `${years}y ${months}mo` : `${years}y`
+}
+
+function formatLastBooking(days: number | null | undefined): string {
+  if (days == null) return 'No service yet'
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 30) return `${days} days ago`
+  if (days < 365) return `${Math.floor(days / 30)} mo ago`
+  return `${Math.floor(days / 365)} yr ago`
+}
+
+// ---------------------------------------------------------------------------
+// Metric Card
+// ---------------------------------------------------------------------------
+
+interface MetricCardProps {
+  label: string
+  value: string
+  sub: string
+  icon: React.ReactNode
+  iconBg: string
+}
+
+function MetricCard({ label, value, sub, icon, iconBg }: MetricCardProps) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-start justify-between mb-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {label}
+          </p>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+            {icon}
+          </div>
+        </div>
+        <p className="text-2xl font-bold text-tinedy-dark leading-none mb-1">
+          {value}
+        </p>
+        <p className="text-xs text-muted-foreground">{sub}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 const CustomerMetricsSection = memo(function CustomerMetricsSection({
   stats,
   customerCreatedAt,
 }: CustomerMetricsSectionProps) {
+  const completionRate =
+    stats && stats.total_bookings > 0
+      ? Math.round((stats.completed_bookings / stats.total_bookings) * 100)
+      : 0
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="border-l-4 border-l-emerald-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Lifetime Value</CardTitle>
-          <DollarSign className="h-4 w-4 text-emerald-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
-            {formatCurrency(stats?.lifetime_value || 0)}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Avg: {formatCurrency(stats?.avg_booking_value || 0)} per booking
-          </p>
-        </CardContent>
-      </Card>
+      <MetricCard
+        label="Lifetime Value"
+        value={formatCurrency(stats?.lifetime_value || 0)}
+        sub={`Avg ${formatCurrency(stats?.avg_booking_value || 0)} / booking`}
+        iconBg="bg-emerald-100"
+        icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
+      />
 
-      <Card className="border-l-4 border-l-tinedy-blue">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-          <FileText className="h-4 w-4 text-tinedy-blue" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
-            {stats?.total_bookings || 0}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats?.completed_bookings || 0} completed, {stats?.cancelled_bookings || 0} cancelled
-          </p>
-        </CardContent>
-      </Card>
+      <MetricCard
+        label="Total Bookings"
+        value={String(stats?.total_bookings || 0)}
+        sub={`${completionRate}% completion rate`}
+        iconBg="bg-blue-100"
+        icon={<CalendarCheck className="h-4 w-4 text-tinedy-blue" />}
+      />
 
-      <Card className="border-l-4 border-l-purple-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Last Booking</CardTitle>
-          <Clock className="h-4 w-4 text-purple-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
-            {stats?.days_since_last_booking !== null && stats?.days_since_last_booking !== undefined
-              ? stats.days_since_last_booking === 0
-                ? 'Today'
-                : stats.days_since_last_booking === 1
-                ? '1 day ago'
-                : `${stats.days_since_last_booking} days ago`
-              : 'No service yet'}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats?.last_booking_date
-              ? formatDate(stats.last_booking_date)
-              : 'No completed booking'}
-          </p>
-        </CardContent>
-      </Card>
+      <MetricCard
+        label="Last Booking"
+        value={formatLastBooking(stats?.days_since_last_booking)}
+        sub={
+          stats?.last_booking_date
+            ? formatDate(stats.last_booking_date)
+            : 'No booking yet'
+        }
+        iconBg="bg-purple-100"
+        icon={<Clock className="h-4 w-4 text-purple-600" />}
+      />
 
-      <Card className="border-l-4 border-l-amber-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Customer Since</CardTitle>
-          <Users className="h-4 w-4 text-amber-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-tinedy-dark">
-            {stats?.customer_tenure_days || 0}d
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {formatDate(customerCreatedAt)}
-          </p>
-        </CardContent>
-      </Card>
+      <MetricCard
+        label="Customer Since"
+        value={formatTenure(stats?.customer_tenure_days || 0)}
+        sub={formatDate(customerCreatedAt)}
+        iconBg="bg-amber-100"
+        icon={<UserCheck className="h-4 w-4 text-amber-600" />}
+      />
     </div>
   )
 })
