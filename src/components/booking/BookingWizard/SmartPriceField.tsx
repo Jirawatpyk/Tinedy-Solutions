@@ -56,7 +56,7 @@ export function SmartPriceField({
   const [areaOutOfRange, setAreaOutOfRange] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
 
-  const { mode: wizardMode, price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, start_time, endTimeManuallySet, validationErrors } = state
+  const { mode: wizardMode, isMultiDay, price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, start_time, endTimeManuallySet, validationErrors } = state
 
   // Confirm before switching to custom if package already selected
   function handleModeChange(newMode: string) {
@@ -217,9 +217,9 @@ export function SmartPriceField({
         </div>
       )}
 
-      {/* Area & Frequency — frequency hidden for Custom mode and Quick mode (no recurring in Quick) */}
+      {/* Area & Frequency — frequency hidden for Custom / Quick / Multi-day modes */}
       {(() => {
-        const showFrequency = price_mode !== PriceMode.Custom && wizardMode !== 'quick'
+        const showFrequency = price_mode !== PriceMode.Custom && wizardMode !== 'quick' && !isMultiDay
         return (
           <div className={showFrequency ? 'grid grid-cols-2 gap-3' : 'space-y-1'}>
             <div className="space-y-1">

@@ -13,17 +13,17 @@ import type { BookingFrequency } from '@/types/service-package-v2'
 import { BookingStatus } from '@/types/booking'
 
 /**
- * แปลง RecurringPattern เป็น label ภาษาไทย
+ * Convert RecurringPattern to display label
  */
 export function getRecurringPatternLabel(pattern: RecurringPattern | null): string {
-  if (!pattern) return 'ไม่ระบุ'
+  if (!pattern) return 'Not specified'
 
   const labels: Record<RecurringPattern, string> = {
-    'auto-monthly': 'เดือนละ 1 ครั้ง',
-    'custom': 'กำหนดเอง'
+    'auto-monthly': 'Monthly',
+    'custom': 'Custom'
   }
 
-  return labels[pattern] || 'ไม่ระบุ'
+  return labels[pattern] || 'Not specified'
 }
 
 /**

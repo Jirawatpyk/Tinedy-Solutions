@@ -126,7 +126,7 @@ export function BookingQuickForm({
     <div className="flex flex-col h-full">
       {/* Header: Quick Mode label + Guided toggle */}
       {!hideToggle && (
-        <div className="flex items-center justify-between pb-3 border-b mb-4">
+        <div className="flex items-center justify-between px-6 pb-3 border-b mb-4">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-tinedy-yellow" />
             <span className="font-semibold text-sm">Quick Mode</span>
@@ -153,7 +153,7 @@ export function BookingQuickForm({
       )}
 
       {/* Scrollable form content */}
-      <div className="flex-1 overflow-y-auto space-y-5 pb-20">
+      <div className="flex-1 overflow-y-auto px-6 space-y-5 pb-20">
         {/* Step 1: Customer */}
         <Step1Customer state={state} dispatch={dispatch} />
 
@@ -222,7 +222,7 @@ export function BookingQuickForm({
       </div>
 
       {/* EC-S3: Sticky submit button */}
-      <div className="sticky bottom-0 bg-background border-t pt-4 flex gap-2">
+      <div className="sticky bottom-0 bg-background border-t pt-4 pb-6 flex gap-2 px-6">
         <Button
           variant="outline"
           onClick={onCancel}

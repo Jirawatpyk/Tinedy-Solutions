@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import { BookingStatus } from '@/types/booking'
 import { cn, formatCurrency } from '@/lib/utils'
-import { getRecurringPatternLabel } from '@/types/recurring-booking'
+import { getRecurringPatternLabel } from '@/lib/recurring-utils'
 import { formatDate } from '@/lib/utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { RecurringGroup } from '@/types/recurring-booking'

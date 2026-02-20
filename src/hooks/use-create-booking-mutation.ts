@@ -155,15 +155,14 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
     // Recurring booking — use createRecurringGroup() for proper linking
     // Manual mode: recurringDates = ALL dates (no separate primary)
     // Auto-monthly mode: booking_date (primary) + recurringDates (future)
-    const allDates =
-      data.recurring_pattern === 'manual'
-        ? [...data.recurring_dates].sort()
-        : [data.booking_date, ...data.recurring_dates].sort()
+    const isManual = data.recurring_pattern === RecurringPattern.Custom
+    const allDates = isManual
+      ? [...data.recurring_dates].sort()
+      : [data.booking_date, ...data.recurring_dates].sort()
 
-    const pattern =
-      data.recurring_pattern === 'manual'
-        ? RecurringPattern.Custom
-        : RecurringPattern.AutoMonthly
+    const pattern = isManual
+      ? RecurringPattern.Custom
+      : RecurringPattern.AutoMonthly
 
     // Split price per booking: total_price is the package total for all sessions
     const perBookingPrice = Math.round(data.total_price / allDates.length)
@@ -174,6 +173,7 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
     const result = await createRecurringGroup({
       baseBooking: {
         customer_id: customerId,
+        end_date: null, // multi-day + recurring ยังไม่รองรับ — force null ป้องกัน child มี end_date < booking_date
         start_time: data.start_time,
         end_time: data.end_time || null,
         status: BookingStatus.Pending,
@@ -207,21 +207,8 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
     bookingIds.push(...result.bookingIds)
   } else {
     // Single booking
-    try {
-      const id = await createSingleBooking(customerId, data, data.booking_date)
-      bookingIds.push(id)
-    } catch (error) {
-      if (bookingIds.length > 0) {
-        const { error: rollbackError } = await supabase
-          .from('bookings')
-          .delete()
-          .in('id', bookingIds)
-        if (rollbackError) {
-          console.error('[useCreateBookingMutation] Rollback failed:', bookingIds, rollbackError)
-        }
-      }
-      throw error
-    }
+    const id = await createSingleBooking(customerId, data, data.booking_date)
+    bookingIds.push(id)
   }
 
   return { bookingIds, customerId }

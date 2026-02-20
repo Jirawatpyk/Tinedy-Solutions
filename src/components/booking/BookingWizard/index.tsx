@@ -101,7 +101,7 @@ export function BookingWizard({ userId, onSuccess, onCancel, onSwitchToQuick, in
     if (Object.keys(errors).length > 0) {
       // M4 fix: jump to the first step that actually has errors
       const step1Keys = ['customer', 'new_customer_name', 'new_customer_phone']
-      const step2Keys = ['booking_date', 'end_date', 'start_time', 'job_name', 'custom_price', 'package_v2_id']
+      const step2Keys = ['booking_date', 'end_date', 'start_time', 'job_name', 'custom_price', 'package_v2_id', 'recurringDates']
       if (step1Keys.some((k) => errors[k])) {
         dispatch({ type: 'GOTO_STEP', step: 1 })
       } else if (step2Keys.some((k) => errors[k])) {

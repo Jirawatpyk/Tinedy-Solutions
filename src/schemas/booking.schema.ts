@@ -52,7 +52,7 @@ export const frequencySchema = z.union([
 ])
 
 // Recurring Pattern Enum
-export const recurringPatternSchema = z.enum(['auto_monthly', 'manual'])
+export const recurringPatternSchema = z.enum(['auto-monthly', 'custom'])
 
 // Base Booking Schema (shared fields)
 const baseBookingSchema = z.object({

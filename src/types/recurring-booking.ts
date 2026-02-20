@@ -84,6 +84,7 @@ export interface RecurringGroupInput {
   /** ข้อมูล booking พื้นฐาน (ไม่รวม dates และ id) */
   baseBooking: {
     customer_id: string
+    end_date?: string | null
     start_time: string
     end_time: string | null
     status: string
@@ -183,20 +184,6 @@ export interface RecurringCreationResult {
   groupId: string
   bookingIds: string[]
   errors?: string[]
-}
-
-/**
- * Helper function: Convert RecurringPattern to label
- */
-export function getRecurringPatternLabel(pattern: RecurringPattern | null): string {
-  if (!pattern) return 'Not specified'
-
-  const labels: Record<RecurringPattern, string> = {
-    'auto-monthly': 'Monthly',
-    'custom': 'Custom'
-  }
-
-  return labels[pattern] || 'Not specified'
 }
 
 /**

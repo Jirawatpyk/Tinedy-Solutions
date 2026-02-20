@@ -188,7 +188,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
         />
         <div className="pl-5 text-sm">
           {/* Manual recurring: show only the manually picked dates as primary */}
-          {isRecurring && recurringPattern === 'manual' && recurringDates.length > 0 ? (
+          {isRecurring && recurringPattern === 'custom' && recurringDates.length > 0 ? (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Repeat className="h-3 w-3" />
