@@ -70,7 +70,8 @@ export function CustomerFormSheet({
     defaultValues: defaultFormValues,
   })
 
-  // Reset form when sheet opens with customer data
+  // Sync form state with open/customer changes
+  // Reset to defaults when closing (fix: avoids flash — reset after sheet closes, not before)
   useEffect(() => {
     if (open) {
       if (customer) {
@@ -96,6 +97,8 @@ export function CustomerFormSheet({
       } else {
         form.reset(defaultFormValues)
       }
+    } else {
+      form.reset(defaultFormValues)
     }
   }, [open, customer, form])
 
@@ -135,9 +138,9 @@ export function CustomerFormSheet({
         toast.success('Customer created successfully')
       }
 
-      form.reset(defaultFormValues)
       onOpenChange(false)
       onSuccess?.()
+      // form.reset happens in useEffect when open → false
     } catch (error) {
       logger.error('Error saving customer', { error, isEditMode }, { context: 'CustomerFormSheet' })
       const errorMessage = mapErrorToUserMessage(error, 'customer')
@@ -145,15 +148,15 @@ export function CustomerFormSheet({
     }
   }
 
+  // handleClose only needs to trigger close — reset is handled by useEffect when open → false
   const handleClose = () => {
-    form.reset(defaultFormValues)
     onOpenChange(false)
   }
 
   return (
     <AppSheet
       open={open}
-      onOpenChange={(o) => !o && handleClose()}
+      onOpenChange={onOpenChange}
       title={isEditMode ? 'Edit Customer' : 'New Customer'}
       size="lg"
     >
