@@ -650,9 +650,8 @@ export function BookingDetailModal({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="line_pay">LINE Pay</SelectItem>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="transfer">Bank Transfer</SelectItem>
                       <SelectItem value="promptpay">PromptPay</SelectItem>
                     </SelectContent>
                   </Select>

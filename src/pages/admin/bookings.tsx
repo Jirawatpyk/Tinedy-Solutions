@@ -58,6 +58,7 @@ export function AdminBookings() {
     handleVerifyRecurringGroup,
     openBookingDetail,
     openEditBooking,
+    createInitialState,
   } = useBookingsPage()
 
   if (loading) {
@@ -211,6 +212,7 @@ export function AdminBookings() {
         isDialogOpen={state.isDialogOpen}
         onCloseDialog={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: false })}
         onSuccess={refresh}
+        initialState={createInitialState ?? undefined}
       />
 
       {/* Filters */}

@@ -240,6 +240,22 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
         errors.package_v2_id = 'Please select a package'
       }
     }
+
+    // Validate frequency is available for this tiered package
+    // Only runs in create-flow where selectedPackage is populated (edit-mode SEED leaves it null)
+    if (state.selectedPackage?.pricing_model === 'tiered' && state.frequency !== null) {
+      const availableFreqs = new Set(
+        state.selectedPackage.tiers.flatMap((t) =>
+          t.frequency_prices && t.frequency_prices.length > 0
+            ? t.frequency_prices.map((fp) => fp.times)
+            : [1, t.price_2_times != null ? 2 : null, t.price_4_times != null ? 4 : null, t.price_8_times != null ? 8 : null]
+                .filter((x): x is number => x !== null)
+        )
+      )
+      if (availableFreqs.size > 0 && !availableFreqs.has(state.frequency)) {
+        errors.frequency = `Frequency ${state.frequency}× is not available for this package — please re-select`
+      }
+    }
   }
 
   if (step === 3) {

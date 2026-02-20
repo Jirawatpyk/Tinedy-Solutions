@@ -7,12 +7,15 @@
 
 import { memo } from 'react'
 import { BookingFormContainer } from '@/components/booking/BookingFormContainer'
+import type { WizardState } from '@/hooks/use-booking-wizard'
 
 interface BookingCreateFlowProps {
   isDialogOpen: boolean
   onCloseDialog: () => void
   onSuccess: () => void
   userId?: string
+  /** Pre-seed wizard state (e.g. from AvailabilityCheckSheet after-select) */
+  initialState?: Partial<WizardState>
 }
 
 function BookingCreateFlowComponent({
@@ -20,6 +23,7 @@ function BookingCreateFlowComponent({
   onCloseDialog,
   onSuccess,
   userId,
+  initialState,
 }: BookingCreateFlowProps) {
   return (
     <BookingFormContainer
@@ -27,6 +31,7 @@ function BookingCreateFlowComponent({
       onOpenChange={(open) => { if (!open) onCloseDialog() }}
       userId={userId}
       onSuccess={onSuccess}
+      initialState={initialState}
     />
   )
 }

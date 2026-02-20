@@ -9,10 +9,11 @@
 import React, { useReducer, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import type { WizardState } from '@/hooks/use-booking-wizard'
 import { useBookingFilters } from '@/hooks/use-booking-filters'
 import { usePagination } from '@/hooks/use-booking-pagination'
 import { useConflictDetection } from '@/hooks/use-conflict-detection'
-import { useBookingForm, toBookingForm } from '@/hooks/use-booking-form'
+import { useBookingForm } from '@/hooks/use-booking-form'
 import { useBulkActions } from '@/hooks/use-bulk-actions'
 import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { useBookings } from '@/hooks/use-bookings'
@@ -43,6 +44,8 @@ interface BookingsPageState {
   showArchived: boolean
   // Create dialog
   isDialogOpen: boolean
+  /** Pre-seeded state from AvailabilityCheckSheet — cleared when dialog closes */
+  createInitialState: Partial<WizardState> | null
   // Assignment types
   createAssignmentType: 'staff' | 'team' | 'none'
   editAssignmentType: 'staff' | 'team' | 'none'
@@ -73,6 +76,7 @@ interface BookingsPageState {
 type BookingsPageAction =
   | { type: 'SET_SHOW_ARCHIVED'; payload: boolean }
   | { type: 'SET_DIALOG_OPEN'; payload: boolean }
+  | { type: 'SET_CREATE_INITIAL_STATE'; payload: Partial<WizardState> | null }
   | { type: 'SET_CREATE_ASSIGNMENT_TYPE'; payload: 'staff' | 'team' | 'none' }
   | { type: 'SET_EDIT_ASSIGNMENT_TYPE'; payload: 'staff' | 'team' | 'none' }
   | { type: 'SET_SELECTED_BOOKING'; payload: Booking | null }
@@ -95,6 +99,7 @@ type BookingsPageAction =
 const initialState: BookingsPageState = {
   showArchived: false,
   isDialogOpen: false,
+  createInitialState: null,
   createAssignmentType: 'none',
   editAssignmentType: 'none',
   selectedBooking: null,
@@ -119,7 +124,12 @@ function bookingsPageReducer(state: BookingsPageState, action: BookingsPageActio
     case 'SET_SHOW_ARCHIVED':
       return { ...state, showArchived: action.payload }
     case 'SET_DIALOG_OPEN':
-      return { ...state, isDialogOpen: action.payload }
+      // Clear createInitialState when dialog closes
+      return action.payload
+        ? { ...state, isDialogOpen: true }
+        : { ...state, isDialogOpen: false, createInitialState: null }
+    case 'SET_CREATE_INITIAL_STATE':
+      return { ...state, createInitialState: action.payload }
     case 'SET_CREATE_ASSIGNMENT_TYPE':
       return { ...state, createAssignmentType: action.payload }
     case 'SET_EDIT_ASSIGNMENT_TYPE':
@@ -302,7 +312,6 @@ export function useBookingsPage() {
   // Forms
   const lastProcessedLocationKey = useRef<string | null>(null)
   const editForm = useBookingForm({ onSubmit: async () => {} })
-  const createForm = useBookingForm({ onSubmit: async () => {} })
 
   // Conflict detection
   const { conflicts, clearConflicts } = useConflictDetection()
@@ -397,56 +406,26 @@ export function useBookingsPage() {
       createBooking?: boolean
       bookingDate?: string
       viewBookingId?: string
-      prefilledData?: {
-        booking_date: string; start_time: string; end_time: string
-        package_v2_id?: string
-        staff_id: string; team_id: string; total_price?: number
-        area_sqm?: number | null; frequency?: 1 | 2 | 4 | 8 | null
-        is_recurring?: boolean; recurring_dates?: string[]; recurring_pattern?: RecurringPattern
-      }
+      /** New format from AvailabilityCheckSheet — direct WizardState partial */
+      initialState?: Partial<WizardState>
     } | null
 
     if (!locationState) { lastProcessedLocationKey.current = null; return }
-    if (loading || servicePackages.length === 0) return
+    if (loading) return
     if (lastProcessedLocationKey.current === location.key) return
     lastProcessedLocationKey.current = location.key
 
-    // Create from Quick Availability
-    if (locationState.createBooking && locationState.prefilledData) {
-      const pf = locationState.prefilledData
-      createForm.setValues({
-        booking_date: pf.booking_date, start_time: pf.start_time, end_time: pf.end_time,
-        package_v2_id: pf.package_v2_id,
-        staff_id: pf.staff_id, team_id: pf.team_id,
-        total_price: pf.total_price || 0, area_sqm: pf.area_sqm || null, frequency: pf.frequency || null,
-      })
-
-      if (pf.package_v2_id && pf.area_sqm && pf.frequency) {
-        const pkg = servicePackages.find(p => p.id === pf.package_v2_id)
-        if (pkg) {
-          dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: {
-            packageId: pkg.id, pricingModel: 'tiered', areaSqm: pf.area_sqm,
-            frequency: pf.frequency, price: pf.total_price || 0, requiredStaff: 1, packageName: pkg.name,
-          }})
-        }
-      }
-
-      if (pf.staff_id) dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'staff' })
-      else if (pf.team_id) dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'team' })
-
-      if (pf.is_recurring && pf.recurring_dates && pf.recurring_dates.length > 0) {
-        dispatch({ type: 'SET_CREATE_RECURRING_DATES', payload: pf.recurring_dates })
-        if (pf.recurring_pattern) dispatch({ type: 'SET_CREATE_RECURRING_PATTERN', payload: pf.recurring_pattern })
-      }
-
+    // Create from AvailabilityCheckSheet (new format — direct WizardState)
+    if (locationState.createBooking && locationState.initialState) {
+      dispatch({ type: 'SET_CREATE_INITIAL_STATE', payload: locationState.initialState })
       dispatch({ type: 'SET_DIALOG_OPEN', payload: true })
       window.history.replaceState({}, document.title)
       return
     }
 
-    // Create from Calendar (legacy)
+    // Create from Calendar (legacy) — pre-seed booking_date via initialState
     if (locationState.createBooking && locationState.bookingDate) {
-      createForm.setValues({ booking_date: locationState.bookingDate || '' })
+      dispatch({ type: 'SET_CREATE_INITIAL_STATE', payload: { booking_date: locationState.bookingDate } })
       dispatch({ type: 'SET_DIALOG_OPEN', payload: true })
       window.history.replaceState({}, document.title)
       return
@@ -482,15 +461,14 @@ export function useBookingsPage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, bookings, servicePackages, loading])
+  }, [location.state, bookings, loading])
 
   // --- Actions ---
 
   const resetForm = useCallback(() => {
-    createForm.reset()
     dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'none' })
     clearConflicts()
-  }, [createForm, clearConflicts])
+  }, [clearConflicts])
 
   const proceedWithConflictOverride = useCallback(async () => {
     if (!state.pendingBookingData) return
@@ -764,7 +742,7 @@ export function useBookingsPage() {
     totalBookingsCount,
     // Forms
     editForm,
-    createForm: toBookingForm(createForm),
+    createInitialState: state.createInitialState,
     // Conflict
     conflicts,
     clearConflicts,

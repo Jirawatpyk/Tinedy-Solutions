@@ -91,7 +91,7 @@ export function SmartPriceField({
             : [1, t.price_2_times != null ? 2 : null, t.price_4_times != null ? 4 : null, t.price_8_times != null ? 8 : null].filter((x): x is number => x !== null)
         )
       )].sort((a, b) => a - b)
-    : [1, 2, 4, 8]
+    : [] // no package selected — show only "Unspecified" until package is chosen
 
   // Auto-calculate price (and end_time) for tiered packages when area/frequency changes
   // Skip in edit mode (lockPriceMode) — DB already stores correct per-booking price;

@@ -13,7 +13,8 @@ import { useMemo, useState } from 'react'
 import { formatTime } from '@/lib/booking-utils'
 
 interface StaffAvailabilityModalProps {
-  isOpen: boolean
+  /** Only used in Dialog mode — ignored when inline=true */
+  isOpen?: boolean
   onClose: () => void
   assignmentType: 'individual' | 'team'
   onSelectStaff?: (staffId: string) => void
@@ -27,6 +28,8 @@ interface StaffAvailabilityModalProps {
   currentAssignedStaffId?: string
   currentAssignedTeamId?: string
   excludeBookingId?: string
+  /** When true: renders inline (no Dialog wrapper) — used inside AvailabilityCheckSheet */
+  inline?: boolean
 }
 
 /**
@@ -57,7 +60,8 @@ export function StaffAvailabilityModal({
   servicePackageName = '',
   currentAssignedStaffId,
   currentAssignedTeamId,
-  excludeBookingId
+  excludeBookingId,
+  inline = false,
 }: StaffAvailabilityModalProps) {
   // Use unified hook that supports both single and multi-date
   const result = useUnifiedAvailabilityCheck({
@@ -170,21 +174,9 @@ export function StaffAvailabilityModal({
     }
   }, [assignmentType, staffResults, teamResults, isMultiDateMode])
 
-  return (
+  // Inner content (context info + results) — shared between Dialog and inline modes
+  const innerContent = (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl">
-            {assignmentType === 'individual' ? '🔍 Check Staff Availability' : '🔍 Check Team Availability'}
-            {isMultiDateMode && displayDates.length > 1 && (
-              <span className="text-base font-normal text-muted-foreground ml-2">
-                ({displayDates.length} dates)
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-
         {/* Context Info */}
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 text-sm border rounded-lg p-3 bg-tinedy-off-white">
@@ -398,7 +390,7 @@ export function StaffAvailabilityModal({
                               key={staff.staffId}
                               staff={staff}
                               onSelect={() => handleSelect(staff.staffId, staff.conflicts, staff.fullName)}
-                              isUnavailable={false}
+                              isUnavailable
                               isCurrentlyAssigned={staff.staffId === currentAssignedStaffId}
                             />
                           ))
@@ -422,7 +414,7 @@ export function StaffAvailabilityModal({
                                 key={team.teamId}
                                 team={team}
                                 onSelect={() => handleSelect(team.teamId, teamConflicts, team.teamName)}
-                                isUnavailable={false}
+                                isUnavailable
                                 isCurrentlyAssigned={team.teamId === currentAssignedTeamId}
                               />
                             )
@@ -442,10 +434,36 @@ export function StaffAvailabilityModal({
             </>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </>
+  )
 
-    {/* Conflict Warning Dialog */}
+  return (
+    <>
+      {inline ? (
+        // Inline mode: no Dialog wrapper — rendered inside AvailabilityCheckSheet
+        <div className="space-y-4 flex-1 overflow-y-auto">
+          {innerContent}
+        </div>
+      ) : (
+        // Dialog mode: existing behavior
+        <Dialog open={isOpen ?? false} onOpenChange={onClose}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-xl">
+                {assignmentType === 'individual' ? '🔍 Check Staff Availability' : '🔍 Check Team Availability'}
+                {isMultiDateMode && displayDates.length > 1 && (
+                  <span className="text-base font-normal text-muted-foreground ml-2">
+                    ({displayDates.length} dates)
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {innerContent}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Conflict Warning Dialog — always a real Dialog */}
     <Dialog open={showConflictWarning} onOpenChange={(open) => {
       if (!open) {
         setShowConflictWarning(false)

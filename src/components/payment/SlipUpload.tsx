@@ -104,7 +104,7 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
       const updateData = {
         payment_slip_url: publicUrl,
         payment_status: newPaymentStatus,
-        payment_method: 'bank_transfer',
+        payment_method: 'transfer',
         ...(autoVerify && { payment_date: paymentDate }),
       }
 
@@ -171,8 +171,13 @@ export function SlipUpload({ bookingId, amount, recurringGroupId, onSuccess }: S
       }
     } catch (error) {
       console.error('Error uploading slip:', error)
+      const message = error instanceof Error ? error.message : 'Unknown error'
       toast.error('Upload failed', {
-        description: 'Failed to upload payment slip. Please try again.',
+        description: message.includes('bucket') || message.includes('storage')
+          ? 'Storage not configured. Please contact support.'
+          : message.includes('constraint') || message.includes('violates')
+            ? 'Database constraint error. Please contact support.'
+            : `Failed to upload payment slip. ${message}`,
       })
     } finally {
       setUploading(false)

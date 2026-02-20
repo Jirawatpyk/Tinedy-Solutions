@@ -425,16 +425,6 @@ export function formatAreaRange(tier: PackagePricingTier): string {
  * getFrequencyLabel(4) // "แพ็ก 4 ครั้ง"
  */
 export function getFrequencyLabel(frequency: BookingFrequency): string {
-  switch (frequency) {
-    case 1:
-      return '1 time'
-    case 2:
-      return '2 times'
-    case 4:
-      return '4 times'
-    case 8:
-      return '8 times'
-    default:
-      return `${frequency} times`
-  }
+  if (frequency === 1) return '1 time'
+  return `${frequency} times`
 }

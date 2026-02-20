@@ -24,12 +24,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, ChevronLeft } from 'lucide-react'
+import { CalendarCheck, ChevronLeft, Plus, X } from 'lucide-react'
 import { AppSheet } from '@/components/ui/app-sheet'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -38,10 +40,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StaffAvailabilityModal } from './staff-availability-modal'
-import { RecurringScheduleSelector } from './RecurringScheduleSelector'
 import { useServicePackages, type UnifiedServicePackage } from '@/hooks/use-service-packages'
 import { calculatePricing } from '@/lib/pricing-utils'
-import { format } from 'date-fns'
+import { format, addMonths, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import type { WizardState } from '@/hooks/use-booking-wizard'
@@ -66,9 +67,21 @@ export function AvailabilityCheckSheet() {
   const [frequency, setFrequency] = useState<number>(1)
   const [recurringDates, setRecurringDates] = useState<string[]>([])
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern>(Pattern.AutoMonthly)
+  const [newDateInput, setNewDateInput] = useState('')
 
   const { packages } = useServicePackages()
   const selectedService = packages.find((s: UnifiedServicePackage) => s.id === servicePackageId)
+
+  // --- Auto-generate monthly recurring dates from start date (matching Wizard Step2) ---
+  useEffect(() => {
+    if (frequency <= 1 || recurringPattern !== Pattern.AutoMonthly || !date) return
+    const base = parseISO(date)
+    // ALL frequency dates: [date, date+1m, date+2m, ...] — index 0 = booking_date
+    const allDates = Array.from({ length: frequency }, (_, i) =>
+      format(addMonths(base, i), 'yyyy-MM-dd')
+    )
+    setRecurringDates(allDates)
+  }, [recurringPattern, date, frequency])
 
   // --- Auto-calculate end time from service duration ---
   useEffect(() => {
@@ -98,6 +111,22 @@ export function AvailabilityCheckSheet() {
     }
   }, [selectedService, startTime, areaSqm, frequency])
 
+  // --- Custom date list management (matching Wizard Step2 custom mode) ---
+  function handleAddDate() {
+    if (!newDateInput || recurringDates.includes(newDateInput)) return
+    if (recurringDates.length >= frequency) return
+    const allDates = [...recurringDates, newDateInput].sort()
+    setRecurringDates(allDates)
+    setDate(allDates[0]) // sync start date to earliest custom date
+    setNewDateInput('')
+  }
+
+  function handleRemoveDate(dateStr: string) {
+    const remaining = recurringDates.filter((d) => d !== dateStr)
+    setRecurringDates(remaining)
+    if (remaining.length > 0) setDate(remaining[0])
+  }
+
   // --- Reset form ---
   const resetForm = useCallback(() => {
     setDate(format(new Date(), 'yyyy-MM-dd'))
@@ -111,8 +140,16 @@ export function AvailabilityCheckSheet() {
     setFrequency(1)
     setRecurringDates([])
     setRecurringPattern(Pattern.AutoMonthly)
+    setNewDateInput('')
     setStep('input')
   }, [])
+
+  // Reset frequency to 1 when package changes — prevents stale freq from previous package
+  // causing wrong isRecurring state, wrong end-time calc, and wrong freq in wizard seed
+  useEffect(() => {
+    setFrequency(1)
+    setRecurringDates([])
+  }, [servicePackageId])
 
   function handleOpenChange(open: boolean) {
     if (!open) resetForm()
@@ -139,7 +176,8 @@ export function AvailabilityCheckSheet() {
   function buildInitialState(staffId: string | null, teamId: string | null): Partial<WizardState> {
     const isRecurring = frequency > 1
     return {
-      booking_date: isRecurring ? (recurringDates[0] ?? '') : date,
+      // booking_date = first occurrence (index 0 for custom, `date` for auto-monthly)
+      booking_date: isRecurring ? (recurringDates[0] ?? date) : date,
       end_date: isMultiDay && !isRecurring ? (endDate || null) : null,
       isMultiDay: isMultiDay && !isRecurring,
       start_time: startTime,
@@ -149,9 +187,10 @@ export function AvailabilityCheckSheet() {
       team_id: teamId,
       assignmentType: staffId ? 'staff' : teamId ? 'team' : 'none',
       area_sqm: selectedService?.pricing_model === 'tiered' ? areaSqm : null,
-      frequency: selectedService?.pricing_model === 'tiered' ? frequency : null,
+      frequency: selectedService?.pricing_model === 'tiered' ? (frequency as BookingFrequency) : null,
       isRecurring,
-      recurringDates: isRecurring ? recurringDates : [],
+      // Wizard expects future dates only (slice off index 0 = booking_date)
+      recurringDates: isRecurring ? recurringDates.slice(1) : [],
       recurringPattern: isRecurring ? recurringPattern : Pattern.AutoMonthly,
     }
   }
@@ -284,117 +323,193 @@ export function AvailabilityCheckSheet() {
                 </>
               )}
 
-              {/* Recurring selector — auto-shown when frequency > 1 */}
-              {servicePackageId && isRecurring ? (
-                <>
-                  <RecurringScheduleSelector
-                    frequency={frequency as BookingFrequency}
-                    selectedDates={recurringDates}
-                    onDatesChange={setRecurringDates}
-                    pattern={recurringPattern}
-                    onPatternChange={setRecurringPattern}
-                  />
+              {/* Date input — hidden only in custom recurring (user picks all dates from list) */}
+              {!(isRecurring && recurringPattern === Pattern.Custom) && (
+                isMultiDay && !isRecurring ? (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="qac-start">Start Time *</Label>
+                      <Label htmlFor="qac-date-start">Start Date *</Label>
                       <Input
-                        id="qac-start"
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="qac-end">End Time</Label>
-                      <Input
-                        id="qac-end"
-                        type="time"
-                        value={endTime}
-                        readOnly
-                        className="bg-muted cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* Single-day or Multi-day mode */
-                <>
-                  {/* Multi-day toggle */}
-                  <div className="flex items-center gap-3">
-                    <input
-                      id="qac-multiday"
-                      type="checkbox"
-                      checked={isMultiDay}
-                      onChange={(e) => {
-                        setIsMultiDay(e.target.checked)
-                        if (!e.target.checked) setEndDate('')
-                      }}
-                      className="h-4 w-4 rounded border-gray-300 accent-tinedy-blue"
-                    />
-                    <Label htmlFor="qac-multiday" className="font-normal cursor-pointer">
-                      Multi-day booking
-                    </Label>
-                  </div>
-
-                  {/* Date(s) */}
-                  {isMultiDay ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="qac-date-start">Start Date *</Label>
-                        <Input
-                          id="qac-date-start"
-                          type="date"
-                          value={date}
-                          onChange={(e) => setDate(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="qac-date-end">End Date</Label>
-                        <Input
-                          id="qac-date-end"
-                          type="date"
-                          value={endDate}
-                          min={date}
-                          onChange={(e) => setEndDate(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label htmlFor="qac-date">Date *</Label>
-                      <Input
-                        id="qac-date"
+                        id="qac-date-start"
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                       />
                     </div>
-                  )}
-
-                  {/* Time */}
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="qac-start">Start Time *</Label>
+                      <Label htmlFor="qac-date-end">End Date</Label>
                       <Input
-                        id="qac-start"
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="qac-end">End Time</Label>
-                      <Input
-                        id="qac-end"
-                        type="time"
-                        value={endTime}
-                        readOnly
-                        className="bg-muted cursor-not-allowed"
+                        id="qac-date-end"
+                        type="date"
+                        value={endDate}
+                        min={date}
+                        onChange={(e) => setEndDate(e.target.value)}
                       />
                     </div>
                   </div>
-                </>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="qac-date">{isRecurring ? 'Start Date *' : 'Date *'}</Label>
+                    <Input
+                      id="qac-date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                    />
+                  </div>
+                )
               )}
+
+              {/* Multi-day toggle — only in non-recurring mode */}
+              {!isRecurring && (
+                <div className="flex items-center gap-3">
+                  <input
+                    id="qac-multiday"
+                    type="checkbox"
+                    checked={isMultiDay}
+                    onChange={(e) => {
+                      setIsMultiDay(e.target.checked)
+                      if (!e.target.checked) setEndDate('')
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 accent-tinedy-blue"
+                  />
+                  <Label htmlFor="qac-multiday" className="font-normal cursor-pointer">
+                    Multi-day booking
+                  </Label>
+                </div>
+              )}
+
+              {/* Recurring detail — matching Wizard Step2 style */}
+              {servicePackageId && isRecurring && (
+                <div className="space-y-4 pl-4 border-l-2 border-primary/20">
+                  {/* Pattern selector */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Repeat Pattern</Label>
+                    <RadioGroup
+                      value={recurringPattern}
+                      onValueChange={(v) => {
+                        setRecurringPattern(v as RecurringPattern)
+                        setRecurringDates([])
+                        setNewDateInput('')
+                      }}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value={Pattern.AutoMonthly} id="rp-auto" />
+                        <Label htmlFor="rp-auto" className="cursor-pointer text-sm">
+                          Monthly (auto)
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value={Pattern.Custom} id="rp-manual" />
+                        <Label htmlFor="rp-manual" className="cursor-pointer text-sm">
+                          Pick dates manually
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Auto-monthly: preview generated future dates */}
+                  {recurringPattern === Pattern.AutoMonthly && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {frequency} bookings total (start date + {frequency - 1} monthly)
+                      </p>
+                      {!date ? (
+                        <p className="text-xs text-muted-foreground">Select a start date to preview</p>
+                      ) : recurringDates.length > 1 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-muted-foreground">
+                            Future dates ({recurringDates.length - 1})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {recurringDates.slice(1).map((d) => (
+                              <Badge key={d} variant="secondary" className="text-xs">
+                                {format(parseISO(d), 'dd/MM/yyyy')}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Custom: manual date picker with removable list */}
+                  {recurringPattern === Pattern.Custom && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Add Date ({recurringDates.length}/{frequency})
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={newDateInput}
+                          onChange={(e) => setNewDateInput(e.target.value)}
+                          className="h-9 flex-1"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAddDate}
+                          disabled={!newDateInput || recurringDates.length >= frequency}
+                          className="h-9 px-3"
+                          aria-label="Add date"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      {recurringDates.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-muted-foreground">
+                            Selected dates ({recurringDates.length}/{frequency})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {recurringDates.map((d) => (
+                              <Badge key={d} variant="secondary" className="text-xs flex items-center gap-1 pr-1">
+                                {format(parseISO(d), 'dd/MM/yyyy')}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDate(d)}
+                                  className="hover:text-destructive transition-colors ml-0.5"
+                                  aria-label={`Remove date ${d}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No dates selected yet</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Time inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="qac-start">Start Time *</Label>
+                  <Input
+                    id="qac-start"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qac-end">End Time</Label>
+                  <Input
+                    id="qac-end"
+                    type="time"
+                    value={endTime}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+              </div>
 
               {/* Assignment Type */}
               <div className="space-y-2">

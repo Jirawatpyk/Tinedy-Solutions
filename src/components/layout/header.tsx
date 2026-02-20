@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Menu, Search, User, Users, Calendar, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NotificationBell } from '@/components/notifications/notification-bell'
-import { QuickAvailabilityCheck } from '@/components/booking/quick-availability-check'
+import { AvailabilityCheckSheet } from '@/components/booking/AvailabilityCheckSheet'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/common'
@@ -320,7 +320,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           {/* Quick Availability Check - Admin & Manager, show on all screens */}
           {(profile?.role === UserRole.Admin || profile?.role === UserRole.Manager) && (
-            <QuickAvailabilityCheck />
+            <AvailabilityCheckSheet />
           )}
         </div>
 

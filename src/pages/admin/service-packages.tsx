@@ -249,12 +249,6 @@ export function AdminServicePackages() {
     setEditingPackageV2(null)
   }, [])
 
-  const handleFormSuccess = useCallback(() => {
-    setIsEditV1DialogOpen(false)
-    resetForm()
-    refresh()
-  }, [resetForm, refresh])
-
   const handleFormCancel = useCallback(() => {
     setIsEditV1DialogOpen(false)
     resetForm()
