@@ -273,6 +273,35 @@ export function CustomerFormSheet({
                   />
                 </div>
               </div>
+
+              {/* Lock Toggle — Admin only, Edit mode only, directly below Relationship Level select */}
+              {isEditMode && isAdmin && (
+                <Controller
+                  name="relationship_level_locked"
+                  control={form.control}
+                  render={({ field }) => (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Label htmlFor="relationship_level_locked" className="cursor-pointer text-sm font-medium">
+                            Lock Relationship Level
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Prevent auto-upgrade from overwriting this level
+                        </p>
+                      </div>
+                      <Switch
+                        id="relationship_level_locked"
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </div>
+                  )}
+                />
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="source">How did they find us?</Label>
@@ -329,33 +358,6 @@ export function CustomerFormSheet({
                 </div>
               )}
 
-              {/* Lock Toggle — Admin only, Edit mode only, inside Relationship section */}
-              {isEditMode && isAdmin && (
-                <Controller
-                  name="relationship_level_locked"
-                  control={form.control}
-                  render={({ field }) => (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                          <Label htmlFor="relationship_level_locked" className="cursor-pointer text-sm font-medium">
-                            Lock Relationship Level
-                          </Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Prevent auto-upgrade from overwriting this level
-                        </p>
-                      </div>
-                      <Switch
-                        id="relationship_level_locked"
-                        checked={field.value ?? false}
-                        onCheckedChange={field.onChange}
-                      />
-                    </div>
-                  )}
-                />
-              )}
             </div>
 
             {/* Tags Section */}

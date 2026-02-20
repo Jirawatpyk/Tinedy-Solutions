@@ -182,8 +182,9 @@ describe('checkAndUpdateCustomerIntelligence', () => {
 
     await checkAndUpdateCustomerIntelligence('cust-1')
 
-    // No update: level stays vip, no new tags, no note
-    expect(mockFrom).toHaveBeenCalledTimes(2) // customer + stats only
+    // No update call — only customer fetch + stats fetch
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers', 'bookings'])
   })
 
   it('stays regular on 4 bookings (boundary — not yet vip)', async () => {
@@ -202,8 +203,9 @@ describe('checkAndUpdateCustomerIntelligence', () => {
 
     await checkAndUpdateCustomerIntelligence('cust-1')
 
-    // Level unchanged, no auto-tags triggered → no update
-    expect(mockFrom).toHaveBeenCalledTimes(2) // customer + stats only
+    // Level unchanged, no auto-tags triggered → no update call
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers', 'bookings'])
   })
 
   it('appends auto-note after existing notes (does not overwrite)', async () => {

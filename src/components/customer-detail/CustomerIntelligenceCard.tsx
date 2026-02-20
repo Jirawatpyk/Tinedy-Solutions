@@ -3,14 +3,13 @@ import { Lock, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getTagColor } from '@/lib/tag-utils'
+import { AUTO_TAGS } from '@/lib/customer-intelligence'
 import type { CustomerRecord, RelationshipLevel } from '@/types'
 import type { CustomerStats } from './CustomerMetricsSection'
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-
-const AUTO_TAGS = ['High Value', 'Frequent Booker']
 const INACTIVE_RISK_DAYS = 120
 
 const relationshipConfig: Record<

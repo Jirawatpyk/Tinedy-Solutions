@@ -3,6 +3,9 @@ import { getBangkokDateString } from '@/lib/utils'
 
 const HIGH_VALUE_THRESHOLD = 15000
 const FREQUENT_BOOKER_THRESHOLD = 5
+const NOTES_MAX_LENGTH = 1000
+
+export const AUTO_TAGS: string[] = ['High Value', 'Frequent Booker']
 
 export async function getCustomerStats(
   customerId: string
@@ -66,21 +69,33 @@ export async function checkAndUpdateCustomerIntelligence(
     const spendStr = totalSpend > 0 ? `, ฿${totalSpend.toLocaleString('th-TH')} total spend` : ''
     const bookingStr = `${paidBookings} completed booking${paidBookings !== 1 ? 's' : ''}`
     const autoNote = `[Auto] ${getBangkokDateString()} — Relationship upgraded: ${currentLevel} → ${newLevel} (${bookingStr}${spendStr})`
-    const updatedNotes = customer.notes ? `${customer.notes}\n\n${autoNote}` : autoNote
+    // Cap notes to NOTES_MAX_LENGTH: preserve full auto-note, trim existing prefix if needed
+    const separator = '\n\n'
+    const maxPrefixLen = NOTES_MAX_LENGTH - separator.length - autoNote.length
+    const existingNotes = customer.notes ?? ''
+    const trimmedPrefix =
+      existingNotes.length > maxPrefixLen
+        ? existingNotes.slice(existingNotes.length - maxPrefixLen)
+        : existingNotes
+    const updatedNotes = trimmedPrefix ? `${trimmedPrefix}${separator}${autoNote}` : autoNote
 
-    await supabase
+    const { error: updateErr } = await supabase
       .from('customers')
       .update({ relationship_level: newLevel, tags: mergedTags, notes: updatedNotes })
       .eq('id', customerId)
+
+    if (updateErr) console.warn('[customer-intelligence] update failed:', updateErr.message)
 
     return
   }
 
   // 8. Only tags changed — update tags only
   if (tagsChanged) {
-    await supabase
+    const { error: tagsErr } = await supabase
       .from('customers')
       .update({ tags: mergedTags })
       .eq('id', customerId)
+
+    if (tagsErr) console.warn('[customer-intelligence] tags update failed:', tagsErr.message)
   }
 }
