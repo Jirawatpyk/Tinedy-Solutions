@@ -16,12 +16,14 @@ import { useBulkActions } from '../use-bulk-actions'
 import React, { type ReactNode } from 'react'
 import type { Booking } from '@/types/booking'
 
-// Mock useToast
-const mockToast = vi.fn()
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+// Mock sonner toast (code uses toast.success/toast.error from sonner)
+const mockToastSuccess = vi.fn()
+const mockToastError = vi.fn()
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
 }))
 
 // Mock Supabase
@@ -360,12 +362,9 @@ describe('useBulkActions', () => {
         record_id: 'booking-2',
       })
 
-      // Verify success toast (no "successfully" in implementation)
+      // Verify success toast (Sonner: toast.success(message))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
-          description: 'Archived 2 bookings',
-        })
+        expect(mockToastSuccess).toHaveBeenCalledWith('Archived 2 bookings')
       })
 
       // Verify selections cleared
@@ -400,12 +399,9 @@ describe('useBulkActions', () => {
         await result.current.confirmBulkDelete()
       })
 
-      // Should show singular form in toast (no "successfully" in implementation)
+      // Should show singular form in toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
-          description: 'Archived 1 booking',
-        })
+        expect(mockToastSuccess).toHaveBeenCalledWith('Archived 1 booking')
       })
     })
 
@@ -449,14 +445,9 @@ describe('useBulkActions', () => {
         expect(cachedData).toHaveLength(3)
       })
 
-      // Verify error toast
+      // Verify error toast (Sonner: toast.error(title, { description }))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Error',
-            variant: 'destructive',
-          })
-        )
+        expect(mockToastError).toHaveBeenCalled()
       })
 
       // onSuccess should not be called on error
@@ -521,12 +512,9 @@ describe('useBulkActions', () => {
       // Verify all 50 RPC calls were made
       expect(mockRpc).toHaveBeenCalledTimes(50)
 
-      // Verify single toast (not 50 toasts, no "successfully" in implementation)
+      // Verify single toast (not 50 toasts)
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
-          description: 'Archived 50 bookings',
-        })
+        expect(mockToastSuccess).toHaveBeenCalledWith('Archived 50 bookings')
       })
 
       // Performance assertion - should complete in reasonable time
@@ -673,13 +661,10 @@ describe('useBulkActions', () => {
       // Verify update was called
       expect(mockUpdate).toHaveBeenCalledWith({ status: 'confirmed' })
 
-      // Verify success toast
+      // Verify success toast (Sonner: toast.success(message))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Success',
-            description: expect.stringContaining('confirmed'),
-          })
+        expect(mockToastSuccess).toHaveBeenCalledWith(
+          expect.stringContaining('confirmed')
         )
       })
 

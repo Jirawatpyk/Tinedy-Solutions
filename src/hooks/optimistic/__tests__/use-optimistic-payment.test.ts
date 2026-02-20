@@ -18,12 +18,14 @@ import { useOptimisticPayment } from '../use-optimistic-payment'
 import React, { type ReactNode } from 'react'
 import type { Booking } from '@/types/booking'
 
-// Mock useToast
-const mockToast = vi.fn()
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+// Mock sonner toast (code uses toast.success/toast.error from sonner)
+const mockToastSuccess = vi.fn()
+const mockToastError = vi.fn()
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
 }))
 
 // Mock mapErrorToUserMessage
@@ -68,7 +70,8 @@ describe('useOptimisticPayment', () => {
         mutations: { retry: false },
       },
     })
-    mockToast.mockClear()
+    mockToastSuccess.mockClear()
+    mockToastError.mockClear()
     mockMarkAsPaidService.mockClear()
     mockVerifyPaymentService.mockClear()
     mockRequestRefundService.mockClear()
@@ -140,10 +143,9 @@ describe('useOptimisticPayment', () => {
       expect(cachedData?.[0].payment_method).toBe('cash')
       expect(cachedData?.[0].amount_paid).toBe(1000)
 
-      // Verify toast called
+      // Verify toast called (Sonner: toast.success(title, { description }))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Booking marked as paid',
         })
       })
@@ -231,8 +233,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast shows count
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: '3 bookings marked as paid',
         })
       })
@@ -270,8 +271,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Payment verified successfully',
         })
       })
@@ -316,8 +316,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast shows count
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: '3 bookings verified successfully',
         })
       })
@@ -355,8 +354,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Refund requested successfully',
         })
       })
@@ -394,8 +392,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Refund completed successfully',
         })
       })
@@ -433,8 +430,7 @@ describe('useOptimisticPayment', () => {
 
       // Verify toast (cancelRefund uses 'Refund cancelled successfully')
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Refund cancelled successfully',
         })
       })
@@ -475,13 +471,12 @@ describe('useOptimisticPayment', () => {
         expect(cachedData?.[0].payment_status).toBe('unpaid')
       })
 
-      // Verify error toast shown
+      // Verify error toast shown (Sonner: toast.error(title, { description }))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Error',
           expect.objectContaining({
-            title: 'Error',
             description: 'Payment processing failed',
-            variant: 'destructive',
           })
         )
       })
