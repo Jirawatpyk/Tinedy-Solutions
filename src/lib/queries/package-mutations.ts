@@ -26,12 +26,36 @@ export async function createPackageV2(data: PackageV2CreateData): Promise<string
   return newPackage.id
 }
 
+/**
+ * Map TierFormData to DB insert row.
+ * Writes frequency_prices JSONB + also populates legacy price columns
+ * (price_1_time etc.) for backward compat with the get_package_price DB function.
+ */
+function buildTierRow(tier: TierFormData, packageId: string) {
+  const find = (times: number) =>
+    tier.frequency_prices.find((fp) => fp.times === times)?.price ?? null
+
+  return {
+    package_id: packageId,
+    area_min: tier.area_min,
+    area_max: tier.area_max,
+    required_staff: tier.required_staff,
+    estimated_hours: tier.estimated_hours,
+    frequency_prices: tier.frequency_prices,
+    // Legacy columns — kept for DB function backward compat
+    price_1_time: find(1) ?? 0,
+    price_2_times: find(2),
+    price_4_times: find(4),
+    price_8_times: find(8),
+  }
+}
+
 /** Insert pricing tiers for a package. */
 export async function insertPackageTiers(
   packageId: string,
   tiers: TierFormData[]
 ): Promise<void> {
-  const tierData = tiers.map((tier) => ({ package_id: packageId, ...tier }))
+  const tierData = tiers.map((tier) => buildTierRow(tier, packageId))
   const { error } = await supabase.from('package_pricing_tiers').insert(tierData)
   if (error) throw error
 }

@@ -16,6 +16,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 export function Step3Confirm({ values }: Step3Props) {
+  // Collect all unique "times" values across all tiers for the table header
+  const allTimes = [
+    ...new Set(
+      values.tiers.flatMap((tier) => tier.frequency_prices.map((fp) => fp.times))
+    ),
+  ].sort((a, b) => a - b)
+
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
@@ -89,7 +96,7 @@ export function Step3Confirm({ values }: Step3Props) {
         </div>
       </div>
 
-      {/* Tiers table (tiered only) */}
+      {/* Tiers summary table — dynamic columns */}
       {values.pricing_model === PricingModel.Tiered && values.tiers.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-2.5 bg-muted/50">
@@ -101,27 +108,41 @@ export function Step3Confirm({ values }: Step3Props) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Tier</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Area (sqm)</th>
-                  <th className="text-right px-3 py-2 font-medium text-muted-foreground">1×</th>
-                  <th className="text-right px-3 py-2 font-medium text-muted-foreground">4×</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground whitespace-nowrap">
+                    Tier
+                  </th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground whitespace-nowrap">
+                    Area (sqm)
+                  </th>
+                  {allTimes.map((t) => (
+                    <th
+                      key={t}
+                      className="text-right px-3 py-2 font-medium text-muted-foreground whitespace-nowrap"
+                    >
+                      {t}×
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {values.tiers.map((tier, i) => (
-                  <tr key={i}>
-                    <td className="px-3 py-2 text-muted-foreground">Tier {i + 1}</td>
-                    <td className="px-3 py-2">
-                      {tier.area_min}–{tier.area_max}
-                    </td>
-                    <td className="px-3 py-2 text-right">{formatCurrency(tier.price_1_time)}</td>
-                    <td className="px-3 py-2 text-right">
-                      {tier.price_4_times != null
-                        ? formatCurrency(tier.price_4_times)
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {values.tiers.map((tier, i) => {
+                  const priceMap = new Map(
+                    tier.frequency_prices.map((fp) => [fp.times, fp.price])
+                  )
+                  return (
+                    <tr key={i}>
+                      <td className="px-3 py-2 text-muted-foreground">Tier {i + 1}</td>
+                      <td className="px-3 py-2">
+                        {tier.area_min}–{tier.area_max}
+                      </td>
+                      {allTimes.map((t) => (
+                        <td key={t} className="px-3 py-2 text-right">
+                          {priceMap.has(t) ? formatCurrency(priceMap.get(t)!) : '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

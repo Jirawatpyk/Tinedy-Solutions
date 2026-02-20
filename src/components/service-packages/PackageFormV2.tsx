@@ -105,17 +105,31 @@ export function PackageFormV2({
 
       if (error) throw error
 
-      // Convert to TierFormData (remove timestamps and id)
-      const tierData: TierFormData[] = (data || []).map((tier) => ({
-        area_min: tier.area_min,
-        area_max: tier.area_max,
-        required_staff: tier.required_staff,
-        estimated_hours: tier.estimated_hours,
-        price_1_time: tier.price_1_time,
-        price_2_times: tier.price_2_times,
-        price_4_times: tier.price_4_times,
-        price_8_times: tier.price_8_times,
-      }))
+      // Convert to TierFormData — prefer frequency_prices JSONB, fallback to legacy columns
+      const tierData: TierFormData[] = (data || []).map((tier) => {
+        const freqPrices =
+          tier.frequency_prices && tier.frequency_prices.length > 0
+            ? tier.frequency_prices
+            : [
+                { times: 1, price: tier.price_1_time ?? 0 },
+                ...(tier.price_2_times != null
+                  ? [{ times: 2, price: tier.price_2_times }]
+                  : []),
+                ...(tier.price_4_times != null
+                  ? [{ times: 4, price: tier.price_4_times }]
+                  : []),
+                ...(tier.price_8_times != null
+                  ? [{ times: 8, price: tier.price_8_times }]
+                  : []),
+              ]
+        return {
+          area_min: tier.area_min,
+          area_max: tier.area_max,
+          required_staff: tier.required_staff,
+          estimated_hours: tier.estimated_hours ?? 0,
+          frequency_prices: freqPrices,
+        }
+      })
 
       setTiers(tierData)
       return tierData
@@ -259,10 +273,22 @@ export function PackageFormV2({
    * Insert tiers for new package
    */
   const insertTiers = async (packageId: string) => {
-    const tierData = tiers.map((tier) => ({
-      package_id: packageId,
-      ...tier,
-    }))
+    const tierData = tiers.map((tier) => {
+      const find = (times: number) =>
+        tier.frequency_prices.find((fp) => fp.times === times)?.price ?? null
+      return {
+        package_id: packageId,
+        area_min: tier.area_min,
+        area_max: tier.area_max,
+        required_staff: tier.required_staff,
+        estimated_hours: tier.estimated_hours,
+        frequency_prices: tier.frequency_prices,
+        price_1_time: find(1) ?? 0,
+        price_2_times: find(2),
+        price_4_times: find(4),
+        price_8_times: find(8),
+      }
+    })
 
     const { error } = await supabase.from('package_pricing_tiers').insert(tierData)
 

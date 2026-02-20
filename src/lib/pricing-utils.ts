@@ -468,13 +468,17 @@ export async function validateArea(
 export function getAvailableFrequencies(
   tier: PackagePricingTier
 ): BookingFrequency[] {
-  const frequencies: BookingFrequency[] = []
+  // Use frequency_prices JSONB if available (post-migration)
+  if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+    return [...tier.frequency_prices.map((fp) => fp.times)].sort((a, b) => a - b)
+  }
 
+  // Fallback: reconstruct from legacy columns (pre-migration rows)
+  const frequencies: BookingFrequency[] = []
   if (tier.price_1_time) frequencies.push(1)
   if (tier.price_2_times !== null) frequencies.push(2)
   if (tier.price_4_times !== null) frequencies.push(4)
   if (tier.price_8_times !== null) frequencies.push(8)
-
   return frequencies
 }
 
@@ -498,6 +502,13 @@ export function getPriceForFrequency(
   tier: PackagePricingTier,
   frequency: BookingFrequency
 ): number | null {
+  // Use frequency_prices JSONB if available (post-migration)
+  if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+    const entry = tier.frequency_prices.find((fp) => fp.times === frequency)
+    return entry?.price ?? null
+  }
+
+  // Fallback: legacy columns (pre-migration rows)
   switch (frequency) {
     case 1:
       return tier.price_1_time

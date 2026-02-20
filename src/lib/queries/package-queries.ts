@@ -25,6 +25,7 @@ export interface PackagePricingTier {
   area_max: number
   required_staff: number
   estimated_hours: number | null
+  frequency_prices: Array<{ times: number; price: number }>
   price_1_time: number
   price_2_times: number | null
   price_4_times: number | null
@@ -146,12 +147,18 @@ export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTier
     let max_price: number | undefined
 
     if (pkg.pricing_model === 'tiered' && pkgTiers.length > 0) {
-      const prices = pkgTiers.flatMap(tier => [
-        tier.price_1_time,
-        tier.price_2_times,
-        tier.price_4_times,
-        tier.price_8_times
-      ]).filter((p): p is number => p !== null && p > 0)
+      const prices = pkgTiers.flatMap((tier) => {
+        // Prefer frequency_prices JSONB; fall back to legacy columns
+        if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+          return tier.frequency_prices.map((fp: { times: number; price: number }) => fp.price)
+        }
+        return [
+          tier.price_1_time,
+          tier.price_2_times,
+          tier.price_4_times,
+          tier.price_8_times,
+        ]
+      }).filter((p): p is number => p !== null && p > 0)
 
       if (prices.length > 0) {
         min_price = Math.min(...prices)
@@ -213,12 +220,18 @@ export async function fetchServicePackagesV2WithArchived(): Promise<ServicePacka
     let max_price: number | undefined
 
     if (pkg.pricing_model === 'tiered' && pkgTiers.length > 0) {
-      const prices = pkgTiers.flatMap(tier => [
-        tier.price_1_time,
-        tier.price_2_times,
-        tier.price_4_times,
-        tier.price_8_times
-      ]).filter((p): p is number => p !== null && p > 0)
+      const prices = pkgTiers.flatMap((tier) => {
+        // Prefer frequency_prices JSONB; fall back to legacy columns
+        if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+          return tier.frequency_prices.map((fp: { times: number; price: number }) => fp.price)
+        }
+        return [
+          tier.price_1_time,
+          tier.price_2_times,
+          tier.price_4_times,
+          tier.price_8_times,
+        ]
+      }).filter((p): p is number => p !== null && p > 0)
 
       if (prices.length > 0) {
         min_price = Math.min(...prices)

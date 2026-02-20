@@ -27,6 +27,16 @@ export const ServiceCategoryEnum = z.enum(['office', 'condo', 'house'])
 // PRICING TIER SCHEMA
 // ============================================================================
 
+export const FrequencyPriceSchema = z.object({
+  times: z
+    .number({ message: 'Times is required' })
+    .int('Times must be a whole number')
+    .positive('Times must be greater than 0'),
+  price: z
+    .number({ message: 'Price is required' })
+    .min(0, 'Price cannot be negative'),
+})
+
 export const PackagePricingTierSchema = z.object({
   area_min: z
     .number({ message: 'Minimum area is required' })
@@ -47,27 +57,9 @@ export const PackagePricingTierSchema = z.object({
     .number({ message: 'Estimated hours is required' })
     .positive('Estimated hours must be greater than 0'),
 
-  price_1_time: z
-    .number({ message: '1-time price is required' })
-    .min(0, '1-time price cannot be negative'),
-
-  price_2_times: z
-    .number()
-    .min(0, '2-times price cannot be negative')
-    .nullable()
-    .optional(),
-
-  price_4_times: z
-    .number()
-    .min(0, '4-times price cannot be negative')
-    .nullable()
-    .optional(),
-
-  price_8_times: z
-    .number()
-    .min(0, '8-times price cannot be negative')
-    .nullable()
-    .optional(),
+  frequency_prices: z
+    .array(FrequencyPriceSchema)
+    .min(1, 'At least one frequency pricing entry is required'),
 }).refine(
   (data) => data.area_max > data.area_min,
   {
@@ -215,6 +207,7 @@ export type ServicePackageV2BaseFormData = z.infer<typeof ServicePackageV2BaseSc
 
 export type ServicePackageV2FormData = z.infer<typeof ServicePackageV2Schema>
 export type PackagePricingTierFormData = z.infer<typeof PackagePricingTierSchema>
+export type FrequencyPriceFormData = z.infer<typeof FrequencyPriceSchema>
 export type ServicePackageV2CompleteFormData = z.infer<typeof ServicePackageV2FormSchema>
 export type ServiceType = z.infer<typeof ServiceTypeEnum>
 export type PricingModel = z.infer<typeof PricingModelEnum>
