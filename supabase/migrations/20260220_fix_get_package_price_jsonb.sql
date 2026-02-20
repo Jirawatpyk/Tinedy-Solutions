@@ -3,6 +3,9 @@
 -- Now supports unlimited custom frequencies stored in frequency_prices JSONB
 -- Maintains full backward compatibility via fallback to legacy columns
 
+-- Drop existing function first (required when changing parameter signatures/defaults)
+DROP FUNCTION IF EXISTS get_package_price(uuid, integer, integer);
+
 CREATE OR REPLACE FUNCTION get_package_price(
   p_package_id UUID,
   p_area_sqm   INTEGER,
