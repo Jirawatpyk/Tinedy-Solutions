@@ -15,7 +15,7 @@ import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
-import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
+import { CustomerFormSheet } from '@/components/customers/CustomerFormSheet'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
@@ -242,10 +242,10 @@ export function AdminCustomers() {
         }
       />
 
-      {/* Customer Form Dialog */}
-      <CustomerFormDialog
-        isOpen={isDialogOpen}
-        onClose={handleDialogClose}
+      {/* Customer Form Sheet */}
+      <CustomerFormSheet
+        open={isDialogOpen}
+        onOpenChange={(o) => !o && handleDialogClose()}
         onSuccess={handleDialogSuccess}
         customer={editingCustomer}
       />

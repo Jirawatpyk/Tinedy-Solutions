@@ -4,17 +4,10 @@ import type { CustomerRecord } from '@/types'
 import type { Booking } from '@/types/booking'
 import { BookingFormContainer } from '@/components/booking/BookingFormContainer'
 import { BookingEditModal } from '@/components/booking/BookingEditModal'
-import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
+import { CustomerFormSheet } from '@/components/customers/CustomerFormSheet'
 import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { AppSheet } from '@/components/ui/app-sheet'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -145,16 +138,16 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
         }}
       />
 
-      {/* Add Note Dialog */}
-      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Note</DialogTitle>
-            <DialogDescription>
-              Add a note to {customer.full_name}'s profile
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+      {/* Add Note Sheet */}
+      <AppSheet
+        open={isNoteDialogOpen}
+        onOpenChange={setIsNoteDialogOpen}
+        title="Add Note"
+        description={`Add a note to ${customer.full_name}'s profile`}
+        size="sm"
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto px-6 pb-20">
             <div className="space-y-2">
               <Label htmlFor="note">Note</Label>
               <Textarea
@@ -165,34 +158,35 @@ const BookingModalsContainerComponent = function BookingModalsContainer({
                 placeholder="Enter note here..."
               />
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsNoteDialogOpen(false)
-                  setNoteText('')
-                }}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={onAddNote}
-                disabled={submitting || !noteText.trim()}
-                className="bg-tinedy-blue"
-              >
-                {submitting ? 'Adding...' : 'Add Note'}
-              </Button>
-            </DialogFooter>
           </div>
-        </DialogContent>
-      </Dialog>
+          <div className="sticky bottom-0 bg-background border-t pt-4 pb-6 flex gap-2 px-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsNoteDialogOpen(false)
+                setNoteText('')
+              }}
+              disabled={submitting}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onAddNote}
+              disabled={submitting || !noteText.trim()}
+              className="flex-1 bg-tinedy-blue"
+            >
+              {submitting ? 'Adding...' : 'Add Note'}
+            </Button>
+          </div>
+        </div>
+      </AppSheet>
 
-      {/* Edit Customer Dialog */}
-      <CustomerFormDialog
-        isOpen={isEditDialogOpen}
-        onClose={onCloseEditDialog}
+      {/* Edit Customer Sheet */}
+      <CustomerFormSheet
+        open={isEditDialogOpen}
+        onOpenChange={(o) => !o && onCloseEditDialog()}
         onSuccess={onEditSuccess}
         customer={customer}
       />
