@@ -1,30 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase'
 import { useTeamsWithDetails } from '@/hooks/use-teams'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { toast } from 'sonner'
@@ -32,27 +14,10 @@ import { AdminOnly } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { TeamCard } from '@/components/teams/team-card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { mapErrorToUserMessage, getLoadErrorMessage, getTeamMemberError } from '@/lib/error-messages'
+import { getLoadErrorMessage, getTeamMemberError } from '@/lib/error-messages'
 import { useOptimisticDelete } from '@/hooks/optimistic'
-import {
-  TeamCreateSchema,
-  TeamUpdateSchema,
-  TeamCreateTransformSchema,
-  TeamUpdateTransformSchema,
-  AddTeamMemberSchema,
-  type TeamCreateFormData,
-  type TeamUpdateFormData,
-  type AddTeamMemberFormData,
-} from '@/schemas'
-
-interface TeamMember {
-  id: string
-  full_name: string
-  email: string
-  phone: string | null
-  avatar_url: string | null
-  role: string
-}
+import { TeamFormSheet, type TeamForForm, type TeamMember } from '@/components/teams/TeamFormSheet'
+import { AddTeamMemberSheet } from '@/components/teams/AddTeamMemberSheet'
 
 interface Team {
   id: string
@@ -82,10 +47,10 @@ export function AdminTeams() {
     onSuccess: refresh,
   })
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
+  const [isMemberSheetOpen, setIsMemberSheetOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
-  const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   const [availableStaff, setAvailableStaff] = useState<TeamMember[]>([])
@@ -94,37 +59,6 @@ export function AdminTeams() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
   const [pendingRemove, setPendingRemove] = useState<{ teamId: string; staffId: string } | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
-
-  // React Hook Form - Create Team (uses base schema, transforms on submit)
-  const createTeamForm = useForm<TeamCreateFormData>({
-    resolver: zodResolver(TeamCreateSchema),
-    defaultValues: {
-      name: '',
-      description: null,
-      team_lead_id: null,
-      is_active: true,
-    },
-  })
-
-  // React Hook Form - Update Team (uses base schema, transforms on submit)
-  const updateTeamForm = useForm<TeamUpdateFormData>({
-    resolver: zodResolver(TeamUpdateSchema),
-    defaultValues: {
-      name: '',
-      description: null,
-      team_lead_id: null,
-    },
-  })
-
-  // React Hook Form - Add Member
-  const addMemberForm = useForm<AddTeamMemberFormData>({
-    resolver: zodResolver(AddTeamMemberSchema),
-    defaultValues: {
-      team_id: '',
-      staff_id: '',
-      role: 'member',
-    },
-  })
 
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
@@ -195,115 +129,6 @@ export function AdminTeams() {
     loadAvailableStaff()
   }, [loadAvailableStaff])
 
-  const onSubmitCreateTeam = async (data: TeamCreateFormData) => {
-    try {
-      // Transform form data (empty string → null)
-      const transformedData = TeamCreateTransformSchema.parse(data)
-
-      // Create the team
-      const { data: newTeam, error: teamError } = await supabase
-        .from('teams')
-        .insert({
-          name: transformedData.name,
-          description: transformedData.description,
-          team_lead_id: transformedData.team_lead_id,
-          is_active: transformedData.is_active,
-        })
-        .select()
-        .single()
-
-      if (teamError) throw teamError
-
-      // If a team lead was selected, automatically add them as a member
-      if (transformedData.team_lead_id && newTeam) {
-        const { error: memberError } = await supabase
-          .from('team_members')
-          .insert({
-            team_id: newTeam.id,
-            staff_id: transformedData.team_lead_id,
-            joined_at: new Date().toISOString(),
-          })
-
-        if (memberError) {
-          console.error('Error adding team lead as member:', memberError)
-          // Don't throw - team was created successfully, just log the warning
-        }
-      }
-
-      toast.success(
-        transformedData.team_lead_id
-          ? 'Team created and team lead added as member'
-          : 'Team created successfully'
-      )
-
-      setDialogOpen(false)
-      createTeamForm.reset()
-      refresh()
-    } catch (error) {
-      console.error('Error creating team:', error)
-      const errorMessage = mapErrorToUserMessage(error, 'team')
-      toast.error(errorMessage.title, { description: errorMessage.description })
-    }
-  }
-
-  const onSubmitUpdateTeam = async (data: TeamUpdateFormData) => {
-    if (!editingTeam) return
-
-    try {
-      // Transform form data (empty string → null)
-      const transformedData = TeamUpdateTransformSchema.parse(data)
-
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          name: transformedData.name,
-          description: transformedData.description,
-          team_lead_id: transformedData.team_lead_id,
-        })
-        .eq('id', editingTeam.id)
-
-      if (error) throw error
-
-      // If a new team lead was selected, check if they're already a member
-      if (transformedData.team_lead_id) {
-        const isAlreadyMember = editingTeam.members?.some(
-          (member) => member.id === transformedData.team_lead_id
-        )
-
-        // If not a member yet, add them automatically
-        if (!isAlreadyMember) {
-          const { error: memberError } = await supabase
-            .from('team_members')
-            .insert({
-              team_id: editingTeam.id,
-              staff_id: transformedData.team_lead_id,
-              joined_at: new Date().toISOString(),
-            })
-
-          if (memberError) {
-            console.error('Error adding team lead as member:', memberError)
-            // Don't throw - team was updated successfully, just log the warning
-          }
-        }
-      }
-
-      toast.success(
-        transformedData.team_lead_id && !editingTeam.members?.some((m) => m.id === transformedData.team_lead_id)
-          ? 'Team updated and team lead added as member'
-          : 'Team updated successfully'
-      )
-
-      setDialogOpen(false)
-      setEditingTeam(null)
-      updateTeamForm.reset()
-      refresh()
-    } catch (error) {
-      console.error('Error updating team:', error)
-      const errorMessage = mapErrorToUserMessage(error, 'team')
-      toast.error(errorMessage.title, { description: errorMessage.description })
-    }
-  }
-
   const handleDeleteTeam = async (teamId: string) => {
     deleteOps.permanentDelete.mutate({ id: teamId })
   }
@@ -314,60 +139,6 @@ export function AdminTeams() {
 
   const restoreTeam = async (teamId: string) => {
     deleteOps.restore.mutate({ id: teamId })
-  }
-
-  const onSubmitAddMember = async (data: AddTeamMemberFormData) => {
-    try {
-      // Check if staff is currently an ACTIVE member (to prevent duplicates)
-      const { data: activeMember } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('team_id', data.team_id)
-        .eq('staff_id', data.staff_id)
-        .is('left_at', null)
-        .maybeSingle()
-
-      if (activeMember) {
-        // Already an active member - don't add again
-        toast.error('Already a Member', {
-          description: 'This staff member is already in the team.',
-        })
-        return
-      }
-
-      // Always create a NEW record for re-join
-      // This preserves membership history: each join/leave period is a separate record
-      // Old records with left_at will be used for historical revenue calculation
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: data.team_id,
-          staff_id: data.staff_id,
-          joined_at: new Date().toISOString(),
-        })
-
-      if (error) throw error
-
-      toast.success('Member added successfully')
-
-      setMemberDialogOpen(false)
-      addMemberForm.reset()
-      refresh()
-    } catch (error) {
-      console.error('Error adding member:', error)
-
-      // Check if this is a unique constraint violation (duplicate active member)
-      const errorObj = error as { code?: string; message?: string }
-      if (errorObj?.code === '23505' || errorObj?.message?.includes('unique')) {
-        toast.error('Already a Member', {
-          description: 'This staff member is already in the team.',
-        })
-        return
-      }
-
-      const errorMessage = getTeamMemberError('add')
-      toast.error(errorMessage.title, { description: errorMessage.description })
-    }
   }
 
   // Open remove member confirmation dialog
@@ -387,7 +158,6 @@ export function AdminTeams() {
       const isTeamLead = team?.team_lead_id === pendingRemove.staffId
 
       // Soft delete: Set left_at timestamp instead of deleting
-      // This preserves historical revenue data for the staff member
       const { error } = await supabase
         .from('team_members')
         .update({ left_at: new Date().toISOString() })
@@ -425,36 +195,14 @@ export function AdminTeams() {
     }
   }
 
-
-  const openCreateDialog = () => {
-    setEditingTeam(null)
-    createTeamForm.reset({
-      name: '',
-      description: null,
-      team_lead_id: null,
-      is_active: true,
-    })
-    setDialogOpen(true)
-  }
-
-  const openEditDialog = (team: Team) => {
-    setEditingTeam(team)
-    updateTeamForm.reset({
-      name: team.name,
-      description: team.description,
-      team_lead_id: team.team_lead_id,
-    })
-    setDialogOpen(true)
-  }
-
-  const openMemberDialog = (team: Team) => {
+  const openEditSheet = (team: Team) => {
     setSelectedTeam(team)
-    addMemberForm.reset({
-      team_id: team.id,
-      staff_id: '',
-      role: 'member',
-    })
-    setMemberDialogOpen(true)
+    setIsEditSheetOpen(true)
+  }
+
+  const openMemberSheet = (team: Team) => {
+    setSelectedTeam(team)
+    setIsMemberSheetOpen(true)
   }
 
   if (loading) {
@@ -553,7 +301,7 @@ export function AdminTeams() {
                 </label>
               </div>
             </AdminOnly>
-            <Button onClick={openCreateDialog} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
+            <Button onClick={() => setIsCreateSheetOpen(true)} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
               <Plus className="h-4 w-4 mr-2" />
               New Team
             </Button>
@@ -613,7 +361,7 @@ export function AdminTeams() {
               description={searchQuery ? 'Try a different search term' : 'Create your first team to get started'}
               action={!searchQuery ? {
                 label: 'New Team',
-                onClick: openCreateDialog,
+                onClick: () => setIsCreateSheetOpen(true),
                 icon: Plus
               } : undefined}
             />
@@ -626,11 +374,11 @@ export function AdminTeams() {
               <TeamCard
                 key={team.id}
                 team={team}
-                onEdit={openEditDialog}
+                onEdit={openEditSheet}
                 onDelete={handleDeleteTeam}
                 onCancel={archiveTeam}
                 onRestore={restoreTeam}
-                onAddMember={openMemberDialog}
+                onAddMember={openMemberSheet}
                 onRemoveMember={handleRemoveMember}
               />
             ))}
@@ -657,159 +405,38 @@ export function AdminTeams() {
         </>
       )}
 
-      {/* Create/Edit Team Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open)
-        if (!open) {
-          createTeamForm.reset()
-          updateTeamForm.reset()
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingTeam ? 'Edit Team' : 'Create New Team'}</DialogTitle>
-            <DialogDescription>
-              {editingTeam ? 'Update team information' : 'Create a new team for your staff'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={editingTeam ?
-            updateTeamForm.handleSubmit(onSubmitUpdateTeam) :
-            createTeamForm.handleSubmit(onSubmitCreateTeam)
-          }>
-            <div className="space-y-4 py-4">
-              <Controller
-                name="name"
-                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="teamName">Team Name *</Label>
-                    <Input
-                      id="teamName"
-                      {...field}
-                      placeholder="e.g., Sales Team, Support Team"
-                    />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
+      {/* Create Team Sheet */}
+      <TeamFormSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        staffList={availableStaff}
+        onSuccess={refresh}
+      />
 
-              <Controller
-                name="description"
-                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="teamDescription">Description</Label>
-                    <Input
-                      id="teamDescription"
-                      {...field}
-                      value={field.value || ''}
-                      placeholder="Brief description of the team"
-                    />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
+      {/* Edit Team Sheet */}
+      <TeamFormSheet
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
+        team={selectedTeam as TeamForForm | null}
+        staffList={availableStaff}
+        onSuccess={refresh}
+      />
 
-              <Controller
-                name="team_lead_id"
-                control={(editingTeam ? updateTeamForm.control : createTeamForm.control) as typeof createTeamForm.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="teamLead">Team Lead</Label>
-                    <Select
-                      value={field.value || undefined}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team lead (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableStaff.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingTeam ? 'Update' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Member Dialog */}
-      <Dialog open={memberDialogOpen} onOpenChange={(open) => {
-        setMemberDialogOpen(open)
-        if (!open) {
-          addMemberForm.reset()
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
-            <DialogDescription>
-              Add a staff member to {selectedTeam?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={addMemberForm.handleSubmit(onSubmitAddMember)}>
-            <div className="space-y-4 py-4">
-              <Controller
-                name="staff_id"
-                control={addMemberForm.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="staffSelect">Select Staff Member</Label>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a staff member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableStaff
-                          .filter((staff) =>
-                            !selectedTeam?.members?.some((m) => m.id === staff.id)
-                          )
-                          .map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.full_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setMemberDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Add Member
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Add Member Sheet — use fresh team data from teams array to avoid stale members */}
+      {selectedTeam && (() => {
+        const freshTeam = teams.find(t => t.id === selectedTeam.id) ?? selectedTeam
+        return (
+          <AddTeamMemberSheet
+            open={isMemberSheetOpen}
+            onOpenChange={setIsMemberSheetOpen}
+            team={freshTeam as TeamForForm}
+            availableStaff={availableStaff.filter(
+              (s) => !freshTeam.members?.some((m) => m.id === s.id)
+            )}
+            onSuccess={refresh}
+          />
+        )
+      })()}
 
       {/* Remove Member Confirmation Dialog */}
       <ConfirmDialog
