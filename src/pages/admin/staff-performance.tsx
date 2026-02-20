@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { getDeleteErrorMessage } from '@/lib/error-messages'
 import { useEffect, useState } from 'react'
-import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import { StaffEditSheet, type StaffForEdit } from '@/components/staff/StaffEditSheet'
 
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
@@ -186,8 +186,8 @@ export function AdminStaffPerformance() {
         </SectionErrorBoundary>
       </div>
 
-      {/* Edit Dialog */}
-      <StaffEditDialog
+      {/* Edit Staff Sheet */}
+      <StaffEditSheet
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         staff={staffForEdit}
