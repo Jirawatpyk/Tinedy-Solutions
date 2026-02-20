@@ -74,6 +74,7 @@ export const PAYMENT_STATUS_COLORS = {
   unpaid: 'bg-orange-100 text-orange-800 border-orange-300',
   pending_verification: 'bg-amber-100 text-amber-800 border-amber-300',
   paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  partial: 'bg-blue-100 text-blue-800 border-blue-300',
   refund_pending: 'bg-purple-100 text-purple-800 border-purple-300',
   refunded: 'bg-tinedy-off-white text-tinedy-dark border-tinedy-dark/20',
 } as const
@@ -82,6 +83,7 @@ export const PAYMENT_STATUS_DOTS = {
   unpaid: 'bg-orange-500',
   pending_verification: 'bg-amber-500',
   paid: 'bg-emerald-500',
+  partial: 'bg-blue-500',
   refund_pending: 'bg-purple-500',
   refunded: 'bg-tinedy-dark/60',
 } as const
@@ -90,9 +92,18 @@ export const PAYMENT_STATUS_LABELS = {
   unpaid: 'Unpaid',
   pending_verification: 'Verifying',
   paid: 'Paid',
+  partial: 'Partial',
   refund_pending: 'Refunding',
   refunded: 'Refunded',
 } as const
+
+/** Display labels for payment methods */
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: 'Cash',
+  credit_card: 'Credit Card',
+  transfer: 'Bank Transfer',
+  promptpay: 'PromptPay',
+}
 
 // ============================================================================
 // LEGACY EXPORTS (for backward compatibility)
@@ -114,6 +125,7 @@ export const STATUS_COLORS_TIMELINE = {
   unpaid: 'bg-orange-500 hover:bg-orange-600',
   pending_verification: 'bg-amber-500 hover:bg-amber-600',
   paid: 'bg-emerald-500 hover:bg-emerald-600',
+  partial: 'bg-blue-500 hover:bg-blue-600',
   refund_pending: 'bg-purple-500 hover:bg-purple-600',
   refunded: 'bg-tinedy-dark/60 hover:bg-tinedy-dark/70',
 } as const
@@ -144,6 +156,7 @@ const PAYMENT_STATUS_TEXT_COLORS: Record<PaymentStatus, string> = {
   unpaid: 'text-orange-800',
   pending_verification: 'text-amber-800',
   paid: 'text-emerald-800',
+  partial: 'text-blue-800',
   refund_pending: 'text-purple-800',
   refunded: 'text-tinedy-dark',
 }

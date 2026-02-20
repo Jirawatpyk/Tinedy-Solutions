@@ -8,9 +8,13 @@ import {
   ErrorSeverity,
 } from '../error-handling'
 
-// Mock toast
-vi.mock('@/hooks/use-toast', () => ({
-  toast: vi.fn(),
+// Mock sonner toast (code migrated from useToast to Sonner)
+const mockToastError = vi.fn()
+vi.mock('sonner', () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: vi.fn(),
+  },
 }))
 
 describe('error-handling', () => {
@@ -49,16 +53,14 @@ describe('error-handling', () => {
       expect(result.error).toBeInstanceOf(Error)
     })
 
-    it('should respect showToast config', async () => {
-      const { toast } = await import('@/hooks/use-toast')
-
+    it('should respect showToast config', () => {
       handleError(new Error('Test'), { showToast: true })
-      expect(toast).toHaveBeenCalled()
+      expect(mockToastError).toHaveBeenCalled()
 
       vi.clearAllMocks()
 
       handleError(new Error('Test'), { showToast: false })
-      expect(toast).not.toHaveBeenCalled()
+      expect(mockToastError).not.toHaveBeenCalled()
     })
 
     it('should call custom onError handler', () => {

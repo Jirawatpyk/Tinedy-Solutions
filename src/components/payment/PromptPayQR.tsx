@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useSettings } from '@/hooks/use-settings'
 import { supabase } from '@/lib/supabase'
 import { Loader2, AlertCircle, Upload, Image as ImageIcon, X, CheckCircle2 } from 'lucide-react'
 import { formatCurrency, getBangkokDateString } from '@/lib/utils'
+import { sendPaymentConfirmation } from '@/lib/email'
 import generatePayload from 'promptpay-qr'
 import { toDataURL } from 'qrcode'
 
@@ -28,7 +29,6 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
   const [uploading, setUploading] = useState(false)
   const [uploaded, setUploaded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { toast } = useToast()
   const { settings, loading: settingsLoading } = useSettings()
 
   const generateQRCode = useCallback(async () => {
@@ -75,20 +75,16 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
 
     // Validate file type
     if (!selectedFile.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid file type',
+      toast.error('Invalid file type', {
         description: 'Please upload an image file (JPG, PNG, etc.)',
-        variant: 'destructive',
       })
       return
     }
 
     // Validate file size (max 5MB)
     if (selectedFile.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
+      toast.error('File too large', {
         description: 'Please upload an image smaller than 5MB',
-        variant: 'destructive',
       })
       return
     }
@@ -186,13 +182,9 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
 
       // Send payment confirmation email if auto-verified
       if (autoVerify) {
-        try {
-          await supabase.functions.invoke('send-payment-confirmation', {
-            body: { bookingId }
-          })
-        } catch (emailError) {
+        sendPaymentConfirmation({ bookingId }).catch((emailError) => {
           console.warn('Failed to send confirmation email:', emailError)
-        }
+        })
       }
 
       setUploaded(true)
@@ -205,8 +197,7 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
           ? 'Payment confirmed! You will receive a confirmation email shortly.'
           : 'Payment slip uploaded successfully. We will verify your payment soon.'
 
-      toast({
-        title: autoVerify ? 'Payment Confirmed!' : 'Slip Uploaded!',
+      toast.success(autoVerify ? 'Payment Confirmed!' : 'Slip Uploaded!', {
         description: successMessage,
       })
 
@@ -218,10 +209,8 @@ export function PromptPayQR({ amount, bookingId, recurringGroupId, onSuccess }: 
       }
     } catch (error) {
       console.error('Error uploading slip:', error)
-      toast({
-        title: 'Upload failed',
+      toast.error('Upload failed', {
         description: 'Failed to upload payment slip. Please try again.',
-        variant: 'destructive',
       })
     } finally {
       setUploading(false)

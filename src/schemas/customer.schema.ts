@@ -71,6 +71,7 @@ export const customerUpdateSchema = customerCreateSchema.partial().extend({
   full_name: nameSchema.optional(),
   email: emailSchema.optional(),
   phone: phoneSchema.optional(),
+  relationship_level_locked: z.boolean().optional(),
 })
 
 export type CustomerUpdateFormData = z.infer<typeof customerUpdateSchema>

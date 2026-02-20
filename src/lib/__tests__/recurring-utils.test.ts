@@ -20,20 +20,20 @@ describe('recurring-utils', () => {
   // ============================================================================
 
   describe('getRecurringPatternLabel', () => {
-    it('should return Thai label for auto-monthly', () => {
-      expect(getRecurringPatternLabel('auto-monthly')).toBe('เดือนละ 1 ครั้ง')
+    it('should return label for auto-monthly', () => {
+      expect(getRecurringPatternLabel('auto-monthly')).toBe('Monthly')
     })
 
-    it('should return Thai label for custom', () => {
-      expect(getRecurringPatternLabel('custom')).toBe('กำหนดเอง')
+    it('should return label for custom', () => {
+      expect(getRecurringPatternLabel('custom')).toBe('Custom')
     })
 
-    it('should return "ไม่ระบุ" for null', () => {
-      expect(getRecurringPatternLabel(null)).toBe('ไม่ระบุ')
+    it('should return "Not specified" for null', () => {
+      expect(getRecurringPatternLabel(null)).toBe('Not specified')
     })
 
-    it('should return "ไม่ระบุ" for unknown pattern', () => {
-      expect(getRecurringPatternLabel('unknown' as any)).toBe('ไม่ระบุ')
+    it('should return "Not specified" for unknown pattern', () => {
+      expect(getRecurringPatternLabel('unknown' as any)).toBe('Not specified')
     })
   })
 

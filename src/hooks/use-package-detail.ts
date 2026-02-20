@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { logger } from '@/lib/logger'
@@ -121,7 +121,6 @@ function packageDetailReducer(state: PackageDetailState, action: PackageDetailAc
 
 export function usePackageDetail(packageId: string | undefined) {
   const navigate = useNavigate()
-  const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const isMountedRef = useRef(true)
@@ -148,7 +147,7 @@ export function usePackageDetail(packageId: string | undefined) {
       const { data: bookingsData, error } = await supabase
         .from('bookings')
         .select('status, total_price, booking_date')
-        .or(`service_package_id.eq.${pkgId},package_v2_id.eq.${pkgId}`)
+        .eq('package_v2_id', pkgId)
 
       if (error) throw error
       if (!bookingsData) return
@@ -175,9 +174,9 @@ export function usePackageDetail(packageId: string | undefined) {
       })
     } catch (err) {
       logger.error('Error fetching package stats', { error: err }, { context: 'PackageDetail' })
-      toast({ title: 'Warning', description: 'Could not load package statistics', variant: 'destructive' })
+      toast.warning('Could not load package statistics')
     }
-  }, [toast])
+  }, [])
 
   const fetchPackageBookings = useCallback(async (pkgId: string) => {
     try {
@@ -189,7 +188,7 @@ export function usePackageDetail(packageId: string | undefined) {
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
         `)
-        .or(`service_package_id.eq.${pkgId},package_v2_id.eq.${pkgId}`)
+        .eq('package_v2_id', pkgId)
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -197,9 +196,9 @@ export function usePackageDetail(packageId: string | undefined) {
       dispatch({ type: 'SET_BOOKINGS', payload: (data as unknown as BookingWithRelations[]) || [] })
     } catch (err) {
       logger.error('Error fetching package bookings', { error: err }, { context: 'PackageDetail' })
-      toast({ title: 'Warning', description: 'Could not load bookings history', variant: 'destructive' })
+      toast.warning('Could not load bookings history')
     }
-  }, [toast])
+  }, [])
 
   const fetchPackageDetails = useCallback(async () => {
     if (!packageId) return
@@ -304,27 +303,20 @@ export function usePackageDetail(packageId: string | undefined) {
 
       dispatch({ type: 'TOGGLE_ACTIVE' })
       invalidatePackageCache()
-      toast({
-        title: 'Success',
-        description: `Package ${state.packageData.is_active ? 'deactivated' : 'activated'} successfully`,
-      })
+      toast.success(`Package ${state.packageData.is_active ? 'deactivated' : 'activated'} successfully`)
     } catch (err) {
       const errorMsg = mapErrorToUserMessage(err, 'general')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       dispatch({ type: 'SET_TOGGLING', payload: false })
     }
-  }, [state.packageData, state.packageSource, state.toggling, toast, invalidatePackageCache])
+  }, [state.packageData, state.packageSource, state.toggling, invalidatePackageCache])
 
   const handleDelete = useCallback(async () => {
     if (!state.packageData) return
 
     if (state.stats.total_bookings > 0) {
-      toast({
-        title: 'Cannot Delete',
-        description: `This package has ${state.stats.total_bookings} booking(s). Cannot delete packages with existing bookings.`,
-        variant: 'destructive',
-      })
+      toast.error('Cannot Delete', { description: `This package has ${state.stats.total_bookings} booking(s). Cannot delete packages with existing bookings.` })
       return
     }
 
@@ -342,23 +334,19 @@ export function usePackageDetail(packageId: string | undefined) {
       if (error) throw error
 
       queryClient.removeQueries({ queryKey: queryKeys.packages.all })
-      toast({ title: 'Success', description: 'Package deleted successfully' })
+      toast.success('Package deleted successfully')
       navigate(`${basePath}/packages`)
     } catch (err) {
       const errorMsg = mapErrorToUserMessage(err, 'general')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.packageData, state.packageSource, state.stats.total_bookings, toast, navigate, queryClient, basePath])
+  }, [state.packageData, state.packageSource, state.stats.total_bookings, navigate, queryClient, basePath])
 
   const handleArchive = useCallback(async () => {
     if (!state.packageData) return
 
     if (state.stats.total_bookings > 0) {
-      toast({
-        title: 'Cannot Archive',
-        description: `This package has ${state.stats.total_bookings} booking(s). Cannot archive packages with existing bookings.`,
-        variant: 'destructive',
-      })
+      toast.error('Cannot Archive', { description: `This package has ${state.stats.total_bookings} booking(s). Cannot archive packages with existing bookings.` })
       return
     }
 
@@ -372,13 +360,13 @@ export function usePackageDetail(packageId: string | undefined) {
       if (error) throw error
 
       queryClient.removeQueries({ queryKey: queryKeys.packages.all })
-      toast({ title: 'Success', description: 'Package archived successfully' })
+      toast.success('Package archived successfully')
       navigate(`${basePath}/packages`)
     } catch (err) {
       const errorMsg = mapErrorToUserMessage(err, 'general')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.packageData, state.packageSource, state.stats.total_bookings, toast, navigate, user?.id, queryClient, basePath])
+  }, [state.packageData, state.packageSource, state.stats.total_bookings, navigate, user?.id, queryClient, basePath])
 
   return {
     ...state,

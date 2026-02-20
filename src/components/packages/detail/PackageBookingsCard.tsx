@@ -93,7 +93,7 @@ function PackageBookingsCardComponent({
                 <SelectValue placeholder="Booking" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Booking</SelectItem>
+                <SelectItem value="all">All Bookings</SelectItem>
                 {getAllStatusOptions().map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}

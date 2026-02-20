@@ -1,0 +1,291 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { supabase } from '@/lib/supabase'
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: { from: vi.fn() },
+}))
+
+vi.mock('@/lib/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/utils')>()
+  return { ...actual, getBangkokDateString: vi.fn(() => '2026-02-20') }
+})
+
+import { checkAndUpdateCustomerIntelligence } from '@/lib/customer-intelligence'
+
+const mockFrom = vi.mocked(supabase.from)
+
+function mockCustomerCall(customer: object) {
+  mockFrom.mockImplementationOnce(
+    () =>
+      ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: customer, error: null }),
+      }) as any
+  )
+}
+
+function mockStatsCall(rows: { total_price: number | null }[]) {
+  const result = { data: rows, error: null }
+  mockFrom.mockImplementationOnce(
+    () =>
+      ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        then: (
+          resolve: (v: typeof result) => unknown,
+          _reject?: (reason?: unknown) => unknown
+        ) => Promise.resolve(result).then(resolve as any),
+      }) as any
+  )
+}
+
+function mockUpdateCall(updateError: { message: string } | null = null) {
+  const update = vi.fn().mockReturnValue({
+    eq: vi.fn().mockResolvedValue({ error: updateError }),
+  })
+  mockFrom.mockImplementationOnce(() => ({ update }) as any)
+  return update
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+describe('checkAndUpdateCustomerIntelligence', () => {
+  it('upgrades new → regular on first paid booking', async () => {
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([{ total_price: 1000 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ relationship_level: 'regular' })
+    )
+  })
+
+  it('upgrades regular → vip on 5th paid booking and adds "Frequent Booker" tag', async () => {
+    mockCustomerCall({
+      relationship_level: 'regular',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([
+      { total_price: 1000 },
+      { total_price: 1000 },
+      { total_price: 1000 },
+      { total_price: 1000 },
+      { total_price: 1000 },
+    ])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relationship_level: 'vip',
+        tags: expect.arrayContaining(['Frequent Booker']),
+      })
+    )
+  })
+
+  it('upgrades regular → vip when spend reaches ฿15,000 (3 bookings)', async () => {
+    mockCustomerCall({
+      relationship_level: 'regular',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([
+      { total_price: 5000 },
+      { total_price: 5000 },
+      { total_price: 5000 },
+    ])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ relationship_level: 'vip' })
+    )
+  })
+
+  it('skips all updates when relationship_level_locked is true', async () => {
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: true,
+      tags: [],
+      notes: null,
+    })
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    // Only customer fetch — no stats, no update
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers'])
+  })
+
+  it('adds "High Value" tag when spend reaches ฿15,000', async () => {
+    mockCustomerCall({
+      relationship_level: 'regular',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([
+      { total_price: 5000 },
+      { total_price: 5000 },
+      { total_price: 5000 },
+    ])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: expect.arrayContaining(['High Value']) })
+    )
+  })
+
+  it('appends correctly formatted auto-note on new → regular upgrade', async () => {
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    // total_price: 0 so spendStr is omitted from the auto-note
+    mockStatsCall([{ total_price: 0 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    const callArgs = update.mock.calls[0][0] as { notes: string }
+    expect(callArgs.notes).toContain(
+      '[Auto] 2026-02-20 — Relationship upgraded: new → regular (1 completed booking)'
+    )
+  })
+
+  it('keeps vip level unchanged regardless of low stats', async () => {
+    mockCustomerCall({
+      relationship_level: 'vip',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([{ total_price: 500 }])
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    // No update call — only customer fetch + stats fetch
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers', 'bookings'])
+  })
+
+  it('stays regular on 4 bookings (boundary — not yet vip)', async () => {
+    mockCustomerCall({
+      relationship_level: 'regular',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([
+      { total_price: 1000 },
+      { total_price: 1000 },
+      { total_price: 1000 },
+      { total_price: 1000 },
+    ])
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    // Level unchanged, no auto-tags triggered → no update call
+    const calledTables = mockFrom.mock.calls.map((c) => c[0])
+    expect(calledTables).toEqual(['customers', 'bookings'])
+  })
+
+  it('appends auto-note after existing notes (does not overwrite)', async () => {
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: 'Prefers morning appointments',
+    })
+    mockStatsCall([{ total_price: 0 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    const callArgs = update.mock.calls[0][0] as { notes: string }
+    expect(callArgs.notes).toMatch(/^Prefers morning appointments\n\n\[Auto\]/)
+  })
+
+  it('warns to console when update fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: null,
+    })
+    mockStatsCall([{ total_price: 1000 }])
+    mockUpdateCall({ message: 'DB write failed' })
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[customer-intelligence] update failed:',
+      'DB write failed'
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('caps notes to 1000 chars with "..." prefix when existing notes are very long', async () => {
+    const longNotes = 'A'.repeat(950) // 950 chars of existing notes
+
+    mockCustomerCall({
+      relationship_level: 'new',
+      relationship_level_locked: false,
+      tags: [],
+      notes: longNotes,
+    })
+    mockStatsCall([{ total_price: 0 }])
+    const update = mockUpdateCall()
+
+    await checkAndUpdateCustomerIntelligence('cust-1')
+
+    const callArgs = update.mock.calls[0][0] as { notes: string }
+    expect(callArgs.notes.length).toBeLessThanOrEqual(1000)
+    expect(callArgs.notes).toMatch(/^\.\.\.A+\n\n\[Auto\]/)
+  })
+
+  it('getCustomerStats returns zeros when DB returns error', async () => {
+    mockFrom.mockImplementationOnce(
+      () =>
+        ({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          then: (
+            resolve: (v: { data: null; error: { message: string } }) => unknown,
+            _reject?: unknown
+          ) =>
+            Promise.resolve({ data: null, error: { message: 'DB error' } }).then(
+              resolve as any
+            ),
+        }) as any
+    )
+
+    const { getCustomerStats } = await import('@/lib/customer-intelligence')
+    const result = await getCustomerStats('cust-err')
+
+    expect(result).toEqual({ paidBookings: 0, totalSpend: 0 })
+  })
+})

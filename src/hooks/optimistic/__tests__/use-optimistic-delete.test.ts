@@ -16,12 +16,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useOptimisticDelete } from '../use-optimistic-delete'
 import React, { type ReactNode } from 'react'
 
-// Mock useToast
-const mockToast = vi.fn()
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+// Mock sonner toast (code uses toast.success/toast.error from sonner)
+const mockToastSuccess = vi.fn()
+const mockToastError = vi.fn()
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
 }))
 
 // Mock Supabase
@@ -113,10 +115,9 @@ describe('useOptimisticDelete', () => {
         record_id: 'booking-1',
       })
 
-      // Verify toast
+      // Verify toast (Sonner: toast.success(title, { description }))
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Booking archived successfully',
         })
       })
@@ -134,11 +135,9 @@ describe('useOptimisticDelete', () => {
       await customersResult.current.softDelete.mutate({ id: 'customer-1' })
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            description: 'Customer archived successfully',
-          })
-        )
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
+          description: 'Customer archived successfully',
+        })
       })
 
       // Test teams
@@ -150,11 +149,9 @@ describe('useOptimisticDelete', () => {
       await teamsResult.current.softDelete.mutate({ id: 'team-1' })
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            description: 'Team archived successfully',
-          })
-        )
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
+          description: 'Team archived successfully',
+        })
       })
     })
 
@@ -213,8 +210,7 @@ describe('useOptimisticDelete', () => {
 
       // Verify toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Booking restored successfully',
         })
       })
@@ -272,8 +268,7 @@ describe('useOptimisticDelete', () => {
 
       // Verify toast
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Success',
+        expect(mockToastSuccess).toHaveBeenCalledWith('Success', {
           description: 'Booking permanently deleted',
         })
       })
@@ -311,10 +306,11 @@ describe('useOptimisticDelete', () => {
 
   describe('Loading States', () => {
     it('should track loading state for soft delete', async () => {
+      let resolveFn!: (value: { data: null; error: null }) => void
       mockRpc.mockImplementation(
         () =>
           new Promise((resolve) => {
-            setTimeout(() => resolve({ data: null, error: null }), 50)
+            resolveFn = resolve
           })
       )
 
@@ -331,6 +327,8 @@ describe('useOptimisticDelete', () => {
         expect(result.current.softDelete.isLoading).toBe(true)
       })
 
+      // Resolve the pending RPC call
+      resolveFn({ data: null, error: null })
       await mutatePromise
 
       await waitFor(() => {

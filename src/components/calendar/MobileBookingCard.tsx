@@ -22,7 +22,7 @@ import type { Booking } from '@/types/booking'
 import { STATUS_LABELS, STATUS_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaymentStatus } from '@/constants/booking-status'
 import { formatTime } from '@/lib/booking-utils'
 import { cn } from '@/lib/utils'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface MobileBookingCardProps {
   booking: Booking
@@ -44,7 +44,6 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
 }) => {
   const [isChangingStatus, setIsChangingStatus] = useState(false)
   const isMountedRef = useRef(true)
-  const { toast } = useToast()
 
   // Cleanup on unmount to prevent state updates after unmount
   useEffect(() => {
@@ -70,10 +69,8 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
       await onStatusChange(booking.id, newStatus)
     } catch (error) {
       // Show error toast when status change fails
-      toast({
-        title: 'Failed to update status',
+      toast.error('Failed to update status', {
         description: error instanceof Error ? error.message : 'Please try again',
-        variant: 'destructive',
       })
     } finally {
       // Only update state if component is still mounted
@@ -81,7 +78,7 @@ const MobileBookingCardComponent: React.FC<MobileBookingCardProps> = ({
         setIsChangingStatus(false)
       }
     }
-  }, [onStatusChange, booking.id, toast])
+  }, [onStatusChange, booking.id])
 
   const handleDropdownClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()

@@ -124,14 +124,18 @@ export type Database = {
         Row: {
           id: string
           customer_id: string
-          service_package_id: string
           staff_id: string | null
           team_id: string | null
           booking_date: string
+          end_date: string | null
           start_time: string
           end_time: string
           status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           total_price: number
+          job_name: string | null
+          custom_price: number | null
+          price_mode: 'package' | 'override' | 'custom'
+          price_override: boolean
           notes: string | null
           address: string
           city: string
@@ -143,14 +147,18 @@ export type Database = {
         Insert: {
           id?: string
           customer_id: string
-          service_package_id: string
           staff_id?: string | null
           team_id?: string | null
           booking_date: string
+          end_date?: string | null
           start_time: string
           end_time: string
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           total_price: number
+          job_name?: string | null
+          custom_price?: number | null
+          price_mode?: 'package' | 'override' | 'custom'
+          price_override?: boolean
           notes?: string | null
           address: string
           city: string
@@ -162,14 +170,18 @@ export type Database = {
         Update: {
           id?: string
           customer_id?: string
-          service_package_id?: string
           staff_id?: string | null
           team_id?: string | null
           booking_date?: string
+          end_date?: string | null
           start_time?: string
           end_time?: string
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           total_price?: number
+          job_name?: string | null
+          custom_price?: number | null
+          price_mode?: 'package' | 'override' | 'custom'
+          price_override?: boolean
           notes?: string | null
           address?: string
           city?: string

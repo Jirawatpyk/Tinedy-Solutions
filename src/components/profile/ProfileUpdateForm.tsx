@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
@@ -44,7 +44,6 @@ interface ProfileUpdateFormProps {
 }
 
 export function ProfileUpdateForm({ initialData, profileId, onSuccess }: ProfileUpdateFormProps) {
-  const { toast } = useToast()
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialData?.avatar_url || null)
   const [showRemoveAvatarDialog, setShowRemoveAvatarDialog] = useState(false)
@@ -71,19 +70,12 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Profile updated successfully',
-      })
+      toast.success('Profile updated successfully')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 
@@ -94,11 +86,7 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
     // Validate file
     const validation = validateAvatarFile(file)
     if (!validation.valid) {
-      toast({
-        title: 'Invalid File',
-        description: validation.error,
-        variant: 'destructive',
-      })
+      toast.error('Invalid File', { description: validation.error })
       return
     }
 
@@ -134,20 +122,13 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
 
       setAvatarUrl(publicUrl)
 
-      toast({
-        title: 'Avatar Uploaded',
-        description: 'Profile picture has been updated successfully',
-      })
+      toast.success('Profile picture has been updated successfully')
 
       onSuccess?.()
     } catch (error) {
       console.error('Error uploading avatar:', error)
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setUploadingAvatar(false)
       if (fileInputRef.current) {
@@ -168,19 +149,12 @@ export function ProfileUpdateForm({ initialData, profileId, onSuccess }: Profile
       setAvatarUrl(null)
       setShowRemoveAvatarDialog(false)
 
-      toast({
-        title: 'Avatar Removed',
-        description: 'Profile picture has been removed',
-      })
+      toast.success('Profile picture has been removed')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

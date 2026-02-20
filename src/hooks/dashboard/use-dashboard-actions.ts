@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { usePaymentActions } from '@/hooks/use-payment-actions'
@@ -19,7 +19,6 @@ export function useDashboardActions(
   selectedBooking: Booking | null,
   onBookingUpdate?: Dispatch<SetStateAction<Booking | null>>
 ) {
-  const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
   const [actionLoading, setActionLoading] = useState<ActionLoading>({
     statusChange: false,
@@ -93,25 +92,18 @@ export function useDashboardActions(
 
         if (error) throw error
 
-        toast({
-          title: 'Success',
-          description: 'Booking deleted successfully',
-        })
+        toast.success('Booking deleted successfully')
 
         setDeleteConfirm({ show: false, bookingId: null })
         refresh()
       } catch (error) {
         const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
+        toast.error(errorMsg.title, { description: errorMsg.description })
       } finally {
         setActionLoading((prev) => ({ ...prev, delete: false }))
       }
     },
-    [deleteConfirm.bookingId, toast, refresh]
+    [deleteConfirm.bookingId, refresh]
   )
 
   // Close delete confirmation dialog

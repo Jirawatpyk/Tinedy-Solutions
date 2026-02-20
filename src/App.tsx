@@ -6,7 +6,7 @@ import { ProtectedRoute } from './components/auth/protected-route'
 import { RoleBasedRedirect } from './components/auth/role-based-redirect'
 import { MainLayout } from './components/layout/main-layout'
 import { StaffLayout } from './components/layout/staff-layout'
-import { Toaster } from './components/ui/toaster'
+import { Toaster as SonnerToaster } from 'sonner'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PUBLIC_ROUTES, ADMIN_ROUTES, STAFF_ROUTES } from './config/routes'
 
@@ -197,7 +197,7 @@ function App() {
           />
               </Routes>
             </Suspense>
-            <Toaster />
+            <SonnerToaster richColors position="top-right" />
           </BrowserRouter>
         </ErrorBoundary>
       </AuthProvider>

@@ -1,11 +1,11 @@
-import { memo, useMemo, useCallback } from 'react'
+import React, { memo, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Package, Phone, CheckCircle2, StickyNote, MapPin, Play, Users, Loader2 } from 'lucide-react'
 import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { BookingStatus } from '@/types/booking'
-import { format } from 'date-fns'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { AvatarWithFallback } from '@/components/ui/avatar-with-fallback'
 import { useAuth } from '@/contexts/auth-context'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
@@ -59,9 +59,16 @@ export const BookingCard = memo(function BookingCard({
   )
 
   const formattedDate = useMemo(
-    () => showDate ? format(new Date(booking.booking_date), 'dd MMM yyyy') : null,
-    [showDate, booking.booking_date]
+    () => showDate ? formatDateRange(booking.booking_date, booking.end_date) : null,
+    [showDate, booking.booking_date, booking.end_date]
   )
+
+  const handleMapClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (fullAddress) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank')
+    }
+  }, [fullAddress])
 
   return (
     <Card
@@ -137,7 +144,7 @@ export const BookingCard = memo(function BookingCard({
                 <Package className="h-3.5 w-3.5 text-primary flex-shrink-0" />
               </div>
               <span className="font-medium text-xs sm:text-sm line-clamp-1 flex-1">
-                {booking.service_packages?.name || 'Unknown Service'}
+                {booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name ?? 'Unknown Service'}
               </span>
             </div>
 
@@ -192,12 +199,7 @@ export const BookingCard = memo(function BookingCard({
             <span className="text-xs sm:text-sm">Call</span>
           </Button>
           <Button
-            onClick={useCallback((e: React.MouseEvent) => {
-              e.stopPropagation()
-              if (fullAddress) {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank')
-              }
-            }, [fullAddress])}
+            onClick={handleMapClick}
             variant="outline"
             size="sm"
             className="flex-1 min-h-[44px] transition-all duration-200 active:scale-95"

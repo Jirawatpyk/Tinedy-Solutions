@@ -16,13 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionGuard } from '@/components/auth/permission-guard'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { AppSheet } from '@/components/ui/app-sheet'
+import { PackageWizardSheet } from '@/components/service-packages/PackageWizardSheet'
 import {
   Select,
   SelectContent,
@@ -30,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Package, Plus, Layers, TrendingUp, DollarSign } from 'lucide-react'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PackageCard, PackageFormV2 } from '@/components/service-packages'
@@ -40,7 +35,6 @@ import { packageQueryOptions } from '@/lib/queries/package-queries'
 import { PageHeader } from '@/components/common/PageHeader'
 
 export function AdminServicePackagesV2() {
-  const { toast } = useToast()
   const { user } = useAuth()
 
   // React Query - Fetch packages (V1 + V2 unified)
@@ -51,7 +45,8 @@ export function AdminServicePackagesV2() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all')
   const [showArchived, setShowArchived] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackageV2WithTiers | null>(null)
 
   // Fetch archived packages (Admin only)
@@ -79,13 +74,9 @@ export function AdminServicePackagesV2() {
   // Show error toast
   useEffect(() => {
     if (error) {
-      toast({
-        title: 'Error',
-        description: error,
-        variant: 'destructive',
-      })
+      toast.error(error)
     }
-  }, [error, toast])
+  }, [error])
 
   // Calculate statistics (useMemo)
   const stats = useMemo(() => {
@@ -128,8 +119,7 @@ export function AdminServicePackagesV2() {
    * Handle Create Package
    */
   const handleCreatePackage = () => {
-    setEditingPackage(null)
-    setIsDialogOpen(true)
+    setIsCreateSheetOpen(true)
   }
 
   /**
@@ -137,7 +127,7 @@ export function AdminServicePackagesV2() {
    */
   const handleEditPackage = (pkg: ServicePackageV2WithTiers) => {
     setEditingPackage(pkg)
-    setIsDialogOpen(true)
+    setIsEditSheetOpen(true)
   }
 
   /**
@@ -161,27 +151,16 @@ export function AdminServicePackagesV2() {
 
       if (packageError) throw packageError
 
-      toast({
-        title: 'Success',
-        description: 'Package deleted successfully',
-      })
+      toast.success('Package deleted successfully')
 
       refresh()
     } catch (error) {
       console.error('Error deleting package:', error)
       const dbError = error as { code?: string }
       if (dbError.code === '23503') {
-        toast({
-          title: 'Error',
-          description: 'Cannot delete package that has existing bookings',
-          variant: 'destructive',
-        })
+        toast.error('Cannot delete package that has existing bookings')
       } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete package',
-          variant: 'destructive',
-        })
+        toast.error('Failed to delete package')
       }
     }
   }
@@ -198,19 +177,12 @@ export function AdminServicePackagesV2() {
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: `Package ${!pkg.is_active ? 'activated' : 'deactivated'}`,
-      })
+      toast.success(`Package ${!pkg.is_active ? 'activated' : 'deactivated'}`)
 
       refresh()
     } catch (error) {
       console.error('Toggle active error:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update package status',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update package status')
     }
   }
 
@@ -229,10 +201,7 @@ export function AdminServicePackagesV2() {
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Package archived successfully',
-      })
+      toast.success('Package archived successfully')
 
       refresh()
       if (showArchived) {
@@ -240,28 +209,18 @@ export function AdminServicePackagesV2() {
       }
     } catch (error) {
       console.error('Archive package error:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to archive package',
-        variant: 'destructive',
-      })
+      toast.error('Failed to archive package')
     }
   }
 
-  /**
-   * Handle Form Success
-   */
-  const handleFormSuccess = () => {
-    setIsDialogOpen(false)
+  const handleEditSuccess = () => {
+    setIsEditSheetOpen(false)
     setEditingPackage(null)
     refresh()
   }
 
-  /**
-   * Handle Form Cancel
-   */
-  const handleFormCancel = () => {
-    setIsDialogOpen(false)
+  const handleEditCancel = () => {
+    setIsEditSheetOpen(false)
     setEditingPackage(null)
   }
 
@@ -457,29 +416,33 @@ export function AdminServicePackagesV2() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPackage ? 'Edit Package' : 'Create New Package'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPackage
-                ? 'Update package information and pricing'
-                : 'Create a new service package with tiered pricing'}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Create Package — Wizard Sheet */}
+      <PackageWizardSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        onSuccess={refresh}
+      />
 
+      {/* Edit Package — AppSheet */}
+      <AppSheet
+        open={isEditSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) handleEditCancel()
+        }}
+        title="Edit Package"
+        description="Update package information and pricing"
+        size="lg"
+      >
+        {editingPackage && (
           <PackageFormV2
             package={editingPackage}
             packageSource="v2"
-            onSuccess={handleFormSuccess}
-            onCancel={handleFormCancel}
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditCancel}
             showCancel={true}
           />
-        </DialogContent>
-      </Dialog>
+        )}
+      </AppSheet>
     </div>
   )
 }

@@ -22,7 +22,6 @@ export const createMockBooking = (
   customer_id: 'customer-123',
   staff_id: 'staff-123',
   team_id: null,
-  service_package_id: 'package-123',
   package_v2_id: null,
   created_at: '2026-01-29T10:00:00Z',
   area_sqm: null,

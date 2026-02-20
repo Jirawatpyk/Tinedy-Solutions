@@ -30,7 +30,7 @@ import type {
  *
  * @param packageId - Package UUID
  * @param areaSqm - Area in square meters
- * @param frequency - Booking frequency (1, 2, 4, or 8)
+ * @param frequency - Booking frequency (any positive integer)
  * @returns Calculated price in Thai Baht, or 0 if not found
  *
  * @example
@@ -186,7 +186,7 @@ export async function calculatePricing(
  * @example
  * ```typescript
  * const tier = await getPricingTierForArea('package-uuid', 150)
- * // Returns: { area_min: 101, area_max: 200, price_1_time: 3900, ... }
+ * // Returns: { area_min: 101, area_max: 200, frequency_prices: [{times:1,price:3900},...], ... }
  * ```
  */
 export async function getPricingTierForArea(
@@ -303,13 +303,18 @@ export async function getPackageWithTiers(
     // Fetch tiers
     const tiers = await getPackageTiers(packageId)
 
-    // Calculate min/max prices from tiers
-    const prices = tiers.flatMap(tier => [
-      tier.price_1_time,
-      tier.price_2_times,
-      tier.price_4_times,
-      tier.price_8_times
-    ].filter((p): p is number => p !== null))
+    // Calculate min/max prices from tiers — prefer frequency_prices JSONB, fallback to legacy columns
+    const prices = tiers.flatMap((tier) => {
+      if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+        return tier.frequency_prices.map((fp) => fp.price).filter((p) => p > 0)
+      }
+      return [
+        tier.price_1_time,
+        tier.price_2_times,
+        tier.price_4_times,
+        tier.price_8_times,
+      ].filter((p): p is number => p !== null && p > 0)
+    })
 
     const min_price = prices.length > 0 ? Math.min(...prices) : undefined
     const max_price = prices.length > 0 ? Math.max(...prices) : undefined
@@ -461,20 +466,24 @@ export async function validateArea(
  * ```typescript
  * const tier = await getPricingTierForArea('pkg-id', 100)
  * const frequencies = getAvailableFrequencies(tier)
- * // Returns: [1, 2, 4, 8] (if all prices are defined)
- * // Returns: [1, 4] (if only price_1_time and price_4_times are set)
+ * // Returns: [1, 2, 4, 8] (standard tier)
+ * // Returns: [1, 3, 6] (custom tier with non-standard frequencies)
  * ```
  */
 export function getAvailableFrequencies(
   tier: PackagePricingTier
 ): BookingFrequency[] {
-  const frequencies: BookingFrequency[] = []
+  // Use frequency_prices JSONB if available (post-migration)
+  if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+    return [...tier.frequency_prices.map((fp) => fp.times)].sort((a, b) => a - b)
+  }
 
-  if (tier.price_1_time) frequencies.push(1)
+  // Fallback: reconstruct from legacy columns (pre-migration rows)
+  const frequencies: BookingFrequency[] = []
+  if (tier.price_1_time !== null) frequencies.push(1)
   if (tier.price_2_times !== null) frequencies.push(2)
   if (tier.price_4_times !== null) frequencies.push(4)
   if (tier.price_8_times !== null) frequencies.push(8)
-
   return frequencies
 }
 
@@ -498,6 +507,13 @@ export function getPriceForFrequency(
   tier: PackagePricingTier,
   frequency: BookingFrequency
 ): number | null {
+  // Use frequency_prices JSONB if available (post-migration)
+  if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+    const entry = tier.frequency_prices.find((fp) => fp.times === frequency)
+    return entry?.price ?? null
+  }
+
+  // Fallback: legacy columns (pre-migration rows)
   switch (frequency) {
     case 1:
       return tier.price_1_time

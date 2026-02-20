@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { format, startOfMonth, endOfMonth, startOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { useStaffCalendar } from '@/hooks/use-staff-calendar'
 import { type CalendarEvent } from '@/lib/queries/staff-calendar-queries'
@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Calendar as CalendarIcon, Clock, User, Briefcase, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStaffDashboard } from '@/hooks/use-staff-dashboard'
-import { formatTime } from '@/lib/booking-utils'
 import { EmptyState } from '@/components/common/EmptyState'
 import {
   calendarEventToStaffBooking,
@@ -28,6 +27,10 @@ import { StatusBadge, getBookingStatusVariant, getBookingStatusLabel } from '@/c
 import { PullToRefresh } from '@/components/staff/pull-to-refresh'
 // Note: calendar.css is only needed for react-big-calendar (Admin calendar)
 // Staff calendar uses custom components that don't require it
+
+// Module-level constant — Staff Portal never tracks conflicts, so this Map
+// never changes between renders; no need for useMemo.
+const EMPTY_CONFLICT_MAP = createEmptyConflictMap()
 
 /**
  * Staff cannot change status from calendar dropdown - returns empty array.
@@ -46,24 +49,38 @@ export default function StaffCalendar() {
   // Convert events to bookings for MobileCalendar
   const bookings = useMemo(() => calendarEventsToBookings(events), [events])
   const bookingsByDate = useMemo(() => groupBookingsByDate(bookings), [bookings])
-  const conflictMap = useMemo(() => createEmptyConflictMap(), [])
+  const conflictMap = EMPTY_CONFLICT_MAP
 
-  const getEventsForDate = (date: Date) => {
-    return events.filter((event) => isSameDay(event.start, date))
-  }
+  // Cache formatted date strings for events once — avoids re-formatting O(days×events) per render
+  const eventDateStrings = useMemo(
+    () => events.map(event => ({
+      event,
+      startStr: format(event.start, 'yyyy-MM-dd'),
+      endStr: format(event.end, 'yyyy-MM-dd'),
+    })),
+    [events]
+  )
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
-  }
+  const getEventsForDate = useCallback((date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return eventDateStrings
+      .filter(({ startStr, endStr }) => dateStr >= startStr && dateStr <= endStr)
+      .map(({ event }) => event)
+  }, [eventDateStrings])
 
-  const goToNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
-  }
+  const goToPreviousMonth = useCallback(() => {
+    setCurrentDate(prev => subMonths(prev, 1))
+  }, [])
 
-  const goToToday = () => {
-    setCurrentDate(new Date())
-    setSelectedDate(new Date())
-  }
+  const goToNextMonth = useCallback(() => {
+    setCurrentDate(prev => addMonths(prev, 1))
+  }, [])
+
+  const goToToday = useCallback(() => {
+    const today = new Date()
+    setCurrentDate(today)
+    setSelectedDate(today)
+  }, [])
 
   // Handle booking click from MobileCalendar
   const handleMobileBookingClick = useCallback((booking: Booking) => {
@@ -93,16 +110,18 @@ export default function StaffCalendar() {
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = startOfWeek(monthEnd)
   const calendarDays = eachDayOfInterval({
     start: calendarStart,
-    end: new Date(calendarEnd.getTime() + 6 * 24 * 60 * 60 * 1000)
+    end: endOfWeek(monthEnd),
   })
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
-  // Get booking data for selected event
-  const selectedBooking = selectedEvent ? calendarEventToStaffBooking(selectedEvent) : null
+  // Get booking data for selected event — memoized to avoid re-conversion on unrelated renders
+  const selectedBooking = useMemo(
+    () => selectedEvent ? calendarEventToStaffBooking(selectedEvent) : null,
+    [selectedEvent]
+  )
 
   return (
     <CalendarErrorBoundary>
@@ -246,7 +265,7 @@ export default function StaffCalendar() {
                       ))}
 
                       {/* Calendar days */}
-                      {calendarDays.map((day, index) => {
+                      {calendarDays.map((day) => {
                         const dayEvents = getEventsForDate(day)
                         const isCurrentMonth = isSameMonth(day, currentDate)
                         const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
@@ -254,7 +273,7 @@ export default function StaffCalendar() {
 
                         return (
                           <div
-                            key={index}
+                            key={format(day, 'yyyy-MM-dd')}
                             className={`
                               relative min-h-16 md:min-h-20 p-1.5 border rounded transition-all cursor-pointer
                               ${!isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-background'}
@@ -373,7 +392,7 @@ export default function StaffCalendar() {
                               <div className="flex items-center gap-2 min-w-0">
                                 <Clock className="h-4 w-4 flex-shrink-0" />
                                 <span className="font-semibold text-sm truncate">
-                                  {formatTime(format(event.start, 'HH:mm:ss'))} - {formatTime(format(event.end, 'HH:mm:ss'))}
+                                  {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
                                 </span>
                               </div>
                               <StatusBadge

@@ -85,7 +85,6 @@ describe('useBookingDetailModal', () => {
     staff_id: null,
     team_id: null,
     customer_id: 'customer-1',
-    service_package_id: 'package-1',
     package_v2_id: null,
     customers: {
       id: 'customer-1',

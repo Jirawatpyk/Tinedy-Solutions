@@ -9,13 +9,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { getLoadErrorMessage } from '@/lib/error-messages'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
-import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
+import { CustomerFormSheet } from '@/components/customers/CustomerFormSheet'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import { Badge } from '@/components/ui/badge'
@@ -55,8 +55,6 @@ export function AdminCustomers() {
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
-
-  const { toast } = useToast()
 
   // Initialize optimistic delete hook
   const deleteOps = useOptimisticDelete({
@@ -98,13 +96,9 @@ export function AdminCustomers() {
   useEffect(() => {
     if (customersError) {
       const errorMessage = getLoadErrorMessage('customer')
-      toast({
-        title: errorMessage.title,
-        description: customersError,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: customersError })
     }
-  }, [customersError, toast])
+  }, [customersError])
 
   const deleteCustomer = async (customerId: string) => {
     deleteOps.permanentDelete.mutate({ id: customerId })
@@ -160,8 +154,8 @@ export function AdminCustomers() {
           subtitle="Manage your customer database"
           actions={
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              New Customer
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Customer</span>
             </Button>
           }
         />
@@ -231,7 +225,7 @@ export function AdminCustomers() {
                 />
                 <label
                   htmlFor="show-archived-customers"
-                  className="text-sm font-medium cursor-pointer"
+                  className="hidden sm:block text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>
@@ -241,17 +235,17 @@ export function AdminCustomers() {
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={openCreateDialog}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              New Customer
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Customer</span>
             </Button>
           </>
         }
       />
 
-      {/* Customer Form Dialog */}
-      <CustomerFormDialog
-        isOpen={isDialogOpen}
-        onClose={handleDialogClose}
+      {/* Customer Form Sheet */}
+      <CustomerFormSheet
+        open={isDialogOpen}
+        onOpenChange={(o) => !o && handleDialogClose()}
         onSuccess={handleDialogSuccess}
         customer={editingCustomer}
       />

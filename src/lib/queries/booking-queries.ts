@@ -116,8 +116,11 @@ export async function fetchBookingsByDateRange(
       profiles!bookings_staff_id_fkey (full_name),
       ${TEAMS_WITH_LEAD_QUERY}
     `)
-    .gte('booking_date', startDate)
+    // T2.5: Multi-day range overlap query
+    // A booking overlaps [startDate, endDate] if:
+    //   booking_date <= endDate AND (end_date IS NULL ? booking_date : end_date) >= startDate
     .lte('booking_date', endDate)
+    .or(`and(end_date.is.null,booking_date.gte.${startDate}),end_date.gte.${startDate}`)
     .order('booking_date')
     .order('start_time')
 

@@ -39,6 +39,12 @@ describe('pricing-utils', () => {
     price_2_times: 3700,
     price_4_times: 7400,
     price_8_times: 14000,
+    frequency_prices: [
+      { times: 1, price: 1950 },
+      { times: 2, price: 3700 },
+      { times: 4, price: 7400 },
+      { times: 8, price: 14000 },
+    ],
     required_staff: 2,
     estimated_hours: 2,
     created_at: '2025-01-01T00:00:00Z',
@@ -386,8 +392,18 @@ describe('pricing-utils', () => {
     it('should get package with tiers and calculate min/max prices', async () => {
       const mockPackage = createMockPackage()
       const mockTiers = [
-        createMockTier({ id: 'tier-1', price_1_time: 1950, price_8_times: 14000 }),
-        createMockTier({ id: 'tier-2', price_1_time: 3900, price_8_times: 28000 }),
+        createMockTier({
+          id: 'tier-1',
+          price_1_time: 1950,
+          price_8_times: 14000,
+          frequency_prices: [{ times: 1, price: 1950 }, { times: 8, price: 14000 }],
+        }),
+        createMockTier({
+          id: 'tier-2',
+          price_1_time: 3900,
+          price_8_times: 28000,
+          frequency_prices: [{ times: 1, price: 3900 }, { times: 8, price: 28000 }],
+        }),
       ]
 
       // Mock package query
@@ -729,6 +745,10 @@ describe('pricing-utils', () => {
         price_2_times: null,
         price_4_times: 7400,
         price_8_times: null,
+        frequency_prices: [
+          { times: 1, price: 1950 },
+          { times: 4, price: 7400 },
+        ],
       })
 
       const result = getAvailableFrequencies(tier)
@@ -742,6 +762,7 @@ describe('pricing-utils', () => {
         price_2_times: null,
         price_4_times: null,
         price_8_times: null,
+        frequency_prices: [{ times: 1, price: 1950 }],
       })
 
       const result = getAvailableFrequencies(tier)
@@ -784,6 +805,7 @@ describe('pricing-utils', () => {
         price_2_times: null,
         price_4_times: null,
         price_8_times: null,
+        frequency_prices: [{ times: 1, price: 1950 }],
       })
 
       expect(getPriceForFrequency(tierWithNulls, 2)).toBeNull()

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
@@ -61,7 +61,6 @@ export function useBookingDetailModal({
   refresh,
   bookings = [],
 }: UseBookingDetailModalProps): UseBookingDetailModalReturn {
-  const { toast } = useToast()
   const { softDelete } = useSoftDelete('bookings')
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -163,23 +162,16 @@ export function useBookingDetailModal({
 
         if (error) throw error
 
-        toast({
-          title: 'Success',
-          description: 'Booking deleted successfully',
-        })
+        toast.success('Booking deleted successfully')
 
         closeDetail()
         refresh()
       } catch (error) {
         const errorMsg = mapErrorToUserMessage(error, 'booking')
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: 'destructive',
-        })
+        toast.error(errorMsg.title, { description: errorMsg.description })
       }
     },
-    [toast, closeDetail, refresh]
+    [closeDetail, refresh]
   )
 
   return {

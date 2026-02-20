@@ -14,6 +14,8 @@
 
 import { supabase } from '@/lib/supabase'
 import { getBangkokDateString } from '@/lib/utils'
+import { sendPaymentConfirmation, sendRefundConfirmation } from '@/lib/email'
+import { checkAndUpdateCustomerIntelligence } from '@/lib/customer-intelligence'
 
 // ===== Types =====
 
@@ -41,38 +43,6 @@ export interface PaymentResult {
   success: boolean
   count: number
   error?: string
-}
-
-// ===== Helper Functions =====
-
-/**
- * ส่ง payment confirmation email
- * ไม่ throw error - payment ยังถือว่าสำเร็จแม้ส่ง email ไม่ได้
- */
-async function sendPaymentConfirmationEmail(bookingId: string): Promise<void> {
-  try {
-    await supabase.functions.invoke('send-payment-confirmation', {
-      body: { bookingId },
-    })
-  } catch (error) {
-    console.warn('Failed to send payment confirmation email:', error)
-    // Don't throw - payment is still successful
-  }
-}
-
-/**
- * ส่ง refund confirmation email
- * ไม่ throw error - refund ยังถือว่าสำเร็จแม้ส่ง email ไม่ได้
- */
-async function sendRefundConfirmationEmail(bookingId: string): Promise<void> {
-  try {
-    await supabase.functions.invoke('send-refund-confirmation', {
-      body: { bookingId },
-    })
-  } catch (error) {
-    console.warn('Failed to send refund confirmation email:', error)
-    // Don't throw - refund is still successful
-  }
 }
 
 // ===== Main Functions =====
@@ -131,8 +101,21 @@ export async function verifyPayment(
 
     // Send email
     if (sendEmail) {
-      await sendPaymentConfirmationEmail(bookingId)
+      const emailResult = await sendPaymentConfirmation({ bookingId })
+      if (!emailResult.success) console.warn('Payment confirmation email failed:', emailResult.error)
     }
+
+    // Fire-and-forget: update customer intelligence after payment
+    ;(async () => {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('customer_id')
+        .eq('id', bookingId)
+        .single()
+      if (booking?.customer_id) {
+        await checkAndUpdateCustomerIntelligence(booking.customer_id)
+      }
+    })().catch(console.warn)
 
     return { success: true, count }
   } catch (error) {
@@ -211,8 +194,21 @@ export async function markAsPaid(
 
     // Send email
     if (sendEmail) {
-      await sendPaymentConfirmationEmail(bookingId)
+      const emailResult = await sendPaymentConfirmation({ bookingId })
+      if (!emailResult.success) console.warn('Payment confirmation email failed:', emailResult.error)
     }
+
+    // Fire-and-forget: update customer intelligence after payment
+    ;(async () => {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('customer_id')
+        .eq('id', bookingId)
+        .single()
+      if (booking?.customer_id) {
+        await checkAndUpdateCustomerIntelligence(booking.customer_id)
+      }
+    })().catch(console.warn)
 
     return { success: true, count }
   } catch (error) {
@@ -335,7 +331,8 @@ export async function completeRefund(
 
     // Send refund confirmation email
     if (sendEmail) {
-      await sendRefundConfirmationEmail(bookingId)
+      const emailResult = await sendRefundConfirmation({ bookingId })
+      if (!emailResult.success) console.warn('Refund confirmation email failed:', emailResult.error)
     }
 
     return { success: true, count }

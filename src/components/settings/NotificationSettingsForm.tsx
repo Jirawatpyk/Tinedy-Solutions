@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import {
@@ -33,8 +33,6 @@ interface NotificationSettingsFormProps {
 }
 
 export function NotificationSettingsForm({ initialData, settingsId, onSuccess }: NotificationSettingsFormProps) {
-  const { toast } = useToast()
-
   const form = useForm<NotificationSettingsFormData>({
     resolver: zodResolver(NotificationSettingsSchema),
     defaultValues: {
@@ -60,19 +58,12 @@ export function NotificationSettingsForm({ initialData, settingsId, onSuccess }:
 
       if (error) throw error
 
-      toast({
-        title: 'Success',
-        description: 'Notification settings saved successfully',
-      })
+      toast.success('Notification settings saved successfully')
 
       onSuccess?.()
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
   }
 

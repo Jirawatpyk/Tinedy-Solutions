@@ -13,6 +13,7 @@
 
 import { memo } from 'react'
 import type { ReactNode } from 'react'
+import { PriceMode } from '@/types/booking'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +33,8 @@ import {
   getPaymentStatusLabel,
 } from '@/components/common/StatusBadge'
 import { RecurringBookingCard } from '@/components/booking/RecurringBookingCard'
-import { formatDate, formatBookingId } from '@/lib/utils'
+import { formatBookingId, formatCurrency } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { formatTime, getAllStatusOptions } from '@/lib/booking-utils'
 import {
   FileText,
@@ -51,6 +53,9 @@ import type { RecurringGroup } from '@/types/recurring-booking'
 export interface CustomerBooking {
   id: string
   booking_date: string
+  end_date?: string | null
+  price_mode?: string | null
+  job_name?: string | null
   start_time: string
   end_time: string
   status: string
@@ -65,11 +70,9 @@ export interface CustomerBooking {
   recurring_group_id: string | null
 }
 
-export interface CombinedItem {
-  type: 'group' | 'booking'
-  data: RecurringGroup | CustomerBooking
-  createdAt: string
-}
+export type HistoryCombinedItem =
+  | { type: 'group'; data: RecurringGroup; createdAt: string }
+  | { type: 'booking'; data: CustomerBooking; createdAt: string }
 
 export interface BookingHistorySectionProps {
   // Filter state
@@ -81,7 +84,7 @@ export interface BookingHistorySectionProps {
   onPaymentStatusFilterChange: (status: string) => void
 
   // Data
-  paginatedItems: CombinedItem[]
+  paginatedItems: HistoryCombinedItem[]
   totalItems: number
   filteredBookingsCount: number
 
@@ -208,7 +211,7 @@ const BookingHistorySection = memo(function BookingHistorySection({
                   <SelectValue placeholder="Booking Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Booking</SelectItem>
+                  <SelectItem value="all">All Bookings</SelectItem>
                   {getAllStatusOptions().map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -328,25 +331,35 @@ const BookingHistorySection = memo(function BookingHistorySection({
                         {/* 3. Service Type Badge + Package Name */}
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            <Badge
-                              variant="outline"
-                              className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
-                            >
-                              {booking.service?.service_type ||
-                                booking.service_packages?.service_type ||
-                                'N/A'}
-                            </Badge>
+                            {booking.price_mode === PriceMode.Custom ? (
+                              <Badge
+                                variant="secondary"
+                                className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
+                              >
+                                Custom Job
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs"
+                              >
+                                {booking.service?.service_type ||
+                                  booking.service_packages?.service_type ||
+                                  'N/A'}
+                              </Badge>
+                            )}
                             <span className="truncate">
-                              {booking.service?.name ||
+                              {booking.job_name ||
+                                booking.service?.name ||
                                 booking.service_packages?.name ||
-                                'N/A'}
+                                'ไม่ระบุ'}
                             </span>
                           </span>
                         </div>
 
                         {/* 4. Date + Time */}
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          {formatDate(booking.booking_date)} &bull;{' '}
+                          {formatDateRange(booking.booking_date, booking.end_date)} &bull;{' '}
                           {formatTime(booking.start_time)} -{' '}
                           {booking.end_time
                             ? formatTime(booking.end_time)
@@ -376,7 +389,7 @@ const BookingHistorySection = memo(function BookingHistorySection({
                       <div className="hidden sm:flex flex-col items-end gap-2 sm:gap-4 flex-shrink-0">
                         <div>
                           <p className="font-semibold text-tinedy-dark text-base sm:text-lg">
-                            &#3647;{booking.total_price?.toLocaleString() || 0}
+                            {formatCurrency(booking.total_price ?? 0)}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center sm:items-end justify-end">
@@ -400,7 +413,7 @@ const BookingHistorySection = memo(function BookingHistorySection({
                     {/* Mobile: Price at the bottom */}
                     <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t">
                       <p className="font-semibold text-tinedy-dark">
-                        &#3647;{booking.total_price?.toLocaleString() || 0}
+                        {formatCurrency(booking.total_price ?? 0)}
                       </p>
                       <StatusBadge
                         variant={getPaymentStatusVariant(

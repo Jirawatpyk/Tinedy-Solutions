@@ -1,7 +1,7 @@
 import { useRef, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Camera, Upload, User } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { getOptimizedUrl } from '@/lib/image-utils'
 import { getInitials } from '@/lib/string-utils'
 
@@ -22,7 +22,6 @@ const SIZE_PIXELS = {
 export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: ProfileAvatarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
-  const { toast } = useToast()
 
   const sizeClasses = {
     sm: 'w-16 h-16',
@@ -43,16 +42,9 @@ export function ProfileAvatar({ avatarUrl, userName, onUpload, size = 'lg' }: Pr
     try {
       setUploading(true)
       await onUpload(file)
-      toast({
-        title: 'Upload Successful',
-        description: 'Your profile picture has been updated',
-      })
+      toast.success('Your profile picture has been updated')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Could not upload image',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Could not upload image')
     } finally {
       setUploading(false)
       if (fileInputRef.current) {

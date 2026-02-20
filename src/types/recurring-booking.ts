@@ -24,6 +24,7 @@ export type RecurringPattern = typeof RecurringPattern[keyof typeof RecurringPat
 export interface RecurringBookingBase {
   id: string
   booking_date: string
+  end_date?: string | null
   start_time: string
   end_time?: string | null
   status: string
@@ -68,7 +69,6 @@ export interface RecurringBookingBase {
  */
 export interface RecurringBookingRecord extends RecurringBookingBase {
   customer_id: string
-  service_package_id: string
   payment_status?: string
   area_sqm?: number | null
   frequency?: number | null
@@ -85,7 +85,7 @@ export interface RecurringGroupInput {
   /** ข้อมูล booking พื้นฐาน (ไม่รวม dates และ id) */
   baseBooking: {
     customer_id: string
-    service_package_id: string | null
+    end_date?: string | null
     start_time: string
     end_time: string | null
     status: string
@@ -99,10 +99,16 @@ export interface RecurringGroupInput {
     frequency?: number | null
     calculated_price?: number | null
     package_v2_id?: string | null
+    // V2 pricing fields (S-01)
+    price_mode?: string | null
+    custom_price?: number | null
+    price_override?: boolean
+    job_name?: string | null
     staff_id?: string | null
     team_id?: string | null
     notes?: string | null
     team_member_count?: number | null
+    payment_method?: string | null
   }
 
   /** รูปแบบการเกิดซ้ำ */
@@ -179,20 +185,6 @@ export interface RecurringCreationResult {
   groupId: string
   bookingIds: string[]
   errors?: string[]
-}
-
-/**
- * Helper function: Convert RecurringPattern to label
- */
-export function getRecurringPatternLabel(pattern: RecurringPattern | null): string {
-  if (!pattern) return 'Not specified'
-
-  const labels: Record<RecurringPattern, string> = {
-    'auto-monthly': 'Monthly',
-    'custom': 'Custom'
-  }
-
-  return labels[pattern] || 'Not specified'
 }
 
 /**

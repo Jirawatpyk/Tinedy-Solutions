@@ -34,7 +34,7 @@ function PackagesHeaderComponent({
               />
               <label
                 htmlFor="showArchived"
-                className="text-sm font-medium cursor-pointer"
+                className="hidden sm:block text-sm font-medium cursor-pointer"
               >
                 Show archived
               </label>
@@ -45,8 +45,8 @@ function PackagesHeaderComponent({
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={onCreateClick}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              New Package
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Package</span>
             </Button>
           )}
         </>

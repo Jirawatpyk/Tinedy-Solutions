@@ -14,24 +14,10 @@
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import type { ServicePackage } from '@/types'
+import type { PackagePricingTier } from '@/types/service-package-v2'
 
-/**
- * Package Pricing Tier type
- */
-export interface PackagePricingTier {
-  id: string
-  package_id: string
-  area_min: number
-  area_max: number
-  required_staff: number
-  estimated_hours: number | null
-  price_1_time: number
-  price_2_times: number | null
-  price_4_times: number | null
-  price_8_times: number | null
-  created_at: string
-  updated_at: string
-}
+// Re-export so existing callers of this module don't break
+export type { PackagePricingTier }
 
 /**
  * Service Package V2 type (base)
@@ -146,12 +132,18 @@ export async function fetchServicePackagesV2(): Promise<ServicePackageV2WithTier
     let max_price: number | undefined
 
     if (pkg.pricing_model === 'tiered' && pkgTiers.length > 0) {
-      const prices = pkgTiers.flatMap(tier => [
-        tier.price_1_time,
-        tier.price_2_times,
-        tier.price_4_times,
-        tier.price_8_times
-      ]).filter((p): p is number => p !== null && p > 0)
+      const prices = pkgTiers.flatMap((tier) => {
+        // Prefer frequency_prices JSONB; fall back to legacy columns
+        if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+          return tier.frequency_prices.map((fp: { times: number; price: number }) => fp.price)
+        }
+        return [
+          tier.price_1_time,
+          tier.price_2_times,
+          tier.price_4_times,
+          tier.price_8_times,
+        ]
+      }).filter((p): p is number => p !== null && p > 0)
 
       if (prices.length > 0) {
         min_price = Math.min(...prices)
@@ -213,12 +205,18 @@ export async function fetchServicePackagesV2WithArchived(): Promise<ServicePacka
     let max_price: number | undefined
 
     if (pkg.pricing_model === 'tiered' && pkgTiers.length > 0) {
-      const prices = pkgTiers.flatMap(tier => [
-        tier.price_1_time,
-        tier.price_2_times,
-        tier.price_4_times,
-        tier.price_8_times
-      ]).filter((p): p is number => p !== null && p > 0)
+      const prices = pkgTiers.flatMap((tier) => {
+        // Prefer frequency_prices JSONB; fall back to legacy columns
+        if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+          return tier.frequency_prices.map((fp: { times: number; price: number }) => fp.price)
+        }
+        return [
+          tier.price_1_time,
+          tier.price_2_times,
+          tier.price_4_times,
+          tier.price_8_times,
+        ]
+      }).filter((p): p is number => p !== null && p > 0)
 
       if (prices.length > 0) {
         min_price = Math.min(...prices)

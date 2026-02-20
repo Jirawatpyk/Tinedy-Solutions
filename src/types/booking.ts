@@ -19,6 +19,21 @@
  * @property {string} Cancelled - Booking was cancelled by staff or customer
  * @property {string} NoShow - Customer did not show up for the scheduled booking
  */
+/**
+ * Price mode for a booking — determines how total_price is calculated
+ *
+ * @property {string} Package - V2 package selected, price auto-calculated from tiered pricing
+ * @property {string} Override - V2 package selected, price manually changed by admin
+ * @property {string} Custom - No package, fully manual job (requires job_name)
+ */
+export const PriceMode = {
+  Package: 'package',
+  Override: 'override',
+  Custom: 'custom',
+} as const
+
+export type PriceMode = typeof PriceMode[keyof typeof PriceMode]
+
 export const BookingStatus = {
   Pending: 'pending',
   Confirmed: 'confirmed',
@@ -46,7 +61,8 @@ export const PaymentStatus = {
   PendingVerification: 'pending_verification',
   Paid: 'paid',
   Partial: 'partial',
-  Refunded: 'refunded'
+  RefundPending: 'refund_pending',
+  Refunded: 'refunded',
 } as const
 
 export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus]
@@ -85,7 +101,7 @@ export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod]
  * @property {string} customer_id - UUID of the customer who made the booking
  * @property {string | null} staff_id - UUID of the assigned staff member, null if assigned to team
  * @property {string | null} team_id - UUID of the assigned team, null if assigned to individual staff
- * @property {string} service_package_id - UUID of the booked service package (legacy/V1)
+ * @property {string} package_v2_id - UUID of the V2 service package
  * @property {number} total_price - Total price for the booking in decimal format
  * @property {BookingStatus} status - Current status of the booking
  * @property {PaymentStatus} payment_status - Current payment status
@@ -111,7 +127,6 @@ export interface BookingRecord {
   customer_id?: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
   total_price: number
   status: BookingStatus
   payment_status: PaymentStatus
@@ -123,9 +138,10 @@ export interface BookingRecord {
   notes: string | null
   created_at?: string
   updated_at: string
+  deleted_at?: string | null
   // V2 Tiered Pricing Fields
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   calculated_price?: number | null
   package_v2_id?: string | null
   // Recurring Bookings Fields
@@ -135,6 +151,12 @@ export interface BookingRecord {
   recurring_pattern?: string | null
   is_recurring?: boolean
   parent_booking_id?: string | null
+  // Multi-Day & Custom Pricing (V2)
+  end_date?: string | null          // YYYY-MM-DD, null = single-day booking
+  job_name?: string | null          // Custom job description (required when price_mode = 'custom')
+  custom_price?: number | null      // Manual price when price_mode = 'override' or 'custom'
+  price_mode?: PriceMode            // How total_price is calculated
+  price_override?: boolean          // true when admin manually changed auto-calculated price
   // Team Earnings Calculation
   team_member_count?: number | null
 }
@@ -222,19 +244,24 @@ export interface Booking {
   staff_id: string | null
   team_id: string | null
   customer_id?: string
-  service_package_id: string
   package_v2_id?: string | null
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   notes: string | null
   payment_status?: string
-  payment_method?: string
+  payment_method?: string | null
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
   payment_slip_url?: string | null
   created_at?: string
   deleted_at?: string | null
+  // Multi-Day & Custom Pricing (V2)
+  end_date?: string | null
+  job_name?: string | null
+  custom_price?: number | null
+  price_mode?: PriceMode
+  price_override?: boolean
   // Recurring Bookings Fields
   recurring_group_id?: string | null
   recurring_sequence?: number
@@ -272,7 +299,7 @@ export interface BookingBase {
   id: string
   status: string
   payment_status?: string
-  payment_method?: string
+  payment_method?: string | null
   total_price?: number
   amount_paid?: number
   payment_date?: string
@@ -294,7 +321,7 @@ export interface BookingBase {
  * @property {string} customer_id - UUID of the customer making the booking
  * @property {string} [staff_id] - Optional UUID of staff member to assign
  * @property {string} [team_id] - Optional UUID of team to assign
- * @property {string} service_package_id - UUID of the service package being booked
+ * @property {string} [package_v2_id] - UUID of the V2 service package
  * @property {number} total_price - Total price for the booking
  * @property {string} address - Street address for service location
  * @property {string} city - City for service location
@@ -309,7 +336,7 @@ export interface BookingFormData {
   customer_id?: string
   staff_id?: string
   team_id?: string
-  service_package_id: string
+  package_v2_id?: string
   total_price: number
   address: string
   city: string

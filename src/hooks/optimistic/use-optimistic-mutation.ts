@@ -53,7 +53,7 @@
 
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import type {
   UseOptimisticMutationOptions,
@@ -74,7 +74,6 @@ export function useOptimisticMutation<TData, TVariables, TLocalState = never>(
   } = options
 
   const queryClient = useQueryClient()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<unknown | null>(null)
 
@@ -128,9 +127,8 @@ export function useOptimisticMutation<TData, TVariables, TLocalState = never>(
               ? toastConfig.successDescription(result)
               : toastConfig.successDescription
 
-          toast({
-            title: toastConfig.successTitle || 'Success',
-            description: description || 'Operation completed successfully',
+          toast.success(toastConfig.successTitle || 'Operation completed successfully', {
+            description: description,
           })
         }
 
@@ -156,10 +154,8 @@ export function useOptimisticMutation<TData, TVariables, TLocalState = never>(
         // Show error toast
         if (toastConfig) {
           const errorMsg = mapErrorToUserMessage(err, toastConfig.errorContext || 'general')
-          toast({
-            title: toastConfig.errorTitle || errorMsg.title,
+          toast.error(toastConfig.errorTitle || errorMsg.title, {
             description: toastConfig.errorDescription || errorMsg.description,
-            variant: 'destructive',
           })
         }
 
@@ -192,7 +188,6 @@ export function useOptimisticMutation<TData, TVariables, TLocalState = never>(
       onError,
       onSettled,
       queryClient,
-      toast,
     ]
   )
 

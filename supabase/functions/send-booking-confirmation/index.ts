@@ -6,47 +6,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface BookingEmailData {
-  bookingId: string
-  customerName: string
-  customerEmail: string
-  serviceName: string
-  bookingDate: string
-  startTime: string
-  endTime: string
-  totalPrice: number
-  location?: string
-  notes?: string
-  staffName?: string
-  paymentLink: string
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not set')
+    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set')
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !supabaseKey) throw new Error('Supabase env vars not set')
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { bookingId } = await req.json()
+    if (!bookingId) {
+      return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const data: BookingEmailData = await req.json()
+    // Fetch booking with all needed relations
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        booking_date,
+        start_time,
+        end_time,
+        total_price,
+        address,
+        city,
+        state,
+        zip_code,
+        notes,
+        recurring_group_id,
+        customers (full_name, email),
+        service_packages_v2 (name),
+        profiles:staff_id (full_name)
+      `)
+      .eq('id', bookingId)
+      .single()
 
-    // Validate required fields
-    if (!data.customerEmail || !data.customerName || !data.serviceName) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
+    if (bookingError || !booking) {
+      return new Response(JSON.stringify({ error: 'Booking not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Fetch business settings from database
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join types are not inferred in edge functions
+    const b = booking as Record<string, any>
+    const customerName: string = b.customers?.full_name ?? 'Customer'
+    const customerEmail: string = b.customers?.email ?? ''
+    if (!customerEmail) {
+      return new Response(JSON.stringify({ error: 'Customer has no email' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const serviceName: string = b.service_packages_v2?.name ?? 'Service'
+    const staffName: string | undefined = b.profiles?.full_name ?? undefined
+    const location = [b.address, b.city, b.state, b.zip_code].filter(Boolean).join(', ') || undefined
+
+    // Business settings
     let fromName = 'Tinedy CRM'
     let fromEmail = 'bookings@resend.dev'
     let businessPhone = ''
@@ -54,55 +83,43 @@ serve(async (req) => {
     let businessLogoUrl = 'https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png'
 
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('business_name, business_email, business_phone, business_address, business_logo_url')
+        .limit(1)
+        .maybeSingle()
 
-      if (supabaseUrl && supabaseKey) {
-        const supabase = createClient(supabaseUrl, supabaseKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        })
-
-        const { data: settings } = await supabase
-          .from('settings')
-          .select('business_name, business_email, business_phone, business_address, business_logo_url')
-          .limit(1)
-          .maybeSingle()
-
-        if (settings) {
-          fromName = settings.business_name || fromName
-          fromEmail = settings.business_email || fromEmail
-          businessPhone = settings.business_phone || businessPhone
-          businessAddress = settings.business_address || businessAddress
-          businessLogoUrl = settings.business_logo_url || businessLogoUrl
-        }
+      if (settings) {
+        fromName = settings.business_name || fromName
+        fromEmail = settings.business_email || fromEmail
+        businessPhone = settings.business_phone || businessPhone
+        businessAddress = settings.business_address || businessAddress
+        businessLogoUrl = settings.business_logo_url || businessLogoUrl
       }
-    } catch (error) {
-      console.warn('Failed to fetch settings, using defaults:', error)
-      // Continue with default values
+    } catch {
+      // continue with defaults
     }
 
-    // Format date for email
-    const bookingDateFormatted = new Date(data.bookingDate).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    const bookingDateFormatted = new Date(b.booking_date).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
 
-    // Generate email HTML
     const emailHtml = generateBookingConfirmationEmail({
-      ...data,
+      customerName,
+      serviceName,
       bookingDateFormatted,
+      startTime: b.start_time?.slice(0, 5) ?? '',
+      endTime: b.end_time?.slice(0, 5) ?? '',
+      totalPrice: b.total_price ?? 0,
+      staffName,
+      location,
+      notes: b.notes ?? undefined,
       fromName,
       businessPhone,
       businessAddress,
       businessLogoUrl,
     })
 
-    // Send email using Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -111,297 +128,153 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
-        to: data.customerEmail,
-        subject: `Booking Confirmed - ${data.serviceName}`,
+        to: customerEmail,
+        subject: `Booking Confirmed — ${serviceName}`,
         html: emailHtml,
       }),
     })
 
     const responseData = await response.json()
+    if (!response.ok) throw new Error(responseData.message || 'Failed to send email')
 
-    if (!response.ok) {
-      throw new Error(responseData.message || 'Failed to send email')
-    }
+    // Queue for tracking
+    await supabase.from('email_queue').insert({
+      booking_id: bookingId,
+      email_type: 'booking_confirmation',
+      recipient_email: customerEmail,
+      recipient_name: customerName,
+      subject: `Booking Confirmed — ${serviceName}`,
+      html_content: '',
+      status: 'pending',
+    }).catch(() => {})
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Email sent successfully',
-        data: responseData
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      JSON.stringify({ success: true, message: 'Email sent successfully', data: responseData }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
-
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
-function generateBookingConfirmationEmail(data: BookingEmailData & {
+// ============================================================================
+// EMAIL TEMPLATE — Tinedy Brand
+// All styles are INLINE for email client compatibility (Gmail, Outlook)
+// Color Palette:
+//   tinedy-blue:      #2e4057  (header, borders, labels, button)
+//   tinedy-green:     #8fb996  (price, success accent)
+//   tinedy-yellow:    #e7d188  (notes section)
+//   tinedy-off-white: #f5f3ee  (info card background)
+//   tinedy-dark:      #2d241d  (body text)
+// ============================================================================
+function generateBookingConfirmationEmail(data: {
+  customerName: string
+  serviceName: string
   bookingDateFormatted: string
+  startTime: string
+  endTime: string
+  totalPrice: number
+  staffName?: string
+  location?: string
+  notes?: string
   fromName: string
   businessPhone: string
   businessAddress: string
   businessLogoUrl: string
 }): string {
-  return `
-<!DOCTYPE html>
-<html>
+  const priceFormatted = `฿${data.totalPrice.toLocaleString('th-TH')}`
+
+  const detailRows = [
+    { label: '📋 Service', value: data.serviceName },
+    { label: '📅 Date', value: data.bookingDateFormatted },
+    { label: '🕐 Time', value: `${data.startTime} – ${data.endTime}` },
+    ...(data.staffName ? [{ label: '👤 Staff', value: data.staffName }] : []),
+    ...(data.location ? [{ label: '📍 Location', value: data.location }] : []),
+  ]
+
+  const detailRowsHtml = detailRows.map(({ label, value }) => `
+    <tr>
+      <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">${label}</td>
+      <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${value}</td>
+    </tr>
+  `).join('')
+
+  const notesSection = data.notes ? `
+    <div style="background-color:#fdf9e8;border-left:4px solid #e7d188;border-radius:4px;padding:16px 20px;margin:20px 0;">
+      <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">📝 Notes</p>
+      <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">${data.notes}</p>
+    </div>
+  ` : ''
+
+  const footerPhone = data.businessPhone
+    ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>`
+    : ''
+  const footerAddress = data.businessAddress
+    ? `<span>📍 ${data.businessAddress}</span>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking Confirmation</title>
-  ${getEmailStyles()}
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Booking Confirmed</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${data.businessLogoUrl}"
-           alt="${data.fromName} Logo"
-           class="logo"
-           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
-      <h1>✅ Booking Confirmed!</h1>
-    </div>
+<body style="margin:0;padding:0;background-color:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
-    <div class="greeting">
-      Hi ${data.customerName},
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">✅ Booking Confirmed!</h1>
+              <p style="margin:8px 0 0;color:#8fb996;font-size:15px;">Your appointment is all set.</p>
+            </td>
+          </tr>
 
-    <p>Thank you for booking with ${data.fromName}! Your appointment has been confirmed.</p>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">Thank you for booking with <strong>${data.fromName}</strong>! Here are your appointment details:</p>
 
-    <div class="booking-details">
-      <div class="detail-row">
-        <div class="detail-label">Service:</div>
-        <div class="detail-value">${data.serviceName}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Date:</div>
-        <div class="detail-value">${data.bookingDateFormatted}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Time:</div>
-        <div class="detail-value">${data.startTime} - ${data.endTime}</div>
-      </div>
-      ${data.staffName ? `
-      <div class="detail-row">
-        <div class="detail-label">Staff:</div>
-        <div class="detail-value">${data.staffName}</div>
-      </div>
-      ` : ''}
-      ${data.location ? `
-      <div class="detail-row">
-        <div class="detail-label">Location:</div>
-        <div class="detail-value">${data.location}</div>
-      </div>
-      ` : ''}
-      <div class="detail-row">
-        <div class="detail-label">Total Price:</div>
-        <div class="detail-value"><strong>฿${data.totalPrice.toLocaleString()}</strong></div>
-      </div>
-    </div>
+              <!-- INFO CARD -->
+              <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  ${detailRowsHtml}
+                  <tr>
+                    <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;border-top:1px solid #e8e4df;vertical-align:top;">💰 Total</td>
+                    <td style="padding:10px 0;font-size:20px;font-weight:700;color:#8fb996;border-top:1px solid #e8e4df;vertical-align:top;">${priceFormatted}</td>
+                  </tr>
+                </table>
+              </div>
 
-    <div class="payment-section">
-      <h3>💳 Complete Your Payment</h3>
-      <p>Please complete your payment to secure your booking:</p>
-      <a href="${data.paymentLink}" class="button">Pay Now</a>
-      <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
-        Or copy this link: <br>
-        <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${data.paymentLink}</code>
-      </p>
-    </div>
+              ${notesSection}
 
-    ${data.notes ? `
-    <div class="notes-section">
-      <strong>Notes:</strong>
-      <p>${data.notes}</p>
-    </div>
-    ` : ''}
+              <p style="margin:24px 0 0;font-size:14px;color:#6b6b6b;line-height:1.6;">If you have any questions or need to reschedule, please contact us.</p>
+            </td>
+          </tr>
 
-    <div class="footer">
-      <div class="business-info">
-        <div class="business-name">${data.fromName}</div>
-        ${data.businessPhone ? `
-        <div class="contact-item">
-          <span>📞</span>
-          <span>${data.businessPhone}</span>
-        </div>
-        ` : ''}
-        ${data.businessAddress ? `
-        <div class="contact-item">
-          <span>📍</span>
-          <span>${data.businessAddress}</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="footer-note">
-        If you have any questions, please contact us.
-      </div>
-    </div>
-  </div>
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim()
-}
-
-/**
- * Email Styles
- * Color Palette:
- * - Primary: #4F46E5 (Indigo-600) - Headers, buttons, accents
- * - Primary Hover: #4338ca (Indigo-700)
- * - Success: #10b981 (Green-500)
- * - Warning: #f59e0b (Yellow-500) - Notes section
- * - Text: #333, #1f2937, #4b5563, #6b7280, #9ca3af
- * - Background: #f5f5f5, #ffffff, #f8f9fa, #f9fafb
- * - Border: #e5e7eb
- *
- * Business Info Section:
- * - business-name: text-align: center (centered business name)
- * - contact-item: justify-content: flex-start (left-aligned phone/address)
- */
-function getEmailStyles(): string {
-  return `
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #4F46E5;
-    }
-    .header h1 {
-      color: #4F46E5;
-      margin: 0;
-      font-size: 28px;
-    }
-    .greeting {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .booking-details {
-      background-color: #f8f9fa;
-      border-left: 4px solid #4F46E5;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .detail-row {
-      display: flex;
-      margin: 12px 0;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #4F46E5;
-      min-width: 120px;
-    }
-    .detail-value {
-      color: #333;
-    }
-    .payment-section {
-      background-color: #eff6ff;
-      border: 2px solid #3b82f6;
-      border-radius: 8px;
-      padding: 24px;
-      margin: 24px 0;
-      text-align: center;
-    }
-    .payment-section h3 {
-      margin-top: 0;
-      color: #1e40af;
-    }
-    .button {
-      display: inline-block;
-      background-color: #4F46E5;
-      color: #ffffff !important;
-      padding: 14px 32px;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 600;
-      margin: 16px 0;
-      transition: background-color 0.2s;
-      font-size: 16px;
-    }
-    .button:hover {
-      background-color: #4338ca;
-      color: #ffffff !important;
-    }
-    .button:visited {
-      color: #ffffff !important;
-    }
-    .button:active {
-      color: #ffffff !important;
-    }
-    .notes-section {
-      background-color: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .business-info {
-      background-color: #f9fafb;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .business-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    .contact-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .contact-item span {
-      margin-left: 8px;
-    }
-    .footer-note {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-  </style>
-  `
+</html>`.trim()
 }

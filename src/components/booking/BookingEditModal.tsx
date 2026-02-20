@@ -1,23 +1,23 @@
-import { useToast } from '@/hooks/use-toast'
-import { supabase } from '@/lib/supabase'
-import { mapErrorToUserMessage } from '@/lib/error-messages'
-import { useConflictDetection } from '@/hooks/use-conflict-detection'
-import { formatTime } from '@/lib/booking-utils'
-import { logger } from '@/lib/logger'
-import { useState, useEffect, useRef } from 'react'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+/**
+ * BookingEditModal — Edit existing booking inside AppSheet
+ *
+ * V2 update: wraps edit form with AppSheet + adds end_date, job_name,
+ * custom_price, price_override fields. Uses SmartPriceField and DateRangePicker.
+ * Staff/Teams/Packages fetched internally via TanStack Query (no prop-drilling).
+ *
+ * Edit always uses Quick Mode layout (spec T3.7).
+ * Conflict detection preserved from original.
+ *
+ * FM1-E: initialState fallbacks ensure all V2 fields have explicit defaults.
+ */
+
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
+import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Select,
   SelectContent,
@@ -25,739 +25,382 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sparkles } from 'lucide-react'
-import { BookingStatus } from '@/types/booking'
+import { Phone, Mail } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { packageQueryOptions } from '@/lib/queries/package-queries'
+import { supabase } from '@/lib/supabase'
+import { queryKeys } from '@/lib/query-keys'
+import { getErrorMessage } from '@/lib/error-utils'
+import { AppSheet } from '@/components/ui/app-sheet'
+import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
+import { useBookingWizard, validateEditState } from '@/hooks/use-booking-wizard'
+import { useConflictDetection } from '@/hooks/use-conflict-detection'
+import type { BookingConflict } from '@/hooks/use-conflict-detection'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
+import { SmartPriceField, SmartPriceFieldSkeleton } from './BookingWizard/SmartPriceField'
+import { DateRangePicker } from './BookingWizard/DateRangePicker'
+import { Step3Assignment } from './BookingWizard/Step3Assignment'
+import { PriceMode, BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { ServicePackage } from '@/types'
-import { PackageSelector, type PackageSelectionData } from '@/components/service-packages'
-import type { BookingForm } from '@/hooks/use-booking-form'
-import type { UnifiedServicePackage } from '@/hooks/use-service-packages'
-import type { ServicePackageV2WithTiers } from '@/types'
-import {
-  bookingUpdateSchema,
-  type BookingUpdateFormData,
-} from '@/schemas'
-
-interface StaffMember {
-  id: string
-  full_name: string
-  email: string
-  role: string
-}
-
-interface Team {
-  id: string
-  name: string
-}
-
-// BookingForm and BookingFormState interfaces imported from @/hooks/useBookingForm
+import { getAvailableStatuses, getStatusLabel } from '@/lib/booking-utils'
 
 interface BookingEditModalProps {
-  isOpen: boolean
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   booking: Booking | null
-  onSuccess: () => void
-  servicePackages: ServicePackage[] | UnifiedServicePackage[]
-  staffMembers: StaffMember[]
-  teams: Team[]
-  onOpenAvailabilityModal: () => void
-  onBeforeOpenAvailability?: (formData: BookingUpdateFormData) => void
-  editForm: BookingForm
-  assignmentType: 'staff' | 'team' | 'none'
-  onAssignmentTypeChange: (type: 'staff' | 'team' | 'none') => void
-  calculateEndTime: (startTime: string, duration: number) => string
-  packageSelection: PackageSelectionData | null
-  setPackageSelection: (selection: PackageSelectionData | null) => void
-  // Default values from parent state (for syncing selected staff/team)
-  defaultStaffId?: string
-  defaultTeamId?: string
+  onSuccess?: () => void
+}
+
+// Build initialState from existing booking (FM1-E fix)
+function buildInitialState(booking: Booking) {
+  // M3 fix: read price_mode directly from DB (G2 — no derivation)
+  const priceMode: PriceMode = booking.price_mode ?? PriceMode.Package
+
+  const assignmentType: 'staff' | 'team' | 'none' = booking.staff_id
+    ? 'staff'
+    : booking.team_id
+    ? 'team'
+    : 'none'
+
+  return {
+    booking_date: booking.booking_date ?? '',
+    end_date: booking.end_date ?? null,
+    isMultiDay: !!booking.end_date,
+    start_time: booking.start_time?.split(':').slice(0, 2).join(':') ?? '',
+    end_time: booking.end_time?.split(':').slice(0, 2).join(':') ?? '',
+    endTimeManuallySet: true, // always treat edit end_time as manual (spec FM1-E)
+    package_v2_id: booking.package_v2_id ?? null,
+    price_mode: priceMode,
+    total_price: booking.total_price ?? 0,
+    custom_price: booking.custom_price ?? null,
+    price_override: booking.price_override ?? false,
+    job_name: booking.job_name ?? '',
+    area_sqm: booking.area_sqm ?? null,
+    frequency: booking.frequency ?? null,
+    assignmentType,
+    staff_id: booking.staff_id ?? null,
+    team_id: booking.team_id ?? null,
+    address: booking.address ?? '',
+    city: booking.city ?? '',
+    state: booking.state ?? '',
+    zip_code: booking.zip_code ?? '',
+    notes: booking.notes ?? '',
+    useCustomerAddress: false,
+  }
 }
 
 export function BookingEditModal({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   booking,
   onSuccess,
-  servicePackages,
-  staffMembers,
-  teams,
-  onOpenAvailabilityModal,
-  onBeforeOpenAvailability,
-  assignmentType,
-  onAssignmentTypeChange,
-  calculateEndTime,
-  packageSelection,
-  setPackageSelection,
-  defaultStaffId,
-  defaultTeamId,
 }: BookingEditModalProps) {
-  const { toast } = useToast()
-  const {
-    checkConflicts,
-    clearConflicts,
-  } = useConflictDetection()
-
+  const queryClient = useQueryClient()
+  const [status, setStatus] = useState<string>(booking?.status ?? BookingStatus.Pending)
   const [showConflictDialog, setShowConflictDialog] = useState(false)
-  const [pendingUpdateData, setPendingUpdateData] = useState<Record<string, unknown> | null>(null)
-  const [bookingDuration, setBookingDuration] = useState<number | null>(null)
+  const [pendingUpdate, setPendingUpdate] = useState<Record<string, unknown> | null>(null)
 
-  // Track if form has been initialized for current booking to prevent re-reset
-  const lastInitializedBookingId = useRef<string | null>(null)
+  const { checkConflicts, clearConflicts } = useConflictDetection()
 
-  // React Hook Form with Zod validation
-  const form = useForm<BookingUpdateFormData>({
-    resolver: zodResolver(bookingUpdateSchema),
-    defaultValues: {
-      booking_date: '',
-      start_time: '',
-      end_time: '',
-      service_package_id: '',
-      package_v2_id: '',
-      total_price: 0,
-      area_sqm: undefined,
-      frequency: undefined,
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      staff_id: '',
-      team_id: '',
-      notes: '',
-      status: BookingStatus.Pending,
-    },
-  })
+  // No initialState prop — SEED useEffect handles seeding to avoid double-initialization.
+  const { state, dispatch } = useBookingWizard()
 
-  // Sync form data when booking changes (only once per booking to prevent overwriting user changes)
+  // Seed wizard whenever booking changes.
+  // Deps on full booking object (not just booking?.id) to prevent stale data.
   useEffect(() => {
-    if (booking && isOpen) {
-      // Only reset if this is a new booking or first time opening
-      if (lastInitializedBookingId.current !== booking.id) {
-        // Calculate duration from existing booking times
-        try {
-          const startTime = new Date(`1970-01-01T${booking.start_time}`)
-          const endTime = new Date(`1970-01-01T${booking.end_time}`)
-          const durationMs = endTime.getTime() - startTime.getTime()
-          const durationMinutes = Math.round(durationMs / (1000 * 60))
-
-          if (durationMinutes > 0) {
-            setBookingDuration(durationMinutes)
-          }
-        } catch (error) {
-          logger.error('Error calculating duration in BookingEditModal', { error })
-          setBookingDuration(null)
-        }
-
-        form.reset({
-          booking_date: booking.booking_date || '',
-          start_time: formatTime(booking.start_time || ''),
-          end_time: formatTime(booking.end_time || ''),
-          service_package_id: booking.service_package_id || '',
-          package_v2_id: booking.package_v2_id || '',
-          total_price: booking.total_price || 0,
-          area_sqm: booking.area_sqm || undefined,
-          frequency: booking.frequency || undefined,
-          address: booking.address || '',
-          city: booking.city || '',
-          state: booking.state || '',
-          zip_code: booking.zip_code || '',
-          staff_id: booking.staff_id || '',
-          team_id: booking.team_id || '',
-          notes: booking.notes || '',
-          status: (booking.status || BookingStatus.Pending) as 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed' | 'no_show',
-        })
-        lastInitializedBookingId.current = booking.id
-      }
+    if (booking?.id) {
+      dispatch({ type: 'SEED', overrides: buildInitialState(booking) })
     }
+  }, [booking]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Reset tracking when modal closes
-    if (!isOpen) {
-      lastInitializedBookingId.current = null
-      setBookingDuration(null)
-    }
-  }, [booking, isOpen, form])
-
-  // Sync defaultStaffId and defaultTeamId when they change (after selecting from StaffAvailabilityModal)
+  // Sync status from booking when it changes
   useEffect(() => {
-    if (!isOpen) return // Only sync when modal is open
-
-    if (defaultStaffId) {
-      form.setValue('staff_id', defaultStaffId)
-      form.setValue('team_id', '') // Clear team when staff is selected
+    if (booking?.status) {
+      setStatus(booking.status)
     }
-    if (defaultTeamId) {
-      form.setValue('team_id', defaultTeamId)
-      form.setValue('staff_id', '') // Clear staff when team is selected
-    }
-  }, [isOpen, defaultStaffId, defaultTeamId, form])
+  }, [booking?.status])
 
-  const onSubmit = async (data: BookingUpdateFormData) => {
-    try {
-      // Use existing end_time from form (เก็บเวลาเดิมที่ผู้ใช้ตั้งไว้)
-      let endTime = data.end_time || ''
+  const { data: packagesV2 = [], isLoading: packagesLoading } = useQuery(packageQueryOptions.v2)
 
-      // Only calculate end_time if not set (ไม่มีค่า end_time)
-      if (!endTime && data.start_time) {
-        const selectedPackage = servicePackages.find(pkg => pkg.id === data.service_package_id || pkg.id === data.package_v2_id)
-
-        if (selectedPackage && selectedPackage.duration_minutes) {
-          // Package with fixed duration
-          endTime = calculateEndTime(data.start_time, selectedPackage.duration_minutes)
-        } else if (packageSelection?.requiredStaff) {
-          // Tiered package - estimate duration
-          const estimatedHours = packageSelection.requiredStaff <= 2 ? 2 : packageSelection.requiredStaff <= 4 ? 3 : 4
-          endTime = calculateEndTime(data.start_time, estimatedHours * 60)
-        }
-      }
-
-      // Store booking_id separately
-      const bookingId = booking?.id || ''
-
-      // Determine package type (fixed or tiered)
-      const hasFixedPackage = data.service_package_id && data.service_package_id.trim()
-      const hasTieredPackage = data.package_v2_id && data.package_v2_id.trim()
-
-      // Get team member count if team is assigned (for earnings calculation)
-      // IMPORTANT: Only update team_member_count if team actually changed
-      // to preserve the original count from when booking was created
-      let teamMemberCount: number | null = null
-      const newTeamId = data.team_id && data.team_id.trim() ? data.team_id : null
-      const originalTeamId = booking?.team_id || null
-
-      if (newTeamId) {
-        if (newTeamId === originalTeamId) {
-          // Team unchanged - preserve existing team_member_count
-          teamMemberCount = (booking as { team_member_count?: number | null })?.team_member_count ?? null
-          logger.debug('Team unchanged, preserving team_member_count', { teamId: newTeamId, count: teamMemberCount }, { context: 'BookingEditModal' })
-        } else {
-          // Team changed - get new member count
-          const { data: members } = await supabase
-            .rpc('get_team_members_by_team_id', { p_team_id: newTeamId })
-          teamMemberCount = members?.length || 1
-          logger.debug('Team changed, new team_member_count', { oldTeamId: originalTeamId, newTeamId, count: teamMemberCount }, { context: 'BookingEditModal' })
-        }
-      }
-      // If team_id is cleared (switching to staff or unassigned), teamMemberCount stays null
-
-      // Base update data (common fields)
-      const updateData: {
-        booking_date: string
-        start_time: string
-        end_time: string
-        address: string | null
-        city: string | null
-        state: string | null
-        zip_code: string | null
-        notes: string | null
-        total_price: number
-        staff_id: string | null
-        team_id: string | null
-        team_member_count: number | null
-        status: string
-        service_package_id?: string | null
-        package_v2_id?: string | null
-        area_sqm?: number | null
-        frequency?: number | null
-      } = {
-        booking_date: data.booking_date,
-        start_time: data.start_time,
-        end_time: endTime,
-        address: data.address && data.address.trim() ? data.address : null,
-        city: data.city && data.city.trim() ? data.city : null,
-        state: data.state && data.state.trim() ? data.state : null,
-        zip_code: data.zip_code && data.zip_code.trim() ? data.zip_code : null,
-        notes: data.notes && data.notes.trim() ? data.notes : null,
-        total_price: data.total_price,
-        staff_id: data.staff_id && data.staff_id.trim() ? data.staff_id : null,
-        team_id: newTeamId,
-        team_member_count: teamMemberCount,
-        status: data.status || BookingStatus.Pending,
-      }
-
-      // Add package-specific fields based on package type
-      if (hasTieredPackage) {
-        // Tiered pricing package (V2)
-        updateData.package_v2_id = data.package_v2_id
-        updateData.service_package_id = null // Clear fixed package ID
-        updateData.area_sqm = data.area_sqm || null
-        updateData.frequency = data.frequency || null
-      } else if (hasFixedPackage) {
-        // Fixed pricing package (V1)
-        updateData.service_package_id = data.service_package_id
-        updateData.package_v2_id = null // Clear tiered package ID
-        updateData.area_sqm = null // Clear tiered fields
-        updateData.frequency = null
-      } else {
-        // No package selected (shouldn't happen, but handle it)
-        updateData.service_package_id = null
-        updateData.package_v2_id = null
-        updateData.area_sqm = null
-        updateData.frequency = null
-      }
-
-      // Check for conflicts
-      const detectedConflicts = await checkConflicts({
-        staffId: updateData.staff_id,
-        teamId: updateData.team_id,
-        bookingDate: updateData.booking_date || '',
-        startTime: updateData.start_time || '',
-        endTime: endTime,
-        excludeBookingId: bookingId // Exclude current booking from conflict check
-      })
-
-      // If conflicts detected, show confirmation dialog
-      if (detectedConflicts.length > 0) {
-        setPendingUpdateData({ ...updateData, bookingId })
-        setShowConflictDialog(true)
-        return // Stop submission until user confirms
-      }
-
-      // No conflicts - proceed with update
-      await performUpdate(updateData, bookingId)
-    } catch (error) {
-      logger.error('Error in BookingEditModal submission', { error })
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
-    }
-  }
-
-  // Perform the actual database update
-  const performUpdate = async (updateData: Record<string, unknown>, bookingId: string, isOverride = false) => {
-    try {
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async (updateData: Record<string, unknown>) => {
+      if (!booking?.id) throw new Error('Booking ID not found')
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
-        .eq('id', bookingId)
-        .select()
+        .eq('id', booking.id)
 
-      if (error) {
-        logger.error('Error updating booking in BookingEditModal', { bookingId, error })
-        throw error
+      if (error) throw new Error(`Failed to update booking: ${getErrorMessage(error)}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+      toast.success('Booking updated successfully')
+      onOpenChange(false)
+      clearConflicts()
+      onSuccess?.()
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Unable to update booking')
+    },
+  })
+
+  async function handleSubmit() {
+    // Edit mode: validate only Steps 2+3 — customer is already bound to the booking
+    const errors = validateEditState(state)
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    const updateData: Record<string, unknown> = {
+      booking_date: state.booking_date,
+      end_date: state.end_date,
+      start_time: state.start_time,
+      end_time: state.end_time || null,
+      package_v2_id: state.package_v2_id,
+      price_mode: state.price_mode,
+      total_price: state.price_mode === PriceMode.Package ? state.total_price : state.custom_price ?? 0,
+      custom_price: state.custom_price,
+      price_override: state.price_mode === PriceMode.Override,
+      job_name: state.job_name || null,
+      area_sqm: state.area_sqm,
+      frequency: state.frequency,
+      staff_id: state.staff_id,
+      team_id: state.team_id,
+      address: state.address,
+      city: state.city,
+      state: state.state,
+      zip_code: state.zip_code,
+      notes: state.notes || null,
+      status,
+    }
+
+    // Check conflicts (excludes self)
+    // M3: Wrap in try/catch — re-thrown errors must be handled here
+    let conflicts: BookingConflict[] = []
+    try {
+      conflicts = await checkConflicts({
+        staffId: state.staff_id,
+        teamId: state.team_id,
+        bookingDate: state.booking_date,
+        endDate: state.end_date,
+        startTime: state.start_time,
+        endTime: state.end_time,
+        excludeBookingId: booking?.id,
+      })
+    } catch {
+      toast.error('Could not verify schedule availability. Please try again.')
+      return
+    }
+
+    if (conflicts.length > 0) {
+      const isExact = conflicts.some(
+        (c) =>
+          c.booking.booking_date === state.booking_date &&
+          c.booking.start_time?.slice(0, 5) === state.start_time
+      )
+      if (isExact) {
+        toast.error('This staff already has a booking at this exact start time. Please choose a different time or staff.')
+        return
       }
+      setPendingUpdate(updateData)
+      setShowConflictDialog(true)
+      return
+    }
 
-      toast({
-        title: 'Success',
-        description: isOverride ? 'Booking updated successfully (conflict overridden)' : 'Booking updated successfully',
-      })
-      handleClose()
-      onSuccess()
-    } catch (error) {
-      logger.error('Error in BookingEditModal submission', { error })
-      const errorMsg = mapErrorToUserMessage(error, 'booking')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+    updateMutation.mutate(updateData)
+  }
+
+  function handleClose() {
+    onOpenChange(false)
+    clearConflicts()
+    setPendingUpdate(null)
+    // M1 fix: Reset wizard state to original booking data on close.
+    // Prevents stale edits from persisting when user cancels and reopens.
+    if (booking) {
+      dispatch({ type: 'SEED', overrides: buildInitialState(booking) })
     }
   }
 
-  // Handle conflict override confirmation
-  const handleConflictConfirm = async () => {
-    if (!pendingUpdateData) return
-    const { bookingId, ...updateData } = pendingUpdateData
-    await performUpdate(updateData, bookingId as string, true)
-    setShowConflictDialog(false)
-  }
-
-  const handleClose = () => {
-    onClose()
-    clearConflicts()
-    setPendingUpdateData(null)
-    setShowConflictDialog(false)
-  }
+  const endBeforeStart =
+    !state.isMultiDay && state.start_time && state.end_time && state.end_time < state.start_time
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Booking</DialogTitle>
-          <DialogDescription>
-            Update booking information
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Package Selector V2 - รองรับทั้ง Fixed และ Tiered Pricing */}
-            <div className="space-y-2 sm:col-span-2">
-              <PackageSelector
-                serviceType="cleaning"
-                packages={servicePackages as unknown as ServicePackageV2WithTiers[]} // ส่ง unified packages
-                value={packageSelection}
-                disabled={true}
-                onChange={(selection) => {
-                  setPackageSelection(selection)
-                  if (selection) {
-                    if (selection.pricingModel === 'fixed') {
-                      // Fixed pricing - เซ็ตเฉพาะ service_package_id
-                      form.setValue('service_package_id', selection.packageId)
-                      form.setValue('package_v2_id', '') // ล้าง package_v2_id
-                      form.setValue('total_price', selection.price)
-                      form.setValue('area_sqm', undefined)
-                      form.setValue('frequency', undefined)
-                    } else {
-                      // Tiered pricing - เซ็ตเฉพาะ package_v2_id
-                      form.setValue('service_package_id', '') // ล้าง service_package_id
-                      form.setValue('package_v2_id', selection.packageId)
-                      form.setValue('area_sqm', selection.areaSqm)
-                      form.setValue('frequency', selection.frequency as 1 | 2 | 4 | 8)
-                      form.setValue('total_price', selection.price)
+    <AppSheet
+      open={open}
+      onOpenChange={handleClose}
+      title="Edit Booking"
+      size="md"
+    >
+      <DashboardErrorBoundary
+        fallback={
+          <div className="flex items-center justify-center h-full p-6 text-center">
+            <p className="text-sm text-muted-foreground">An error occurred. Please close and try again.</p>
+          </div>
+        }
+      >
+        <div className="flex flex-col h-full">
+          {/* Scrollable form */}
+          <div className="flex-1 overflow-y-auto space-y-5 px-4 py-4 pb-20">
+            {/* Customer info (read-only) */}
+            {booking?.customers && (
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="bg-tinedy-blue/10 text-tinedy-blue text-xs">
+                    {booking.customers.full_name?.slice(0, 2).toUpperCase() ?? 'N/A'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="font-medium text-sm text-tinedy-dark leading-tight">
+                    {booking.customers.full_name}
+                  </p>
+                  {booking.customers.phone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {booking.customers.phone}
+                    </p>
+                  )}
+                  {booking.customers.email && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      {booking.customers.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Pricing */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Service & Pricing</p>
+              {packagesLoading ? (
+                <SmartPriceFieldSkeleton />
+              ) : (
+                <SmartPriceField
+                  state={state}
+                  dispatch={dispatch}
+                  packages={packagesV2}
+                  packagesLoading={packagesLoading}
+                  lockPriceMode
+                />
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Date & Time */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
+              <DateRangePicker state={state} dispatch={dispatch} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-start" className="text-xs text-muted-foreground">
+                    Start Time <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="edit-start"
+                    type="time"
+                    value={state.start_time}
+                    onChange={(e) =>
+                      dispatch({ type: 'SET_START_TIME', time: e.target.value })
                     }
-
-                    // Auto-calculate End Time if Start Time is set
-                    const currentStartTime = form.getValues('start_time')
-                    if (currentStartTime && selection.estimatedHours) {
-                      const durationMinutes = Math.round(selection.estimatedHours * 60)
-                      const endTime = calculateEndTime(currentStartTime, durationMinutes)
-                      form.setValue('end_time', endTime)
+                    className={state.validationErrors.start_time ? 'border-destructive' : undefined}
+                  />
+                  {state.validationErrors.start_time && (
+                    <p className="text-xs text-destructive">{state.validationErrors.start_time}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-end" className="text-xs text-muted-foreground">
+                    End Time
+                  </Label>
+                  <Input
+                    id="edit-end"
+                    type="time"
+                    value={state.end_time}
+                    onChange={(e) =>
+                      dispatch({ type: 'SET_END_TIME', time: e.target.value, manual: true })
                     }
-                  } else {
-                    form.setValue('service_package_id', '')
-                    form.setValue('package_v2_id', '')
-                    form.setValue('area_sqm', undefined)
-                    form.setValue('frequency', undefined)
-                    form.setValue('total_price', 0)
-                  }
-                }}
-              />
+                    className={endBeforeStart ? 'border-yellow-400' : undefined}
+                  />
+                  {endBeforeStart && (
+                    <p className="text-xs text-yellow-600">⚠️ End time is before start time</p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit_date">Booking Date *</Label>
-              <Input
-                id="edit_date"
-                type="date"
-                {...form.register('booking_date')}
-                required
-                aria-invalid={!!form.formState.errors.booking_date}
-              />
-              {form.formState.errors.booking_date && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.booking_date.message}
-                </p>
-              )}
-            </div>
+            <Separator />
 
-            <div className="space-y-2">
-              <Label htmlFor="edit_start_time">Start Time *</Label>
-              <Input
-                id="edit_start_time"
-                type="time"
-                {...form.register('start_time', {
-                  onChange: (e) => {
-                    const newStartTime = e.target.value
-
-                    // Auto-calculate End Time when Start Time changes
-                    // Priority: 1. bookingDuration (from existing booking), 2. packageSelection.estimatedHours
-                    const durationMinutes = bookingDuration ??
-                      (packageSelection?.estimatedHours ? Math.round(packageSelection.estimatedHours * 60) : null)
-
-                    if (newStartTime && durationMinutes) {
-                      const endTime = calculateEndTime(newStartTime, durationMinutes)
-                      form.setValue('end_time', endTime)
-                    }
-                  }
-                })}
-                required
-                aria-invalid={!!form.formState.errors.start_time}
-              />
-              {form.formState.errors.start_time && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.start_time.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit_end_time">End Time (Auto-calculated) *</Label>
-              <Input
-                id="edit_end_time"
-                type="time"
-                {...form.register('end_time')}
-                placeholder="Auto-calculated from package"
-                disabled={true}
-                className="bg-muted"
-                aria-invalid={!!form.formState.errors.end_time}
-              />
-              {form.formState.errors.end_time && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.end_time.message}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {packageSelection?.estimatedHours
-                  ? `Calculated from ${packageSelection.estimatedHours} hrs duration`
-                  : 'Duration calculated from area and staff count'}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit_status">Status *</Label>
-              <Controller
-                name="status"
-                control={form.control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger aria-invalid={!!form.formState.errors.status}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="no_show">No Show</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {form.formState.errors.status && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.status.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit_price">Total Price (Auto-calculated) *</Label>
-              <Input
-                id="edit_price"
-                type="number"
-                step="0.01"
-                {...form.register('total_price', {
-                  valueAsNumber: true,
-                })}
-                required
-                disabled
-                className="bg-muted"
-                aria-invalid={!!form.formState.errors.total_price}
-              />
-              {form.formState.errors.total_price && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.total_price.message}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Price is calculated from package selection
-              </p>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="edit_assign_to">Assign to</Label>
-              <Select
-                value={assignmentType}
-                onValueChange={(value: 'staff' | 'team' | 'none') => {
-                  onAssignmentTypeChange(value)
-                  form.setValue('staff_id', '')
-                  form.setValue('team_id', '')
-                }}
-              >
+            {/* Status */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select assignment type" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  <SelectItem value="staff">Individual Staff</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
+                  {getAvailableStatuses(booking?.status ?? status).map((s) => (
+                    <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Staff Selector - Conditional */}
-            {assignmentType === 'staff' && (
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="edit_staff_id">Select Staff Member *</Label>
-                <Controller
-                  name="staff_id"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange} required>
-                      <SelectTrigger aria-invalid={!!form.formState.errors.staff_id}>
-                        <SelectValue placeholder="Select staff member..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staffMembers.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.full_name} ({staff.role})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {form.formState.errors.staff_id && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.staff_id.message}
-                  </p>
-                )}
-              </div>
-            )}
+            <Separator />
 
-            {/* Team Selector - Conditional */}
-            {assignmentType === 'team' && (
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="edit_team_id">Select Team *</Label>
-                <Controller
-                  name="team_id"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange} required>
-                      <SelectTrigger aria-invalid={!!form.formState.errors.team_id}>
-                        <SelectValue placeholder="Select team..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {form.formState.errors.team_id && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.team_id.message}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Check Availability Button */}
-            {assignmentType !== 'none' && (
-              <div className="space-y-2 sm:col-span-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-gradient-to-r from-tinedy-blue/10 to-tinedy-green/10 hover:from-tinedy-blue/20 hover:to-tinedy-green/20 border-tinedy-blue/30"
-                  onClick={() => {
-                    const currentFormData = form.getValues()
-
-                    // Sync form data to parent before opening availability modal
-                    if (onBeforeOpenAvailability) {
-                      onBeforeOpenAvailability(currentFormData)
-                    }
-
-                    onOpenAvailabilityModal()
-                  }}
-                  disabled={
-                    !form.getValues('booking_date') ||
-                    !form.getValues('start_time') ||
-                    !packageSelection
-                  }
-                >
-                  <Sparkles className="h-4 w-4 mr-2 text-tinedy-blue" />
-                  Check Staff Availability
-                </Button>
-                {(!form.getValues('booking_date') || !form.getValues('start_time') || !packageSelection) && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Please select date, time, and service package first
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Assignment & Address */}
+            <Step3Assignment state={state} dispatch={dispatch} />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit_address">Address</Label>
-            <Input
-              id="edit_address"
-              {...form.register('address')}
-              aria-invalid={!!form.formState.errors.address}
-            />
-            {form.formState.errors.address && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.address.message}
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_city">City</Label>
-              <Input
-                id="edit_city"
-                {...form.register('city')}
-                aria-invalid={!!form.formState.errors.city}
-              />
-              {form.formState.errors.city && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.city.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_state">Province</Label>
-              <Input
-                id="edit_state"
-                {...form.register('state')}
-                aria-invalid={!!form.formState.errors.state}
-              />
-              {form.formState.errors.state && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.state.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_zip_code">Zip Code</Label>
-              <Input
-                id="edit_zip_code"
-                {...form.register('zip_code')}
-                aria-invalid={!!form.formState.errors.zip_code}
-              />
-              {form.formState.errors.zip_code && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.zip_code.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit_notes">Notes</Label>
-            <Input
-              id="edit_notes"
-              {...form.register('notes')}
-              aria-invalid={!!form.formState.errors.notes}
-            />
-            {form.formState.errors.notes && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.notes.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex gap-2 justify-end">
+          {/* EC-S3: Sticky footer */}
+          <div className="sticky bottom-0 bg-background border-t px-4 pt-4 pb-4 flex gap-2">
             <Button
-              type="button"
               variant="outline"
               onClick={handleClose}
+              disabled={updateMutation.isPending}
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button type="submit">
-              Update Booking
+            <Button
+              onClick={handleSubmit}
+              disabled={updateMutation.isPending}
+              className="flex-1 bg-tinedy-blue hover:bg-tinedy-blue/90"
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
-        </form>
-      </DialogContent>
+        </div>
 
-      {/* Conflict Confirmation Dialog */}
-      <ConfirmDialog
-        open={showConflictDialog}
-        onOpenChange={setShowConflictDialog}
-        title="Scheduling Conflict"
-        description="This booking conflicts with existing bookings. Are you sure you want to proceed anyway?"
-        variant="default"
-        confirmLabel="Proceed Anyway"
-        cancelLabel="Cancel"
-        onConfirm={handleConflictConfirm}
-      />
-    </Dialog>
+        {/* Conflict dialog */}
+        <ConfirmDialog
+          open={showConflictDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowConflictDialog(false)
+              setPendingUpdate(null)
+              clearConflicts()
+            }
+          }}
+          title="Schedule Conflict Detected"
+          description="A schedule conflict was detected for the selected staff or team."
+          variant="warning"
+          confirmLabel="Save Anyway"
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            if (pendingUpdate) {
+              updateMutation.mutate(pendingUpdate)
+            }
+            setShowConflictDialog(false)
+            setPendingUpdate(null)
+          }}
+        />
+      </DashboardErrorBoundary>
+    </AppSheet>
   )
 }

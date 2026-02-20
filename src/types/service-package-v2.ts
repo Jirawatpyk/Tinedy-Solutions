@@ -44,14 +44,8 @@ export const ServiceCategory = {
 export type ServiceCategory = typeof ServiceCategory[keyof typeof ServiceCategory]
 
 /**
- * Booking frequency options
- *
- * @enum {number}
- *
- * @property {number} Once - One-time booking
- * @property {number} Twice - Twice per month
- * @property {number} Weekly - Weekly (4 times per month)
- * @property {number} BiWeekly - Twice per week (8 times per month)
+ * Booking frequency — any positive integer (times per month)
+ * Named constants kept for backward compatibility with existing booking forms
  */
 export const BookingFrequency = {
   Once: 1,
@@ -60,7 +54,15 @@ export const BookingFrequency = {
   BiWeekly: 8
 } as const
 
-export type BookingFrequency = typeof BookingFrequency[keyof typeof BookingFrequency]
+export type BookingFrequency = number
+
+/**
+ * One entry in the dynamic frequency_prices array stored in JSONB.
+ */
+export interface FrequencyPrice {
+  times: number
+  price: number
+}
 
 // ============================================================================
 // SERVICE PACKAGE V2 TYPES
@@ -184,6 +186,9 @@ export interface PackagePricingTier {
   area_max: number
   required_staff: number
   estimated_hours: number | null
+  /** Dynamic frequency pricing — the source of truth after migration */
+  frequency_prices: FrequencyPrice[]
+  /** Legacy columns kept for backward compat with DB function get_package_price */
   price_1_time: number
   price_2_times: number | null
   price_4_times: number | null
@@ -310,7 +315,7 @@ export type PricingTierUpdate = Partial<Omit<PricingTierInput, 'package_id'>>
  *
  * @property {string} package_id - Package UUID
  * @property {number} area_sqm - Area in square meters
- * @property {BookingFrequency} frequency - Booking frequency (1, 2, 4, or 8)
+ * @property {BookingFrequency} frequency - Booking frequency (any positive integer, e.g. 1, 2, 3, 4)
  *
  * @example
  * const request: PricingCalculationRequest = {
@@ -420,16 +425,6 @@ export function formatAreaRange(tier: PackagePricingTier): string {
  * getFrequencyLabel(4) // "แพ็ก 4 ครั้ง"
  */
 export function getFrequencyLabel(frequency: BookingFrequency): string {
-  switch (frequency) {
-    case 1:
-      return '1 time'
-    case 2:
-      return '2 times'
-    case 4:
-      return '4 times'
-    case 8:
-      return '8 times'
-    default:
-      return `${frequency} times`
-  }
+  if (frequency === 1) return '1 time'
+  return `${frequency} times`
 }

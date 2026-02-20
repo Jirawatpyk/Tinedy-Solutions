@@ -14,38 +14,28 @@ interface BookingData {
   total_price: number
   amount_paid: number
   recurring_group_id?: string
-  customers: {
-    full_name: string
-    email: string
-  }
-  service_packages?: {
-    name: string
-  } | null
-  service_packages_v2?: {
-    name: string
-  } | null
+  customers: { full_name: string; email: string }
+  service_packages_v2?: { name: string } | null
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log('=== send-refund-confirmation started ===')
-
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    console.log('RESEND_API_KEY exists:', !!RESEND_API_KEY)
+    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set')
 
-    if (!RESEND_API_KEY) {
-      console.error('RESEND_API_KEY is not set')
-      throw new Error('RESEND_API_KEY is not set')
-    }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !supabaseKey) throw new Error('Supabase configuration is missing')
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
     const { bookingId } = await req.json()
-    console.log('Received bookingId:', bookingId)
-
     if (!bookingId) {
       return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
         status: 400,
@@ -53,24 +43,7 @@ serve(async (req) => {
       })
     }
 
-    // Initialize Supabase client with service role
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-      throw new Error('Supabase configuration is missing')
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-
-    // Fetch business settings from database
-    console.log('Fetching business settings...')
+    // Business settings
     let fromName = 'Tinedy CRM'
     let fromEmail = 'bookings@resend.dev'
     let businessPhone = ''
@@ -78,18 +51,11 @@ serve(async (req) => {
     let businessLogoUrl = 'https://homtefwwsrrwfzmxdnrk.supabase.co/storage/v1/object/public/logo/logo-horizontal.png'
 
     try {
-      const { data: settings, error: settingsError } = await supabase
+      const { data: settings } = await supabase
         .from('settings')
         .select('business_name, business_email, business_phone, business_address, business_logo_url')
         .limit(1)
         .maybeSingle()
-
-      if (settingsError) {
-        console.warn('Settings fetch error:', settingsError)
-      } else {
-        console.log('Settings fetched:', !!settings)
-      }
-
       if (settings) {
         fromName = settings.business_name || fromName
         fromEmail = settings.business_email || fromEmail
@@ -97,12 +63,8 @@ serve(async (req) => {
         businessAddress = settings.business_address || businessAddress
         businessLogoUrl = settings.business_logo_url || businessLogoUrl
       }
-    } catch (error) {
-      console.warn('Failed to fetch settings, using defaults:', error)
-    }
+    } catch { /* continue */ }
 
-    // Fetch booking data
-    console.log('Fetching booking data...')
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
       .select(`
@@ -114,47 +76,38 @@ serve(async (req) => {
         amount_paid,
         recurring_group_id,
         customers (full_name, email),
-        service_packages (name),
         service_packages_v2 (name)
       `)
       .eq('id', bookingId)
       .single()
 
     if (fetchError || !booking) {
-      console.error('Error fetching booking:', fetchError)
       return new Response(JSON.stringify({ error: 'Booking not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Booking fetched successfully')
-    const bookingData = booking as unknown as BookingData
-
-    // Get service name from either service_packages or service_packages_v2
-    const serviceName = bookingData.service_packages?.name || bookingData.service_packages_v2?.name || 'Service'
-
-    // Calculate refund amount
-    const refundAmount = bookingData.amount_paid || bookingData.total_price || 0
+    const b = booking as unknown as BookingData
+    const serviceName = b.service_packages_v2?.name ?? 'Service'
+    const refundAmount = b.amount_paid || b.total_price || 0
 
     let emailHtml: string
     let refundCount = 1
 
-    if (bookingData.recurring_group_id) {
-      // Fetch all bookings in the recurring group that were refunded
-      const { data: groupBookings, error: groupError } = await supabase
+    if (b.recurring_group_id) {
+      const { data: groupBookings } = await supabase
         .from('bookings')
         .select('id, booking_date, start_time, end_time, total_price, amount_paid')
-        .eq('recurring_group_id', bookingData.recurring_group_id)
+        .eq('recurring_group_id', b.recurring_group_id)
         .eq('payment_status', 'refunded')
         .order('booking_date')
 
-      if (!groupError && groupBookings && groupBookings.length > 1) {
+      if (groupBookings && groupBookings.length > 1) {
         refundCount = groupBookings.length
-        const totalRefund = groupBookings.reduce((sum, b) => sum + Number(b.amount_paid || b.total_price || 0), 0)
-
+        const totalRefund = groupBookings.reduce((sum, gb) => sum + Number(gb.amount_paid || gb.total_price || 0), 0)
         emailHtml = generateRecurringRefundEmail({
-          customerName: bookingData.customers.full_name,
+          customerName: b.customers.full_name,
           serviceName,
           bookings: groupBookings,
           totalRefund,
@@ -165,21 +118,12 @@ serve(async (req) => {
           businessLogoUrl,
         })
       } else {
-        // Single refund in recurring group or fallback
-        const bookingDate = new Date(bookingData.booking_date)
-        const formattedDate = bookingDate.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
-
         emailHtml = generateSingleRefundEmail({
-          customerName: bookingData.customers.full_name,
+          customerName: b.customers.full_name,
           serviceName,
-          formattedDate,
-          startTime: bookingData.start_time,
-          endTime: bookingData.end_time,
+          formattedDate: formatDate(b.booking_date),
+          startTime: b.start_time?.slice(0, 5) ?? '',
+          endTime: b.end_time?.slice(0, 5) ?? '',
           refundAmount,
           fromName,
           businessPhone,
@@ -188,21 +132,12 @@ serve(async (req) => {
         })
       }
     } else {
-      // Single booking refund
-      const bookingDate = new Date(bookingData.booking_date)
-      const formattedDate = bookingDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-
       emailHtml = generateSingleRefundEmail({
-        customerName: bookingData.customers.full_name,
+        customerName: b.customers.full_name,
         serviceName,
-        formattedDate,
-        startTime: bookingData.start_time,
-        endTime: bookingData.end_time,
+        formattedDate: formatDate(b.booking_date),
+        startTime: b.start_time?.slice(0, 5) ?? '',
+        endTime: b.end_time?.slice(0, 5) ?? '',
         refundAmount,
         fromName,
         businessPhone,
@@ -211,73 +146,54 @@ serve(async (req) => {
       })
     }
 
-    // Send email via Resend
-    console.log('Sending refund confirmation email to:', bookingData.customers.email)
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
-        to: bookingData.customers.email,
-        subject: `Refund Processed - ${serviceName}`,
+        to: b.customers.email,
+        subject: `Refund Processed — ${serviceName}`,
         html: emailHtml,
       }),
     })
 
-    console.log('Email API response status:', emailResponse.status)
     const emailResult = await emailResponse.json()
-
-    if (!emailResponse.ok) {
-      console.error('Resend error:', emailResult)
-      throw new Error(emailResult.message || 'Failed to send email')
-    }
-
-    console.log('Refund confirmation email sent successfully:', emailResult.id)
+    if (!emailResponse.ok) throw new Error(emailResult.message || 'Failed to send email')
 
     return new Response(
       JSON.stringify({
         success: true,
         emailId: emailResult.id,
-        message: refundCount > 1
-          ? `Refund confirmation email sent for ${refundCount} bookings`
-          : 'Refund confirmation email sent successfully',
+        message: refundCount > 1 ? `Refund confirmation sent for ${refundCount} bookings` : 'Refund confirmation sent',
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error in send-refund-confirmation:', error)
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
-/**
- * Generate single refund confirmation email
- *
- * Email Color Palette:
- * - Primary: #4F46E5 (Indigo-600) - Headers, buttons, accents
- * - Success: #10b981 (Green-500) - Refund success
- * - Text: #333, #1f2937, #4b5563, #6b7280, #9ca3af
- * - Background: #f5f5f5, #ffffff, #f8f9fa, #f9fafb
- * - Border: #e5e7eb
- *
- * Business Info Section:
- * - business-name: text-align: center (centered business name)
- * - contact-item: justify-content: flex-start (left-aligned phone/address)
- */
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+}
+
+// ============================================================================
+// EMAIL TEMPLATES — Tinedy Brand (inline CSS for email client compatibility)
+// Color Palette:
+//   tinedy-blue:      #2e4057  (header bg, borders, labels)
+//   tinedy-green:     #8fb996  (refund amount highlight)
+//   tinedy-yellow:    #e7d188  (info/notes banner)
+//   tinedy-off-white: #f5f3ee  (info card bg)
+//   tinedy-dark:      #2d241d  (body text)
+//   background:       #f0ede8
+// ============================================================================
+
 function generateSingleRefundEmail(data: {
   customerName: string
   serviceName: string
@@ -290,208 +206,92 @@ function generateSingleRefundEmail(data: {
   businessAddress: string
   businessLogoUrl: string
 }): string {
-  return `
-<!DOCTYPE html>
-<html>
+  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
+  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Refund Processed</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #6366f1;
-    }
-    .header h1 {
-      color: #6366f1;
-      margin: 0;
-      font-size: 28px;
-    }
-    .greeting {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .booking-details {
-      background-color: #f8f9fa;
-      border-left: 4px solid #6366f1;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .detail-row {
-      display: flex;
-      margin: 12px 0;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #6366f1;
-      min-width: 120px;
-    }
-    .detail-value {
-      color: #333;
-    }
-    .refund-amount {
-      background-color: #dbeafe;
-      border-left: 4px solid #3b82f6;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .refund-amount .amount {
-      font-size: 24px;
-      font-weight: 700;
-      color: #3b82f6;
-    }
-    .info-message {
-      background-color: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .business-info {
-      background-color: #f9fafb;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .business-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    .contact-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .contact-item span {
-      margin-left: 8px;
-    }
-    .footer-note {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${data.businessLogoUrl}"
-           alt="${data.fromName} Logo"
-           class="logo"
-           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
-      <h1>💸 Refund Processed</h1>
-    </div>
+<body style="margin:0;padding:0;background-color:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
-    <div class="greeting">
-      Hi ${data.customerName},
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">💸 Refund Processed</h1>
+              <p style="margin:8px 0 0;color:#8fb996;font-size:15px;">Your refund has been issued.</p>
+            </td>
+          </tr>
 
-    <p>We've processed your refund for the following booking:</p>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">We've processed your refund for the following booking:</p>
 
-    <div class="booking-details">
-      <div class="detail-row">
-        <div class="detail-label">Service:</div>
-        <div class="detail-value">${data.serviceName}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Date:</div>
-        <div class="detail-value">${data.formattedDate}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Time:</div>
-        <div class="detail-value">${data.startTime} - ${data.endTime}</div>
-      </div>
-    </div>
+              <!-- INFO CARD -->
+              <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">📋 Service</td>
+                    <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${data.serviceName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">📅 Date</td>
+                    <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${data.formattedDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 16px 10px 0;font-weight:600;color:#2e4057;white-space:nowrap;font-size:14px;vertical-align:top;">🕐 Time</td>
+                    <td style="padding:10px 0;color:#2d241d;font-size:14px;vertical-align:top;">${data.startTime} – ${data.endTime}</td>
+                  </tr>
+                </table>
+              </div>
 
-    <div class="refund-amount">
-      <p style="margin: 0 0 8px 0; color: #6b7280;">Refund Amount</p>
-      <div class="amount">฿${data.refundAmount.toLocaleString()}</div>
-    </div>
+              <!-- REFUND AMOUNT -->
+              <div style="background-color:#f5f3ee;border:2px solid #8fb996;border-radius:8px;padding:20px 24px;margin:0 0 24px;text-align:center;">
+                <p style="margin:0 0 8px;color:#2d241d;font-size:14px;">Refund Amount</p>
+                <p style="margin:0;color:#8fb996;font-size:32px;font-weight:700;">฿${data.refundAmount.toLocaleString('th-TH')}</p>
+              </div>
 
-    <div class="info-message">
-      <p style="margin: 0;"><strong>📋 Please note:</strong></p>
-      <p style="margin: 8px 0 0 0;">The refund will be credited to your original payment method within 5-10 business days, depending on your bank.</p>
-    </div>
+              <!-- INFO BANNER -->
+              <div style="background-color:#fdf9e8;border-left:4px solid #e7d188;border-radius:4px;padding:16px 20px;margin:0 0 24px;">
+                <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">📋 Please note</p>
+                <p style="margin:8px 0 0;color:#2d241d;font-size:14px;line-height:1.6;">The refund will be credited to your original payment method within 5–10 business days, depending on your bank.</p>
+              </div>
 
-    <p>If you have any questions about your refund, please don't hesitate to contact us.</p>
+              <p style="margin:0;font-size:14px;color:#6b6b6b;line-height:1.6;">If you have any questions about your refund, please contact us.</p>
+            </td>
+          </tr>
 
-    <div class="footer">
-      <div class="business-info">
-        <div class="business-name">${data.fromName}</div>
-        ${data.businessPhone ? `
-        <div class="contact-item">
-          <span>📞</span>
-          <span>${data.businessPhone}</span>
-        </div>
-        ` : ''}
-        ${data.businessAddress ? `
-        <div class="contact-item">
-          <span>📍</span>
-          <span>${data.businessAddress}</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="footer-note">
-        We hope to serve you again soon!
-      </div>
-    </div>
-  </div>
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">We hope to serve you again soon!</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 }
 
-/**
- * Generate recurring refund confirmation email
- * Uses same color palette as single refund email
- */
 function generateRecurringRefundEmail(data: {
   customerName: string
   serviceName: string
-  bookings: Array<{
-    id: string
-    booking_date: string
-    start_time: string
-    end_time: string
-    total_price: number
-    amount_paid: number
-  }>
+  bookings: Array<{ id: string; booking_date: string; start_time: string; end_time: string; total_price: number; amount_paid: number }>
   totalRefund: number
   refundCount: number
   fromName: string
@@ -499,216 +299,88 @@ function generateRecurringRefundEmail(data: {
   businessAddress: string
   businessLogoUrl: string
 }): string {
-  const scheduleListHtml = data.bookings.map((booking, index) => {
-    const bookingDate = new Date(booking.booking_date)
-    const formattedDate = bookingDate.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  const scheduleRowsHtml = data.bookings.map((booking, index) => {
+    const formattedDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
     })
     const amount = booking.amount_paid || booking.total_price || 0
-
+    const bg = index % 2 === 0 ? '#f5f3ee' : '#ffffff'
     return `
-      <div style="padding: 12px; background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'}; border-radius: 4px; margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-weight: 600; color: #6366f1; margin-right: 8px;">#${index + 1}</span>
-            <span style="color: #1f2937;">📅 ${formattedDate}</span>
-            <span style="color: #6b7280; font-size: 14px; margin-left: 8px;">🕐 ${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}</span>
-          </div>
-          <span style="color: #3b82f6; font-weight: 600; margin-left: 12px;">฿${amount.toLocaleString()}</span>
-        </div>
-      </div>
+      <tr>
+        <td style="padding:10px 12px;background-color:${bg};font-weight:700;color:#2e4057;font-size:14px;width:36px;">#${index + 1}</td>
+        <td style="padding:10px 12px;background-color:${bg};color:#2d241d;font-size:14px;">📅 ${formattedDate}</td>
+        <td style="padding:10px 12px;background-color:${bg};color:#6b6b6b;font-size:13px;">🕐 ${booking.start_time.slice(0, 5)} – ${booking.end_time.slice(0, 5)}</td>
+        <td style="padding:10px 12px;background-color:${bg};color:#8fb996;font-size:14px;font-weight:600;text-align:right;">฿${amount.toLocaleString('th-TH')}</td>
+      </tr>
     `
   }).join('')
 
-  return `
-<!DOCTYPE html>
-<html>
+  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
+  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Refund Processed - Recurring Booking</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #6366f1;
-    }
-    .header h1 {
-      color: #6366f1;
-      margin: 0;
-      font-size: 28px;
-    }
-    .header-subtitle {
-      color: #6b7280;
-      font-size: 14px;
-      margin-top: 8px;
-    }
-    .greeting {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .schedule-section {
-      background-color: #f8f9fa;
-      border-left: 4px solid #6366f1;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .schedule-section h3 {
-      color: #1f2937;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-    .refund-total {
-      background-color: #dbeafe;
-      border-left: 4px solid #3b82f6;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    .total-row.grand-total {
-      font-size: 18px;
-      font-weight: 700;
-      color: #3b82f6;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 2px solid #3b82f6;
-    }
-    .info-message {
-      background-color: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .business-info {
-      background-color: #f9fafb;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .business-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    .contact-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .contact-item span {
-      margin-left: 8px;
-    }
-    .footer-note {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Refund Processed</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${data.businessLogoUrl}"
-           alt="${data.fromName} Logo"
-           class="logo"
-           style="max-height: 100px; max-width: 200px; margin-bottom: 16px; object-fit: contain;" />
-      <h1>💸 Refund Processed</h1>
-      <p class="header-subtitle">Recurring Booking - ${data.refundCount} sessions refunded</p>
-    </div>
+<body style="margin:0;padding:0;background-color:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
-    <div class="greeting">
-      Hi ${data.customerName},
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">💸 Refund Processed</h1>
+              <p style="margin:8px 0 0;color:#8fb996;font-size:15px;font-weight:600;">Recurring Booking — ${data.refundCount} sessions refunded</p>
+            </td>
+          </tr>
 
-    <p>We've processed refunds for your ${data.refundCount} recurring bookings of <strong>${data.serviceName}</strong>.</p>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">We've processed refunds for your ${data.refundCount} recurring sessions of <strong>${data.serviceName}</strong>.</p>
 
-    <div class="schedule-section">
-      <h3>📋 Refunded Bookings (${data.refundCount} sessions)</h3>
-      ${scheduleListHtml}
-    </div>
+              <!-- REFUNDED SESSIONS TABLE -->
+              <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#2e4057;">📋 Refunded Sessions (${data.refundCount})</p>
+              <table width="100%" cellpadding="0" cellspacing="2" style="border-collapse:separate;border-spacing:0 4px;margin-bottom:24px;">
+                ${scheduleRowsHtml}
+              </table>
 
-    <div class="refund-total">
-      <div class="total-row">
-        <div>Number of bookings refunded:</div>
-        <div>${data.refundCount}</div>
-      </div>
-      <div class="total-row grand-total">
-        <div>Total Refund Amount:</div>
-        <div>฿${data.totalRefund.toLocaleString()}</div>
-      </div>
-    </div>
+              <!-- TOTAL REFUND -->
+              <div style="background-color:#f5f3ee;border:2px solid #8fb996;border-radius:8px;padding:20px 24px;margin:0 0 24px;text-align:center;">
+                <p style="margin:0 0 8px;color:#2d241d;font-size:14px;">Total Refund Amount</p>
+                <p style="margin:0;color:#8fb996;font-size:32px;font-weight:700;">฿${data.totalRefund.toLocaleString('th-TH')}</p>
+              </div>
 
-    <div class="info-message">
-      <p style="margin: 0;"><strong>📋 Please note:</strong></p>
-      <p style="margin: 8px 0 0 0;">The refund will be credited to your original payment method within 5-10 business days, depending on your bank.</p>
-    </div>
+              <!-- INFO BANNER -->
+              <div style="background-color:#fdf9e8;border-left:4px solid #e7d188;border-radius:4px;padding:16px 20px;margin:0 0 24px;">
+                <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">📋 Please note</p>
+                <p style="margin:8px 0 0;color:#2d241d;font-size:14px;line-height:1.6;">The refund will be credited to your original payment method within 5–10 business days, depending on your bank.</p>
+              </div>
 
-    <p>If you have any questions about your refund, please don't hesitate to contact us.</p>
+              <p style="margin:0;font-size:14px;color:#6b6b6b;line-height:1.6;">If you have any questions about your refund, please contact us.</p>
+            </td>
+          </tr>
 
-    <div class="footer">
-      <div class="business-info">
-        <div class="business-name">${data.fromName}</div>
-        ${data.businessPhone ? `
-        <div class="contact-item">
-          <span>📞</span>
-          <span>${data.businessPhone}</span>
-        </div>
-        ` : ''}
-        ${data.businessAddress ? `
-        <div class="contact-item">
-          <span>📍</span>
-          <span>${data.businessAddress}</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="footer-note">
-        We hope to serve you again soon!
-      </div>
-    </div>
-  </div>
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">We hope to serve you again soon!</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 }

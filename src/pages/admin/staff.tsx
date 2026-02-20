@@ -4,17 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -22,28 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { toast } from 'sonner'
 import { Plus, Search, Edit, Mail, Phone, User, Shield, Hash, Award, Star, Users, UserPlus } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
-import { TagInput } from '@/components/ui/tag-input'
-import { STAFF_SKILL_SUGGESTIONS, getSkillColor } from '@/constants/staff-skills'
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
-import { mapErrorToUserMessage, getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
+import { getLoadErrorMessage, getDeleteErrorMessage } from '@/lib/error-messages'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/common'
 import { useStaffWithRatings } from '@/hooks/use-staff'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  StaffCreateSchema,
-  StaffCreateWithSkillsSchema,
-  type StaffCreateFormData,
-} from '@/schemas'
-import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import { StaffFormSheet } from '@/components/staff/StaffFormSheet'
+import { StaffEditSheet, type StaffForEdit } from '@/components/staff/StaffEditSheet'
 import { PageHeader } from '@/components/common/PageHeader'
 import type { StaffWithRating } from '@/types/staff'
 
@@ -55,10 +37,10 @@ export function AdminStaff() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
-  // Edit dialog state - uses reusable StaffEditDialog
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  // Edit sheet state
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [staffForEdit, setStaffForEdit] = useState<StaffForEdit | null>(null)
 
   // Both admin and manager use /admin routes
@@ -67,22 +49,6 @@ export function AdminStaff() {
   // Pagination
   const [displayCount, setDisplayCount] = useState(12)
   const ITEMS_PER_LOAD = 12
-
-  const { toast } = useToast()
-
-  // React Hook Form - Create Form (uses base schema, transforms on submit)
-  const createForm = useForm<StaffCreateFormData>({
-    resolver: zodResolver(StaffCreateSchema),
-    defaultValues: {
-      email: '',
-      full_name: '',
-      phone: '',
-      role: UserRole.Staff,
-      password: '',
-      staff_number: '',
-      skills: [],
-    },
-  })
 
   // Filter staff with useMemo for better performance
   const filteredStaff = useMemo(() => {
@@ -112,103 +78,15 @@ export function AdminStaff() {
   useEffect(() => {
     if (staffError) {
       const errorMessage = getLoadErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: staffError,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: staffError })
     }
-  }, [staffError, toast])
-
-  const onCreateSubmit = async (data: StaffCreateFormData) => {
-    try {
-      // Create new staff - transform form data to WithSkills type
-      const createData = StaffCreateWithSkillsSchema.parse(data)
-
-      // Get auth token for Edge Function
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        throw new Error('Authentication required')
-      }
-
-      // Call Edge Function directly with fetch to get proper error responses
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            email: createData.email,
-            password: createData.password,
-            full_name: createData.full_name,
-            phone: createData.phone || null,
-            role: createData.role,
-            staff_number: createData.staff_number || null,
-            skills: createData.skills && createData.skills.length > 0 ? createData.skills : null,
-          }),
-        }
-      )
-
-      const responseData = await response.json()
-
-      if (!response.ok || !responseData?.success) {
-        const errorMsg = responseData?.error || 'Failed to create staff member'
-
-        // Log error for debugging
-        console.error('[Create Staff] Edge Function error:', {
-          errorMsg,
-          responseData,
-          response: { ok: response.ok, status: response.status }
-        })
-
-        // Check for duplicate email error (flexible matching)
-        const errorLower = errorMsg.toLowerCase()
-        if ((errorLower.includes('already') && errorLower.includes('registered')) ||
-            (errorLower.includes('already') && errorLower.includes('email')) ||
-            (errorLower.includes('user') && errorLower.includes('already')) ||
-            errorLower.includes('already exists')) {
-          throw new Error('This email is already registered. Please use a different email.')
-        }
-
-        // Check for duplicate staff_number error
-        if (errorMsg.toLowerCase().includes('duplicate') &&
-            errorMsg.toLowerCase().includes('staff_number')) {
-          throw new Error('This staff number is already in use. Please use a different staff number.')
-        }
-
-        throw new Error(errorMsg)
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Staff member created successfully',
-      })
-
-      setIsDialogOpen(false)
-      resetForm()
-      refresh()
-    } catch (error) {
-      const errorMessage = mapErrorToUserMessage(error, 'staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
-    }
-  }
+  }, [staffError])
 
   const deleteStaff = async (staffId: string) => {
     try {
       // ป้องกันการลบโปรไฟล์ตัวเอง
       if (user?.id === staffId) {
-        toast({
-          title: 'Cannot delete your own profile',
-          description: 'You cannot delete your own account. Please contact another administrator.',
-          variant: 'destructive',
-        })
+        toast.error('Cannot delete your own profile', { description: 'You cannot delete your own account. Please contact another administrator.' })
         return
       }
 
@@ -227,44 +105,26 @@ export function AdminStaff() {
         throw new Error(data?.error || data?.details || 'Failed to delete user')
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Staff member deleted successfully',
-      })
+      toast.success(data.message || 'Staff member deleted successfully')
       refresh()
     } catch (error) {
       console.error('[Delete Staff] Caught error:', error)
       const errorMessage = getDeleteErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
-  const openEditDialog = (staffMember: StaffWithRating) => {
+  const openEditSheet = (staffMember: StaffWithRating) => {
     setStaffForEdit({
       id: staffMember.id,
       full_name: staffMember.full_name,
+      email: staffMember.email,
       phone: staffMember.phone,
       role: staffMember.role as 'admin' | 'manager' | 'staff',
       staff_number: staffMember.staff_number,
       skills: staffMember.skills,
     })
-    setIsEditDialogOpen(true)
-  }
-
-  const resetForm = () => {
-    createForm.reset({
-      email: '',
-      full_name: '',
-      phone: '',
-      role: UserRole.Staff,
-      password: '',
-      staff_number: '',
-      skills: [],
-    })
+    setIsEditSheetOpen(true)
   }
 
   const getStaffStats = () => {
@@ -285,8 +145,8 @@ export function AdminStaff() {
           subtitle="Manage your team members"
           actions={
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              New Staff
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Staff</span>
             </Button>
           }
         />
@@ -352,7 +212,7 @@ export function AdminStaff() {
         actions={
           <Button
             className="bg-tinedy-blue hover:bg-tinedy-blue/90"
-            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+            onClick={() => setIsCreateSheetOpen(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
             New Staff
@@ -360,191 +220,12 @@ export function AdminStaff() {
         }
       />
 
-      {/* Create Staff Dialog - Using controlled open/onOpenChange pattern instead of DialogTrigger
-          to allow Button to be placed in PageHeader actions slot while Dialog renders as sibling */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Add New Staff Member</DialogTitle>
-              <DialogDescription>Create a new staff account</DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="flex flex-col flex-1 min-h-0">
-                <div className="overflow-y-auto flex-1 pr-4 pl-1">
-                  <div className="space-y-4">
-                {/* Email & Password - 2 Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Controller
-                    name="email"
-                    control={createForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    name="password"
-                    control={createForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password *</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Minimum 6 characters
-                        </p>
-                      </div>
-                    )}
-                  />
-                </div>
-
-                {/* Full Name & Phone - 2 Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Controller
-                    name="full_name"
-                    control={createForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name">Full Name *</Label>
-                        <Input
-                          id="full_name"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    name="phone"
-                    control={createForm.control}
-                    render={({ field, fieldState }) => (
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                        {fieldState.error && (
-                          <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                        )}
-                      </div>
-                    )}
-                  />
-                </div>
-
-                <Controller
-                  name="staff_number"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="staff_number">Staff Number</Label>
-                      <Input
-                        id="staff_number"
-                        {...field}
-                        value={field.value || ''}
-                        placeholder="Auto-generated if left empty"
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Leave empty for auto-generation
-                      </p>
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="skills"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="skills">Skills</Label>
-                      <TagInput
-                        tags={field.value || []}
-                        onChange={field.onChange}
-                        suggestions={[...STAFF_SKILL_SUGGESTIONS]}
-                        getTagColor={getSkillColor}
-                        placeholder="Type skill or select from suggestions..."
-                      />
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="role"
-                  control={createForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role *</Label>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <AdminOnly>
-                            <SelectItem value="manager">Admin</SelectItem>
-                            <SelectItem value="admin">Super admin</SelectItem>
-                          </AdminOnly>
-                        </SelectContent>
-                      </Select>
-                      {fieldState.error && (
-                        <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                      )}
-                    </div>
-                  )}
-                />
-                  </div>
-                </div>
-                <DialogFooter className="mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-tinedy-blue"
-                  >
-                    Create
-                  </Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-      </Dialog>
+      {/* Create Staff Sheet */}
+      <StaffFormSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        onSuccess={refresh}
+      />
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -619,7 +300,7 @@ export function AdminStaff() {
               description={searchQuery ? 'Try a different search term' : 'Add your first staff member to get started'}
               action={!searchQuery ? {
                 label: 'Add Staff',
-                onClick: () => { resetForm(); setIsDialogOpen(true); },
+                onClick: () => setIsCreateSheetOpen(true),
                 icon: UserPlus
               } : undefined}
             />
@@ -679,7 +360,7 @@ export function AdminStaff() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openEditDialog(member)}
+                            onClick={() => openEditSheet(member)}
                             className="h-7 w-7 sm:h-8 sm:w-8"
                           >
                             <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -769,10 +450,10 @@ export function AdminStaff() {
         </>
       )}
 
-      {/* Edit Dialog - reusable component */}
-      <StaffEditDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+      {/* Edit Staff Sheet */}
+      <StaffEditSheet
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
         staff={staffForEdit}
         onSuccess={refresh}
       />

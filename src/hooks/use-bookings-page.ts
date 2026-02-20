@@ -9,15 +9,16 @@
 import React, { useReducer, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import type { WizardState } from '@/hooks/use-booking-wizard'
 import { useBookingFilters } from '@/hooks/use-booking-filters'
 import { usePagination } from '@/hooks/use-booking-pagination'
 import { useConflictDetection } from '@/hooks/use-conflict-detection'
-import { useBookingForm, toBookingForm } from '@/hooks/use-booking-form'
+import { useBookingForm } from '@/hooks/use-booking-form'
 import { useBulkActions } from '@/hooks/use-bulk-actions'
 import { useBookingStatusManager } from '@/hooks/use-booking-status-manager'
 import { useBookings } from '@/hooks/use-bookings'
 import { useStaffList } from '@/hooks/use-staff'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useServicePackages } from '@/hooks/use-service-packages'
 import { usePaymentActions } from '@/hooks/use-payment-actions'
@@ -43,6 +44,8 @@ interface BookingsPageState {
   showArchived: boolean
   // Create dialog
   isDialogOpen: boolean
+  /** Pre-seeded state from AvailabilityCheckSheet — cleared when dialog closes */
+  createInitialState: Partial<WizardState> | null
   // Assignment types
   createAssignmentType: 'staff' | 'team' | 'none'
   editAssignmentType: 'staff' | 'team' | 'none'
@@ -73,6 +76,7 @@ interface BookingsPageState {
 type BookingsPageAction =
   | { type: 'SET_SHOW_ARCHIVED'; payload: boolean }
   | { type: 'SET_DIALOG_OPEN'; payload: boolean }
+  | { type: 'SET_CREATE_INITIAL_STATE'; payload: Partial<WizardState> | null }
   | { type: 'SET_CREATE_ASSIGNMENT_TYPE'; payload: 'staff' | 'team' | 'none' }
   | { type: 'SET_EDIT_ASSIGNMENT_TYPE'; payload: 'staff' | 'team' | 'none' }
   | { type: 'SET_SELECTED_BOOKING'; payload: Booking | null }
@@ -95,6 +99,7 @@ type BookingsPageAction =
 const initialState: BookingsPageState = {
   showArchived: false,
   isDialogOpen: false,
+  createInitialState: null,
   createAssignmentType: 'none',
   editAssignmentType: 'none',
   selectedBooking: null,
@@ -119,7 +124,12 @@ function bookingsPageReducer(state: BookingsPageState, action: BookingsPageActio
     case 'SET_SHOW_ARCHIVED':
       return { ...state, showArchived: action.payload }
     case 'SET_DIALOG_OPEN':
-      return { ...state, isDialogOpen: action.payload }
+      // Clear createInitialState when dialog closes
+      return action.payload
+        ? { ...state, isDialogOpen: true }
+        : { ...state, isDialogOpen: false, createInitialState: null }
+    case 'SET_CREATE_INITIAL_STATE':
+      return { ...state, createInitialState: action.payload }
     case 'SET_CREATE_ASSIGNMENT_TYPE':
       return { ...state, createAssignmentType: action.payload }
     case 'SET_EDIT_ASSIGNMENT_TYPE':
@@ -176,7 +186,6 @@ function bookingsPageReducer(state: BookingsPageState, action: BookingsPageActio
 
 export function useBookingsPage() {
   const location = useLocation()
-  const { toast } = useToast()
   const [state, dispatch] = useReducer(bookingsPageReducer, initialState)
 
   // Data hooks
@@ -303,7 +312,6 @@ export function useBookingsPage() {
   // Forms
   const lastProcessedLocationKey = useRef<string | null>(null)
   const editForm = useBookingForm({ onSubmit: async () => {} })
-  const createForm = useBookingForm({ onSubmit: async () => {} })
 
   // Conflict detection
   const { conflicts, clearConflicts } = useConflictDetection()
@@ -382,9 +390,9 @@ export function useBookingsPage() {
   useEffect(() => {
     if (bookingsError) {
       const errorMessage = getLoadErrorMessage('booking')
-      toast({ title: errorMessage.title, description: bookingsError, variant: 'destructive' })
+      toast.error(errorMessage.title, { description: bookingsError })
     }
-  }, [bookingsError, toast])
+  }, [bookingsError])
 
   useEffect(() => {
     goToPage(1)
@@ -398,64 +406,26 @@ export function useBookingsPage() {
       createBooking?: boolean
       bookingDate?: string
       viewBookingId?: string
-      prefilledData?: {
-        booking_date: string; start_time: string; end_time: string
-        service_package_id: string; package_v2_id?: string
-        staff_id: string; team_id: string; total_price?: number
-        area_sqm?: number | null; frequency?: 1 | 2 | 4 | 8 | null
-        is_recurring?: boolean; recurring_dates?: string[]; recurring_pattern?: RecurringPattern
-      }
+      /** New format from AvailabilityCheckSheet — direct WizardState partial */
+      initialState?: Partial<WizardState>
     } | null
 
     if (!locationState) { lastProcessedLocationKey.current = null; return }
-    if (loading || servicePackages.length === 0) return
+    if (loading) return
     if (lastProcessedLocationKey.current === location.key) return
     lastProcessedLocationKey.current = location.key
 
-    // Create from Quick Availability
-    if (locationState.createBooking && locationState.prefilledData) {
-      const pf = locationState.prefilledData
-      createForm.setValues({
-        booking_date: pf.booking_date, start_time: pf.start_time, end_time: pf.end_time,
-        service_package_id: pf.service_package_id || '', package_v2_id: pf.package_v2_id,
-        staff_id: pf.staff_id, team_id: pf.team_id,
-        total_price: pf.total_price || 0, area_sqm: pf.area_sqm || null, frequency: pf.frequency || null,
-      })
-
-      if (pf.package_v2_id && pf.area_sqm && pf.frequency) {
-        const pkg = servicePackages.find(p => p.id === pf.package_v2_id)
-        if (pkg) {
-          dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: {
-            packageId: pkg.id, pricingModel: 'tiered', areaSqm: pf.area_sqm,
-            frequency: pf.frequency, price: pf.total_price || 0, requiredStaff: 1, packageName: pkg.name,
-          }})
-        }
-      } else if (pf.service_package_id) {
-        const pkg = servicePackages.find(p => p.id === pf.service_package_id)
-        if (pkg && pkg.base_price) {
-          dispatch({ type: 'SET_CREATE_PACKAGE_SELECTION', payload: {
-            packageId: pkg.id, pricingModel: 'fixed', price: pkg.base_price, requiredStaff: 1,
-            packageName: pkg.name, estimatedHours: pkg.duration_minutes ? pkg.duration_minutes / 60 : undefined,
-          }})
-        }
-      }
-
-      if (pf.staff_id) dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'staff' })
-      else if (pf.team_id) dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'team' })
-
-      if (pf.is_recurring && pf.recurring_dates && pf.recurring_dates.length > 0) {
-        dispatch({ type: 'SET_CREATE_RECURRING_DATES', payload: pf.recurring_dates })
-        if (pf.recurring_pattern) dispatch({ type: 'SET_CREATE_RECURRING_PATTERN', payload: pf.recurring_pattern })
-      }
-
+    // Create from AvailabilityCheckSheet (new format — direct WizardState)
+    if (locationState.createBooking && locationState.initialState) {
+      dispatch({ type: 'SET_CREATE_INITIAL_STATE', payload: locationState.initialState })
       dispatch({ type: 'SET_DIALOG_OPEN', payload: true })
       window.history.replaceState({}, document.title)
       return
     }
 
-    // Create from Calendar (legacy)
+    // Create from Calendar (legacy) — pre-seed booking_date via initialState
     if (locationState.createBooking && locationState.bookingDate) {
-      createForm.setValues({ booking_date: locationState.bookingDate || '' })
+      dispatch({ type: 'SET_CREATE_INITIAL_STATE', payload: { booking_date: locationState.bookingDate } })
       dispatch({ type: 'SET_DIALOG_OPEN', payload: true })
       window.history.replaceState({}, document.title)
       return
@@ -476,7 +446,7 @@ export function useBookingsPage() {
       const booking = bookings.find(b => b.id === locationState.editBookingId)
       if (booking) {
         editForm.setValues({
-          customer_id: booking.customers?.id || '', service_package_id: booking.service_package_id,
+          customer_id: booking.customers?.id || '',
           staff_id: booking.staff_id || '', team_id: booking.team_id || '',
           booking_date: booking.booking_date, start_time: booking.start_time,
           end_time: booking.end_time, address: booking.address, city: booking.city || '',
@@ -491,22 +461,21 @@ export function useBookingsPage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, bookings, servicePackages, loading])
+  }, [location.state, bookings, loading])
 
   // --- Actions ---
 
   const resetForm = useCallback(() => {
-    createForm.reset()
     dispatch({ type: 'SET_CREATE_ASSIGNMENT_TYPE', payload: 'none' })
     clearConflicts()
-  }, [createForm, clearConflicts])
+  }, [clearConflicts])
 
   const proceedWithConflictOverride = useCallback(async () => {
     if (!state.pendingBookingData) return
     try {
       const { error } = await supabase.from('bookings').insert(state.pendingBookingData)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking created successfully (conflict overridden)' })
+      toast.success('Booking created successfully (conflict overridden)')
       dispatch({ type: 'SET_DIALOG_OPEN', payload: false })
       dispatch({ type: 'SET_CONFLICT_DIALOG', payload: false })
       resetForm()
@@ -515,9 +484,9 @@ export function useBookingsPage() {
       refresh()
     } catch (_error) {
       const errorMsg = getBookingConflictError()
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingBookingData, toast, resetForm, clearConflicts, refresh])
+  }, [state.pendingBookingData, resetForm, clearConflicts, refresh])
 
   const cancelConflictOverride = useCallback(() => {
     dispatch({ type: 'SET_CONFLICT_DIALOG', payload: false })
@@ -531,17 +500,17 @@ export function useBookingsPage() {
       const result = await deleteRecurringBookings(state.pendingRecurringBooking.id, scope)
       if (!result.success) {
         const errorMsg = getRecurringBookingError('delete')
-        toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+        toast.error(errorMsg.title, { description: errorMsg.description })
         return
       }
-      toast({ title: 'Success', description: `Deleted ${result.deletedCount} booking(s) successfully` })
+      toast.success(`Deleted ${result.deletedCount} booking(s) successfully`)
       dispatch({ type: 'CLOSE_RECURRING_DIALOG' })
       refresh()
     } catch (_error) {
       const errorMsg = getRecurringBookingError('delete')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingRecurringBooking, toast, refresh])
+  }, [state.pendingRecurringBooking, refresh])
 
   const handleRecurringArchive = useCallback(async (scope: RecurringEditScope) => {
     if (!state.pendingRecurringBooking) return
@@ -573,19 +542,20 @@ export function useBookingsPage() {
         }
       }
 
-      let archivedCount = 0
-      for (const bookingId of bookingIdsToArchive) {
-        const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: bookingId })
-        if (!error) archivedCount++
-      }
-      toast({ title: 'Success', description: `Archived ${archivedCount} booking(s) successfully` })
+      const archiveResults = await Promise.all(
+        bookingIdsToArchive.map((id) =>
+          supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: id })
+        )
+      )
+      const archivedCount = archiveResults.filter((r) => !r.error).length
+      toast.success(`Archived ${archivedCount} booking(s) successfully`)
       dispatch({ type: 'CLOSE_RECURRING_DIALOG' })
       refresh()
     } catch (_error) {
       const errorMsg = getArchiveErrorMessage()
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [state.pendingRecurringBooking, toast, refresh])
+  }, [state.pendingRecurringBooking, refresh])
 
   const deleteBooking = useCallback(async (bookingId: string) => {
     try {
@@ -596,35 +566,35 @@ export function useBookingsPage() {
       }
       const { error } = await supabase.from('bookings').delete().eq('id', bookingId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking deleted successfully' })
+      toast.success('Booking deleted successfully')
       refresh()
     } catch (_error) {
       const errorMsg = getDeleteErrorMessage('booking')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [bookings, toast, refresh])
+  }, [bookings, refresh])
 
   const archiveBooking = useCallback(async (bookingId: string) => {
     try {
       const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: bookingId })
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking archived successfully' })
+      toast.success('Booking archived successfully')
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to archive booking', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to archive booking')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const restoreBooking = useCallback(async (bookingId: string) => {
     try {
       const { error } = await supabase.from('bookings').update({ deleted_at: null, deleted_by: null }).eq('id', bookingId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking restored successfully' })
+      toast.success('Booking restored successfully')
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to restore booking', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to restore booking')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const restoreRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -632,19 +602,20 @@ export function useBookingsPage() {
         .from('bookings').select('id').eq('recurring_group_id', groupId).not('deleted_at', 'is', null)
       if (fetchError) throw fetchError
       if (!groupBookings || groupBookings.length === 0) {
-        toast({ title: 'Info', description: 'No archived bookings found in this group to restore' }); return
+        toast('No archived bookings found in this group to restore'); return
       }
-      let restoredCount = 0
-      for (const booking of groupBookings) {
-        const { error } = await supabase.from('bookings').update({ deleted_at: null, deleted_by: null }).eq('id', booking.id)
-        if (!error) restoredCount++
-      }
-      toast({ title: 'Success', description: `Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully` })
+      const { error: restoreError } = await supabase
+        .from('bookings')
+        .update({ deleted_at: null, deleted_by: null })
+        .in('id', groupBookings.map((b) => b.id))
+      if (restoreError) throw restoreError
+      const restoredCount = groupBookings.length
+      toast.success(`Restored ${restoredCount} booking${restoredCount > 1 ? 's' : ''} successfully`)
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to restore recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to restore recurring group')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const archiveRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -652,19 +623,20 @@ export function useBookingsPage() {
         .from('bookings').select('id').eq('recurring_group_id', groupId).is('deleted_at', null)
       if (fetchError) throw fetchError
       if (!groupBookings || groupBookings.length === 0) {
-        toast({ title: 'Info', description: 'No active bookings found in this group to archive' }); return
+        toast('No active bookings found in this group to archive'); return
       }
-      let archivedCount = 0
-      for (const booking of groupBookings) {
-        const { error } = await supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: booking.id })
-        if (!error) archivedCount++
-      }
-      toast({ title: 'Success', description: `Archived ${archivedCount} booking(s) successfully` })
+      const archiveGroupResults = await Promise.all(
+        groupBookings.map((b) =>
+          supabase.rpc('soft_delete_record', { table_name: 'bookings', record_id: b.id })
+        )
+      )
+      const archivedCount = archiveGroupResults.filter((r) => !r.error).length
+      toast.success(`Archived ${archivedCount} booking(s) successfully`)
       refresh()
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to archive recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to archive recurring group')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const deleteRecurringGroup = useCallback(async (groupId: string) => {
     try {
@@ -681,24 +653,21 @@ export function useBookingsPage() {
       }
       dispatch({ type: 'OPEN_RECURRING_DIALOG', payload: { action: 'delete', booking: processedBooking as Booking } })
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete recurring group', variant: 'destructive' })
+      toast.error(error instanceof Error ? error.message : 'Failed to delete recurring group')
     }
-  }, [toast])
+  }, [])
 
   const handleVerifyRecurringGroup = useCallback(async (recurringGroupId: string) => {
     try {
       const { verifyPayment } = await import('@/services/payment-service')
       const result = await verifyPayment({ bookingId: '', recurringGroupId })
       if (!result.success) throw new Error(result.error)
-      toast({
-        title: 'Success',
-        description: result.count > 1 ? `${result.count} bookings verified successfully` : 'Payment verified successfully',
-      })
+      toast.success(result.count > 1 ? `${result.count} bookings verified successfully` : 'Payment verified successfully')
       refresh()
     } catch (_error) {
-      toast({ title: 'Error', description: 'Failed to verify payment', variant: 'destructive' })
+      toast.error('Failed to verify payment')
     }
-  }, [toast, refresh])
+  }, [refresh])
 
   const openBookingDetail = useCallback((booking: Booking) => {
     dispatch({ type: 'OPEN_DETAIL', payload: booking })
@@ -707,7 +676,7 @@ export function useBookingsPage() {
   const openEditBooking = useCallback((booking: Booking) => {
     dispatch({ type: 'SET_SELECTED_BOOKING', payload: booking })
     editForm.setValues({
-      customer_id: booking.customers?.id || '', service_package_id: booking.service_package_id,
+      customer_id: booking.customers?.id || '',
       staff_id: booking.staff_id || '', team_id: booking.team_id || '',
       booking_date: booking.booking_date, start_time: formatTime(booking.start_time),
       end_time: formatTime(booking.end_time), address: booking.address,
@@ -719,15 +688,15 @@ export function useBookingsPage() {
     else if (booking.team_id) assignmentType = 'team'
 
     // Set package selection
-    if (booking.service_package_id || ('package_v2_id' in booking && booking.package_v2_id)) {
-      const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+    if ('package_v2_id' in booking && booking.package_v2_id) {
+      const packageId = booking.package_v2_id
       const pkg = servicePackages.find(p => p.id === packageId)
       if (pkg) {
         const isTiered = 'pricing_model' in pkg && pkg.pricing_model === 'tiered'
         if (isTiered && 'area_sqm' in booking && 'frequency' in booking && booking.area_sqm && booking.frequency) {
           dispatch({ type: 'SET_EDIT_PACKAGE_SELECTION', payload: {
             packageId: pkg.id, pricingModel: 'tiered', areaSqm: Number(booking.area_sqm) || 0,
-            frequency: (booking.frequency as 1 | 2 | 4 | 8) || 1, price: booking.total_price || 0,
+            frequency: (booking.frequency as number) || 1, price: booking.total_price || 0,
             requiredStaff: 1, packageName: pkg.name,
           }})
         } else {
@@ -740,9 +709,7 @@ export function useBookingsPage() {
       }
     }
 
-    setTimeout(() => {
-      dispatch({ type: 'OPEN_EDIT', payload: { booking, assignmentType } })
-    }, 0)
+    dispatch({ type: 'OPEN_EDIT', payload: { booking, assignmentType } })
   }, [editForm, servicePackages])
 
   return {
@@ -776,7 +743,7 @@ export function useBookingsPage() {
     totalBookingsCount,
     // Forms
     editForm,
-    createForm: toBookingForm(createForm),
+    createInitialState: state.createInitialState,
     // Conflict
     conflicts,
     clearConflicts,

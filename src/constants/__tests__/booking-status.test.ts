@@ -59,6 +59,7 @@ describe('booking-status constants', () => {
       // Assert - all payment statuses should be defined
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('unpaid')
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('paid')
+      expect(PAYMENT_STATUS_LABELS).toHaveProperty('partial')
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('pending_verification')
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('refund_pending')
       expect(PAYMENT_STATUS_LABELS).toHaveProperty('refunded')
@@ -68,15 +69,16 @@ describe('booking-status constants', () => {
       // Assert - labels should be human-readable
       expect(PAYMENT_STATUS_LABELS.unpaid).toBe('Unpaid')
       expect(PAYMENT_STATUS_LABELS.paid).toBe('Paid')
+      expect(PAYMENT_STATUS_LABELS.partial).toBe('Partial')
       expect(PAYMENT_STATUS_LABELS.pending_verification).toBe('Verifying')
       expect(PAYMENT_STATUS_LABELS.refund_pending).toBe('Refunding')
       expect(PAYMENT_STATUS_LABELS.refunded).toBe('Refunded')
     })
 
-    it('should have exactly 5 payment statuses', () => {
+    it('should have exactly 6 payment statuses', () => {
       // Assert - ensure no extra or missing statuses
       const statusCount = Object.keys(PAYMENT_STATUS_LABELS).length
-      expect(statusCount).toBe(5)
+      expect(statusCount).toBe(6)
     })
   })
 

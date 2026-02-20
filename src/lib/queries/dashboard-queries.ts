@@ -155,7 +155,8 @@ export async function fetchTodayBookings(): Promise<TodayBooking[]> {
     `
     )
     .is('deleted_at', null)
-    .eq('booking_date', todayStr)
+    // Include: single-day bookings today + multi-day bookings that span today
+    .or(`and(booking_date.eq.${todayStr},end_date.is.null),and(booking_date.lte.${todayStr},end_date.gte.${todayStr})`)
     .order('start_time', { ascending: true })
 
   if (error) throw new Error(`Failed to fetch today's bookings: ${error.message}`)

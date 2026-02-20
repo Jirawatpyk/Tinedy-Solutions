@@ -1,3 +1,5 @@
+import type { PriceMode } from '@/types/booking'
+
 // Dashboard Stats Types
 export interface Stats {
   totalBookings: number
@@ -24,6 +26,7 @@ export interface BookingStatus {
 export interface TodayBooking {
   id: string
   booking_date: string
+  end_date?: string | null
   start_time: string
   end_time: string
   status: string
@@ -34,16 +37,16 @@ export interface TodayBooking {
   zip_code: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
   package_v2_id?: string | null
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   notes: string | null
   payment_status?: string
   payment_method?: string
   amount_paid?: number
   payment_date?: string
   payment_notes?: string
+  price_mode?: PriceMode
   customers: {
     id: string
     full_name: string

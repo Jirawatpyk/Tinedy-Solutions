@@ -30,7 +30,6 @@ describe('BookingCard', () => {
     state: 'Bangkok',
     zip_code: '10110',
     customer_id: 'customer-123',
-    service_package_id: 'service-123',
     package_v2_id: null,
     created_at: '2025-10-26T00:00:00Z',
     staff_id: mockAuthContext.user?.id || null,
@@ -116,7 +115,7 @@ describe('BookingCard', () => {
       )
 
       // Assert
-      expect(screen.getByText(/25 Dec 2025/)).toBeInTheDocument()
+      expect(screen.getByText(/25 Dec/)).toBeInTheDocument()
     })
 
     it('should not display booking date when showDate is false', () => {

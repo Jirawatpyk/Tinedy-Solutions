@@ -37,7 +37,7 @@ interface TodayBooking {
   zip_code: string
   staff_id: string | null
   team_id: string | null
-  service_package_id: string
+  package_v2_id?: string | null
   notes: string | null
   payment_status?: string
   payment_method?: string
@@ -166,7 +166,7 @@ export function useDashboardData(): DashboardData {
           service_packages (name, service_type),
           profiles!bookings_staff_id_fkey (full_name),
           teams (name)
-        `).is('deleted_at', null).eq('booking_date', today).order('start_time', { ascending: true }),
+        `).is('deleted_at', null).or(`and(booking_date.eq.${today},end_date.is.null),and(booking_date.lte.${today},end_date.gte.${today})`).order('start_time', { ascending: true }),
 
         // Revenue data for last 7 days
         supabase.from('bookings').select('booking_date, total_price').eq('status', BookingStatus.Completed).is('deleted_at', null).gte('booking_date', sevenDaysAgoStr).order('booking_date', { ascending: true }),

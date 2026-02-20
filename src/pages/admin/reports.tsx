@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { SimpleTabs as Tabs, SimpleTabsContent as TabsContent, SimpleTabsList as TabsList, SimpleTabsTrigger as TabsTrigger } from '@/components/ui/simple-tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
   BarChart3,
   Users,
@@ -73,7 +73,6 @@ export function AdminReports() {
   // UI states only
   const [dateRange, setDateRange] = useState('thisMonth')
   const [activeTab, setActiveTab] = useState('revenue')
-  const { toast } = useToast()
   const { role } = usePermissions()
 
   // Tab configuration for cleaner JSX
@@ -87,11 +86,7 @@ export function AdminReports() {
   // Show error toast if query fails (use useEffect to avoid infinite loop)
   useEffect(() => {
     if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load reports data. Please refresh the page.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load reports data. Please refresh the page.')
     }
   }, [error, toast])
 
@@ -162,23 +157,13 @@ export function AdminReports() {
 
       // Show appropriate toast based on result
       if (success) {
-        toast({
-          title: 'Export successful',
-          description: 'Data exported to Excel successfully',
-        })
+        toast.success('Data exported to Excel successfully')
       } else {
-        toast({
-          title: 'No data to export',
-          description: 'There is no data available for the selected criteria',
-        })
+        toast('No data to export', { description: 'There is no data available for the selected criteria' })
       }
     } catch (error) {
       console.error('Export error:', error)
-      toast({
-        title: 'Export failed',
-        description: 'An error occurred while exporting data',
-        variant: 'destructive',
-      })
+      toast.error('Export failed', { description: 'An error occurred while exporting data' })
     }
   }
 
@@ -223,15 +208,20 @@ export function AdminReports() {
       payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
-      service_type: b.service_packages?.service_type,
+      service_type: b.service_packages_v2?.service_type ?? b.service_packages?.service_type,
+      price_mode: b.price_mode,
     })),
     [filteredBookings]
   )
 
-  // Calculate top service packages by booking count
+  // Calculate top service packages by booking count (G1 Fix: include custom jobs)
   const topPackages = useMemo(() => {
     const packageCounts = filteredBookings.reduce((acc, booking) => {
-      const packageName = booking.service_packages?.name
+      // G1 Fix: custom jobs grouped as single "Custom" entry (job_name too unique to aggregate individually)
+      const packageName =
+        booking.price_mode === 'custom'
+          ? 'Custom'
+          : (booking.service_packages_v2?.name ?? booking.service_packages?.name)
       if (packageName) {
         acc[packageName] = (acc[packageName] || 0) + 1
       }
@@ -289,7 +279,8 @@ export function AdminReports() {
       payment_date: b.payment_date,
       created_at: b.created_at,
       staff_id: b.staff_id,
-      service_type: b.service_packages?.service_type,
+      service_type: b.service_packages_v2?.service_type ?? b.service_packages?.service_type,
+      price_mode: b.price_mode,
     })),
     [bookings]
   )
@@ -327,6 +318,7 @@ export function AdminReports() {
     () => [
       { name: 'Cleaning', value: serviceTypeRevenue.cleaning, color: '#2e4057' },
       { name: 'Training', value: serviceTypeRevenue.training, color: '#8fb996' },
+      { name: 'Custom', value: serviceTypeRevenue.custom, color: '#e7d188' },
     ].filter(item => item.value > 0),
     [serviceTypeRevenue]
   )

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
   getTeamMemberCounts,
   calculateBookingRevenue,
@@ -34,6 +34,8 @@ export interface Staff {
   role: string
   phone?: string
   avatar_url?: string
+  staff_number?: string | null
+  skills?: string[] | null
 }
 
 interface BookingRawFromDB {
@@ -64,7 +66,6 @@ interface TeamMembershipPeriod {
 }
 
 export function useStaffPerformance(staffId: string | undefined) {
-  const { toast } = useToast()
   const [staff, setStaff] = useState<Staff | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<StaffPerformanceStats>({
@@ -89,7 +90,7 @@ export function useStaffPerformance(staffId: string | undefined) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, phone, avatar_url')
+        .select('id, full_name, email, role, phone, avatar_url, staff_number, skills')
         .eq('id', staffId)
         .single()
 
@@ -103,13 +104,9 @@ export function useStaffPerformance(staffId: string | undefined) {
     } catch (error) {
       console.error('Error fetching staff:', error)
       setError('Failed to load staff data')
-      toast({
-        title: 'Error',
-        description: 'Failed to load staff data',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load staff data')
     }
-  }, [staffId, toast])
+  }, [staffId])
 
   const fetchBookings = useCallback(async () => {
     if (!staffId) return
@@ -263,13 +260,9 @@ export function useStaffPerformance(staffId: string | undefined) {
       await calculateMonthlyData(filteredData)
     } catch (error) {
       console.error('Error fetching bookings:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load bookings',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load bookings')
     }
-  }, [staffId, toast])
+  }, [staffId])
 
   const calculateStats = async (bookingsData: Booking[], membershipPeriods: MembershipPeriod[] = []) => {
     const total = bookingsData.length
@@ -296,10 +289,7 @@ export function useStaffPerformance(staffId: string | undefined) {
       } catch (error) {
         // Reviews table may not exist in all deployments - show warning toast
         console.warn('Could not fetch reviews:', error)
-        toast({
-          title: 'Warning',
-          description: 'Could not load rating data. Other statistics are available.',
-        })
+        toast.warning('Could not load rating data. Other statistics are available.')
       }
     }
 

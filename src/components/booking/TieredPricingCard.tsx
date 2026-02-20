@@ -20,12 +20,15 @@ interface TieredPricingCardProps {
   servicePackageId: string
   areaSqm: number | null
   frequency: BookingFrequency
+  /** Called when price is calculated (or 0 when area is cleared) */
+  onPriceCalculated?: (price: number) => void
 }
 
 export function TieredPricingCard({
   servicePackageId,
   areaSqm,
-  frequency
+  frequency,
+  onPriceCalculated,
 }: TieredPricingCardProps) {
   const [pricingResult, setPricingResult] = useState<PricingCalculationResult | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
@@ -34,6 +37,7 @@ export function TieredPricingCard({
   useEffect(() => {
     if (!areaSqm || areaSqm <= 0) {
       setPricingResult(null)
+      onPriceCalculated?.(0)
       return
     }
 
@@ -41,15 +45,16 @@ export function TieredPricingCard({
     calculatePricing(servicePackageId, areaSqm, frequency)
       .then((result) => {
         if (result.found) {
-          setPrevPrice(prev => prev)
           setPricingResult(prevResult => {
             if (prevResult?.price) {
               setPrevPrice(prevResult.price)
             }
             return result
           })
+          onPriceCalculated?.(result.price)
         } else {
           setPricingResult(result)
+          onPriceCalculated?.(0)
         }
       })
       .catch((error) => {
@@ -59,7 +64,7 @@ export function TieredPricingCard({
       .finally(() => {
         setTimeout(() => setIsCalculating(false), 300)
       })
-  }, [servicePackageId, areaSqm, frequency])
+  }, [servicePackageId, areaSqm, frequency, onPriceCalculated])
 
   // Empty State - ยังไม่กรอกพื้นที่ (ไม่แสดงอะไร)
   if (!areaSqm || areaSqm <= 0) {

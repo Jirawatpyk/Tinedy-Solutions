@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { useSoftDelete } from '@/hooks/use-soft-delete'
 import { useOptimisticPayment, useOptimisticDelete } from '@/hooks/optimistic'
 import { useBookingsByCustomer } from '@/hooks/use-bookings'
@@ -29,7 +29,7 @@ import type { BookingFormState } from '@/hooks/use-booking-form'
 import type { PackageSelectionData } from '@/components/service-packages'
 import { RecurringPattern as RecurringPatternValues } from '@/types/recurring-booking'
 import type { RecurringGroup, RecurringPattern } from '@/types/recurring-booking'
-import type { CustomerStats, CustomerBooking, CombinedItem } from '@/components/customer-detail'
+import type { CustomerStats, CustomerBooking, HistoryCombinedItem } from '@/components/customer-detail'
 import { StatusBadge, getPaymentStatusVariant, getPaymentStatusLabel } from '@/components/common/StatusBadge'
 
 interface Team {
@@ -70,7 +70,6 @@ interface CustomerDetailState {
     booking_date?: string
     start_time?: string
     end_time?: string
-    service_package_id?: string
     package_v2_id?: string
   } | null
   selectedCreateStaffId: string
@@ -85,7 +84,6 @@ interface CustomerDetailState {
     booking_date?: string
     start_time?: string
     end_time?: string
-    service_package_id?: string
     package_v2_id?: string
   } | null
   selectedEditStaffId: string
@@ -247,7 +245,6 @@ function customerDetailReducer(state: CustomerDetailState, action: CustomerDetai
 
 export function useCustomerDetail(customerId: string | undefined) {
   const navigate = useNavigate()
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   const { softDelete } = useSoftDelete('bookings')
   const basePath = '/admin'
@@ -374,7 +371,7 @@ export function useCustomerDetail(customerId: string | undefined) {
       await fetchStats()
     } catch (error) {
       logger.error('Error fetching customer details', { error }, { context: 'CustomerDetail' })
-      toast({ title: 'Error', description: 'Failed to load customer details', variant: 'destructive' })
+      toast.error('Failed to load customer details')
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false })
     }
@@ -453,7 +450,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     })
   }, [bookings, state.searchQuery, state.statusFilter, state.paymentStatusFilter])
 
-  const combinedItems = useMemo((): CombinedItem[] => {
+  const combinedItems = useMemo((): HistoryCombinedItem[] => {
     const recurring: RecurringGroup[] = []
     const standalone: typeof filteredBookings = []
     const processedGroupIds = new Set<string>()
@@ -488,7 +485,7 @@ export function useCustomerDetail(customerId: string | undefined) {
       }
     })
 
-    const combined: CombinedItem[] = [
+    const combined: HistoryCombinedItem[] = [
       ...recurring.map(group => ({
         type: 'group' as const,
         data: group,
@@ -518,7 +515,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     let bookingsSoFar = 0
     const targetStart = (state.currentPage - 1) * itemsPerPage
     const targetEnd = targetStart + itemsPerPage
-    const result: CombinedItem[] = []
+    const result: HistoryCombinedItem[] = []
 
     for (const item of combinedItems) {
       const itemBookingsCount = item.type === 'group' ? (item.data as RecurringGroup).bookings.length : 1
@@ -575,18 +572,18 @@ export function useCustomerDetail(customerId: string | undefined) {
       const { error } = await supabase.from('customers').update({ notes: updatedNotes }).eq('id', customerId)
       if (error) throw error
 
-      toast({ title: 'Success', description: 'Note added successfully' })
+      toast.success('Note added successfully')
       dispatch({ type: 'CLOSE_MODAL' })
       dispatch({ type: 'SET_NOTE_TEXT', payload: '' })
       fetchCustomerDetails()
     } catch (error) {
       logger.error('Error adding note', { error }, { context: 'CustomerDetail' })
       const errorMsg = mapErrorToUserMessage(error, 'customer')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       dispatch({ type: 'SET_SUBMITTING', payload: false })
     }
-  }, [customerId, state.noteText, state.customer?.notes, toast, fetchCustomerDetails])
+  }, [customerId, state.noteText, state.customer?.notes, fetchCustomerDetails])
 
   const archiveCustomer = useCallback(() => {
     if (!customerId) return
@@ -597,18 +594,17 @@ export function useCustomerDetail(customerId: string | undefined) {
     try {
       const { error } = await supabase.from('customers').delete().eq('id', customerId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Customer deleted successfully' })
+      toast.success('Customer deleted successfully')
       navigate(`${basePath}/customers`)
     } catch (error) {
       logger.error('Error deleting customer', { error }, { context: 'CustomerDetail' })
       const errorMsg = getDeleteErrorMessage('customer')
-      toast({ title: errorMsg.title, description: errorMsg.description, variant: 'destructive' })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     }
-  }, [customerId, toast, navigate, basePath])
+  }, [customerId, navigate, basePath])
 
   const handleEditBooking = useCallback((booking: Booking) => {
     const formState: BookingFormState = {
-      service_package_id: booking.service_package_id,
       package_v2_id: 'package_v2_id' in booking ? (booking.package_v2_id || undefined) : undefined,
       area_sqm: 'area_sqm' in booking ? (booking.area_sqm || undefined) : undefined,
       frequency: 'frequency' in booking ? (booking.frequency || undefined) : undefined,
@@ -631,7 +627,7 @@ export function useCustomerDetail(customerId: string | undefined) {
     else if (booking.team_id) assignmentType = 'team'
 
     let pkgSelection: PackageSelectionData | null = null
-    const packageId = ('package_v2_id' in booking && booking.package_v2_id) || booking.service_package_id
+    const packageId = 'package_v2_id' in booking ? booking.package_v2_id : null
     if (packageId) {
       const pkg = servicePackages.find(p => p.id === packageId)
       if (pkg) {
@@ -672,7 +668,6 @@ export function useCustomerDetail(customerId: string | undefined) {
       zip_code: booking.zip_code,
       staff_id: booking.staff_id,
       team_id: booking.team_id,
-      service_package_id: booking.service_package_id,
       package_v2_id: 'package_v2_id' in booking ? booking.package_v2_id : null,
       area_sqm: 'area_sqm' in booking ? booking.area_sqm : null,
       frequency: 'frequency' in booking ? booking.frequency : null,
@@ -736,21 +731,21 @@ export function useCustomerDetail(customerId: string | undefined) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Booking History')
     const filename = `${state.customer.full_name}_booking_history_${new Date().toISOString().split('T')[0]}.xlsx`
     XLSX.writeFile(workbook, filename)
-    toast({ title: 'Success', description: 'Booking history exported to Excel successfully' })
-  }, [state.customer, filteredBookings, toast])
+    toast.success('Booking history exported to Excel successfully')
+  }, [state.customer, filteredBookings])
 
   const deleteBookingById = useCallback(async (bookingId: string) => {
     try {
       const { error } = await supabase.from('bookings').delete().eq('id', bookingId)
       if (error) throw error
-      toast({ title: 'Success', description: 'Booking deleted successfully' })
+      toast.success('Booking deleted successfully')
       dispatch({ type: 'CLOSE_MODAL' })
       dispatch({ type: 'SET_SELECTED_BOOKING_ID', payload: null })
       refetchBookings()
     } catch (_error) {
-      toast({ title: 'Error', description: 'Failed to delete booking', variant: 'destructive' })
+      toast.error('Failed to delete booking')
     }
-  }, [toast, refetchBookings])
+  }, [refetchBookings])
 
   const getPaymentStatusBadge = useCallback((status?: string) => {
     const displayStatus = status === 'pending' ? 'unpaid' : (status || 'unpaid')

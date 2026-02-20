@@ -27,8 +27,9 @@ import { type StaffBooking } from '@/lib/queries/staff-bookings-queries'
 import { BookingStatus } from '@/types/booking'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { formatFullAddress, calculateDuration } from '@/lib/booking-utils'
+import { bookingDurationDays } from '@/lib/date-range-utils'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { BookingTimelineSkeleton } from '@/components/staff/skeletons'
 import { useBookingReview, useBookingTeamMembers } from '@/hooks/use-booking-details'
@@ -74,7 +75,6 @@ export function BookingDetailContent({
   const [isStarting, setIsStarting] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const { toast } = useToast()
 
   // Sync notes state when booking.notes changes (e.g., from realtime updates)
   useEffect(() => {
@@ -82,7 +82,7 @@ export function BookingDetailContent({
   }, [booking.notes])
 
   // Data fetching hooks
-  const { review } = useBookingReview(booking.id, true)
+  const { review } = useBookingReview(booking.id, booking.status === BookingStatus.Completed)
   const { teamMembers } = useBookingTeamMembers(
     booking.team_id,
     booking.created_at,
@@ -95,16 +95,9 @@ export function BookingDetailContent({
     setIsSaving(true)
     try {
       await onAddNotes(booking.id, notes.trim())
-      toast({
-        title: 'Saved',
-        description: 'Notes saved successfully',
-      })
+      toast.success('Notes saved successfully')
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to save notes',
-        variant: 'destructive',
-      })
+      toast.error('Failed to save notes')
     } finally {
       setIsSaving(false)
     }
@@ -117,11 +110,7 @@ export function BookingDetailContent({
       await onStartProgress(booking.id)
       onClose()
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to start task',
-        variant: 'destructive',
-      })
+      toast.error('Failed to start task')
     } finally {
       setIsStarting(false)
     }
@@ -134,11 +123,7 @@ export function BookingDetailContent({
       await onMarkCompleted(booking.id)
       onClose()
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to mark as completed',
-        variant: 'destructive',
-      })
+      toast.error('Failed to mark as completed')
     } finally {
       setIsMarking(false)
     }
@@ -148,8 +133,11 @@ export function BookingDetailContent({
   const canMarkCompleted = booking.status === BookingStatus.InProgress
   const hasNotesChanged = notes !== (booking.notes || '')
 
-  // Calculate duration string
-  const durationStr = calculateDuration(booking.start_time, booking.end_time)
+  // Calculate duration — multi-day shows "X วัน", single-day shows hours
+  const totalDays = bookingDurationDays({ booking_date: booking.booking_date, end_date: booking.end_date })
+  const durationStr = totalDays > 1
+    ? `${totalDays} วัน`
+    : calculateDuration(booking.start_time, booking.end_time)
 
   // Check if there are more details to show
   const hasTeamInfo = booking.team_id && booking.teams
@@ -166,6 +154,7 @@ export function BookingDetailContent({
           startTime={booking.start_time}
           endTime={booking.end_time}
           date={booking.booking_date}
+          endDate={booking.end_date}
           status={booking.status}
         />
 
@@ -177,7 +166,7 @@ export function BookingDetailContent({
 
         {/* Service Summary */}
         <BookingServiceSummary
-          serviceName={booking.service_packages?.name}
+          serviceName={booking.job_name ?? booking.service_packages_v2?.name ?? booking.service_packages?.name}
           duration={durationStr}
           price={booking.service_packages?.price}
           teamName={booking.teams?.name}

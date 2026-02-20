@@ -2,14 +2,13 @@
  * TierEditor Component - Area-based Pricing Tier Management
  *
  * Component สำหรับจัดการระดับราคาตามพื้นที่ (Pricing Tiers)
- * รองรับการเพิ่ม/ลบ/แก้ไข tiers แบบ dynamic
+ * รองรับการเพิ่ม/ลบ/แก้ไข tiers แบบ dynamic พร้อม frequency pricing แบบไม่จำกัดจำนวน
  *
  * Features:
  * - เพิ่ม/ลบระดับราคา
  * - กำหนดช่วงพื้นที่ (area_min - area_max)
- * - ตั้งราคาสำหรับแต่ละแพ็กเกจ (1, 2, 4, 8 ครั้ง)
+ * - ราคาตามจำนวนครั้ง (frequency_prices) แบบ dynamic — เพิ่ม/ลบแถวได้อิสระ
  * - ตรวจสอบความถูกต้อง (validation)
- * - แสดงตัวอย่างราคา
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -20,19 +19,19 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import type { FrequencyPrice } from '@/types/service-package-v2'
 
 /**
  * Tier data for form (without package_id and timestamps)
+ * _key is a stable client-side id for React reconciliation
  */
 export interface TierFormData {
+  _key: string
   area_min: number
   area_max: number
   required_staff: number
   estimated_hours: number
-  price_1_time: number
-  price_2_times: number | null
-  price_4_times: number | null
-  price_8_times: number | null
+  frequency_prices: FrequencyPrice[]
 }
 
 interface TierEditorProps {
@@ -51,14 +50,12 @@ interface TierEditorProps {
  */
 function createEmptyTier(): TierFormData {
   return {
+    _key: crypto.randomUUID(),
     area_min: 0,
     area_max: 100,
     required_staff: 1,
     estimated_hours: 0,
-    price_1_time: 0,
-    price_2_times: null,
-    price_4_times: null,
-    price_8_times: null,
+    frequency_prices: [{ times: 1, price: 0 }],
   }
 }
 
@@ -82,7 +79,6 @@ export function TierEditor({
     tiers.forEach((tier, index) => {
       const tierErrors: string[] = []
 
-      // Area validation
       if (tier.area_min < 0) {
         tierErrors.push('Minimum area cannot be negative')
       }
@@ -104,14 +100,18 @@ export function TierEditor({
         }
       })
 
-      // Staff validation
       if (tier.required_staff < 1) {
         tierErrors.push('Must have at least 1 staff member')
       }
 
-      // Price validation (allow 0 for optional pricing)
-      if (tier.price_1_time < 0) {
-        tierErrors.push('Price for 1 time cannot be negative')
+      if (tier.frequency_prices.length === 0) {
+        tierErrors.push('At least one frequency pricing entry is required')
+      }
+
+      // Check for duplicate times
+      const timesSet = new Set(tier.frequency_prices.map((fp) => fp.times))
+      if (timesSet.size !== tier.frequency_prices.length) {
+        tierErrors.push('Duplicate frequency entries found')
       }
 
       if (tierErrors.length > 0) {
@@ -123,49 +123,88 @@ export function TierEditor({
     return Object.keys(errors).length === 0
   }, [tiers])
 
-  // Validate tiers whenever they change
   useEffect(() => {
     if (showErrors) {
       validateTiers()
     }
   }, [tiers, showErrors, validateTiers])
 
-  /**
-   * Add new tier
-   */
+  // ─── Tier-level handlers ───────────────────────────────────────────────────
+
   const handleAddTier = () => {
     const lastTier = tiers[tiers.length - 1]
     const newTier = createEmptyTier()
 
-    // Auto-set area_min based on last tier
     if (lastTier) {
       newTier.area_min = lastTier.area_max + 1
       newTier.area_max = lastTier.area_max + 100
       newTier.required_staff = lastTier.required_staff
+      // Copy frequency structure from last tier (same times, zero price)
+      newTier.frequency_prices = lastTier.frequency_prices.map((fp) => ({
+        times: fp.times,
+        price: 0,
+      }))
     }
 
     onChange([...tiers, newTier])
   }
 
-  /**
-   * Remove tier
-   */
   const handleRemoveTier = (index: number) => {
-    const newTiers = tiers.filter((_, i) => i !== index)
+    onChange(tiers.filter((_, i) => i !== index))
+  }
+
+  const handleUpdateTierField = (
+    tierIndex: number,
+    field: 'area_min' | 'area_max' | 'estimated_hours' | 'required_staff',
+    value: number
+  ) => {
+    const newTiers = [...tiers]
+    newTiers[tierIndex] = { ...newTiers[tierIndex], [field]: value }
     onChange(newTiers)
   }
 
-  /**
-   * Update tier field
-   */
-  const handleUpdateTier = (index: number, field: keyof TierFormData, value: number | null) => {
+  // ─── Frequency price row handlers ─────────────────────────────────────────
+
+  const handleAddFrequency = (tierIndex: number) => {
     const newTiers = [...tiers]
-    newTiers[index] = {
-      ...newTiers[index],
-      [field]: value,
+    const existingTimes = newTiers[tierIndex].frequency_prices.map((fp) => fp.times)
+    // Suggest next sensible default (next integer not yet used)
+    let nextTimes = 1
+    while (existingTimes.includes(nextTimes)) nextTimes++
+
+    newTiers[tierIndex] = {
+      ...newTiers[tierIndex],
+      frequency_prices: [
+        ...newTiers[tierIndex].frequency_prices,
+        { times: nextTimes, price: 0 },
+      ],
     }
     onChange(newTiers)
   }
+
+  const handleRemoveFrequency = (tierIndex: number, freqIndex: number) => {
+    const newTiers = [...tiers]
+    newTiers[tierIndex] = {
+      ...newTiers[tierIndex],
+      frequency_prices: newTiers[tierIndex].frequency_prices.filter((_, i) => i !== freqIndex),
+    }
+    onChange(newTiers)
+  }
+
+  const handleUpdateFrequency = (
+    tierIndex: number,
+    freqIndex: number,
+    field: 'times' | 'price',
+    value: number
+  ) => {
+    const newTiers = [...tiers]
+    const fps = [...newTiers[tierIndex].frequency_prices]
+    fps[freqIndex] = { ...fps[freqIndex], [field]: value }
+    newTiers[tierIndex] = { ...newTiers[tierIndex], frequency_prices: fps }
+    onChange(newTiers)
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
@@ -197,12 +236,7 @@ export function TierEditor({
             <p className="text-muted-foreground mb-4">
               No pricing tiers yet. Please add at least 1 tier.
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddTier}
-              disabled={disabled}
-            >
+            <Button type="button" variant="outline" onClick={handleAddTier} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add First Tier
             </Button>
@@ -210,27 +244,27 @@ export function TierEditor({
         </Card>
       ) : (
         <div className="space-y-4">
-          {tiers.map((tier, index) => (
+          {tiers.map((tier, tierIndex) => (
             <Card
-              key={index}
+              key={tier._key}
               className={cn(
                 'relative',
-                validationErrors[index] && showErrors && 'border-red-500'
+                validationErrors[tierIndex] && showErrors && 'border-red-500'
               )}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">Tier {index + 1}</Badge>
+                    <Badge variant="outline">Tier {tierIndex + 1}</Badge>
                     <span className="text-sm text-muted-foreground">
-                      {tier.area_min}-{tier.area_max} sqm
+                      {tier.area_min}–{tier.area_max} sqm
                     </span>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveTier(index)}
+                    onClick={() => handleRemoveTier(tierIndex)}
                     disabled={disabled || tiers.length === 1}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
@@ -240,13 +274,11 @@ export function TierEditor({
 
               <CardContent className="space-y-4">
                 {/* Validation Errors */}
-                {validationErrors[index] && showErrors && (
+                {validationErrors[tierIndex] && showErrors && (
                   <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                    <p className="text-sm font-medium text-red-800 mb-1">
-                      Errors found:
-                    </p>
+                    <p className="text-sm font-medium text-red-800 mb-1">Errors found:</p>
                     <ul className="text-sm text-red-700 space-y-1">
-                      {validationErrors[index].map((error, i) => (
+                      {validationErrors[tierIndex].map((error, i) => (
                         <li key={i}>• {error}</li>
                       ))}
                     </ul>
@@ -256,47 +288,71 @@ export function TierEditor({
                 {/* Area Range */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor={`tier-${index}-min`}>Minimum Area (sqm)</Label>
+                    <Label htmlFor={`tier-${tierIndex}-min`}>Min Area (sqm)</Label>
                     <Input
-                      id={`tier-${index}-min`}
+                      id={`tier-${tierIndex}-min`}
                       type="number"
                       min="0"
                       value={tier.area_min}
                       onChange={(e) =>
-                        handleUpdateTier(index, 'area_min', parseInt(e.target.value) || 0)
+                        handleUpdateTierField(tierIndex, 'area_min', parseInt(e.target.value) || 0)
                       }
                       disabled={disabled}
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`tier-${index}-max`}>Maximum Area (sqm)</Label>
+                    <Label htmlFor={`tier-${tierIndex}-max`}>Max Area (sqm)</Label>
                     <Input
-                      id={`tier-${index}-max`}
+                      id={`tier-${tierIndex}-max`}
                       type="number"
                       min="0"
                       value={tier.area_max}
                       onChange={(e) =>
-                        handleUpdateTier(index, 'area_max', parseInt(e.target.value) || 0)
+                        handleUpdateTierField(tierIndex, 'area_max', parseInt(e.target.value) || 0)
                       }
                       disabled={disabled}
                     />
                   </div>
                 </div>
 
+                {/* Required Staff */}
+                <div>
+                  <Label htmlFor={`tier-${tierIndex}-staff`}>Required Staff *</Label>
+                  <Input
+                    id={`tier-${tierIndex}-staff`}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={tier.required_staff}
+                    onChange={(e) =>
+                      handleUpdateTierField(
+                        tierIndex,
+                        'required_staff',
+                        parseInt(e.target.value) || 1
+                      )
+                    }
+                    disabled={disabled}
+                    className={cn(
+                      showErrors && tier.required_staff < 1 && 'border-red-500'
+                    )}
+                  />
+                  {showErrors && tier.required_staff < 1 && (
+                    <p className="text-sm text-red-500 mt-1">At least 1 staff required</p>
+                  )}
+                </div>
+
                 {/* Estimated Hours */}
                 <div>
-                  <Label htmlFor={`tier-${index}-hours`}>
-                    Estimated Hours *
-                  </Label>
+                  <Label htmlFor={`tier-${tierIndex}-hours`}>Estimated Hours *</Label>
                   <Input
-                    id={`tier-${index}-hours`}
+                    id={`tier-${tierIndex}-hours`}
                     type="number"
                     step="0.5"
                     min="0.5"
                     value={tier.estimated_hours > 0 ? tier.estimated_hours : ''}
                     onChange={(e) =>
-                      handleUpdateTier(
-                        index,
+                      handleUpdateTierField(
+                        tierIndex,
                         'estimated_hours',
                         e.target.value ? parseFloat(e.target.value) : 0
                       )
@@ -304,7 +360,9 @@ export function TierEditor({
                     placeholder="e.g. 2.5"
                     disabled={disabled}
                     className={cn(
-                      showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && 'border-red-500'
+                      showErrors &&
+                        (!tier.estimated_hours || tier.estimated_hours <= 0) &&
+                        'border-red-500'
                     )}
                   />
                   {showErrors && (!tier.estimated_hours || tier.estimated_hours <= 0) && (
@@ -312,126 +370,113 @@ export function TierEditor({
                   )}
                 </div>
 
-                {/* Prices by Frequency */}
-                <div>
-                  <Label className="mb-3 block">Pricing by Frequency</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* 1 time */}
-                    <div>
-                      <Label htmlFor={`tier-${index}-price-1`} className="text-sm">
-                        1 time *
-                      </Label>
+                {/* ── Pricing by Frequency (dynamic rows) ── */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Pricing by Frequency</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddFrequency(tierIndex)}
+                      disabled={disabled}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {tier.frequency_prices.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">
+                      No frequency pricing set. Click Add to add one.
+                    </p>
+                  )}
+
+                  {/* Column headers */}
+                  {tier.frequency_prices.length > 0 && (
+                    <div className="grid grid-cols-[1fr_1.5fr_auto] gap-2 px-1">
+                      <span className="text-xs text-muted-foreground font-medium">Times/mo</span>
+                      <span className="text-xs text-muted-foreground font-medium">Price (฿)</span>
+                      <span className="w-8" />
+                    </div>
+                  )}
+
+                  {tier.frequency_prices.map((fp, freqIndex) => (
+                    <div
+                      key={`${tier._key}-freq-${freqIndex}`}
+                      className="grid grid-cols-[1fr_1.5fr_auto] gap-2 items-center"
+                    >
+                      {/* Times */}
                       <Input
-                        id={`tier-${index}-price-1`}
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={fp.times}
+                        onChange={(e) =>
+                          handleUpdateFrequency(
+                            tierIndex,
+                            freqIndex,
+                            'times',
+                            parseInt(e.target.value) || 1
+                          )
+                        }
+                        disabled={disabled}
+                        placeholder="1"
+                        aria-label={`Tier ${tierIndex + 1} frequency ${freqIndex + 1} times`}
+                      />
+
+                      {/* Price */}
+                      <Input
                         type="number"
                         min="0"
                         step="0.01"
-                        value={tier.price_1_time}
+                        value={fp.price}
                         onChange={(e) =>
-                          handleUpdateTier(index, 'price_1_time', parseFloat(e.target.value) || 0)
+                          handleUpdateFrequency(
+                            tierIndex,
+                            freqIndex,
+                            'price',
+                            parseFloat(e.target.value) || 0
+                          )
                         }
                         disabled={disabled}
                         placeholder="0.00"
+                        aria-label={`Tier ${tierIndex + 1} frequency ${freqIndex + 1} price`}
                       />
-                    </div>
 
-                    {/* 2 times */}
-                    <div>
-                      <Label htmlFor={`tier-${index}-price-2`} className="text-sm">
-                        2 times
-                      </Label>
-                      <Input
-                        id={`tier-${index}-price-2`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={tier.price_2_times ?? ''}
-                        onChange={(e) =>
-                          handleUpdateTier(
-                            index,
-                            'price_2_times',
-                            e.target.value ? parseFloat(e.target.value) : null
-                          )
-                        }
-                        disabled={disabled}
-                        placeholder="Optional"
-                      />
+                      {/* Remove */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleRemoveFrequency(tierIndex, freqIndex)}
+                        disabled={disabled || tier.frequency_prices.length === 1}
+                        aria-label="Remove frequency row"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-
-                    {/* 4 times */}
-                    <div>
-                      <Label htmlFor={`tier-${index}-price-4`} className="text-sm">
-                        4 times
-                      </Label>
-                      <Input
-                        id={`tier-${index}-price-4`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={tier.price_4_times ?? ''}
-                        onChange={(e) =>
-                          handleUpdateTier(
-                            index,
-                            'price_4_times',
-                            e.target.value ? parseFloat(e.target.value) : null
-                          )
-                        }
-                        disabled={disabled}
-                        placeholder="Optional"
-                      />
-                    </div>
-
-                    {/* 8 times */}
-                    <div>
-                      <Label htmlFor={`tier-${index}-price-8`} className="text-sm">
-                        8 times
-                      </Label>
-                      <Input
-                        id={`tier-${index}-price-8`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={tier.price_8_times ?? ''}
-                        onChange={(e) =>
-                          handleUpdateTier(
-                            index,
-                            'price_8_times',
-                            e.target.value ? parseFloat(e.target.value) : null
-                          )
-                        }
-                        disabled={disabled}
-                        placeholder="Optional"
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* Price Summary */}
-                <div className="bg-muted rounded-md p-3">
-                  <p className="text-sm font-medium mb-2">Price Summary:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>1 time:</div>
-                    <div className="font-semibold">{formatCurrency(tier.price_1_time)}</div>
-                    {tier.price_2_times != null && tier.price_2_times > 0 && (
-                      <>
-                        <div>2 times:</div>
-                        <div className="font-semibold">{formatCurrency(tier.price_2_times)}</div>
-                      </>
-                    )}
-                    {tier.price_4_times != null && tier.price_4_times > 0 && (
-                      <>
-                        <div>4 times:</div>
-                        <div className="font-semibold">{formatCurrency(tier.price_4_times)}</div>
-                      </>
-                    )}
-                    {tier.price_8_times != null && tier.price_8_times > 0 && (
-                      <>
-                        <div>8 times:</div>
-                        <div className="font-semibold">{formatCurrency(tier.price_8_times)}</div>
-                      </>
-                    )}
+                {tier.frequency_prices.some((fp) => fp.price > 0) && (
+                  <div className="bg-muted rounded-md p-3">
+                    <p className="text-sm font-medium mb-2">Price Summary:</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      {[...tier.frequency_prices]
+                        .sort((a, b) => a.times - b.times)
+                        .filter((fp) => fp.price > 0)
+                        .map((fp, i) => (
+                          <div key={i} className="contents">
+                            <div className="text-muted-foreground">{fp.times}×:</div>
+                            <div className="font-semibold">{formatCurrency(fp.price)}</div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -445,8 +490,8 @@ export function TierEditor({
             <div className="flex items-center gap-2 text-sm text-blue-800">
               <AlertCircle className="h-4 w-4" />
               <span>
-                {tiers.length} pricing tier{tiers.length > 1 ? 's' : ''} defined (covering area {tiers[0]?.area_min || 0} -{' '}
-                {tiers[tiers.length - 1]?.area_max || 0} sqm)
+                {tiers.length} pricing tier{tiers.length > 1 ? 's' : ''} defined (covering area{' '}
+                {tiers[0]?.area_min || 0}–{tiers[tiers.length - 1]?.area_max || 0} sqm)
               </span>
             </div>
           </CardContent>

@@ -262,8 +262,8 @@ export function useBookingForm(
     }
 
     // Service package validation (V1 or V2)
-    if (!formData.service_package_id && !formData.package_v2_id) {
-      newErrors.service_package_id = 'Service package is required'
+    if (!formData.package_v2_id) {
+      newErrors.package_v2_id = 'Service package is required'
     }
 
     // Date and time validation

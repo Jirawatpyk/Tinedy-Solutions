@@ -11,24 +11,22 @@ import { StaffPerformanceCharts } from '@/components/staff/performance/StaffPerf
 import { StaffRecentBookings } from '@/components/staff/performance/StaffRecentBookings'
 import { ErrorBoundary, SectionErrorBoundary } from '@/components/ErrorBoundary'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { getDeleteErrorMessage } from '@/lib/error-messages'
 import { useEffect, useState } from 'react'
-import { StaffEditDialog, type StaffForEdit } from '@/components/staff/StaffEditDialog'
+import { StaffEditSheet, type StaffForEdit } from '@/components/staff/StaffEditSheet'
 
 export function AdminStaffPerformance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
-
   // Both admin and manager use /admin routes
   const basePath = '/admin'
 
   // Use custom hook for data fetching and stats calculation
   const { staff, stats, monthlyData, loading, error, refresh } = useStaffPerformance(id)
 
-  // Edit dialog state
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  // Edit sheet state
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [staffForEdit, setStaffForEdit] = useState<StaffForEdit | null>(null)
 
   // Fetch additional counts for delete warning
@@ -79,33 +77,33 @@ export function AdminStaffPerformance() {
         throw new Error(data?.error || data?.details || 'Failed to delete user')
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Staff member deleted successfully',
-      })
+      toast.success(data.message || 'Staff member deleted successfully')
 
       // Navigate back to staff list
       navigate(`${basePath}/staff`)
     } catch (error) {
       console.error('[Delete Staff] Error:', error)
       const errorMessage = getDeleteErrorMessage('staff')
-      toast({
-        title: errorMessage.title,
-        description: errorMessage.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMessage.title, { description: errorMessage.description })
     }
   }
 
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 sm:h-8 w-48 sm:w-64" />
-            <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
+        {/* Header skeleton — mirrors StaffPerformanceHeader layout */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Skeleton className="h-9 w-9 rounded-md flex-shrink-0" />
+            <Skeleton className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex-shrink-0" />
+            <div className="space-y-2 min-w-0">
+              <Skeleton className="h-6 sm:h-8 w-48 sm:w-64" />
+              <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Skeleton className="h-8 w-8 sm:h-9 sm:w-16" />
+            <Skeleton className="h-8 w-8 sm:h-9 sm:w-20" />
           </div>
         </div>
 
@@ -172,10 +170,10 @@ export function AdminStaffPerformance() {
                   full_name: staff.full_name,
                   phone: staff.phone,
                   role: staff.role as 'admin' | 'manager' | 'staff',
-                  staff_number: undefined, // Will be fetched in dialog
-                  skills: undefined, // Will be fetched in dialog
+                  staff_number: staff.staff_number,
+                  skills: staff.skills,
                 })
-                setIsEditDialogOpen(true)
+                setIsEditSheetOpen(true)
               }
             }}
             onDelete={deleteStaff}
@@ -195,10 +193,10 @@ export function AdminStaffPerformance() {
         </SectionErrorBoundary>
       </div>
 
-      {/* Edit Dialog */}
-      <StaffEditDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+      {/* Edit Staff Sheet */}
+      <StaffEditSheet
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
         staff={staffForEdit}
         onSuccess={refresh}
       />

@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Lock, AlertCircle } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { mapErrorToUserMessage } from '@/lib/error-messages'
 import { formatRole } from '@/lib/role-utils'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -36,23 +36,17 @@ export default function AdminProfile() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const { toast } = useToast()
-
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Passwords do not match',
+      toast.error('Passwords do not match', {
         description: 'Please ensure both password fields match',
-        variant: 'destructive',
       })
       return
     }
 
     if (newPassword.length < 6) {
-      toast({
-        title: 'Password too short',
+      toast.error('Password too short', {
         description: 'Password must be at least 6 characters long',
-        variant: 'destructive',
       })
       return
     }
@@ -60,19 +54,12 @@ export default function AdminProfile() {
     try {
       setChangingPassword(true)
       await changePassword(newPassword)
-      toast({
-        title: 'Password changed successfully',
-        description: 'Your password has been updated',
-      })
+      toast.success('Your password has been updated')
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
       const errorMsg = mapErrorToUserMessage(error, 'general')
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: 'destructive',
-      })
+      toast.error(errorMsg.title, { description: errorMsg.description })
     } finally {
       setChangingPassword(false)
     }

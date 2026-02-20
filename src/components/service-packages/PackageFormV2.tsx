@@ -28,9 +28,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { TierEditor, type TierFormData } from './TierEditor'
-import { Save, X } from 'lucide-react'
+import { Save } from 'lucide-react'
 import {
   PricingModel,
   ServiceCategory,
@@ -65,7 +65,6 @@ export function PackageFormV2({
   onCancel,
   showCancel = true,
 }: PackageFormV2Props) {
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [loadingTiers, setLoadingTiers] = useState(false)
@@ -106,32 +105,43 @@ export function PackageFormV2({
 
       if (error) throw error
 
-      // Convert to TierFormData (remove timestamps and id)
-      const tierData: TierFormData[] = (data || []).map((tier) => ({
-        area_min: tier.area_min,
-        area_max: tier.area_max,
-        required_staff: tier.required_staff,
-        estimated_hours: tier.estimated_hours,
-        price_1_time: tier.price_1_time,
-        price_2_times: tier.price_2_times,
-        price_4_times: tier.price_4_times,
-        price_8_times: tier.price_8_times,
-      }))
+      // Convert to TierFormData — prefer frequency_prices JSONB, fallback to legacy columns
+      const tierData: TierFormData[] = (data || []).map((tier) => {
+        const freqPrices =
+          tier.frequency_prices && tier.frequency_prices.length > 0
+            ? tier.frequency_prices
+            : [
+                { times: 1, price: tier.price_1_time ?? 0 },
+                ...(tier.price_2_times != null
+                  ? [{ times: 2, price: tier.price_2_times }]
+                  : []),
+                ...(tier.price_4_times != null
+                  ? [{ times: 4, price: tier.price_4_times }]
+                  : []),
+                ...(tier.price_8_times != null
+                  ? [{ times: 8, price: tier.price_8_times }]
+                  : []),
+              ]
+        return {
+          _key: crypto.randomUUID(),
+          area_min: tier.area_min,
+          area_max: tier.area_max,
+          required_staff: tier.required_staff,
+          estimated_hours: tier.estimated_hours ?? 0,
+          frequency_prices: freqPrices,
+        }
+      })
 
       setTiers(tierData)
       return tierData
     } catch (error) {
       console.error('Error loading tiers:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load pricing tiers',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load pricing tiers')
       return []
     } finally {
       setLoadingTiers(false)
     }
-  }, [toast])
+  }, [])
 
   // Load package data when editing
   useEffect(() => {
@@ -182,11 +192,7 @@ export function PackageFormV2({
         try {
           validateTiersNoOverlap(data.tiers)
         } catch (error) {
-          toast({
-            title: 'Error',
-            description: error instanceof Error ? error.message : 'Area ranges overlap',
-            variant: 'destructive',
-          })
+          toast.error(error instanceof Error ? error.message : 'Area ranges overlap')
           setLoading(false)
           return
         }
@@ -230,10 +236,7 @@ export function PackageFormV2({
           }
         }
 
-        toast({
-          title: 'Success',
-          description: 'Package updated successfully',
-        })
+        toast.success('Package updated successfully')
       } else {
         // Create new package
         const { data: newPackage, error } = await supabase
@@ -252,10 +255,7 @@ export function PackageFormV2({
           await insertTiers(packageId)
         }
 
-        toast({
-          title: 'Success',
-          description: 'New package created successfully',
-        })
+        toast.success('New package created successfully')
       }
 
       // Invalidate all package queries to refetch data across the app
@@ -264,11 +264,7 @@ export function PackageFormV2({
       onSuccess?.(packageId)
     } catch (error) {
       console.error('Error saving package:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save data',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Failed to save data')
     } finally {
       setLoading(false)
     }
@@ -278,10 +274,22 @@ export function PackageFormV2({
    * Insert tiers for new package
    */
   const insertTiers = async (packageId: string) => {
-    const tierData = tiers.map((tier) => ({
-      package_id: packageId,
-      ...tier,
-    }))
+    const tierData = tiers.map((tier) => {
+      const find = (times: number) =>
+        tier.frequency_prices.find((fp) => fp.times === times)?.price ?? null
+      return {
+        package_id: packageId,
+        area_min: tier.area_min,
+        area_max: tier.area_max,
+        required_staff: tier.required_staff,
+        estimated_hours: tier.estimated_hours,
+        frequency_prices: tier.frequency_prices,
+        price_1_time: find(1) ?? 0,
+        price_2_times: find(2),
+        price_4_times: find(4),
+        price_8_times: find(8),
+      }
+    })
 
     const { error } = await supabase.from('package_pricing_tiers').insert(tierData)
 
@@ -333,7 +341,9 @@ export function PackageFormV2({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <div className="flex flex-col h-full">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -562,19 +572,31 @@ export function PackageFormV2({
         </CardContent>
       </Card>
 
-      {/* Form Actions */}
-      <div className="flex justify-end gap-3">
+      </div>{/* end scrollable */}
+
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 bg-background border-t pt-4 pb-6 flex gap-2 px-6">
         {showCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-            <X className="h-4 w-4 mr-2" />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1"
+          >
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={loading} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
+        <Button
+          type="submit"
+          disabled={loading}
+          className={`${showCancel ? 'flex-1' : ''} bg-tinedy-blue hover:bg-tinedy-blue/90`}
+        >
           <Save className="h-4 w-4 mr-2" />
           {loading ? 'Saving...' : editPackage ? 'Update' : 'Create Package'}
         </Button>
       </div>
     </form>
+    </div>
   )
 }

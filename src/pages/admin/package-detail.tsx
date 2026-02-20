@@ -6,13 +6,7 @@ import { usePackageDetail } from '@/hooks/use-package-detail'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { AppSheet } from '@/components/ui/app-sheet'
 import { PackageFormV2 } from '@/components/service-packages/PackageFormV2'
 
 // Icons
@@ -124,27 +118,25 @@ export default function AdminPackageDetail() {
         />
       </div>
 
-      {/* Edit Package Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => !open && dispatch({ type: 'CLOSE_MODAL' })}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Package</DialogTitle>
-            <DialogDescription>
-              Update package information and pricing tiers
-            </DialogDescription>
-          </DialogHeader>
-          <PackageFormV2
-            package={packageData}
-            packageSource={packageSource}
-            onSuccess={() => {
-              dispatch({ type: 'CLOSE_MODAL' })
-              fetchPackageDetails()
-            }}
-            onCancel={() => dispatch({ type: 'CLOSE_MODAL' })}
-            showCancel={true}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Edit Package — AppSheet */}
+      <AppSheet
+        open={isEditDialogOpen}
+        onOpenChange={(open) => !open && dispatch({ type: 'CLOSE_MODAL' })}
+        title="Edit Package"
+        description="Update package information and pricing tiers"
+        size="lg"
+      >
+        <PackageFormV2
+          package={packageData}
+          packageSource={packageSource}
+          onSuccess={() => {
+            dispatch({ type: 'CLOSE_MODAL' })
+            fetchPackageDetails()
+          }}
+          onCancel={() => dispatch({ type: 'CLOSE_MODAL' })}
+          showCancel={true}
+        />
+      </AppSheet>
     </div>
   )
 }

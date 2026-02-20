@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
-import { formatCurrency, formatDate, formatBookingId } from '@/lib/utils'
+import { formatCurrency, formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
+import { getServiceTypeBadge } from '@/lib/booking-badges'
 import type { CombinedItem } from '@/types/recurring-booking'
 
 interface PaginationMetadata {
@@ -47,7 +49,6 @@ interface BookingListProps {
   onVerifyPayment?: (bookingId: string) => void
   /** Verify payment for entire recurring group */
   onVerifyRecurringGroup?: (recurringGroupId: string) => void
-  showArchived?: boolean
   onStatusChange: (bookingId: string, currentStatus: string, newStatus: string) => void
   formatTime: (time: string) => string
   getStatusBadge: (status: string) => React.ReactElement
@@ -90,7 +91,6 @@ function BookingListComponent({
   onRestoreRecurringGroup,
   onVerifyPayment,
   onVerifyRecurringGroup,
-  showArchived: _showArchived,
   onStatusChange,
   formatTime,
   getStatusBadge,
@@ -202,7 +202,7 @@ function BookingListComponent({
                               Archived
                             </Badge>
                           )}
-                          {/* Mobile: Status badge บนขวา */}
+                          {/* Mobile: Status badge top-right */}
                           <div className="sm:hidden flex-shrink-0 ml-auto">
                             {getStatusBadge(booking.status)}
                           </div>
@@ -213,16 +213,18 @@ function BookingListComponent({
                         </div>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
-                              {booking.service_packages?.service_type}
-                            </Badge>
+                            {getServiceTypeBadge(
+                              booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type,
+                              booking.price_mode,
+                              'mr-1.5 sm:mr-2 text-[10px] sm:text-xs'
+                            )}
                             <span className="truncate">
-                              {booking.service_packages?.name}
+                              {booking.job_name ?? booking.service_packages?.name ?? booking.service_packages_v2?.name}
                             </span>
                           </span>
                         </div>
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          {formatDate(booking.booking_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                          {formatDateRange(booking.booking_date, booking.end_date)} • {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </div>
                         {booking.profiles && (
                           <p className="text-xs sm:text-sm text-tinedy-blue flex items-center gap-1">
@@ -239,7 +241,7 @@ function BookingListComponent({
                       </div>
                       {/* Right Section: Price, Badges, Actions (Desktop) */}
                       <div className="hidden sm:flex sm:flex-col items-end gap-3 sm:gap-4 flex-shrink-0">
-                        {/* Price - บนสุด */}
+                        {/* Price - top */}
                         <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
                           {formatCurrency(Number(booking.total_price))}
                         </p>
@@ -248,7 +250,7 @@ function BookingListComponent({
                           {getStatusBadge(booking.status)}
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
-                        {/* Status dropdown + Delete button - ล่างสุด */}
+                        {/* Status dropdown + Delete button - bottom */}
                         <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
                             <Button
@@ -299,7 +301,7 @@ function BookingListComponent({
                         </div>
                       </div>
 
-                      {/* Mobile: ราคาและ Payment Status ข้างล่าง เหมือน Recurring Group */}
+                      {/* Mobile: Price and Payment Status row at bottom (matches Recurring Group layout) */}
                       <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-tinedy-dark">
@@ -400,7 +402,11 @@ export const BookingList = React.memo(BookingListComponent, (prevProps, nextProp
     prevProps.currentPage === nextProps.currentPage &&
     prevProps.totalPages === nextProps.totalPages &&
     prevProps.itemsPerPage === nextProps.itemsPerPage &&
-    prevProps.metadata === nextProps.metadata
+    prevProps.metadata === nextProps.metadata &&
+    prevProps.onStatusChange === nextProps.onStatusChange &&
+    prevProps.onDeleteBooking === nextProps.onDeleteBooking &&
+    prevProps.onBookingClick === nextProps.onBookingClick &&
+    prevProps.onToggleSelect === nextProps.onToggleSelect
   )
 })
 
