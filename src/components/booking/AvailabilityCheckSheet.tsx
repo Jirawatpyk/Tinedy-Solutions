@@ -56,7 +56,8 @@ export function AvailabilityCheckSheet() {
   const [step, setStep] = useState<'input' | 'results'>('input')
 
   // --- Form state ---
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const [date, setDate] = useState(today)
   const [endDate, setEndDate] = useState('')
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [startTime, setStartTime] = useState('09:00')
@@ -160,9 +161,16 @@ export function AvailabilityCheckSheet() {
   function handleCheckAvailability() {
     if (!servicePackageId || !startTime || !endTime) return
     const isRecurring = frequency > 1
-    if (isRecurring && recurringDates.length === 0) {
-      toast.error('Please select at least one date for recurring booking')
-      return
+    if (isRecurring) {
+      const needsAllDates = recurringPattern === Pattern.Custom
+      if (needsAllDates && recurringDates.length < frequency) {
+        toast.error(`Please select all ${frequency} dates for recurring booking`)
+        return
+      }
+      if (!needsAllDates && recurringDates.length === 0) {
+        toast.error('Please select a start date for recurring booking')
+        return
+      }
     }
     if (!isRecurring && !date) return
     if (isMultiDay && endDate && endDate < date) {
@@ -223,7 +231,8 @@ export function AvailabilityCheckSheet() {
   const isCheckDisabled =
     !servicePackageId ||
     (!isRecurring && !date) ||
-    (isRecurring && recurringDates.length === 0) ||
+    (isRecurring && recurringPattern === Pattern.Custom && recurringDates.length < frequency) ||
+    (isRecurring && recurringPattern !== Pattern.Custom && recurringDates.length === 0) ||
     !startTime ||
     !endTime ||
     (selectedService?.pricing_model === 'tiered' && (!areaSqm || !frequency))
@@ -354,6 +363,7 @@ export function AvailabilityCheckSheet() {
                       id="qac-date"
                       type="date"
                       value={date}
+                      min={today}
                       onChange={(e) => setDate(e.target.value)}
                     />
                   </div>
@@ -415,9 +425,7 @@ export function AvailabilityCheckSheet() {
                       <p className="text-xs text-muted-foreground">
                         {frequency} bookings total (start date + {frequency - 1} monthly)
                       </p>
-                      {!date ? (
-                        <p className="text-xs text-muted-foreground">Select a start date to preview</p>
-                      ) : recurringDates.length > 1 && (
+                      {recurringDates.length > 1 && (
                         <div className="space-y-1.5">
                           <p className="text-xs text-muted-foreground">
                             Future dates ({recurringDates.length - 1})
@@ -444,6 +452,7 @@ export function AvailabilityCheckSheet() {
                         <Input
                           type="date"
                           value={newDateInput}
+                          min={today}
                           onChange={(e) => setNewDateInput(e.target.value)}
                           className="h-9 flex-1"
                         />
