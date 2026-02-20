@@ -17,6 +17,8 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { getErrorMessage } from '@/lib/error-utils'
 import { BookingStatus, PaymentStatus, type PriceMode } from '@/types/booking'
+import { RecurringPattern } from '@/types/recurring-booking'
+import { createRecurringGroup } from '@/lib/recurring-booking-service'
 
 // ============================================================================
 // TYPES
@@ -146,38 +148,80 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
     throw new Error('Please select a customer or enter new customer details')
   }
 
-  // Step 2: Create booking(s) with best-effort rollback on partial failure
+  // Step 2: Create booking(s)
   const bookingIds: string[] = []
 
-  try {
-    if (data.recurring_dates && data.recurring_dates.length > 0) {
-      // H1: Always create the primary booking_date first
-      const primaryId = await createSingleBooking(customerId, data, data.booking_date)
-      bookingIds.push(primaryId)
-      // Batch recurring dates in parallel
-      const recurringIds = await Promise.all(
-        data.recurring_dates.map((date) => createSingleBooking(customerId, data, date))
-      )
-      bookingIds.push(...recurringIds)
-    } else {
-      // Single booking
+  if (data.recurring_dates && data.recurring_dates.length > 0) {
+    // Recurring booking — use createRecurringGroup() for proper linking
+    // Manual mode: recurringDates = ALL dates (no separate primary)
+    // Auto-monthly mode: booking_date (primary) + recurringDates (future)
+    const allDates =
+      data.recurring_pattern === 'manual'
+        ? [...data.recurring_dates].sort()
+        : [data.booking_date, ...data.recurring_dates].sort()
+
+    const pattern =
+      data.recurring_pattern === 'manual'
+        ? RecurringPattern.Custom
+        : RecurringPattern.AutoMonthly
+
+    // Split price per booking: total_price is the package total for all sessions
+    const perBookingPrice = Math.round(data.total_price / allDates.length)
+    const perBookingCustomPrice = data.custom_price != null
+      ? Math.round(data.custom_price / allDates.length)
+      : null
+
+    const result = await createRecurringGroup({
+      baseBooking: {
+        customer_id: customerId,
+        start_time: data.start_time,
+        end_time: data.end_time || null,
+        status: BookingStatus.Pending,
+        payment_status: PaymentStatus.Unpaid,
+        total_price: perBookingPrice,
+        address: data.address,
+        city: data.city,
+        state: data.state ?? null,
+        zip_code: data.zip_code ?? null,
+        package_v2_id: data.package_v2_id ?? null,
+        // V2 pricing fields — preserve override/custom mode in recurring bookings
+        price_mode: data.price_mode ?? 'package',
+        custom_price: perBookingCustomPrice,
+        price_override: data.price_override ?? false,
+        job_name: data.job_name ?? null,
+        staff_id: data.staff_id ?? null,
+        team_id: data.team_id ?? null,
+        notes: data.notes ?? null,
+        area_sqm: data.area_sqm ?? null,
+        frequency: data.frequency ?? null,
+        payment_method: null,
+      },
+      pattern,
+      totalOccurrences: allDates.length,
+      dates: allDates,
+    })
+
+    if (!result.success) {
+      throw new Error(result.errors?.[0] ?? 'Failed to create recurring bookings')
+    }
+    bookingIds.push(...result.bookingIds)
+  } else {
+    // Single booking
+    try {
       const id = await createSingleBooking(customerId, data, data.booking_date)
       bookingIds.push(id)
-    }
-  } catch (error) {
-    // Best-effort rollback: delete any bookings already committed to avoid orphans
-    if (bookingIds.length > 0) {
-      // Best-effort: Supabase PromiseLike requires async/await, not .catch()
-      const { error: rollbackError } = await supabase
-        .from('bookings')
-        .delete()
-        .in('id', bookingIds)
-      if (rollbackError) {
-        // Rollback failure is non-fatal — log for ops visibility
-        console.error('[useCreateBookingMutation] Rollback failed for bookingIds:', bookingIds, rollbackError)
+    } catch (error) {
+      if (bookingIds.length > 0) {
+        const { error: rollbackError } = await supabase
+          .from('bookings')
+          .delete()
+          .in('id', bookingIds)
+        if (rollbackError) {
+          console.error('[useCreateBookingMutation] Rollback failed:', bookingIds, rollbackError)
+        }
       }
+      throw error
     }
-    throw error
   }
 
   return { bookingIds, customerId }

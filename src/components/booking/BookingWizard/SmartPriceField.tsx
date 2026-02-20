@@ -56,7 +56,7 @@ export function SmartPriceField({
   const [areaOutOfRange, setAreaOutOfRange] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
 
-  const { price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, start_time, endTimeManuallySet, validationErrors } = state
+  const { mode: wizardMode, price_mode, package_v2_id, total_price, custom_price, job_name, area_sqm, frequency, start_time, endTimeManuallySet, validationErrors } = state
 
   // Confirm before switching to custom if package already selected
   function handleModeChange(newMode: string) {
@@ -217,53 +217,58 @@ export function SmartPriceField({
         </div>
       )}
 
-      {/* Area & Frequency — frequency hidden for Custom mode (spec T4.0 / Sally UX) */}
-      <div className={price_mode === PriceMode.Custom ? 'space-y-1' : 'grid grid-cols-2 gap-3'}>
-        <div className="space-y-1">
-          <Label htmlFor="area_sqm" className="text-xs text-muted-foreground">
-            Area (sqm)
-          </Label>
-          <Input
-            id="area_sqm"
-            type="number"
-            min={1}
-            placeholder="e.g. 120"
-            value={area_sqm ?? ''}
-            onChange={(e) => {
-              const val = e.target.value ? Number(e.target.value) : null
-              dispatch({ type: 'SET_AREA_SQM', area: val })
-            }}
-          />
-          {areaOutOfRange && (
-            <p className="text-xs text-destructive">
-              ⚠️ Area {area_sqm} sqm is outside the range defined for this package
-            </p>
-          )}
-        </div>
-        {price_mode !== PriceMode.Custom && (
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Frequency / Month</Label>
-            <Select
-              value={frequency?.toString() ?? 'none'}
-              onValueChange={(val) => {
-                const freq = val === 'none' ? null : (Number(val) as 1 | 2 | 4 | 8)
-                dispatch({ type: 'SET_FREQUENCY', frequency: freq })
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Unspecified" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unspecified</SelectItem>
-                <SelectItem value="1">1 time</SelectItem>
-                <SelectItem value="2">2 times</SelectItem>
-                <SelectItem value="4">4 times</SelectItem>
-                <SelectItem value="8">8 times</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Area & Frequency — frequency hidden for Custom mode and Quick mode (no recurring in Quick) */}
+      {(() => {
+        const showFrequency = price_mode !== PriceMode.Custom && wizardMode !== 'quick'
+        return (
+          <div className={showFrequency ? 'grid grid-cols-2 gap-3' : 'space-y-1'}>
+            <div className="space-y-1">
+              <Label htmlFor="area_sqm" className="text-xs text-muted-foreground">
+                Area (sqm)
+              </Label>
+              <Input
+                id="area_sqm"
+                type="number"
+                min={1}
+                placeholder="e.g. 120"
+                value={area_sqm ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : null
+                  dispatch({ type: 'SET_AREA_SQM', area: val })
+                }}
+              />
+              {areaOutOfRange && (
+                <p className="text-xs text-destructive">
+                  ⚠️ Area {area_sqm} sqm is outside the range defined for this package
+                </p>
+              )}
+            </div>
+            {showFrequency && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Frequency</Label>
+                <Select
+                  value={frequency?.toString() ?? 'none'}
+                  onValueChange={(val) => {
+                    const freq = val === 'none' ? null : (Number(val) as 1 | 2 | 4 | 8)
+                    dispatch({ type: 'SET_FREQUENCY', frequency: freq })
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unspecified" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unspecified</SelectItem>
+                    <SelectItem value="1">1 time</SelectItem>
+                    <SelectItem value="2">2 times</SelectItem>
+                    <SelectItem value="4">4 times</SelectItem>
+                    <SelectItem value="8">8 times</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        )
+      })()}
 
       {/* Override price input */}
       {price_mode === PriceMode.Override && (

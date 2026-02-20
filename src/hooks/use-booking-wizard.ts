@@ -199,8 +199,19 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
   }
 
   if (step === 2) {
-    if (!state.booking_date) {
-      errors.booking_date = 'Please select a date'
+    // Recurring validation: require dates matching frequency
+    if (state.isRecurring && state.recurringPattern === 'manual') {
+      if (state.recurringDates.length === 0) {
+        errors.recurringDates = 'Please add at least one date'
+      }
+    } else {
+      if (!state.booking_date) {
+        errors.booking_date = 'Please select a date'
+      }
+    }
+    // auto_monthly: verify dates were generated (needs booking_date set first)
+    if (state.isRecurring && state.recurringPattern === 'auto_monthly' && state.recurringDates.length === 0) {
+      errors.recurringDates = 'Select a start date to generate recurring dates'
     }
     if (state.isMultiDay && state.end_date && state.end_date < state.booking_date) {
       errors.end_date = 'End date must not be before start date'
@@ -240,6 +251,17 @@ function validateStep(state: WizardState, step: WizardStep): Partial<Record<stri
   }
 
   return errors
+}
+
+/**
+ * Count how many bookings will be created for recurring mode.
+ * Shared between Step4Confirm (display) and mutation (price split).
+ */
+export function getRecurringDateCount(state: Pick<WizardState, 'isRecurring' | 'recurringDates' | 'recurringPattern'>): number {
+  if (!state.isRecurring || state.recurringDates.length === 0) return 1
+  return state.recurringPattern === 'manual'
+    ? state.recurringDates.length
+    : state.recurringDates.length + 1  // auto_monthly: booking_date + recurringDates
 }
 
 /**
@@ -421,8 +443,16 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SET_AREA_SQM':
       return { ...state, area_sqm: action.area }
 
-    case 'SET_FREQUENCY':
-      return { ...state, frequency: action.frequency }
+    case 'SET_FREQUENCY': {
+      const freqVal = action.frequency ?? 1
+      return {
+        ...state,
+        frequency: action.frequency,
+        // frequency > 1 → recurring ON; frequency ≤ 1 → recurring OFF + clear dates
+        isRecurring: freqVal > 1,
+        recurringDates: freqVal > 1 ? state.recurringDates : [],
+      }
+    }
 
     case 'SET_BOOKING_DATE':
       return { ...state, booking_date: action.date }
@@ -499,8 +529,17 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SET_NOTES':
       return { ...state, notes: action.notes }
 
-    case 'TOGGLE_RECURRING':
-      return { ...state, isRecurring: action.isRecurring }
+    case 'TOGGLE_RECURRING': {
+      // When turning off recurring: reset frequency to null so price recalculates
+      // (frequency > 1 and non-recurring is inconsistent)
+      const resetFrequency = !action.isRecurring && (state.frequency ?? 1) > 1
+      return {
+        ...state,
+        isRecurring: action.isRecurring,
+        frequency: resetFrequency ? null : state.frequency,
+        recurringDates: action.isRecurring ? state.recurringDates : [],
+      }
+    }
 
     case 'SET_RECURRING_DATES':
       return { ...state, recurringDates: action.dates }

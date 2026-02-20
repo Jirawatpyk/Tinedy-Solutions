@@ -6,14 +6,16 @@
  * Submit button calls validateFullState before mutation.
  */
 
-import { User, Package, Calendar, MapPin, StickyNote, Pencil } from 'lucide-react'
+import { format } from 'date-fns'
+import { enUS } from 'date-fns/locale'
+import { User, Package, Calendar, MapPin, StickyNote, Pencil, Repeat } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { formatCurrency } from '@/lib/utils'
 import { formatDateRange } from '@/lib/date-range-utils'
 import { PriceMode } from '@/types/booking'
-import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
+import { getRecurringDateCount, type WizardState, type WizardAction } from '@/hooks/use-booking-wizard'
 
 interface Step4ConfirmProps {
   state: WizardState
@@ -80,12 +82,21 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
     notes,
     area_sqm,
     frequency,
+    isRecurring,
+    recurringDates,
+    recurringPattern,
   } = state
 
-  const displayPrice =
+  const rawPrice =
     price_mode === PriceMode.Package
       ? total_price
       : custom_price ?? 0
+
+  // For recurring: split price per booking (package price is total for all sessions)
+  const recurringCount = getRecurringDateCount(state)
+  const displayPrice = recurringCount > 1
+    ? Math.round(rawPrice / recurringCount)
+    : rawPrice
 
   const addressParts = [address, city, stateField, zip_code].filter(Boolean).join(', ')
   const dateDisplay = formatDateRange(booking_date, end_date)
@@ -152,12 +163,15 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
           )}
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-tinedy-blue">{formatCurrency(displayPrice)}</span>
+            {recurringCount > 1 && (
+              <span className="text-xs text-muted-foreground">× {recurringCount} = {formatCurrency(rawPrice)}</span>
+            )}
             {price_mode === PriceMode.Override && (
               <Badge variant="secondary" className="text-xs">Override</Badge>
             )}
           </div>
           {area_sqm && <p className="text-xs text-muted-foreground">{area_sqm} sqm</p>}
-          {frequency && <p className="text-xs text-muted-foreground">{frequency} time(s)/month</p>}
+          {frequency && <p className="text-xs text-muted-foreground">{frequency} time(s)</p>}
         </div>
       </div>
 
@@ -173,8 +187,47 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
           dispatch={dispatch}
         />
         <div className="pl-5 text-sm">
-          <p className="font-medium">{dateDisplay || '-'}</p>
-          {timeDisplay && <p className="text-muted-foreground">{timeDisplay}</p>}
+          {/* Manual recurring: show only the manually picked dates as primary */}
+          {isRecurring && recurringPattern === 'manual' && recurringDates.length > 0 ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Repeat className="h-3 w-3" />
+                <span>Recurring · {recurringDates.length} dates (manual)</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {recurringDates.map((date) => (
+                  <Badge key={date} variant="secondary" className="text-xs font-normal">
+                    {format(new Date(`${date}T00:00:00`), 'd MMM yyyy', { locale: enUS })}
+                  </Badge>
+                ))}
+              </div>
+              {timeDisplay && <p className="text-muted-foreground mt-1">{timeDisplay}</p>}
+            </div>
+          ) : (
+            <>
+              <p className="font-medium">{dateDisplay || '-'}</p>
+              {timeDisplay && <p className="text-muted-foreground">{timeDisplay}</p>}
+
+              {/* Auto monthly recurring dates */}
+              {isRecurring && recurringDates.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Repeat className="h-3 w-3" />
+                    <span>
+                      + {recurringDates.length} recurring dates (monthly)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recurringDates.map((date) => (
+                      <Badge key={date} variant="secondary" className="text-xs font-normal">
+                        {format(new Date(`${date}T00:00:00`), 'd MMM yyyy', { locale: enUS })}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

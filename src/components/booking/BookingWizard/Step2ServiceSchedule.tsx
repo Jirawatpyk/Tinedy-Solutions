@@ -20,22 +20,12 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useQuery } from '@tanstack/react-query'
 import { packageQueryOptions } from '@/lib/queries/package-queries'
 import { SmartPriceField, SmartPriceFieldSkeleton } from './SmartPriceField'
 import { DateRangePicker } from './DateRangePicker'
 import type { WizardState, WizardAction } from '@/hooks/use-booking-wizard'
-
-/** Available options for recurring occurrence count */
-const RECURRING_OCCURRENCE_OPTIONS = [1, 2, 3, 4, 6, 12] as const
 
 interface Step2ServiceScheduleProps {
   state: WizardState
@@ -51,37 +41,51 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
     recurringPattern,
     recurringDates,
     booking_date,
+    frequency,
     validationErrors,
   } = state
 
   const { data: packagesV2 = [], isLoading: packagesLoading } = useQuery(packageQueryOptions.v2)
 
-  // Local state for recurring UI only
-  const [occurrences, setOccurrences] = useState(3)
+  // Recurring is only available when frequency > 1
+  const canRecur = (frequency ?? 0) > 1
+
+  // Local state for manual date input only
   const [newDateInput, setNewDateInput] = useState('')
 
-  // Auto-generate monthly dates when booking_date, occurrences, or pattern changes
+  // Auto-generate monthly dates: occurrences = frequency - 1 (booking_date + N future = frequency total)
   useEffect(() => {
-    if (!isRecurring || recurringPattern !== 'auto_monthly' || !booking_date) return
+    if (!isRecurring || recurringPattern !== 'auto_monthly' || !booking_date || !frequency || frequency <= 1) return
     const base = parseISO(booking_date)
-    const dates = Array.from({ length: occurrences }, (_, i) =>
+    const dates = Array.from({ length: frequency - 1 }, (_, i) =>
       format(addMonths(base, i + 1), 'yyyy-MM-dd')
     )
     dispatch({ type: 'SET_RECURRING_DATES', dates })
-  }, [isRecurring, recurringPattern, booking_date, occurrences]) // dispatch omitted: useReducer dispatch is referentially stable (safe per React docs)
+  }, [isRecurring, recurringPattern, booking_date, frequency]) // dispatch omitted: useReducer dispatch is referentially stable
 
   // End-before-start warning — single-day only (multi-day allows overnight spans)
   const endBeforeStart = !isMultiDay && start_time && end_time && end_time < start_time
 
   function handleAddDate() {
     if (!newDateInput || recurringDates.includes(newDateInput)) return
-    const sorted = [...recurringDates, newDateInput].sort()
-    dispatch({ type: 'SET_RECURRING_DATES', dates: sorted })
+    // Manual mode: total dates = frequency (each date = 1 booking)
+    if (frequency && recurringDates.length >= frequency) return
+    const allDates = [...recurringDates, newDateInput].sort()
+    dispatch({ type: 'SET_RECURRING_DATES', dates: allDates })
+    // Auto-sync: booking_date = earliest manual date so user picks dates in one place only
+    if (recurringPattern === 'manual') {
+      dispatch({ type: 'SET_BOOKING_DATE', date: allDates[0] })
+    }
     setNewDateInput('')
   }
 
   function handleRemoveDate(date: string) {
-    dispatch({ type: 'SET_RECURRING_DATES', dates: recurringDates.filter((d) => d !== date) })
+    const remaining = recurringDates.filter((d) => d !== date)
+    dispatch({ type: 'SET_RECURRING_DATES', dates: remaining })
+    // Auto-sync: update booking_date to next earliest, or keep current if list is empty
+    if (recurringPattern === 'manual' && remaining.length > 0) {
+      dispatch({ type: 'SET_BOOKING_DATE', date: remaining[0] })
+    }
   }
 
   return (
@@ -100,8 +104,10 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
         />
       )}
 
-      {/* Date range picker */}
-      <DateRangePicker state={state} dispatch={dispatch} />
+      {/* Date range picker — hidden in manual recurring mode (dates come from manual list instead) */}
+      {!(isRecurring && recurringPattern === 'manual') && (
+        <DateRangePicker state={state} dispatch={dispatch} />
+      )}
 
       {/* Time inputs */}
       <div className="grid grid-cols-2 gap-3">
@@ -144,13 +150,15 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
         </div>
       </div>
 
-      {/* Recurring toggle */}
+      {/* Recurring toggle — only available when frequency > 1 */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <Label className="text-sm">Recurring</Label>
-          {isMultiDay && (
+          {isMultiDay ? (
             <p className="text-xs text-muted-foreground">Multi-day bookings do not support recurring</p>
-          )}
+          ) : !canRecur ? (
+            <p className="text-xs text-muted-foreground">Select frequency &gt; 1 to enable</p>
+          ) : null}
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -158,7 +166,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
               <span>
                 <Switch
                   checked={isRecurring}
-                  disabled={isMultiDay}
+                  disabled={isMultiDay || !canRecur}
                   onCheckedChange={(checked) =>
                     dispatch({ type: 'TOGGLE_RECURRING', isRecurring: checked })
                   }
@@ -166,8 +174,10 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                 />
               </span>
             </TooltipTrigger>
-            {isMultiDay && (
-              <TooltipContent>Multi-day bookings do not support recurring</TooltipContent>
+            {(isMultiDay || !canRecur) && (
+              <TooltipContent>
+                {isMultiDay ? 'Multi-day bookings do not support recurring' : 'Select frequency > 1 to enable'}
+              </TooltipContent>
             )}
           </Tooltip>
         </TooltipProvider>
@@ -203,35 +213,18 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
             </RadioGroup>
           </div>
 
-          {/* Auto monthly — occurrences + preview */}
+          {/* Auto monthly — dates auto-generated from frequency */}
           {recurringPattern === 'auto_monthly' && (
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                  Occurrences
-                </Label>
-                <Select
-                  value={String(occurrences)}
-                  onValueChange={(v) => setOccurrences(Number(v))}
-                >
-                  <SelectTrigger className="h-8 w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RECURRING_OCCURRENCE_OPTIONS.map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n} {n === 1 ? 'time' : 'times'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                {frequency} bookings total (start date + {(frequency ?? 1) - 1} monthly)
+              </p>
               {!booking_date ? (
                 <p className="text-xs text-muted-foreground">Select a start date to preview</p>
               ) : recurringDates.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs text-muted-foreground">
-                    Booking dates ({recurringDates.length} occurrences)
+                    Future dates ({recurringDates.length})
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {recurringDates.map((d) => (
@@ -242,18 +235,22 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                   </div>
                 </div>
               )}
+              {validationErrors.recurringDates && (
+                <p className="text-xs text-destructive">{validationErrors.recurringDates}</p>
+              )}
             </div>
           )}
 
-          {/* Manual — date input + removable list */}
+          {/* Manual — date input + removable list, capped at frequency */}
           {recurringPattern === 'manual' && (
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Add Date</Label>
+              <Label className="text-xs text-muted-foreground">
+                Add Date ({recurringDates.length}/{frequency ?? '?'})
+              </Label>
               <div className="flex gap-2">
                 <Input
                   type="date"
                   value={newDateInput}
-                  min={booking_date || undefined}
                   onChange={(e) => setNewDateInput(e.target.value)}
                   className="h-9 flex-1"
                 />
@@ -262,7 +259,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                   size="sm"
                   variant="outline"
                   onClick={handleAddDate}
-                  disabled={!newDateInput}
+                  disabled={!newDateInput || (!!frequency && recurringDates.length >= frequency)}
                   className="h-9 px-3"
                   aria-label="Add date"
                 >
@@ -272,7 +269,7 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
               {recurringDates.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs text-muted-foreground">
-                    Selected dates ({recurringDates.length} days)
+                    Selected dates ({recurringDates.length}/{frequency ?? '?'})
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {recurringDates.map((d) => (
@@ -296,7 +293,10 @@ export function Step2ServiceSchedule({ state, dispatch }: Step2ServiceSchedulePr
                 </div>
               )}
               {recurringDates.length === 0 && (
-                <p className="text-xs text-muted-foreground">No additional dates selected</p>
+                <p className="text-xs text-muted-foreground">No dates selected yet</p>
+              )}
+              {validationErrors.recurringDates && (
+                <p className="text-xs text-destructive">{validationErrors.recurringDates}</p>
               )}
             </div>
           )}

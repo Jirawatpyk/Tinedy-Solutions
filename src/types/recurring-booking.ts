@@ -97,10 +97,16 @@ export interface RecurringGroupInput {
     frequency?: number | null
     calculated_price?: number | null
     package_v2_id?: string | null
+    // V2 pricing fields (S-01)
+    price_mode?: string | null
+    custom_price?: number | null
+    price_override?: boolean
+    job_name?: string | null
     staff_id?: string | null
     team_id?: string | null
     notes?: string | null
     team_member_count?: number | null
+    payment_method?: string | null
   }
 
   /** รูปแบบการเกิดซ้ำ */
