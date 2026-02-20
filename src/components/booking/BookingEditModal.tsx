@@ -284,6 +284,7 @@ export function BookingEditModal({
                   dispatch={dispatch}
                   packages={packagesV2}
                   packagesLoading={packagesLoading}
+                  lockPriceMode
                 />
               )}
             </div>

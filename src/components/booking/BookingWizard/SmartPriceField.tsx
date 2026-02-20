@@ -43,6 +43,8 @@ interface SmartPriceFieldProps {
   dispatch: React.Dispatch<WizardAction>
   packages: ServicePackageV2WithTiers[]
   packagesLoading?: boolean
+  /** Lock pricing type & package selector (Edit mode — prevent mode/package change) */
+  lockPriceMode?: boolean
 }
 
 export function SmartPriceField({
@@ -50,6 +52,7 @@ export function SmartPriceField({
   dispatch,
   packages,
   packagesLoading,
+  lockPriceMode,
 }: SmartPriceFieldProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingMode, setPendingMode] = useState<typeof PriceMode[keyof typeof PriceMode] | null>(null)
@@ -80,7 +83,11 @@ export function SmartPriceField({
   const selectedPkg = packages.find((p) => p.id === package_v2_id)
 
   // Auto-calculate price (and end_time) for tiered packages when area/frequency changes
+  // Skip in edit mode (lockPriceMode) — DB already stores correct per-booking price;
+  // recalculating would return full package total (e.g. 8000) instead of per-booking split (4000).
   useEffect(() => {
+    if (lockPriceMode) return
+
     // M1: Run for Package + Override modes with tiered packages
     // Override also needs end_time auto-calc from tier's estimated_hours
     const isPackageOrOverride = price_mode === PriceMode.Package || price_mode === PriceMode.Override
@@ -134,25 +141,25 @@ export function SmartPriceField({
       })
 
     return () => { cancelled = true }
-  }, [package_v2_id, area_sqm, frequency, price_mode, selectedPkg?.pricing_model, start_time, endTimeManuallySet])
+  }, [lockPriceMode, package_v2_id, area_sqm, frequency, price_mode, selectedPkg?.pricing_model, start_time, endTimeManuallySet])
 
   return (
     <div className="space-y-4">
       {/* Mode selector */}
       <div className="space-y-2">
         <Label className="text-sm font-medium">Pricing Type</Label>
-        <RadioGroup value={price_mode} onValueChange={handleModeChange} className="flex gap-4">
+        <RadioGroup value={price_mode} onValueChange={handleModeChange} disabled={lockPriceMode} className="flex gap-4">
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Package} id="mode-package" />
-            <Label htmlFor="mode-package" className="cursor-pointer text-sm">Package</Label>
+            <Label htmlFor="mode-package" className={cn('text-sm', lockPriceMode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>Package</Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Override} id="mode-override" />
-            <Label htmlFor="mode-override" className="cursor-pointer text-sm">Override</Label>
+            <Label htmlFor="mode-override" className={cn('text-sm', lockPriceMode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>Override</Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value={PriceMode.Custom} id="mode-custom" />
-            <Label htmlFor="mode-custom" className="cursor-pointer text-sm">Custom Job</Label>
+            <Label htmlFor="mode-custom" className={cn('text-sm', lockPriceMode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>Custom Job</Label>
           </div>
         </RadioGroup>
       </div>
@@ -174,6 +181,7 @@ export function SmartPriceField({
                 const pkg = packages.find((p) => p.id === id) ?? null
                 dispatch({ type: 'SELECT_PACKAGE', package: pkg })
               }}
+              disabled={lockPriceMode}
             >
               <SelectTrigger className={cn(validationErrors.package_v2_id && 'border-destructive')}>
                 <SelectValue placeholder="Select package" />

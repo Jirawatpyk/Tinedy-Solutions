@@ -334,7 +334,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
       }
 
@@ -343,7 +343,7 @@ describe('dashboard-queries', () => {
       const result = await fetchTodayBookings()
 
       expect(result).toEqual(mockBookings)
-      expect(mockChain.eq).toHaveBeenCalledWith('booking_date', expect.any(String))
+      expect(mockChain.or).toHaveBeenCalledWith(expect.stringContaining('booking_date'))
       expect(mockChain.order).toHaveBeenCalledWith('start_time', { ascending: true })
     })
 
@@ -351,7 +351,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: null }),
       }
 
@@ -366,7 +366,7 @@ describe('dashboard-queries', () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
       }
 

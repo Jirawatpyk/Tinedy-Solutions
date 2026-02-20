@@ -34,7 +34,7 @@ import {
 import { BookingStatus } from '@/types/booking'
 import { cn, formatCurrency } from '@/lib/utils'
 import { getRecurringPatternLabel } from '@/lib/recurring-utils'
-import { formatDate } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { RecurringGroup } from '@/types/recurring-booking'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
@@ -374,7 +374,7 @@ export function RecurringBookingCard({
                     <div className="space-y-0.5 sm:space-y-1 flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <span className="text-xs sm:text-sm font-medium">
-                          {formatDate(booking.booking_date)}
+                          {formatDateRange(booking.booking_date, booking.end_date)}
                         </span>
                         {isArchived && (
                           <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-[10px] sm:text-xs">

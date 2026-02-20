@@ -24,6 +24,7 @@ export type RecurringPattern = typeof RecurringPattern[keyof typeof RecurringPat
 export interface RecurringBookingBase {
   id: string
   booking_date: string
+  end_date?: string | null
   start_time: string
   end_time?: string | null
   status: string

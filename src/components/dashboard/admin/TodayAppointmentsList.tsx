@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown } from 'lucide-react'
 import { formatCurrency, formatBookingId } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getStatusBadge, getPaymentStatusBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
@@ -166,6 +167,9 @@ export const TodayAppointmentsList = ({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>
+                        {booking.end_date && booking.end_date !== booking.booking_date
+                          ? `${formatDateRange(booking.booking_date, booking.end_date)} • `
+                          : ''}
                         {booking.start_time.slice(0, 5)} -{' '}
                         {booking.end_time.slice(0, 5)}
                       </span>

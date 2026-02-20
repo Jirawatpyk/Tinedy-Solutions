@@ -24,6 +24,7 @@ export interface BookingStatus {
 export interface TodayBooking {
   id: string
   booking_date: string
+  end_date?: string | null
   start_time: string
   end_time: string
   status: string

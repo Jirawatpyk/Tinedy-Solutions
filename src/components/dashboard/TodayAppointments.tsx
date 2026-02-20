@@ -3,50 +3,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { formatDateRange } from '@/lib/date-range-utils'
 import { EmptyState } from '@/components/common/EmptyState'
 import { memo, useState } from 'react'
-
-interface TodayBooking {
-  id: string
-  booking_date: string
-  start_time: string
-  end_time: string
-  status: string
-  total_price: number
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  staff_id: string | null
-  team_id: string | null
-  package_v2_id?: string | null
-  notes: string | null
-  payment_status?: string
-  payment_method?: string
-  amount_paid?: number
-  payment_date?: string
-  payment_notes?: string
-  customers: {
-    id: string
-    full_name: string
-    phone: string
-    email: string
-  } | null
-  service_packages: {
-    name: string
-    service_type: string
-  } | null
-  service_packages_v2?: {
-    name: string
-    service_type: string
-  } | null
-  profiles: {
-    full_name: string
-  } | null
-  teams: {
-    name: string
-  } | null
-}
+import type { TodayBooking } from '@/types/dashboard'
 
 interface TodayAppointmentsProps {
   bookings: TodayBooking[]
@@ -113,7 +73,12 @@ function TodayAppointmentsComponent({ bookings, onBookingClick, getStatusBadge }
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      <span>{booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}</span>
+                      <span>
+                        {booking.end_date && booking.end_date !== booking.booking_date
+                          ? `${formatDateRange(booking.booking_date, booking.end_date)} • `
+                          : ''}
+                        {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
