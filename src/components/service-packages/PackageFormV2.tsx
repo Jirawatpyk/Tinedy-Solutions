@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { TierEditor, type TierFormData } from './TierEditor'
-import { Save, X } from 'lucide-react'
+import { Save } from 'lucide-react'
 import {
   PricingModel,
   ServiceCategory,
@@ -314,7 +314,9 @@ export function PackageFormV2({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <div className="flex flex-col h-full">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -543,19 +545,31 @@ export function PackageFormV2({
         </CardContent>
       </Card>
 
-      {/* Form Actions */}
-      <div className="flex justify-end gap-3">
+      </div>{/* end scrollable */}
+
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 bg-background border-t pt-4 pb-6 flex gap-2 px-6">
         {showCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-            <X className="h-4 w-4 mr-2" />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1"
+          >
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={loading} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
+        <Button
+          type="submit"
+          disabled={loading}
+          className={`${showCancel ? 'flex-1' : ''} bg-tinedy-blue hover:bg-tinedy-blue/90`}
+        >
           <Save className="h-4 w-4 mr-2" />
           {loading ? 'Saving...' : editPackage ? 'Update' : 'Create Package'}
         </Button>
       </div>
     </form>
+    </div>
   )
 }

@@ -16,13 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionGuard } from '@/components/auth/permission-guard'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { AppSheet } from '@/components/ui/app-sheet'
+import { PackageWizardSheet } from '@/components/service-packages/PackageWizardSheet'
 import {
   Select,
   SelectContent,
@@ -50,7 +45,8 @@ export function AdminServicePackagesV2() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all')
   const [showArchived, setShowArchived] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackageV2WithTiers | null>(null)
 
   // Fetch archived packages (Admin only)
@@ -123,8 +119,7 @@ export function AdminServicePackagesV2() {
    * Handle Create Package
    */
   const handleCreatePackage = () => {
-    setEditingPackage(null)
-    setIsDialogOpen(true)
+    setIsCreateSheetOpen(true)
   }
 
   /**
@@ -132,7 +127,7 @@ export function AdminServicePackagesV2() {
    */
   const handleEditPackage = (pkg: ServicePackageV2WithTiers) => {
     setEditingPackage(pkg)
-    setIsDialogOpen(true)
+    setIsEditSheetOpen(true)
   }
 
   /**
@@ -218,20 +213,14 @@ export function AdminServicePackagesV2() {
     }
   }
 
-  /**
-   * Handle Form Success
-   */
-  const handleFormSuccess = () => {
-    setIsDialogOpen(false)
+  const handleEditSuccess = () => {
+    setIsEditSheetOpen(false)
     setEditingPackage(null)
     refresh()
   }
 
-  /**
-   * Handle Form Cancel
-   */
-  const handleFormCancel = () => {
-    setIsDialogOpen(false)
+  const handleEditCancel = () => {
+    setIsEditSheetOpen(false)
     setEditingPackage(null)
   }
 
@@ -427,29 +416,33 @@ export function AdminServicePackagesV2() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPackage ? 'Edit Package' : 'Create New Package'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPackage
-                ? 'Update package information and pricing'
-                : 'Create a new service package with tiered pricing'}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Create Package — Wizard Sheet */}
+      <PackageWizardSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        onSuccess={refresh}
+      />
 
+      {/* Edit Package — AppSheet */}
+      <AppSheet
+        open={isEditSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) handleEditCancel()
+        }}
+        title="Edit Package"
+        description="Update package information and pricing"
+        size="lg"
+      >
+        {editingPackage && (
           <PackageFormV2
             package={editingPackage}
             packageSource="v2"
-            onSuccess={handleFormSuccess}
-            onCancel={handleFormCancel}
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditCancel}
             showCancel={true}
           />
-        </DialogContent>
-      </Dialog>
+        )}
+      </AppSheet>
     </div>
   )
 }
