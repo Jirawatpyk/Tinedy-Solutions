@@ -380,6 +380,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           selectedPackage: null,
           price_mode: state.price_mode === PriceMode.Override ? PriceMode.Override : PriceMode.Package,
           total_price: 0,
+          frequency: null,
         }
       }
 
@@ -399,6 +400,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         custom_price: null,
         price_override: isOverride,
         end_time: newEndTime,
+        // Reset frequency — new package may have different available frequencies
+        frequency: null,
       }
     }
 

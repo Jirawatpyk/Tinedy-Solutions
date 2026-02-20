@@ -403,7 +403,7 @@ export function TierEditor({
 
                   {tier.frequency_prices.map((fp, freqIndex) => (
                     <div
-                      key={`${tier._key}-freq-${fp.times}`}
+                      key={`${tier._key}-freq-${freqIndex}`}
                       className="grid grid-cols-[1fr_1.5fr_auto] gap-2 items-center"
                     >
                       {/* Times */}

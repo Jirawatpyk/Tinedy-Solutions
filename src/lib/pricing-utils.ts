@@ -30,7 +30,7 @@ import type {
  *
  * @param packageId - Package UUID
  * @param areaSqm - Area in square meters
- * @param frequency - Booking frequency (1, 2, 4, or 8)
+ * @param frequency - Booking frequency (any positive integer)
  * @returns Calculated price in Thai Baht, or 0 if not found
  *
  * @example
@@ -186,7 +186,7 @@ export async function calculatePricing(
  * @example
  * ```typescript
  * const tier = await getPricingTierForArea('package-uuid', 150)
- * // Returns: { area_min: 101, area_max: 200, price_1_time: 3900, ... }
+ * // Returns: { area_min: 101, area_max: 200, frequency_prices: [{times:1,price:3900},...], ... }
  * ```
  */
 export async function getPricingTierForArea(
@@ -306,7 +306,7 @@ export async function getPackageWithTiers(
     // Calculate min/max prices from tiers — prefer frequency_prices JSONB, fallback to legacy columns
     const prices = tiers.flatMap((tier) => {
       if (tier.frequency_prices && tier.frequency_prices.length > 0) {
-        return tier.frequency_prices.map((fp) => fp.price)
+        return tier.frequency_prices.map((fp) => fp.price).filter((p) => p > 0)
       }
       return [
         tier.price_1_time,
@@ -480,7 +480,7 @@ export function getAvailableFrequencies(
 
   // Fallback: reconstruct from legacy columns (pre-migration rows)
   const frequencies: BookingFrequency[] = []
-  if (tier.price_1_time) frequencies.push(1)
+  if (tier.price_1_time !== null) frequencies.push(1)
   if (tier.price_2_times !== null) frequencies.push(2)
   if (tier.price_4_times !== null) frequencies.push(4)
   if (tier.price_8_times !== null) frequencies.push(8)
