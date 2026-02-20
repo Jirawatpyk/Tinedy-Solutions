@@ -118,6 +118,7 @@ export function AdminStaff() {
     setStaffForEdit({
       id: staffMember.id,
       full_name: staffMember.full_name,
+      email: staffMember.email,
       phone: staffMember.phone,
       role: staffMember.role as 'admin' | 'manager' | 'staff',
       staff_number: staffMember.staff_number,

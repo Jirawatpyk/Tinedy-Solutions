@@ -164,34 +164,32 @@ export function CustomerFormSheet({
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-20">
             {/* Basic Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
-                <Input
-                  id="full_name"
-                  {...form.register('full_name')}
-                  aria-invalid={!!form.formState.errors.full_name}
-                />
-                {form.formState.errors.full_name && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.full_name.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...form.register('email')}
-                  aria-invalid={!!form.formState.errors.email}
-                />
-                {form.formState.errors.email && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name *</Label>
+              <Input
+                id="full_name"
+                {...form.register('full_name')}
+                aria-invalid={!!form.formState.errors.full_name}
+              />
+              {form.formState.errors.full_name && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.full_name.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...form.register('email')}
+                aria-invalid={!!form.formState.errors.email}
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.email.message}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

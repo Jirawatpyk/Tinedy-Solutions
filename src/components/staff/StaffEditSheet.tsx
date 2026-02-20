@@ -28,6 +28,7 @@ import {
 export interface StaffForEdit {
   id: string
   full_name: string
+  email?: string | null
   phone?: string | null
   role: 'admin' | 'manager' | 'staff'
   staff_number?: string | null
@@ -161,36 +162,48 @@ export function StaffEditSheet({
       <div className="flex flex-col h-full">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-20">
-            {/* Full Name & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Controller
-                name="full_name"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name *</Label>
-                    <Input id="full_name" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
+            {/* Email (read-only — login credential, cannot change here) */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={staff?.email || ''}
+                disabled
+                className="bg-muted cursor-not-allowed"
               />
-
-              <Controller
-                name="phone"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" type="tel" {...field} value={field.value || ''} />
-                    {fieldState.error && (
-                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                    )}
-                  </div>
-                )}
-              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
             </div>
+
+            {/* Full Name */}
+            <Controller
+              name="full_name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Full Name *</Label>
+                  <Input id="full_name" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                </div>
+              )}
+            />
+
+            {/* Phone */}
+            <Controller
+              name="phone"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" type="tel" {...field} value={field.value || ''} />
+                  {fieldState.error && (
+                    <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                  )}
+                </div>
+              )}
+            />
 
             {/* New Password */}
             <Controller
