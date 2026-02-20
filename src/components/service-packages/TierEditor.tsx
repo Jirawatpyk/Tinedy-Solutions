@@ -23,8 +23,10 @@ import type { FrequencyPrice } from '@/types/service-package-v2'
 
 /**
  * Tier data for form (without package_id and timestamps)
+ * _key is a stable client-side id for React reconciliation
  */
 export interface TierFormData {
+  _key: string
   area_min: number
   area_max: number
   required_staff: number
@@ -48,6 +50,7 @@ interface TierEditorProps {
  */
 function createEmptyTier(): TierFormData {
   return {
+    _key: crypto.randomUUID(),
     area_min: 0,
     area_max: 100,
     required_staff: 1,
@@ -152,7 +155,7 @@ export function TierEditor({
 
   const handleUpdateTierField = (
     tierIndex: number,
-    field: 'area_min' | 'area_max' | 'estimated_hours',
+    field: 'area_min' | 'area_max' | 'estimated_hours' | 'required_staff',
     value: number
   ) => {
     const newTiers = [...tiers]
@@ -243,7 +246,7 @@ export function TierEditor({
         <div className="space-y-4">
           {tiers.map((tier, tierIndex) => (
             <Card
-              key={tierIndex}
+              key={tier._key}
               className={cn(
                 'relative',
                 validationErrors[tierIndex] && showErrors && 'border-red-500'
@@ -312,6 +315,32 @@ export function TierEditor({
                   </div>
                 </div>
 
+                {/* Required Staff */}
+                <div>
+                  <Label htmlFor={`tier-${tierIndex}-staff`}>Required Staff *</Label>
+                  <Input
+                    id={`tier-${tierIndex}-staff`}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={tier.required_staff}
+                    onChange={(e) =>
+                      handleUpdateTierField(
+                        tierIndex,
+                        'required_staff',
+                        parseInt(e.target.value) || 1
+                      )
+                    }
+                    disabled={disabled}
+                    className={cn(
+                      showErrors && tier.required_staff < 1 && 'border-red-500'
+                    )}
+                  />
+                  {showErrors && tier.required_staff < 1 && (
+                    <p className="text-sm text-red-500 mt-1">At least 1 staff required</p>
+                  )}
+                </div>
+
                 {/* Estimated Hours */}
                 <div>
                   <Label htmlFor={`tier-${tierIndex}-hours`}>Estimated Hours *</Label>
@@ -374,7 +403,7 @@ export function TierEditor({
 
                   {tier.frequency_prices.map((fp, freqIndex) => (
                     <div
-                      key={freqIndex}
+                      key={`${tier._key}-freq-${fp.times}`}
                       className="grid grid-cols-[1fr_1.5fr_auto] gap-2 items-center"
                     >
                       {/* Times */}

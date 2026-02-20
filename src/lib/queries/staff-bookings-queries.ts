@@ -48,7 +48,7 @@ export interface StaffBooking {
   price_override?: boolean
   // Package V2 specific fields
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   // Recurring booking fields
   recurring_sequence?: number | null
   recurring_total?: number | null

@@ -315,7 +315,7 @@ export type PricingTierUpdate = Partial<Omit<PricingTierInput, 'package_id'>>
  *
  * @property {string} package_id - Package UUID
  * @property {number} area_sqm - Area in square meters
- * @property {BookingFrequency} frequency - Booking frequency (1, 2, 4, or 8)
+ * @property {BookingFrequency} frequency - Booking frequency (any positive integer, e.g. 1, 2, 3, 4)
  *
  * @example
  * const request: PricingCalculationRequest = {

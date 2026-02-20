@@ -50,7 +50,7 @@ export interface BookingInsertData {
   price_override?: boolean
   job_name?: string | null
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
 
   // Assignment (staff OR team, not both)
   staff_id?: string | null

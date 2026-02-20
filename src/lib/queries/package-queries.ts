@@ -14,25 +14,10 @@
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import type { ServicePackage } from '@/types'
+import type { PackagePricingTier } from '@/types/service-package-v2'
 
-/**
- * Package Pricing Tier type
- */
-export interface PackagePricingTier {
-  id: string
-  package_id: string
-  area_min: number
-  area_max: number
-  required_staff: number
-  estimated_hours: number | null
-  frequency_prices: Array<{ times: number; price: number }>
-  price_1_time: number
-  price_2_times: number | null
-  price_4_times: number | null
-  price_8_times: number | null
-  created_at: string
-  updated_at: string
-}
+// Re-export so existing callers of this module don't break
+export type { PackagePricingTier }
 
 /**
  * Service Package V2 type (base)

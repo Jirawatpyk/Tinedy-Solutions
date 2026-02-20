@@ -76,7 +76,7 @@ function buildInitialState(booking: Booking) {
     price_override: booking.price_override ?? false,
     job_name: booking.job_name ?? '',
     area_sqm: booking.area_sqm ?? null,
-    frequency: (booking.frequency ?? null) as 1 | 2 | 4 | 8 | null,
+    frequency: booking.frequency ?? null,
     assignmentType,
     staff_id: booking.staff_id ?? null,
     team_id: booking.team_id ?? null,

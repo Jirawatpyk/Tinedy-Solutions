@@ -54,7 +54,7 @@ export interface CalendarEvent {
   staff_name: string | null
   team_name: string | null
   area_sqm: number | null
-  frequency: 1 | 2 | 4 | 8 | null
+  frequency: number | null
   recurring_sequence: number | null
   recurring_total: number | null
   created_at: string // Added for BookingDetailsModal team member filtering
@@ -84,7 +84,7 @@ interface BookingData {
   staff_id: string | null
   team_id: string | null
   area_sqm: number | null
-  frequency: 1 | 2 | 4 | 8 | null
+  frequency: number | null
   recurring_sequence: number | null
   recurring_total: number | null
   created_at: string // Added for membership period filtering

@@ -7,6 +7,9 @@ ALTER TABLE package_pricing_tiers
   ADD COLUMN IF NOT EXISTS frequency_prices JSONB NOT NULL DEFAULT '[]';
 
 -- Step 2: Migrate existing data from 4 fixed columns into JSONB array
+-- Note: price_1_time is always included (NOT NULL column), even if value is 0.
+-- A zero price means "service offered for free" not "service not offered".
+-- Rows with price_2/4/8_times = NULL are excluded — NULL = "not offered at that frequency".
 UPDATE package_pricing_tiers AS pt
 SET frequency_prices = (
   SELECT COALESCE(

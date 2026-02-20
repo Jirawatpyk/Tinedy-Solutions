@@ -43,13 +43,8 @@ export const priceModeSchema = z.enum([
   PriceMode.Custom,
 ])
 
-// Frequency Schema (for V2 tiered pricing)
-export const frequencySchema = z.union([
-  z.literal(1),
-  z.literal(2),
-  z.literal(4),
-  z.literal(8),
-])
+// Frequency Schema (for V2 tiered pricing) — any positive integer
+export const frequencySchema = z.number().int().positive()
 
 // Recurring Pattern Enum
 export const recurringPatternSchema = z.enum(['auto-monthly', 'custom'])
@@ -229,7 +224,7 @@ export type RecurringBookingFormData = z.infer<typeof recurringBookingSchema>
 // Payment Update Schema (for marking bookings as paid)
 export const paymentUpdateSchema = z.object({
   payment_status: paymentStatusSchema,
-  payment_method: z.enum(['cash', 'bank_transfer', 'credit_card', 'promptpay', 'other']).optional(),
+  payment_method: z.enum(['cash', 'transfer', 'credit_card', 'promptpay']).optional(),
   amount_paid: positiveNumberSchema.optional(),
   payment_date: dateStringSchema.optional(),
   payment_notes: z.string().max(500).optional().or(z.literal('')),

@@ -37,7 +37,7 @@ export interface TodayBooking {
   team_id: string | null
   package_v2_id?: string | null
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   notes: string | null
   payment_status?: string
   payment_method?: string

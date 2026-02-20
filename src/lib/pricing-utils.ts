@@ -303,13 +303,18 @@ export async function getPackageWithTiers(
     // Fetch tiers
     const tiers = await getPackageTiers(packageId)
 
-    // Calculate min/max prices from tiers
-    const prices = tiers.flatMap(tier => [
-      tier.price_1_time,
-      tier.price_2_times,
-      tier.price_4_times,
-      tier.price_8_times
-    ].filter((p): p is number => p !== null))
+    // Calculate min/max prices from tiers — prefer frequency_prices JSONB, fallback to legacy columns
+    const prices = tiers.flatMap((tier) => {
+      if (tier.frequency_prices && tier.frequency_prices.length > 0) {
+        return tier.frequency_prices.map((fp) => fp.price)
+      }
+      return [
+        tier.price_1_time,
+        tier.price_2_times,
+        tier.price_4_times,
+        tier.price_8_times,
+      ].filter((p): p is number => p !== null && p > 0)
+    })
 
     const min_price = prices.length > 0 ? Math.min(...prices) : undefined
     const max_price = prices.length > 0 ? Math.max(...prices) : undefined
@@ -461,8 +466,8 @@ export async function validateArea(
  * ```typescript
  * const tier = await getPricingTierForArea('pkg-id', 100)
  * const frequencies = getAvailableFrequencies(tier)
- * // Returns: [1, 2, 4, 8] (if all prices are defined)
- * // Returns: [1, 4] (if only price_1_time and price_4_times are set)
+ * // Returns: [1, 2, 4, 8] (standard tier)
+ * // Returns: [1, 3, 6] (custom tier with non-standard frequencies)
  * ```
  */
 export function getAvailableFrequencies(

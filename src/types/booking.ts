@@ -141,7 +141,7 @@ export interface BookingRecord {
   deleted_at?: string | null
   // V2 Tiered Pricing Fields
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   calculated_price?: number | null
   package_v2_id?: string | null
   // Recurring Bookings Fields
@@ -246,7 +246,7 @@ export interface Booking {
   customer_id?: string
   package_v2_id?: string | null
   area_sqm?: number | null
-  frequency?: 1 | 2 | 4 | 8 | null
+  frequency?: number | null
   notes: string | null
   payment_status?: string
   payment_method?: string | null

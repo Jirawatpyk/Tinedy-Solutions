@@ -62,7 +62,14 @@ function validateStep2(values: WizardState): Record<string, string> {
     }
   } else {
     if (!values.category) errors.category = 'Category is required'
-    if (values.tiers.length === 0) errors.tiers = 'At least 1 pricing tier is required'
+    if (values.tiers.length === 0) {
+      errors.tiers = 'At least 1 pricing tier is required'
+    } else {
+      const emptyTierIndex = values.tiers.findIndex((t) => t.frequency_prices.length === 0)
+      if (emptyTierIndex !== -1) {
+        errors.tiers = `Tier ${emptyTierIndex + 1} has no frequency pricing — add at least 1 price row`
+      }
+    }
   }
   return errors
 }

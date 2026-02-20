@@ -52,7 +52,7 @@ export interface WizardState {
   price_override: boolean
   job_name: string
   area_sqm: number | null
-  frequency: 1 | 2 | 4 | 8 | null
+  frequency: number | null
 
   booking_date: string         // YYYY-MM-DD
   end_date: string | null      // YYYY-MM-DD null = single-day
@@ -105,7 +105,7 @@ export type WizardAction =
   | { type: 'SET_CUSTOM_PRICE'; price: number | null }
   | { type: 'SET_JOB_NAME'; name: string }
   | { type: 'SET_AREA_SQM'; area: number | null }
-  | { type: 'SET_FREQUENCY'; frequency: 1 | 2 | 4 | 8 | null }
+  | { type: 'SET_FREQUENCY'; frequency: number | null }
   | { type: 'SET_BOOKING_DATE'; date: string }
   | { type: 'SET_END_DATE'; date: string | null }
   | { type: 'TOGGLE_MULTI_DAY'; isMultiDay: boolean }

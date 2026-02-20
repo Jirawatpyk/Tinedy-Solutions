@@ -82,6 +82,17 @@ export function SmartPriceField({
 
   const selectedPkg = packages.find((p) => p.id === package_v2_id)
 
+  // Collect all unique frequency options from selected package's tiers (dynamic)
+  const availableFrequencies: number[] = selectedPkg?.pricing_model === 'tiered' && selectedPkg.tiers && selectedPkg.tiers.length > 0
+    ? [...new Set(
+        selectedPkg.tiers.flatMap((t) =>
+          t.frequency_prices && t.frequency_prices.length > 0
+            ? t.frequency_prices.map((fp) => fp.times)
+            : [1, t.price_2_times != null ? 2 : null, t.price_4_times != null ? 4 : null, t.price_8_times != null ? 8 : null].filter((x): x is number => x !== null)
+        )
+      )].sort((a, b) => a - b)
+    : [1, 2, 4, 8]
+
   // Auto-calculate price (and end_time) for tiered packages when area/frequency changes
   // Skip in edit mode (lockPriceMode) — DB already stores correct per-booking price;
   // recalculating would return full package total (e.g. 8000) instead of per-booking split (4000).
@@ -257,7 +268,7 @@ export function SmartPriceField({
                 <Select
                   value={frequency?.toString() ?? 'none'}
                   onValueChange={(val) => {
-                    const freq = val === 'none' ? null : (Number(val) as 1 | 2 | 4 | 8)
+                    const freq = val === 'none' ? null : Number(val)
                     dispatch({ type: 'SET_FREQUENCY', frequency: freq })
                   }}
                 >
@@ -266,10 +277,11 @@ export function SmartPriceField({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unspecified</SelectItem>
-                    <SelectItem value="1">1 time</SelectItem>
-                    <SelectItem value="2">2 times</SelectItem>
-                    <SelectItem value="4">4 times</SelectItem>
-                    <SelectItem value="8">8 times</SelectItem>
+                    {availableFrequencies.map((f) => (
+                      <SelectItem key={f} value={String(f)}>
+                        {f} {f === 1 ? 'time' : 'times'}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

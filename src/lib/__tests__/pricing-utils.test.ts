@@ -392,8 +392,18 @@ describe('pricing-utils', () => {
     it('should get package with tiers and calculate min/max prices', async () => {
       const mockPackage = createMockPackage()
       const mockTiers = [
-        createMockTier({ id: 'tier-1', price_1_time: 1950, price_8_times: 14000 }),
-        createMockTier({ id: 'tier-2', price_1_time: 3900, price_8_times: 28000 }),
+        createMockTier({
+          id: 'tier-1',
+          price_1_time: 1950,
+          price_8_times: 14000,
+          frequency_prices: [{ times: 1, price: 1950 }, { times: 8, price: 14000 }],
+        }),
+        createMockTier({
+          id: 'tier-2',
+          price_1_time: 3900,
+          price_8_times: 28000,
+          frequency_prices: [{ times: 1, price: 3900 }, { times: 8, price: 28000 }],
+        }),
       ]
 
       // Mock package query

@@ -123,6 +123,7 @@ export function PackageFormV2({
                   : []),
               ]
         return {
+          _key: crypto.randomUUID(),
           area_min: tier.area_min,
           area_max: tier.area_max,
           required_staff: tier.required_staff,
