@@ -15,7 +15,6 @@ import {
   CustomerMetricsSection,
   CustomerIntelligenceCard,
   CustomerNotesCard,
-  BookingActivityChart,
   BookingHistorySection,
   BookingModalsContainer,
 } from '@/components/customer-detail'
@@ -158,8 +157,6 @@ export function AdminCustomerDetail() {
         onAddNote={() => dispatch({ type: 'OPEN_MODAL', modal: 'note' })}
       />
 
-      {/* Customer Activity Chart */}
-      <BookingActivityChart bookings={bookings} />
 
       {/* Booking History */}
       <BookingHistorySection
