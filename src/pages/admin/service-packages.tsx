@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { AppSheet } from '@/components/ui/app-sheet'
+import { PackageWizardSheet } from '@/components/service-packages/PackageWizardSheet'
 import { toast } from 'sonner'
 import { usePermissions } from '@/hooks/use-permissions'
 import { usePackageActions } from '@/hooks/use-package-actions'
@@ -48,7 +50,9 @@ export function AdminServicePackages() {
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [pricingModelFilter, setPricingModelFilter] = useState('all')
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+  const [isEditV2SheetOpen, setIsEditV2SheetOpen] = useState(false)
+  const [isEditV1DialogOpen, setIsEditV1DialogOpen] = useState(false)
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null)
   const [editingPackageV2, setEditingPackageV2] = useState<ServicePackageV2WithTiers | null>(null)
   const [formData, setFormData] = useState<PackageFormV1Data>({
@@ -197,7 +201,7 @@ export function AdminServicePackages() {
   const handleEditV2 = useCallback((pkg: ServicePackageV2WithTiers) => {
     setEditingPackageV2(pkg)
     setEditingPackage(null)
-    setIsDialogOpen(true)
+    setIsEditV2SheetOpen(true)
   }, [])
 
   const handleEditV1 = useCallback((pkg: ServicePackageV2WithTiers) => {
@@ -220,7 +224,7 @@ export function AdminServicePackages() {
       duration_minutes: v1Pkg.duration_minutes?.toString() || '',
       price: v1Pkg.price?.toString() || '',
     })
-    setIsDialogOpen(true)
+    setIsEditV1DialogOpen(true)
   }, [])
 
   const handleUnifiedEdit = useCallback(
@@ -234,14 +238,25 @@ export function AdminServicePackages() {
     [handleEditV2, handleEditV1]
   )
 
+  const handleV2EditSuccess = useCallback(() => {
+    setIsEditV2SheetOpen(false)
+    setEditingPackageV2(null)
+    refresh()
+  }, [refresh])
+
+  const handleV2EditCancel = useCallback(() => {
+    setIsEditV2SheetOpen(false)
+    setEditingPackageV2(null)
+  }, [])
+
   const handleFormSuccess = useCallback(() => {
-    setIsDialogOpen(false)
+    setIsEditV1DialogOpen(false)
     resetForm()
     refresh()
   }, [resetForm, refresh])
 
   const handleFormCancel = useCallback(() => {
-    setIsDialogOpen(false)
+    setIsEditV1DialogOpen(false)
     resetForm()
   }, [resetForm])
 
@@ -249,7 +264,7 @@ export function AdminServicePackages() {
     async (e: React.FormEvent) => {
       const success = await packageActions.submitV1Form(e, formData, editingPackage)
       if (success) {
-        setIsDialogOpen(false)
+        setIsEditV1DialogOpen(false)
         resetForm()
       }
     },
@@ -267,41 +282,45 @@ export function AdminServicePackages() {
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
         canCreate={can('create', 'service_packages')}
-        onCreateClick={() => {
-          resetForm()
-          setIsDialogOpen(true)
-        }}
+        onCreateClick={() => setIsCreateSheetOpen(true)}
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Create — Wizard Sheet */}
+      <PackageWizardSheet
+        open={isCreateSheetOpen}
+        onOpenChange={setIsCreateSheetOpen}
+        onSuccess={refresh}
+      />
+
+      {/* Edit V2 — AppSheet */}
+      <AppSheet
+        open={isEditV2SheetOpen}
+        onOpenChange={(open) => { if (!open) handleV2EditCancel() }}
+        title="Edit Package"
+        description="Update package information and pricing"
+        size="lg"
+      >
+        {editingPackageV2 && (
+          <PackageFormV2
+            package={editingPackageV2}
+            packageSource="v2"
+            onSuccess={handleV2EditSuccess}
+            onCancel={handleV2EditCancel}
+            showCancel={true}
+          />
+        )}
+      </AppSheet>
+
+      {/* Edit V1 (Legacy) — Dialog */}
+      <Dialog open={isEditV1DialogOpen} onOpenChange={setIsEditV1DialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingPackageV2
-                ? 'Edit Package'
-                : editingPackage
-                  ? 'Edit Package (V1)'
-                  : 'Create New Package'}
-            </DialogTitle>
+            <DialogTitle>Edit Package (V1)</DialogTitle>
             <DialogDescription>
-              {editingPackageV2
-                ? 'Update package information and pricing'
-                : editingPackage
-                  ? 'Update V1 package information (Fixed pricing only)'
-                  : 'Create a new service package with tiered pricing'}
+              Update V1 package information (Fixed pricing only)
             </DialogDescription>
           </DialogHeader>
-
-          {(editingPackageV2 || !editingPackage) && (
-            <PackageFormV2
-              package={editingPackageV2}
-              onSuccess={handleFormSuccess}
-              onCancel={handleFormCancel}
-              showCancel={true}
-            />
-          )}
-
-          {editingPackage && !editingPackageV2 && (
+          {editingPackage && (
             <PackageFormV1
               formData={formData}
               onFormDataChange={setFormData}
