@@ -1,6 +1,8 @@
 export { default as CustomerProfileHeader } from './CustomerProfileHeader'
 export { default as CustomerMetricsSection } from './CustomerMetricsSection'
 export type { CustomerStats } from './CustomerMetricsSection'
+export { default as CustomerIntelligenceCard } from './CustomerIntelligenceCard'
+export { default as CustomerNotesCard } from './CustomerNotesCard'
 export { default as BookingActivityChart } from './BookingActivityChart'
 export { BookingHistorySection } from './BookingHistorySection'
 export type { CustomerBooking, HistoryCombinedItem, BookingHistorySectionProps } from './BookingHistorySection'

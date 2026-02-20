@@ -15,7 +15,6 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { formatDate } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-utils'
 import type { CustomerRecord, RelationshipLevel } from '@/types'
@@ -70,236 +69,155 @@ const CustomerProfileHeader = memo(function CustomerProfileHeader({
   const relationshipInfo =
     relationshipConfig[customer.relationship_level] ?? relationshipConfig.new
 
+  const initials = customer.full_name
+    .split(' ')
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+
   return (
-    <Card className="border-l-4 border-l-tinedy-blue">
+    <Card>
       <CardContent className="pt-6">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-          {/* Customer Info */}
-          <div className="flex-1 space-y-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-2xl font-bold text-tinedy-dark">
-                  {customer.full_name}
-                </h2>
-                <Badge
-                  variant="outline"
-                  className={relationshipInfo.className}
-                >
-                  {relationshipInfo.label}
-                </Badge>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="secondary" className="text-xs">
-                  {customer.preferred_contact_method.toUpperCase()}
-                </Badge>
-
-                {customer.source && (
-                  <Badge variant="outline" className="text-xs">
-                    Source:{' '}
-                    {customer.source === 'other'
-                      ? customer.source_other || 'Other'
-                      : customer.source}
-                  </Badge>
-                )}
-
-                {customer.tags &&
-                  customer.tags.length > 0 &&
-                  customer.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className={`text-xs ${getTagColor(tag)}`}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-              </div>
-            </div>
-
-            {/* Contact & Address Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-blue-600" />
-                <a
-                  href={`mailto:${customer.email}`}
-                  className="text-tinedy-dark hover:text-tinedy-blue"
-                >
-                  {customer.email}
-                </a>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-green-600" />
-                <a
-                  href={`tel:${customer.phone}`}
-                  className="text-tinedy-dark hover:text-tinedy-blue"
-                >
-                  {customer.phone}
-                </a>
-              </div>
-
-              {customer.line_id && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MessageCircle className="h-4 w-4 text-emerald-600" />
-                  <span className="text-tinedy-dark">{customer.line_id}</span>
-                </div>
-              )}
-
-              {customer.birthday && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-purple-600" />
-                  <span className="text-tinedy-dark">
-                    {formatDate(customer.birthday)}
-                  </span>
-                </div>
-              )}
-
-              {customer.address && (
-                <div className="flex items-start gap-2 text-sm md:col-span-2">
-                  <MapPin className="h-4 w-4 text-orange-600 mt-0.5" />
-                  <span className="text-tinedy-dark">
-                    {customer.address}
-                    {customer.city && `, ${customer.city}`}
-                    {customer.state && `, ${customer.state}`}
-                    {customer.zip_code && ` ${customer.zip_code}`}
-                  </span>
-                </div>
-              )}
-
-              {customer.company_name && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Building className="h-4 w-4 text-indigo-600" />
-                  <span className="text-tinedy-dark">
-                    {customer.company_name}
-                  </span>
-                </div>
-              )}
-
-              {customer.tax_id && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-tinedy-dark">{customer.tax_id}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Notes */}
-            {customer.notes && (
-              <div className="bg-muted/50 rounded-lg p-4 mt-4">
-                <p className="text-sm font-medium mb-1">Notes:</p>
-                <p className="text-sm text-muted-foreground">
-                  {customer.notes}
-                </p>
-              </div>
-            )}
+        {/* Top: Avatar + Name + Relationship */}
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-14 h-14 rounded-full bg-tinedy-blue text-white flex items-center justify-center text-xl font-bold flex-shrink-0 select-none">
+            {initials}
           </div>
-
-          {/* Quick Actions Sidebar */}
-          <div className="lg:w-64 space-y-2">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-              Quick Actions
-            </h3>
-
-            {/* Mobile: Icon buttons in a row */}
-            <div className="flex lg:hidden items-center gap-2">
-              <SimpleTooltip content="New Booking">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={onCreateBooking}
-                >
-                  <Calendar className="h-4 w-4" />
-                </Button>
-              </SimpleTooltip>
-
-              <SimpleTooltip content="Call Customer">
-                <a href={`tel:${customer.phone}`} aria-label="Call Customer">
-                  <Button variant="outline" size="icon">
-                    <PhoneCall className="h-4 w-4" />
-                  </Button>
-                </a>
-              </SimpleTooltip>
-
-              <SimpleTooltip content="Send Email">
-                <a href={`mailto:${customer.email}`} aria-label="Send Email">
-                  <Button variant="outline" size="icon">
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </a>
-              </SimpleTooltip>
-
-              {customer.line_id && (
-                <SimpleTooltip content="Copy LINE ID">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onCopyLineId}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                  </Button>
-                </SimpleTooltip>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-tinedy-dark leading-tight">
+              {customer.full_name}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="outline" className={relationshipInfo.className}>
+                {relationshipInfo.label}
+              </Badge>
+              {customer.source && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  {customer.source === 'other'
+                    ? customer.source_other || 'Other'
+                    : customer.source}
+                </Badge>
               )}
-
-              <SimpleTooltip content="Add Note">
-                <Button variant="outline" size="icon" onClick={onAddNote}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </SimpleTooltip>
-            </div>
-
-            {/* Desktop: Full buttons stacked */}
-            <div className="hidden lg:flex lg:flex-col lg:space-y-2">
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={onCreateBooking}
-              >
-                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">New Booking</span>
-              </Button>
-
-              <a href={`tel:${customer.phone}`} className="block">
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                >
-                  <PhoneCall className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Call Customer</span>
-                </Button>
-              </a>
-
-              <a href={`mailto:${customer.email}`} className="block">
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                >
-                  <Send className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Send Email</span>
-                </Button>
-              </a>
-
-              {customer.line_id && (
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  onClick={onCopyLineId}
-                >
-                  <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Copy LINE ID</span>
-                </Button>
-              )}
-
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={onAddNote}
-              >
-                <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">Add Note</span>
-              </Button>
             </div>
           </div>
+        </div>
+
+        {/* Contact Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 mb-4 text-sm">
+          <a
+            href={`mailto:${customer.email}`}
+            className="flex items-center gap-2 text-tinedy-dark hover:text-tinedy-blue truncate"
+          >
+            <Mail className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            <span className="truncate">{customer.email}</span>
+          </a>
+
+          <a
+            href={`tel:${customer.phone}`}
+            className="flex items-center gap-2 text-tinedy-dark hover:text-tinedy-blue"
+          >
+            <Phone className="h-4 w-4 text-green-600 flex-shrink-0" />
+            {customer.phone}
+          </a>
+
+          {customer.line_id && (
+            <button
+              onClick={onCopyLineId}
+              className="flex items-center gap-2 text-tinedy-dark hover:text-tinedy-blue text-left"
+            >
+              <MessageCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+              {customer.line_id}
+            </button>
+          )}
+
+          {customer.birthday && (
+            <div className="flex items-center gap-2 text-tinedy-dark">
+              <Calendar className="h-4 w-4 text-purple-600 flex-shrink-0" />
+              {formatDate(customer.birthday)}
+            </div>
+          )}
+
+          {customer.company_name && (
+            <div className="flex items-center gap-2 text-tinedy-dark">
+              <Building className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+              {customer.company_name}
+            </div>
+          )}
+
+          {customer.tax_id && (
+            <div className="flex items-center gap-2 text-tinedy-dark">
+              <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              {customer.tax_id}
+            </div>
+          )}
+
+          {customer.address && (
+            <div className="flex items-start gap-2 text-tinedy-dark sm:col-span-2">
+              <MapPin className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
+              <span>
+                {[customer.address, customer.city, customer.state, customer.zip_code]
+                  .filter(Boolean)
+                  .join(', ')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Tags */}
+        {(customer.tags?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <Badge variant="secondary" className="text-xs">
+              {customer.preferred_contact_method.toUpperCase()}
+            </Badge>
+            {customer.tags!.map((tag) => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className={`text-xs ${getTagColor(tag)}`}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Bottom Action Bar */}
+        <div className="border-t pt-4 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="bg-tinedy-blue hover:bg-tinedy-blue/90"
+            onClick={onCreateBooking}
+          >
+            <Calendar className="h-4 w-4 mr-1.5" />
+            New Booking
+          </Button>
+
+          <a href={`tel:${customer.phone}`}>
+            <Button variant="outline" size="sm">
+              <PhoneCall className="h-4 w-4 mr-1.5" />
+              Call
+            </Button>
+          </a>
+
+          <a href={`mailto:${customer.email}`}>
+            <Button variant="outline" size="sm">
+              <Send className="h-4 w-4 mr-1.5" />
+              Email
+            </Button>
+          </a>
+
+          {customer.line_id && (
+            <Button variant="outline" size="sm" onClick={onCopyLineId}>
+              <MessageCircle className="h-4 w-4 mr-1.5" />
+              Copy LINE
+            </Button>
+          )}
+
+          <Button variant="outline" size="sm" onClick={onAddNote}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Note
+          </Button>
         </div>
       </CardContent>
     </Card>

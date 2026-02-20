@@ -13,6 +13,8 @@ import type { Booking } from '@/types/booking'
 import {
   CustomerProfileHeader,
   CustomerMetricsSection,
+  CustomerIntelligenceCard,
+  CustomerNotesCard,
   BookingActivityChart,
   BookingHistorySection,
   BookingModalsContainer,
@@ -145,6 +147,15 @@ export function AdminCustomerDetail() {
       <CustomerMetricsSection
         stats={stats}
         customerCreatedAt={customer.created_at}
+      />
+
+      {/* Customer Intelligence */}
+      <CustomerIntelligenceCard customer={customer} stats={stats} />
+
+      {/* Notes & Activity */}
+      <CustomerNotesCard
+        notes={customer.notes}
+        onAddNote={() => dispatch({ type: 'OPEN_MODAL', modal: 'note' })}
       />
 
       {/* Customer Activity Chart */}
