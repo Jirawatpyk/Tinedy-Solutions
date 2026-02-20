@@ -53,6 +53,7 @@ import { supabase } from '@/lib/supabase'
 import { sendBookingReminder } from '@/lib/email'
 import { toast } from 'sonner'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
+import { getServiceTypeBadge } from '@/lib/booking-badges'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { getFrequencyLabel } from '@/types/service-package-v2'
@@ -438,11 +439,9 @@ export function BookingDetailSheet({
               </div>
               <div className="pl-1 space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {isCustomMode ? (
-                    <Badge variant="secondary" className="text-xs">Custom Job</Badge>
-                  ) : serviceType ? (
-                    <Badge variant="outline" className="text-xs">{serviceType}</Badge>
-                  ) : null}
+                  {(isCustomMode || serviceType) &&
+                    getServiceTypeBadge(serviceType, booking?.price_mode, 'text-xs')
+                  }
                   <span className="text-sm font-medium text-tinedy-dark">{serviceName}</span>
                 </div>
                 {booking.area_sqm != null && booking.area_sqm > 0 && (

@@ -7,7 +7,7 @@ import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight,
 import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { formatDateRange } from '@/lib/date-range-utils'
 import { EmptyState } from '@/components/common/EmptyState'
-import { getStatusBadge, getPaymentStatusBadge } from '@/lib/booking-badges'
+import { getStatusBadge, getPaymentStatusBadge, getServiceTypeBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import type { TodayBooking } from '@/types/dashboard'
 
@@ -154,11 +154,11 @@ export const TodayAppointmentsList = ({
                     </div>
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span className="inline-flex items-center">
-                        <Badge variant="outline" className="mr-2">
-                          {booking.service_packages?.service_type ||
-                            booking.service_packages_v2?.service_type ||
-                            'service'}
-                        </Badge>
+                        {getServiceTypeBadge(
+                          booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type,
+                          booking.price_mode,
+                          'mr-1.5 sm:mr-2 text-[10px] sm:text-xs'
+                        )}
                         {booking.service_packages?.name ||
                           booking.service_packages_v2?.name ||
                           'Unknown Service'}

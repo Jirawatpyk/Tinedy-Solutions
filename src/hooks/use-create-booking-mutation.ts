@@ -20,6 +20,7 @@ import { BookingStatus, PaymentStatus, type PriceMode } from '@/types/booking'
 import { RecurringPattern } from '@/types/recurring-booking'
 import { createRecurringGroup } from '@/lib/recurring-booking-service'
 import { sendBookingConfirmation, sendRecurringBookingConfirmation } from '@/lib/email'
+import { toast } from 'sonner'
 
 // ============================================================================
 // TYPES
@@ -217,11 +218,15 @@ async function createBookingMutation(data: BookingInsertData): Promise<CreateBoo
   const primaryId = bookingIds[0]
   if (primaryId) {
     const isRecurring = data.recurring_dates && data.recurring_dates.length > 0
-    if (isRecurring) {
-      sendRecurringBookingConfirmation({ bookingId: primaryId }).catch(() => {})
-    } else {
-      sendBookingConfirmation({ bookingId: primaryId }).catch(() => {})
-    }
+    const sendFn = isRecurring ? sendRecurringBookingConfirmation : sendBookingConfirmation
+    sendFn({ bookingId: primaryId })
+      .then((result) => {
+        if (!result.success) {
+          console.warn('Booking confirmation email failed:', result.error)
+          toast.warning('Booking created — confirmation email failed to send')
+        }
+      })
+      .catch(() => {})
   }
 
   return { bookingIds, customerId }

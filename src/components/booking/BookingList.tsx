@@ -9,10 +9,10 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatBookingId } from '@/lib/utils'
 import { formatDateRange } from '@/lib/date-range-utils'
-import { PriceMode } from '@/types/booking'
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
 import { RecurringBookingCard } from './RecurringBookingCard'
+import { getServiceTypeBadge } from '@/lib/booking-badges'
 import type { CombinedItem } from '@/types/recurring-booking'
 
 interface PaginationMetadata {
@@ -213,12 +213,10 @@ function BookingListComponent({
                         </div>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="inline-flex items-center">
-                            {booking.price_mode === PriceMode.Custom ? (
-                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">Custom Job</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
-                                {booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type}
-                              </Badge>
+                            {getServiceTypeBadge(
+                              booking.service_packages?.service_type ?? booking.service_packages_v2?.service_type,
+                              booking.price_mode,
+                              'mr-1.5 sm:mr-2 text-[10px] sm:text-xs'
                             )}
                             <span className="truncate">
                               {booking.job_name ?? booking.service_packages?.name ?? booking.service_packages_v2?.name}
