@@ -120,6 +120,7 @@ export interface CustomerRecord {
   company_name: string | null
   tax_id: string | null
   notes: string | null
+  relationship_level_locked?: boolean
   created_at: string
   updated_at: string
   deleted_at: string | null

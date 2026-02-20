@@ -15,6 +15,7 @@
 import { supabase } from '@/lib/supabase'
 import { getBangkokDateString } from '@/lib/utils'
 import { sendPaymentConfirmation, sendRefundConfirmation } from '@/lib/email'
+import { checkAndUpdateCustomerIntelligence } from '@/lib/customer-intelligence'
 
 // ===== Types =====
 
@@ -104,6 +105,18 @@ export async function verifyPayment(
       if (!emailResult.success) console.warn('Payment confirmation email failed:', emailResult.error)
     }
 
+    // Fire-and-forget: update customer intelligence after payment
+    ;(async () => {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('customer_id')
+        .eq('id', bookingId)
+        .single()
+      if (booking?.customer_id) {
+        await checkAndUpdateCustomerIntelligence(booking.customer_id)
+      }
+    })()
+
     return { success: true, count }
   } catch (error) {
     console.error('Error in verifyPayment:', error)
@@ -184,6 +197,18 @@ export async function markAsPaid(
       const emailResult = await sendPaymentConfirmation({ bookingId })
       if (!emailResult.success) console.warn('Payment confirmation email failed:', emailResult.error)
     }
+
+    // Fire-and-forget: update customer intelligence after payment
+    ;(async () => {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('customer_id')
+        .eq('id', bookingId)
+        .single()
+      if (booking?.customer_id) {
+        await checkAndUpdateCustomerIntelligence(booking.customer_id)
+      }
+    })()
 
     return { success: true, count }
   } catch (error) {

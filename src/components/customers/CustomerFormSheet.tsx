@@ -12,6 +12,7 @@ import {
   type CustomerUpdateFormData,
 } from '@/schemas'
 import type { CustomerRecord } from '@/types'
+import { useAuth } from '@/contexts/auth-context'
 import { AppSheet } from '@/components/ui/app-sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,10 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { getTagColor } from '@/lib/tag-utils'
 import { CUSTOMER_TAG_SUGGESTIONS } from '@/constants/customer-tags'
-import { Tag } from 'lucide-react'
+import { Lock, Tag } from 'lucide-react'
 
 export interface CustomerFormSheetProps {
   open: boolean
@@ -64,6 +66,8 @@ export function CustomerFormSheet({
   customer = null,
 }: CustomerFormSheetProps) {
   const isEditMode = !!customer
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(isEditMode ? customerUpdateSchema : customerCreateSchema),
@@ -93,6 +97,7 @@ export function CustomerFormSheet({
           company_name: customer.company_name || '',
           tax_id: customer.tax_id || '',
           notes: customer.notes || '',
+          relationship_level_locked: customer.relationship_level_locked ?? false,
         })
       } else {
         form.reset(defaultFormValues)
@@ -324,6 +329,36 @@ export function CustomerFormSheet({
                 </div>
               )}
             </div>
+
+            {/* Lock Toggle — Admin only, Edit mode only */}
+            {isEditMode && isAdmin && (
+              <div className="border-t pt-4">
+                <Controller
+                  name="relationship_level_locked"
+                  control={form.control}
+                  render={({ field }) => (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Label htmlFor="relationship_level_locked" className="cursor-pointer text-sm font-medium">
+                            Lock Relationship Level
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Prevent auto-upgrade from overwriting this level
+                        </p>
+                      </div>
+                      <Switch
+                        id="relationship_level_locked"
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </div>
+                  )}
+                />
+              </div>
+            )}
 
             {/* Tags Section */}
             <div className="border-t pt-4 space-y-2">

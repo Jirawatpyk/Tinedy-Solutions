@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Lock, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getTagColor } from '@/lib/tag-utils'
@@ -79,6 +79,15 @@ const CustomerIntelligenceCard = memo(function CustomerIntelligenceCard({
           <Badge variant="outline" className={relationshipInfo.className}>
             {relationshipInfo.label}
           </Badge>
+          {customer.relationship_level_locked && (
+            <Badge
+              variant="outline"
+              className="text-xs bg-slate-100 text-slate-600 border-slate-300 flex items-center gap-1"
+            >
+              <Lock className="h-3 w-3" />
+              Locked
+            </Badge>
+          )}
           {isInactiveRisk && (
             <Badge
               variant="outline"
