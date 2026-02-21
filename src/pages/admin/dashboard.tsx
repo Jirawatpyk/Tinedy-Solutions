@@ -14,23 +14,11 @@ import { BookingEditModal } from '@/components/booking'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
 
 // Utils
-import { formatCurrency } from '@/lib/utils'
+import { computeDashboardSubtitle } from '@/lib/dashboard-utils'
 
 // Types
 import { BookingStatus } from '@/types/booking'
 import type { Booking } from '@/types/booking'
-import type { TodayBooking } from '@/types/dashboard'
-
-/** Pure helper — exported for unit testing */
-export function computeDashboardSubtitle(todayBookings: TodayBooking[]): string {
-  const count = todayBookings.length
-  if (count === 0) return 'No bookings scheduled today'
-  const revenue = todayBookings
-    .filter((b) => b.status !== 'cancelled')
-    .reduce((sum, b) => sum + Number(b.total_price), 0)
-  if (revenue > 0) return `${count} booking${count !== 1 ? 's' : ''} today • ${formatCurrency(revenue)} revenue`
-  return `${count} booking${count !== 1 ? 's' : ''} today`
-}
 
 export function AdminDashboard() {
   // Dashboard Data Hooks

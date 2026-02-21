@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeDashboardSubtitle } from '../dashboard'
+import { computeDashboardSubtitle } from '@/lib/dashboard-utils'
 import type { TodayBooking } from '@/types/dashboard'
 
 function makeBooking(overrides: Partial<TodayBooking> = {}): TodayBooking {

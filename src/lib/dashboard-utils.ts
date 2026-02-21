@@ -1,3 +1,6 @@
+import { formatCurrency } from '@/lib/utils'
+import type { TodayBooking } from '@/types/dashboard'
+
 /**
  * Calculate end time from start time and duration
  * @param startTime - Start time in HH:MM format
@@ -58,4 +61,18 @@ export function getDateDaysAgo(daysAgo: number): string {
   const date = new Date()
   date.setDate(date.getDate() - daysAgo)
   return date.toISOString().split('T')[0]
+}
+
+/**
+ * Compute dashboard header subtitle from today's bookings
+ * Pure function — no side effects
+ */
+export function computeDashboardSubtitle(todayBookings: TodayBooking[]): string {
+  const count = todayBookings.length
+  if (count === 0) return 'No bookings scheduled today'
+  const revenue = todayBookings
+    .filter((b) => b.status !== 'cancelled')
+    .reduce((sum, b) => sum + Number(b.total_price), 0)
+  if (revenue > 0) return `${count} booking${count !== 1 ? 's' : ''} today • ${formatCurrency(revenue)} revenue`
+  return `${count} booking${count !== 1 ? 's' : ''} today`
 }
