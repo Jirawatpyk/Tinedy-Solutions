@@ -5,6 +5,8 @@ import {
   formatDateTime,
   formatCurrency,
   getBangkokDateString,
+  getBangkokNowHHMM,
+  timeToMinutes,
   getAvatarColor,
   getRankBadgeColor,
   formatBookingId,
@@ -436,6 +438,62 @@ describe('utils', () => {
         expect(colorClass).toMatch(/bg-/)
         expect(colorClass).toMatch(/text-/)
       })
+    })
+  })
+
+  describe('getBangkokNowHHMM', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should return HH:MM format', () => {
+      vi.setSystemTime(new Date('2024-01-15T12:00:00Z'))
+      const result = getBangkokNowHHMM()
+      expect(result).toMatch(/^\d{2}:\d{2}$/)
+    })
+
+    it('should return Bangkok time (UTC+7) when UTC is midnight', () => {
+      // UTC 00:00 → Bangkok 07:00
+      vi.setSystemTime(new Date('2024-01-15T00:00:00Z'))
+      expect(getBangkokNowHHMM()).toBe('07:00')
+    })
+
+    it('should return Bangkok time (UTC+7) when UTC is 17:00', () => {
+      // UTC 17:00 → Bangkok 00:00 next day
+      vi.setSystemTime(new Date('2024-01-15T17:00:00Z'))
+      expect(getBangkokNowHHMM()).toBe('00:00')
+    })
+
+    it('should return Bangkok time at midday', () => {
+      // UTC 05:30 → Bangkok 12:30
+      vi.setSystemTime(new Date('2024-01-15T05:30:00Z'))
+      expect(getBangkokNowHHMM()).toBe('12:30')
+    })
+  })
+
+  describe('timeToMinutes', () => {
+    it('should convert HH:MM to minutes since midnight', () => {
+      expect(timeToMinutes('09:30')).toBe(570)
+    })
+
+    it('should convert midnight to 0', () => {
+      expect(timeToMinutes('00:00')).toBe(0)
+    })
+
+    it('should convert end of day', () => {
+      expect(timeToMinutes('23:59')).toBe(1439)
+    })
+
+    it('should ignore seconds if provided', () => {
+      expect(timeToMinutes('09:30:00')).toBe(570)
+    })
+
+    it('should convert full hours', () => {
+      expect(timeToMinutes('10:00')).toBe(600)
     })
   })
 

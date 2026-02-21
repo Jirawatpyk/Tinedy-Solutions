@@ -48,16 +48,6 @@ export const TodayStatsResponseSchema = z.object({
   bookingsChange: z.number(),
 })
 
-/**
- * Mini stats response (quick overview)
- */
-export const MiniStatsResponseSchema = z.object({
-  totalRevenue: z.number().min(0),
-  totalBookings: z.number().int().min(0),
-  pendingBookings: z.number().int().min(0),
-  activeStaff: z.number().int().min(0),
-})
-
 // ============================================================================
 // BOOKING STATS SCHEMAS
 // ============================================================================
@@ -269,7 +259,6 @@ export const PackagePerformanceResponseSchema = z.object({
 // Dashboard Stats Types
 export type DashboardStatsResponse = z.infer<typeof DashboardStatsResponseSchema>
 export type TodayStatsResponse = z.infer<typeof TodayStatsResponseSchema>
-export type MiniStatsResponse = z.infer<typeof MiniStatsResponseSchema>
 
 // Booking Stats Types
 export type BookingsByStatusResponse = z.infer<typeof BookingsByStatusResponseSchema>

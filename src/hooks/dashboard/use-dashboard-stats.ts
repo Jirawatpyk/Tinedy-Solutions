@@ -55,13 +55,6 @@ export function useDashboardStats() {
     error: errorRevenue,
   } = useQuery(dashboardQueryOptions.revenue(7))
 
-  // Fetch mini stats (top service, avg value, completion rate)
-  const {
-    data: miniStats = { topService: null, avgBookingValue: 0, completionRate: 0 },
-    isLoading: loadingMiniStats,
-    error: errorMiniStats,
-  } = useQuery(dashboardQueryOptions.miniStats)
-
   // Individual loading states for each section
   const loadingStates = {
     stats: loadingStats,
@@ -69,7 +62,6 @@ export function useDashboardStats() {
     byStatus: loadingByStatus,
     todayBookings: loadingTodayBookings,
     revenue: loadingRevenue,
-    miniStats: loadingMiniStats,
   }
 
   // Combined loading state (true if ANY query is loading)
@@ -78,8 +70,7 @@ export function useDashboardStats() {
     loadingTodayStats ||
     loadingByStatus ||
     loadingTodayBookings ||
-    loadingRevenue ||
-    loadingMiniStats
+    loadingRevenue
 
   // Combined error state
   const error =
@@ -88,7 +79,6 @@ export function useDashboardStats() {
     errorByStatus?.message ||
     errorTodayBookings?.message ||
     errorRevenue?.message ||
-    errorMiniStats?.message ||
     null
 
   // Realtime subscription - invalidate queries when data changes
@@ -143,7 +133,6 @@ export function useDashboardStats() {
     bookingsByStatus,
     todayBookings,
     dailyRevenue,
-    miniStats,
     loading,
     loadingStates,
     error,

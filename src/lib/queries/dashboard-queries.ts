@@ -22,7 +22,6 @@ import type {
   BookingStatus,
   TodayBooking,
   DailyRevenue,
-  MiniStats,
 } from '@/types/dashboard'
 
 /**
@@ -207,59 +206,6 @@ export async function fetchDailyRevenue(days: number = 7): Promise<DailyRevenue[
 }
 
 /**
- * Fetch Mini Stats (top service, avg booking value, completion rate)
- * staleTime: 10 minutes - ข้อมูลสรุปไม่เปลี่ยนบ่อย
- */
-export async function fetchMiniStats(): Promise<MiniStats> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(
-      'total_price, status, service_packages(name), service_packages_v2:package_v2_id(name)'
-    )
-    .is('deleted_at', null)
-
-  if (error) throw new Error(`Failed to fetch mini stats: ${error.message}`)
-
-  type BookingWithService = {
-    service_packages?: { name: string }[] | { name: string } | null
-    service_packages_v2?: { name: string }[] | { name: string } | null
-    total_price?: number
-    status?: string
-  }
-
-  // 1. Top Service
-  const fullServiceCount: Record<string, { name: string; count: number }> = {}
-  data?.forEach((booking: BookingWithService) => {
-    const rawPackage = booking.service_packages || booking.service_packages_v2
-    const servicePackage = Array.isArray(rawPackage) ? rawPackage[0] : rawPackage
-    const serviceName = servicePackage?.name
-    if (serviceName) {
-      if (!fullServiceCount[serviceName]) {
-        fullServiceCount[serviceName] = { name: serviceName, count: 0 }
-      }
-      fullServiceCount[serviceName].count++
-    }
-  })
-
-  const topService = Object.values(fullServiceCount).sort((a, b) => b.count - a.count)[0] || null
-
-  // 2. Average Booking Value
-  const totalBookingValue =
-    data?.reduce((sum, booking) => sum + Number(booking.total_price), 0) || 0
-  const avgBookingValue = data && data.length > 0 ? totalBookingValue / data.length : 0
-
-  // 3. Completion Rate
-  const completedCount = data?.filter((b) => b.status === BookingStatusEnum.Completed).length || 0
-  const completionRate = data && data.length > 0 ? (completedCount / data.length) * 100 : 0
-
-  return {
-    topService,
-    avgBookingValue,
-    completionRate,
-  }
-}
-
-/**
  * Query Options สำหรับ Dashboard
  */
 export const dashboardQueryOptions = {
@@ -298,11 +244,4 @@ export const dashboardQueryOptions = {
     refetchOnMount: 'always' as const, // Force refetch on mount
     refetchOnWindowFocus: true, // Refetch when window regains focus
   }),
-  miniStats: {
-    queryKey: queryKeys.dashboard.miniStats(),
-    queryFn: fetchMiniStats,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnMount: 'always' as const, // Force refetch on mount
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-  },
 }

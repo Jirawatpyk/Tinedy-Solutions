@@ -42,6 +42,21 @@ export function getBangkokDateString(): string {
   return bangkokTime.toISOString().split('T')[0]
 }
 
+/** Return current Bangkok time as "HH:MM" string (UTC+7, same pattern as getBangkokDateString) */
+export function getBangkokNowHHMM(): string {
+  const now = new Date()
+  const bangkokOffset = 7 * 60 * 60 * 1000 // UTC+7 in milliseconds
+  const bangkokTime = new Date(now.getTime() + bangkokOffset)
+  // toISOString gives "YYYY-MM-DDTHH:MM:SS.sssZ" in UTC — after adding offset, HH:MM is Bangkok time
+  return bangkokTime.toISOString().slice(11, 16) // "HH:MM"
+}
+
+/** Convert "HH:MM" or "HH:MM:SS" string to minutes since midnight */
+export function timeToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
 // ============================================================================
 // Avatar & Display Utilities
 // ============================================================================

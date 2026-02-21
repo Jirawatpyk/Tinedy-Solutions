@@ -342,7 +342,6 @@ export {
 export {
   DashboardStatsResponseSchema,
   TodayStatsResponseSchema,
-  MiniStatsResponseSchema,
   BookingsByStatusResponseSchema,
   TodayBookingsResponseSchema,
   DailyRevenueDataPointSchema,
@@ -359,7 +358,6 @@ export {
   PackagePerformanceResponseSchema,
   type DashboardStatsResponse,
   type TodayStatsResponse,
-  type MiniStatsResponse,
   type BookingsByStatusResponse,
   type TodayBookingsResponse,
   type DailyRevenueDataPoint,
