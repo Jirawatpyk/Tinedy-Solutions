@@ -5,6 +5,9 @@ import {
   formatDateTime,
   formatCurrency,
   getBangkokDateString,
+  getBangkokNowHHMM,
+  timeToMinutes,
+  getBangkokWeekRange,
   getAvatarColor,
   getRankBadgeColor,
   formatBookingId,
@@ -436,6 +439,105 @@ describe('utils', () => {
         expect(colorClass).toMatch(/bg-/)
         expect(colorClass).toMatch(/text-/)
       })
+    })
+  })
+
+  describe('getBangkokNowHHMM', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should return HH:MM format', () => {
+      vi.setSystemTime(new Date('2024-01-15T12:00:00Z'))
+      const result = getBangkokNowHHMM()
+      expect(result).toMatch(/^\d{2}:\d{2}$/)
+    })
+
+    it('should return Bangkok time (UTC+7) when UTC is midnight', () => {
+      // UTC 00:00 → Bangkok 07:00
+      vi.setSystemTime(new Date('2024-01-15T00:00:00Z'))
+      expect(getBangkokNowHHMM()).toBe('07:00')
+    })
+
+    it('should return Bangkok time (UTC+7) when UTC is 17:00', () => {
+      // UTC 17:00 → Bangkok 00:00 next day
+      vi.setSystemTime(new Date('2024-01-15T17:00:00Z'))
+      expect(getBangkokNowHHMM()).toBe('00:00')
+    })
+
+    it('should return Bangkok time at midday', () => {
+      // UTC 05:30 → Bangkok 12:30
+      vi.setSystemTime(new Date('2024-01-15T05:30:00Z'))
+      expect(getBangkokNowHHMM()).toBe('12:30')
+    })
+  })
+
+  describe('timeToMinutes', () => {
+    it('should convert HH:MM to minutes since midnight', () => {
+      expect(timeToMinutes('09:30')).toBe(570)
+    })
+
+    it('should convert midnight to 0', () => {
+      expect(timeToMinutes('00:00')).toBe(0)
+    })
+
+    it('should convert end of day', () => {
+      expect(timeToMinutes('23:59')).toBe(1439)
+    })
+
+    it('should ignore seconds if provided', () => {
+      expect(timeToMinutes('09:30:00')).toBe(570)
+    })
+
+    it('should convert full hours', () => {
+      expect(timeToMinutes('10:00')).toBe(600)
+    })
+  })
+
+  describe('getBangkokWeekRange', () => {
+    beforeEach(() => { vi.useFakeTimers() })
+    afterEach(() => { vi.useRealTimers() })
+
+    it('returns YYYY-MM-DD strings for weekStart and weekEnd', () => {
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z')) // Wed Bangkok
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      expect(weekStart).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(weekEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it('weekStart is Monday when called on Wednesday (Bangkok)', () => {
+      // 2026-02-18 UTC+7 = Wed 2026-02-18 Bangkok → Mon should be 2026-02-16
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z'))
+      const { weekStart } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-16')
+    })
+
+    it('weekEnd is Sunday (6 days after weekStart)', () => {
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z'))
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      const start = new Date(weekStart)
+      const end = new Date(weekEnd)
+      const diffDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      expect(diffDays).toBe(6)
+    })
+
+    it('returns correct week when called on Sunday (Bangkok)', () => {
+      // 2026-02-22 is Sunday Bangkok → weekStart should be Mon 2026-02-16
+      vi.setSystemTime(new Date('2026-02-22T10:00:00Z'))
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-16')
+      expect(weekEnd).toBe('2026-02-22')
+    })
+
+    it('handles Bangkok timezone boundary — UTC Sun 17:01 = Mon Bangkok', () => {
+      // UTC 2026-02-22T17:01 = Bangkok Mon 2026-02-23 00:01
+      vi.setSystemTime(new Date('2026-02-22T17:01:00Z'))
+      const { weekStart } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-23') // New week started in Bangkok
     })
   })
 

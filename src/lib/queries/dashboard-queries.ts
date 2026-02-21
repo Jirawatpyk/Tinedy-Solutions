@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { format } from 'date-fns'
 import { getBangkokToday, getDateDaysAgo } from '@/lib/dashboard-utils'
+import { getBangkokWeekRange } from '@/lib/utils'
 import { BookingStatus as BookingStatusEnum } from '@/types/booking'
 import type {
   Stats,
@@ -22,7 +23,7 @@ import type {
   BookingStatus,
   TodayBooking,
   DailyRevenue,
-  MiniStats,
+  WeeklyBookingDay,
 } from '@/types/dashboard'
 
 /**
@@ -206,57 +207,50 @@ export async function fetchDailyRevenue(days: number = 7): Promise<DailyRevenue[
   }))
 }
 
+const WEEKLY_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+
 /**
- * Fetch Mini Stats (top service, avg booking value, completion rate)
- * staleTime: 10 minutes - ข้อมูลสรุปไม่เปลี่ยนบ่อย
+ * Fetch this week's booking count per day (Mon-Sun, Bangkok UTC+7)
+ * staleTime: 5 minutes
+ *
+ * NOTE: Counts only by booking_date (not multi-day span).
+ * A 3-day job starting Monday counts only on Monday.
+ * This is intentional — widget shows scheduling density, not team utilization.
  */
-export async function fetchMiniStats(): Promise<MiniStats> {
+export async function fetchWeeklyBookings(): Promise<WeeklyBookingDay[]> {
+  const { weekStart, weekEnd } = getBangkokWeekRange()
+  const { todayStr } = getBangkokToday()
+
   const { data, error } = await supabase
     .from('bookings')
-    .select(
-      'total_price, status, service_packages(name), service_packages_v2:package_v2_id(name)'
-    )
+    .select('booking_date')
     .is('deleted_at', null)
+    .not('status', 'in', `(${BookingStatusEnum.Cancelled},${BookingStatusEnum.NoShow})`)
+    .gte('booking_date', weekStart)
+    .lte('booking_date', weekEnd)
 
-  if (error) throw new Error(`Failed to fetch mini stats: ${error.message}`)
+  if (error) throw new Error(`Failed to fetch weekly bookings: ${error.message}`)
 
-  type BookingWithService = {
-    service_packages?: { name: string }[] | { name: string } | null
-    service_packages_v2?: { name: string }[] | { name: string } | null
-    total_price?: number
-    status?: string
-  }
-
-  // 1. Top Service
-  const fullServiceCount: Record<string, { name: string; count: number }> = {}
-  data?.forEach((booking: BookingWithService) => {
-    const rawPackage = booking.service_packages || booking.service_packages_v2
-    const servicePackage = Array.isArray(rawPackage) ? rawPackage[0] : rawPackage
-    const serviceName = servicePackage?.name
-    if (serviceName) {
-      if (!fullServiceCount[serviceName]) {
-        fullServiceCount[serviceName] = { name: serviceName, count: 0 }
-      }
-      fullServiceCount[serviceName].count++
+  // Count bookings per date
+  const countByDate: Record<string, number> = {}
+  data?.forEach((b) => {
+    if (b.booking_date) {
+      countByDate[b.booking_date] = (countByDate[b.booking_date] || 0) + 1
     }
   })
 
-  const topService = Object.values(fullServiceCount).sort((a, b) => b.count - a.count)[0] || null
-
-  // 2. Average Booking Value
-  const totalBookingValue =
-    data?.reduce((sum, booking) => sum + Number(booking.total_price), 0) || 0
-  const avgBookingValue = data && data.length > 0 ? totalBookingValue / data.length : 0
-
-  // 3. Completion Rate
-  const completedCount = data?.filter((b) => b.status === BookingStatusEnum.Completed).length || 0
-  const completionRate = data && data.length > 0 ? (completedCount / data.length) * 100 : 0
-
-  return {
-    topService,
-    avgBookingValue,
-    completionRate,
-  }
+  // Build 7-item array starting from weekStart (Monday)
+  return WEEKLY_DAY_LABELS.map((dayLabel, i) => {
+    const d = new Date(weekStart + 'T00:00:00Z')
+    d.setUTCDate(d.getUTCDate() + i)
+    const dateStr = d.toISOString().split('T')[0]
+    return {
+      date: dateStr,
+      dayLabel,
+      count: countByDate[dateStr] ?? 0,
+      isToday: dateStr === todayStr,
+    }
+  })
 }
 
 /**
@@ -298,11 +292,11 @@ export const dashboardQueryOptions = {
     refetchOnMount: 'always' as const, // Force refetch on mount
     refetchOnWindowFocus: true, // Refetch when window regains focus
   }),
-  miniStats: {
-    queryKey: queryKeys.dashboard.miniStats(),
-    queryFn: fetchMiniStats,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnMount: 'always' as const, // Force refetch on mount
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+  weeklyBookings: {
+    queryKey: queryKeys.dashboard.weeklyBookings(),
+    queryFn: fetchWeeklyBookings,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always' as const,
+    refetchOnWindowFocus: true,
   },
 }

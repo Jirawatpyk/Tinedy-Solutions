@@ -55,12 +55,12 @@ export function useDashboardStats() {
     error: errorRevenue,
   } = useQuery(dashboardQueryOptions.revenue(7))
 
-  // Fetch mini stats (top service, avg value, completion rate)
+  // Fetch this week's booking count per day
   const {
-    data: miniStats = { topService: null, avgBookingValue: 0, completionRate: 0 },
-    isLoading: loadingMiniStats,
-    error: errorMiniStats,
-  } = useQuery(dashboardQueryOptions.miniStats)
+    data: weeklyBookings = [],
+    isLoading: loadingWeeklyBookings,
+    error: errorWeeklyBookings,
+  } = useQuery(dashboardQueryOptions.weeklyBookings)
 
   // Individual loading states for each section
   const loadingStates = {
@@ -69,7 +69,7 @@ export function useDashboardStats() {
     byStatus: loadingByStatus,
     todayBookings: loadingTodayBookings,
     revenue: loadingRevenue,
-    miniStats: loadingMiniStats,
+    weeklyBookings: loadingWeeklyBookings,
   }
 
   // Combined loading state (true if ANY query is loading)
@@ -79,16 +79,17 @@ export function useDashboardStats() {
     loadingByStatus ||
     loadingTodayBookings ||
     loadingRevenue ||
-    loadingMiniStats
+    loadingWeeklyBookings
 
   // Combined error state
+  // NOTE: errorWeeklyBookings intentionally excluded — widget failure should NOT
+  // crash the entire dashboard. WeeklyOverview renders empty gracefully when days=[].
   const error =
     errorStats?.message ||
     errorTodayStats?.message ||
     errorByStatus?.message ||
     errorTodayBookings?.message ||
     errorRevenue?.message ||
-    errorMiniStats?.message ||
     null
 
   // Realtime subscription - invalidate queries when data changes
@@ -143,7 +144,8 @@ export function useDashboardStats() {
     bookingsByStatus,
     todayBookings,
     dailyRevenue,
-    miniStats,
+    weeklyBookings,
+    weeklyBookingsError: !!errorWeeklyBookings,
     loading,
     loadingStates,
     error,

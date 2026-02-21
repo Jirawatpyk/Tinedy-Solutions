@@ -47,6 +47,7 @@ export interface TodayBooking {
   payment_date?: string
   payment_notes?: string
   price_mode?: PriceMode
+  job_name?: string | null
   customers: {
     id: string
     full_name: string
@@ -81,11 +82,14 @@ export interface DailyRevenue {
   revenue: number
 }
 
-// Mini Stats (Quick Insights)
-export interface MiniStats {
-  topService: { name: string; count: number } | null
-  avgBookingValue: number
-  completionRate: number
+// Weekly Overview
+export type WeeklyDayLabel = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
+
+export interface WeeklyBookingDay {
+  date: string      // 'YYYY-MM-DD'
+  dayLabel: WeeklyDayLabel
+  count: number
+  isToday: boolean
 }
 
 // Loading States
@@ -95,7 +99,7 @@ export interface DashboardLoadingStates {
   byStatus: boolean
   todayBookings: boolean
   revenue: boolean
-  miniStats: boolean
+  weeklyBookings: boolean
 }
 
 // Complete Dashboard Data
@@ -105,7 +109,7 @@ export interface DashboardData {
   bookingsByStatus: BookingStatus[]
   todayBookings: TodayBooking[]
   dailyRevenue: DailyRevenue[]
-  miniStats: MiniStats
+  weeklyBookings: WeeklyBookingDay[]
   loading: boolean
   loadingStates: DashboardLoadingStates
   error: string | null

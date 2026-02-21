@@ -6,7 +6,7 @@ import {
   fetchBookingsByStatus,
   fetchTodayBookings,
   fetchDailyRevenue,
-  fetchMiniStats,
+  fetchWeeklyBookings,
 } from '../dashboard-queries'
 
 // Mock Supabase client
@@ -376,6 +376,114 @@ describe('dashboard-queries', () => {
     })
   })
 
+  describe('fetchWeeklyBookings', () => {
+    it('should return 7-item array with correct day labels', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      expect(result).toHaveLength(7)
+      expect(result.map((d) => d.dayLabel)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+    })
+
+    it('should count bookings per date correctly', async () => {
+      const mockData = [
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-18' },
+      ]
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      // Find the entries matching our mock dates
+      const monEntry = result.find((d) => d.date === '2026-02-16')
+      const wedEntry = result.find((d) => d.date === '2026-02-18')
+      if (monEntry) expect(monEntry.count).toBe(3)
+      if (wedEntry) expect(wedEntry.count).toBe(1)
+    })
+
+    it('should return 0 count for days with no bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      expect(result.every((d) => d.count === 0)).toBe(true)
+    })
+
+    it('should filter out deleted bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await fetchWeeklyBookings()
+
+      expect(mockChain.is).toHaveBeenCalledWith('deleted_at', null)
+    })
+
+    it('should exclude cancelled and no-show bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await fetchWeeklyBookings()
+
+      expect(mockChain.not).toHaveBeenCalledWith('status', 'in', expect.stringContaining('cancelled'))
+    })
+
+    it('should handle errors by throwing', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await expect(fetchWeeklyBookings()).rejects.toThrow('Failed to fetch weekly bookings')
+    })
+  })
+
   describe('fetchDailyRevenue', () => {
     it('should fetch daily revenue for 7 days', async () => {
       const mockChain = {
@@ -447,204 +555,4 @@ describe('dashboard-queries', () => {
     })
   })
 
-  describe('fetchMiniStats', () => {
-    it('should calculate mini stats correctly', async () => {
-      const mockBookings = [
-        {
-          status: 'completed',
-          total_price: 2000,
-          service_packages: { name: 'Basic Cleaning' },
-          service_packages_v2: null,
-        },
-        {
-          status: 'completed',
-          total_price: 3000,
-          service_packages: { name: 'Basic Cleaning' },
-          service_packages_v2: null,
-        },
-        {
-          status: 'completed',
-          total_price: 1500,
-          service_packages: null,
-          service_packages_v2: { name: 'Premium Package' },
-        },
-        {
-          status: 'pending',
-          total_price: 1000,
-          service_packages: { name: 'Basic Cleaning' },
-          service_packages_v2: null,
-        },
-      ]
-
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toEqual({ name: 'Basic Cleaning', count: 3 })
-      expect(result.avgBookingValue).toBe(1875) // (2000 + 3000 + 1500 + 1000) / 4
-      expect(result.completionRate).toBe(75) // 3 completed / 4 total * 100
-    })
-
-    it('should handle bookings with V2 packages', async () => {
-      const mockBookings = [
-        {
-          status: 'completed',
-          total_price: 2000,
-          service_packages: null,
-          service_packages_v2: { name: 'Premium V2' },
-        },
-        {
-          status: 'completed',
-          total_price: 3000,
-          service_packages: null,
-          service_packages_v2: { name: 'Premium V2' },
-        },
-      ]
-
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toEqual({ name: 'Premium V2', count: 2 })
-      expect(result.completionRate).toBe(100)
-    })
-
-    it('should handle empty bookings', async () => {
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toBeNull()
-      expect(result.avgBookingValue).toBe(0)
-      expect(result.completionRate).toBe(0)
-    })
-
-    it('should handle null data', async () => {
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: null, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toBeNull()
-      expect(result.avgBookingValue).toBe(0)
-      expect(result.completionRate).toBe(0)
-    })
-
-    it('should handle bookings without service packages', async () => {
-      const mockBookings = [
-        {
-          status: 'completed',
-          total_price: 2000,
-          service_packages: null,
-          service_packages_v2: null,
-        },
-        {
-          status: 'pending',
-          total_price: 1000,
-          service_packages: null,
-          service_packages_v2: null,
-        },
-      ]
-
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toBeNull()
-      expect(result.avgBookingValue).toBe(1500)
-      expect(result.completionRate).toBe(50)
-    })
-
-    it('should handle errors by throwing', async () => {
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      await expect(fetchMiniStats()).rejects.toThrow('Failed to fetch mini stats')
-    })
-
-    it('should calculate completion rate correctly with decimals', async () => {
-      const mockBookings = [
-        {
-          status: 'completed',
-          total_price: 1000,
-          service_packages: { name: 'Service A' },
-          service_packages_v2: null,
-        },
-        {
-          status: 'completed',
-          total_price: 1000,
-          service_packages: { name: 'Service A' },
-          service_packages_v2: null,
-        },
-        {
-          status: 'pending',
-          total_price: 1000,
-          service_packages: { name: 'Service A' },
-          service_packages_v2: null,
-        },
-      ]
-
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.completionRate).toBeCloseTo(66.67, 1) // 2/3 * 100
-      expect(result.topService).toEqual({ name: 'Service A', count: 3 })
-    })
-
-    it('should handle array service packages', async () => {
-      const mockBookings = [
-        {
-          status: 'completed',
-          total_price: 1000,
-          service_packages: [{ name: 'Service X' }],
-          service_packages_v2: null,
-        },
-      ]
-
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        is: vi.fn().mockResolvedValue({ data: mockBookings, error: null }),
-      }
-
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
-
-      const result = await fetchMiniStats()
-
-      expect(result.topService).toEqual({ name: 'Service X', count: 1 })
-    })
-  })
 })

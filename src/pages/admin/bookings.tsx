@@ -193,15 +193,15 @@ export function AdminBookings() {
                 />
                 <label
                   htmlFor="show-archived-bookings"
-                  className="text-sm font-medium cursor-pointer"
+                  className="hidden sm:block text-sm font-medium cursor-pointer"
                 >
                   Show archived
                 </label>
               </div>
             </AdminOnly>
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Booking
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Booking</span>
             </Button>
           </>
         }

@@ -1,14 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 // Hooks
 import { useDashboardStats, useDashboardActions, useBookingModal } from '@/hooks/dashboard'
 
 // Components
-import { DashboardStats, QuickInsights, DashboardCharts, TodayAppointmentsList } from '@/components/dashboard/admin'
+import { DashboardStats, NeedsAttention, TodayAppointmentsList, WeeklyOverview } from '@/components/dashboard/admin'
+import type { AttentionFilter } from '@/components/dashboard/admin'
+import { RevenueLineChart } from '@/components/charts'
 import { PageHeader } from '@/components/common/PageHeader'
 import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { BookingEditModal } from '@/components/booking'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
+
+// Utils
+import { computeDashboardSubtitle } from '@/lib/dashboard-utils'
 
 // Types
 import { BookingStatus } from '@/types/booking'
@@ -22,6 +28,15 @@ export function AdminDashboard() {
     dashboardData.refresh,
     modal.selectedBooking,
     modal.setSelectedBooking
+  )
+
+  // Attention filter state — lifted from NeedsAttention to coordinate with TodayAppointmentsList
+  const [attentionFilter, setAttentionFilter] = useState<AttentionFilter | null>(null)
+
+  // Dynamic subtitle: computed from todayBookings (not all-time stats.totalRevenue)
+  const subtitle = useMemo(
+    () => computeDashboardSubtitle(dashboardData.todayBookings),
+    [dashboardData.todayBookings]
   )
 
   // Sync selectedBooking with todayBookings when data updates (realtime)
@@ -70,18 +85,13 @@ export function AdminDashboard() {
   if (dashboardData.error) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Dashboard"
-          subtitle="Welcome back! Here's what's happening today."
-        />
+        <PageHeader title="Dashboard" subtitle={subtitle} />
 
         {/* Error Card */}
         <div className="rounded-lg border border-red-200 bg-red-50 p-6">
           <div className="flex items-start gap-3">
             <div className="rounded-full bg-red-100 p-2">
-              <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+              <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-red-900">Failed to Load Dashboard</h3>
@@ -91,9 +101,7 @@ export function AdminDashboard() {
                 onClick={() => dashboardData.refresh()}
                 className="mt-3 inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <RefreshCw className="h-4 w-4" />
                 Retry
               </button>
             </div>
@@ -105,37 +113,47 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Welcome back! Here's what's happening today."
-      />
+      <PageHeader title="Dashboard" subtitle={subtitle} />
 
-      {/* Stats Cards */}
+      {/* Stats Cards — full width */}
       <DashboardStats
         stats={dashboardData.stats}
         statsChange={dashboardData.statsChange}
         loading={dashboardData.loadingStates.stats || dashboardData.loadingStates.todayStats}
       />
 
-      {/* Quick Insights */}
-      <QuickInsights
-        miniStats={dashboardData.miniStats}
-        loading={dashboardData.loadingStates.miniStats}
-      />
+      {/* Main grid: mobile=single col, tablet=2-col, desktop=3-col */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Right sidebar — NeedsAttention + PieChart; mobile: above, desktop: right */}
+        <div className="flex flex-col gap-6 md:order-2 lg:order-2">
+          <NeedsAttention
+            todayBookings={dashboardData.todayBookings}
+            onFilterSelect={setAttentionFilter}
+            activeFilter={attentionFilter}
+          />
+          <WeeklyOverview
+            days={dashboardData.weeklyBookings}
+            loading={dashboardData.loadingStates.weeklyBookings}
+            error={dashboardData.weeklyBookingsError}
+          />
+        </div>
 
-      {/* Charts Row */}
-      <DashboardCharts
-        bookingsByStatus={dashboardData.bookingsByStatus}
-        dailyRevenue={dashboardData.dailyRevenue}
-        loading={dashboardData.loadingStates.byStatus || dashboardData.loadingStates.revenue}
-      />
+        {/* Today's Appointments — col-span-2 on lg, left on md+ */}
+        <div className="md:order-1 lg:order-1 lg:col-span-2">
+          <TodayAppointmentsList
+            bookings={dashboardData.todayBookings}
+            onBookingClick={modal.openDetail}
+            loading={dashboardData.loadingStates.todayBookings}
+            attentionFilter={attentionFilter}
+            onClearAttentionFilter={() => setAttentionFilter(null)}
+          />
+        </div>
 
-      {/* Today's Appointments */}
-      <TodayAppointmentsList
-        bookings={dashboardData.todayBookings}
-        onBookingClick={modal.openDetail}
-        loading={dashboardData.loadingStates.todayBookings}
-      />
+        {/* Revenue Chart — full-width (col-span-full), below the main row */}
+        <div className="col-span-full md:order-3">
+          <RevenueLineChart data={dashboardData.dailyRevenue} />
+        </div>
+      </div>
 
       {/* Booking Detail Modal */}
       <BookingDetailSheet

@@ -3,59 +3,84 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown } from 'lucide-react'
-import { formatCurrency, formatBookingId } from '@/lib/utils'
+import { Calendar, Clock, Phone, MapPin, User, Users, ChevronLeft, ChevronRight, Crown, X } from 'lucide-react'
+import { formatCurrency, formatBookingId, getBangkokNowHHMM, timeToMinutes } from '@/lib/utils'
 import { formatDateRange } from '@/lib/date-range-utils'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getStatusBadge, getPaymentStatusBadge, getServiceTypeBadge } from '@/lib/booking-badges'
 import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/constants/booking-status'
 import type { TodayBooking } from '@/types/dashboard'
+import type { AttentionFilter } from './NeedsAttention'
 
 interface TodayAppointmentsListProps {
   bookings: TodayBooking[]
   onBookingClick: (booking: TodayBooking) => void
   loading: boolean
+  attentionFilter?: AttentionFilter | null
+  onClearAttentionFilter?: () => void
+}
+
+const ATTENTION_FILTER_LABELS: Record<AttentionFilter, string> = {
+  pending: 'Pending bookings',
+  unverified: 'Unverified payments',
+  starting_soon: 'Starting soon',
 }
 
 /**
  * TodayAppointmentsList Component
  *
- * แสดงรายการ appointments วันนี้พร้อม pagination
+ * แสดงรายการ appointments วันนี้พร้อม pagination (paginate เมื่อ > 10 รายการ)
  */
 export const TodayAppointmentsList = ({
   bookings,
   onBookingClick,
   loading,
+  attentionFilter = null,
+  onClearAttentionFilter,
 }: TodayAppointmentsListProps) => {
   const [currentPage, setCurrentPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
-  const itemsPerPage = 5
+  const itemsPerPage = 10
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when any filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [statusFilter, paymentStatusFilter])
+  }, [statusFilter, paymentStatusFilter, attentionFilter])
 
-  // Filter bookings
+  // Apply attention pre-filter, then status/payment filters
   const filteredBookings = useMemo(() => {
-    return bookings.filter(b => {
+    const nowMinutes = attentionFilter === 'starting_soon' ? timeToMinutes(getBangkokNowHHMM()) : 0
+    return bookings.filter((b) => {
+      // Attention pre-filter
+      if (attentionFilter === 'pending' && b.status !== 'pending') return false
+      if (attentionFilter === 'unverified' && b.payment_status !== 'pending_verification') return false
+      if (attentionFilter === 'starting_soon') {
+        const diff = timeToMinutes(b.start_time) - nowMinutes
+        if (!(diff > 0 && diff <= 60)) return false
+      }
+      // Status and payment filters
       const matchesStatus = statusFilter === 'all' || b.status === statusFilter
       const matchesPayment = paymentStatusFilter === 'all' || b.payment_status === paymentStatusFilter
       return matchesStatus && matchesPayment
     })
-  }, [bookings, statusFilter, paymentStatusFilter])
+  }, [bookings, statusFilter, paymentStatusFilter, attentionFilter])
+
+  const shouldPaginate = filteredBookings.length > itemsPerPage
 
   const paginatedBookings = useMemo(() => {
+    if (!shouldPaginate) return filteredBookings
     return filteredBookings.slice(
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
     )
-  }, [filteredBookings, currentPage])
+  }, [filteredBookings, currentPage, shouldPaginate])
 
   const totalPages = useMemo(() => {
     return Math.ceil(filteredBookings.length / itemsPerPage)
   }, [filteredBookings.length])
+
+  const isFiltered = attentionFilter !== null
 
   if (loading) {
     return (
@@ -93,7 +118,19 @@ export const TodayAppointmentsList = ({
             Today's Appointments
             <Badge variant="secondary" className="text-xs">{filteredBookings.length}</Badge>
           </CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+            {/* Attention filter chip */}
+            {attentionFilter && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1 border-tinedy-blue/30 text-tinedy-blue"
+                onClick={onClearAttentionFilter}
+              >
+                {ATTENTION_FILTER_LABELS[attentionFilter]}
+                <X className="h-3 w-3" />
+              </Button>
+            )}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-8 flex-1 sm:flex-none sm:w-[140px] text-xs">
                 <SelectValue placeholder="Booking" />
@@ -124,7 +161,7 @@ export const TodayAppointmentsList = ({
           {filteredBookings.length === 0 ? (
             <EmptyState
               icon={Calendar}
-              title="No appointments for today"
+              title={isFiltered ? 'No matching bookings' : 'No bookings today — enjoy the break!'}
               className="py-8"
             />
           ) : (
@@ -159,7 +196,8 @@ export const TodayAppointmentsList = ({
                           booking.price_mode,
                           'mr-1.5 sm:mr-2 text-[10px] sm:text-xs'
                         )}
-                        {booking.service_packages?.name ||
+                        {booking.job_name ||
+                          booking.service_packages?.name ||
                           booking.service_packages_v2?.name ||
                           'Unknown Service'}
                       </span>
@@ -235,8 +273,8 @@ export const TodayAppointmentsList = ({
                 </div>
               ))}
 
-              {/* Pagination */}
-              {filteredBookings.length > itemsPerPage && (
+              {/* Pagination — only shown when > 10 items */}
+              {shouldPaginate && (
                 <div className="flex items-center justify-between pt-4 border-t">
                   <p className="text-sm text-muted-foreground">
                     Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}

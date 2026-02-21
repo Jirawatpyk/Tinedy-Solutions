@@ -342,7 +342,6 @@ export {
 export {
   DashboardStatsResponseSchema,
   TodayStatsResponseSchema,
-  MiniStatsResponseSchema,
   BookingsByStatusResponseSchema,
   TodayBookingsResponseSchema,
   DailyRevenueDataPointSchema,
@@ -359,7 +358,6 @@ export {
   PackagePerformanceResponseSchema,
   type DashboardStatsResponse,
   type TodayStatsResponse,
-  type MiniStatsResponse,
   type BookingsByStatusResponse,
   type TodayBookingsResponse,
   type DailyRevenueDataPoint,
@@ -374,6 +372,12 @@ export {
   type TopCustomersResponse,
   type PackagePerformanceData,
   type PackagePerformanceResponse,
+  WeeklyDayLabelSchema,
+  WeeklyBookingDaySchema,
+  WeeklyBookingsResponseSchema,
+  type WeeklyDayLabel as WeeklyDayLabelZod,
+  type WeeklyBookingDay as WeeklyBookingDayZod,
+  type WeeklyBookingsResponse,
 } from './api/dashboard-api.schema'
 
 // Settings & Profile API Schemas
