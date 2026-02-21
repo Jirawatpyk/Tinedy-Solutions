@@ -82,6 +82,16 @@ export interface DailyRevenue {
   revenue: number
 }
 
+// Weekly Overview
+export type WeeklyDayLabel = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
+
+export interface WeeklyBookingDay {
+  date: string      // 'YYYY-MM-DD'
+  dayLabel: WeeklyDayLabel
+  count: number
+  isToday: boolean
+}
+
 // Loading States
 export interface DashboardLoadingStates {
   stats: boolean
@@ -89,6 +99,7 @@ export interface DashboardLoadingStates {
   byStatus: boolean
   todayBookings: boolean
   revenue: boolean
+  weeklyBookings: boolean
 }
 
 // Complete Dashboard Data
@@ -98,6 +109,7 @@ export interface DashboardData {
   bookingsByStatus: BookingStatus[]
   todayBookings: TodayBooking[]
   dailyRevenue: DailyRevenue[]
+  weeklyBookings: WeeklyBookingDay[]
   loading: boolean
   loadingStates: DashboardLoadingStates
   error: string | null

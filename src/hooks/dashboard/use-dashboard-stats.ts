@@ -55,6 +55,13 @@ export function useDashboardStats() {
     error: errorRevenue,
   } = useQuery(dashboardQueryOptions.revenue(7))
 
+  // Fetch this week's booking count per day
+  const {
+    data: weeklyBookings = [],
+    isLoading: loadingWeeklyBookings,
+    error: errorWeeklyBookings,
+  } = useQuery(dashboardQueryOptions.weeklyBookings)
+
   // Individual loading states for each section
   const loadingStates = {
     stats: loadingStats,
@@ -62,6 +69,7 @@ export function useDashboardStats() {
     byStatus: loadingByStatus,
     todayBookings: loadingTodayBookings,
     revenue: loadingRevenue,
+    weeklyBookings: loadingWeeklyBookings,
   }
 
   // Combined loading state (true if ANY query is loading)
@@ -70,9 +78,12 @@ export function useDashboardStats() {
     loadingTodayStats ||
     loadingByStatus ||
     loadingTodayBookings ||
-    loadingRevenue
+    loadingRevenue ||
+    loadingWeeklyBookings
 
   // Combined error state
+  // NOTE: errorWeeklyBookings intentionally excluded — widget failure should NOT
+  // crash the entire dashboard. WeeklyOverview renders empty gracefully when days=[].
   const error =
     errorStats?.message ||
     errorTodayStats?.message ||
@@ -133,6 +144,8 @@ export function useDashboardStats() {
     bookingsByStatus,
     todayBookings,
     dailyRevenue,
+    weeklyBookings,
+    weeklyBookingsError: !!errorWeeklyBookings,
     loading,
     loadingStates,
     error,

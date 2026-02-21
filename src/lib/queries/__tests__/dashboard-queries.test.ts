@@ -6,6 +6,7 @@ import {
   fetchBookingsByStatus,
   fetchTodayBookings,
   fetchDailyRevenue,
+  fetchWeeklyBookings,
 } from '../dashboard-queries'
 
 // Mock Supabase client
@@ -372,6 +373,114 @@ describe('dashboard-queries', () => {
       vi.mocked(supabase.from).mockReturnValue(mockChain as any)
 
       await expect(fetchTodayBookings()).rejects.toThrow("Failed to fetch today's bookings")
+    })
+  })
+
+  describe('fetchWeeklyBookings', () => {
+    it('should return 7-item array with correct day labels', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      expect(result).toHaveLength(7)
+      expect(result.map((d) => d.dayLabel)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+    })
+
+    it('should count bookings per date correctly', async () => {
+      const mockData = [
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-16' },
+        { booking_date: '2026-02-18' },
+      ]
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      // Find the entries matching our mock dates
+      const monEntry = result.find((d) => d.date === '2026-02-16')
+      const wedEntry = result.find((d) => d.date === '2026-02-18')
+      if (monEntry) expect(monEntry.count).toBe(3)
+      if (wedEntry) expect(wedEntry.count).toBe(1)
+    })
+
+    it('should return 0 count for days with no bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      const result = await fetchWeeklyBookings()
+
+      expect(result.every((d) => d.count === 0)).toBe(true)
+    })
+
+    it('should filter out deleted bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await fetchWeeklyBookings()
+
+      expect(mockChain.is).toHaveBeenCalledWith('deleted_at', null)
+    })
+
+    it('should exclude cancelled and no-show bookings', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await fetchWeeklyBookings()
+
+      expect(mockChain.not).toHaveBeenCalledWith('status', 'in', expect.stringContaining('cancelled'))
+    })
+
+    it('should handle errors by throwing', async () => {
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockChain as any)
+
+      await expect(fetchWeeklyBookings()).rejects.toThrow('Failed to fetch weekly bookings')
     })
   })
 

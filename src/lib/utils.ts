@@ -57,6 +57,41 @@ export function timeToMinutes(hhmm: string): number {
   return h * 60 + m
 }
 
+/**
+ * Get Bangkok week date range (Mon–Sun) for the current Bangkok week
+ * Uses toLocaleString pattern to avoid double-offset bug (same as getBangkokToday in dashboard-utils.ts)
+ * @returns { weekStart: 'YYYY-MM-DD', weekEnd: 'YYYY-MM-DD' }
+ */
+export function getBangkokWeekRange(): { weekStart: string; weekEnd: string } {
+  const now = new Date()
+  const bangkokDateStr = now
+    .toLocaleString('en-CA', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    .split(',')[0] // 'YYYY-MM-DD'
+
+  const [year, month, day] = bangkokDateStr.split('-').map(Number)
+  const bangkokDate = new Date(Date.UTC(year, month - 1, day))
+
+  // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat → shift to Mon=0
+  const dayOfWeek = bangkokDate.getUTCDay()
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+
+  const monday = new Date(bangkokDate)
+  monday.setUTCDate(bangkokDate.getUTCDate() + daysToMonday)
+
+  const sunday = new Date(monday)
+  sunday.setUTCDate(monday.getUTCDate() + 6)
+
+  return {
+    weekStart: monday.toISOString().split('T')[0],
+    weekEnd: sunday.toISOString().split('T')[0],
+  }
+}
+
 // ============================================================================
 // Avatar & Display Utilities
 // ============================================================================

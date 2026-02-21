@@ -5,9 +5,9 @@ import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useDashboardStats, useDashboardActions, useBookingModal } from '@/hooks/dashboard'
 
 // Components
-import { DashboardStats, NeedsAttention, TodayAppointmentsList } from '@/components/dashboard/admin'
+import { DashboardStats, NeedsAttention, TodayAppointmentsList, WeeklyOverview } from '@/components/dashboard/admin'
 import type { AttentionFilter } from '@/components/dashboard/admin'
-import { BookingStatusPieChart, RevenueLineChart } from '@/components/charts'
+import { RevenueLineChart } from '@/components/charts'
 import { PageHeader } from '@/components/common/PageHeader'
 import { BookingDetailSheet } from '@/components/booking/BookingDetailSheet'
 import { BookingEditModal } from '@/components/booking'
@@ -143,7 +143,11 @@ export function AdminDashboard() {
             onFilterSelect={setAttentionFilter}
             activeFilter={attentionFilter}
           />
-          <BookingStatusPieChart data={dashboardData.bookingsByStatus} height={200} />
+          <WeeklyOverview
+            days={dashboardData.weeklyBookings}
+            loading={dashboardData.loadingStates.weeklyBookings}
+            error={dashboardData.weeklyBookingsError}
+          />
         </div>
 
         {/* Today's Appointments — col-span-2 on lg, left on md+ */}

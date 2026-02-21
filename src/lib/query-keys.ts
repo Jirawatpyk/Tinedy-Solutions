@@ -27,6 +27,7 @@ export const queryKeys = {
     todayBookings: () => [...queryKeys.dashboard.all, 'todayBookings'] as const,
     byStatus: () => [...queryKeys.dashboard.all, 'byStatus'] as const,
     revenue: (days: number) => [...queryKeys.dashboard.all, 'revenue', days] as const,
+    weeklyBookings: () => [...queryKeys.dashboard.all, 'weeklyBookings'] as const,
   },
 
   // ================================

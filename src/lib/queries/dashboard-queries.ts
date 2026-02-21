@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/query-keys'
 import { format } from 'date-fns'
 import { getBangkokToday, getDateDaysAgo } from '@/lib/dashboard-utils'
+import { getBangkokWeekRange } from '@/lib/utils'
 import { BookingStatus as BookingStatusEnum } from '@/types/booking'
 import type {
   Stats,
@@ -22,6 +23,7 @@ import type {
   BookingStatus,
   TodayBooking,
   DailyRevenue,
+  WeeklyBookingDay,
 } from '@/types/dashboard'
 
 /**
@@ -205,6 +207,52 @@ export async function fetchDailyRevenue(days: number = 7): Promise<DailyRevenue[
   }))
 }
 
+const WEEKLY_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+
+/**
+ * Fetch this week's booking count per day (Mon-Sun, Bangkok UTC+7)
+ * staleTime: 5 minutes
+ *
+ * NOTE: Counts only by booking_date (not multi-day span).
+ * A 3-day job starting Monday counts only on Monday.
+ * This is intentional — widget shows scheduling density, not team utilization.
+ */
+export async function fetchWeeklyBookings(): Promise<WeeklyBookingDay[]> {
+  const { weekStart, weekEnd } = getBangkokWeekRange()
+  const { todayStr } = getBangkokToday()
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('booking_date')
+    .is('deleted_at', null)
+    .not('status', 'in', `(${BookingStatusEnum.Cancelled},${BookingStatusEnum.NoShow})`)
+    .gte('booking_date', weekStart)
+    .lte('booking_date', weekEnd)
+
+  if (error) throw new Error(`Failed to fetch weekly bookings: ${error.message}`)
+
+  // Count bookings per date
+  const countByDate: Record<string, number> = {}
+  data?.forEach((b) => {
+    if (b.booking_date) {
+      countByDate[b.booking_date] = (countByDate[b.booking_date] || 0) + 1
+    }
+  })
+
+  // Build 7-item array starting from weekStart (Monday)
+  return WEEKLY_DAY_LABELS.map((dayLabel, i) => {
+    const d = new Date(weekStart + 'T00:00:00Z')
+    d.setUTCDate(d.getUTCDate() + i)
+    const dateStr = d.toISOString().split('T')[0]
+    return {
+      date: dateStr,
+      dayLabel,
+      count: countByDate[dateStr] ?? 0,
+      isToday: dateStr === todayStr,
+    }
+  })
+}
+
 /**
  * Query Options สำหรับ Dashboard
  */
@@ -244,4 +292,11 @@ export const dashboardQueryOptions = {
     refetchOnMount: 'always' as const, // Force refetch on mount
     refetchOnWindowFocus: true, // Refetch when window regains focus
   }),
+  weeklyBookings: {
+    queryKey: queryKeys.dashboard.weeklyBookings(),
+    queryFn: fetchWeeklyBookings,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always' as const,
+    refetchOnWindowFocus: true,
+  },
 }

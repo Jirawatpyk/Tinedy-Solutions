@@ -253,6 +253,32 @@ export const PackagePerformanceResponseSchema = z.object({
 })
 
 // ============================================================================
+// WEEKLY OVERVIEW SCHEMAS
+// ============================================================================
+
+/**
+ * Weekly day label (Mon-Sun)
+ */
+export const WeeklyDayLabelSchema = z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+
+/**
+ * Weekly booking day data point
+ */
+export const WeeklyBookingDaySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  dayLabel: WeeklyDayLabelSchema,
+  count: z.number().int().min(0),
+  isToday: z.boolean(),
+})
+
+/**
+ * Weekly bookings response (always 7 items, Mon-Sun)
+ */
+export const WeeklyBookingsResponseSchema = z
+  .array(WeeklyBookingDaySchema)
+  .length(7, 'Must have exactly 7 days')
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
@@ -283,3 +309,8 @@ export type TopCustomersResponse = z.infer<typeof TopCustomersResponseSchema>
 // Package Analytics Types
 export type PackagePerformanceData = z.infer<typeof PackagePerformanceDataSchema>
 export type PackagePerformanceResponse = z.infer<typeof PackagePerformanceResponseSchema>
+
+// Weekly Overview Types
+export type WeeklyDayLabel = z.infer<typeof WeeklyDayLabelSchema>
+export type WeeklyBookingDay = z.infer<typeof WeeklyBookingDaySchema>
+export type WeeklyBookingsResponse = z.infer<typeof WeeklyBookingsResponseSchema>

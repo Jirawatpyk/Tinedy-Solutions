@@ -7,6 +7,7 @@ import {
   getBangkokDateString,
   getBangkokNowHHMM,
   timeToMinutes,
+  getBangkokWeekRange,
   getAvatarColor,
   getRankBadgeColor,
   formatBookingId,
@@ -494,6 +495,49 @@ describe('utils', () => {
 
     it('should convert full hours', () => {
       expect(timeToMinutes('10:00')).toBe(600)
+    })
+  })
+
+  describe('getBangkokWeekRange', () => {
+    beforeEach(() => { vi.useFakeTimers() })
+    afterEach(() => { vi.useRealTimers() })
+
+    it('returns YYYY-MM-DD strings for weekStart and weekEnd', () => {
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z')) // Wed Bangkok
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      expect(weekStart).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(weekEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it('weekStart is Monday when called on Wednesday (Bangkok)', () => {
+      // 2026-02-18 UTC+7 = Wed 2026-02-18 Bangkok → Mon should be 2026-02-16
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z'))
+      const { weekStart } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-16')
+    })
+
+    it('weekEnd is Sunday (6 days after weekStart)', () => {
+      vi.setSystemTime(new Date('2026-02-18T10:00:00Z'))
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      const start = new Date(weekStart)
+      const end = new Date(weekEnd)
+      const diffDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      expect(diffDays).toBe(6)
+    })
+
+    it('returns correct week when called on Sunday (Bangkok)', () => {
+      // 2026-02-22 is Sunday Bangkok → weekStart should be Mon 2026-02-16
+      vi.setSystemTime(new Date('2026-02-22T10:00:00Z'))
+      const { weekStart, weekEnd } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-16')
+      expect(weekEnd).toBe('2026-02-22')
+    })
+
+    it('handles Bangkok timezone boundary — UTC Sun 17:01 = Mon Bangkok', () => {
+      // UTC 2026-02-22T17:01 = Bangkok Mon 2026-02-23 00:01
+      vi.setSystemTime(new Date('2026-02-22T17:01:00Z'))
+      const { weekStart } = getBangkokWeekRange()
+      expect(weekStart).toBe('2026-02-23') // New week started in Bangkok
     })
   })
 
