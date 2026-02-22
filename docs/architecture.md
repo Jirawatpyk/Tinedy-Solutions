@@ -227,7 +227,7 @@ const channel = supabase
 | `send-payment-confirmation` | Email payment confirmation |
 | `send-refund-confirmation` | Email refund confirmation |
 | `send-recurring-booking-confirmation` | Email recurring booking |
-| `process-email-queue` | Process queued emails |
+| `auto-send-booking-reminders` | Cron orchestrator for booking reminders |
 | `update-staff-password` | Admin password reset |
 
 ## Testing Architecture

@@ -20,10 +20,9 @@ const EMAIL_TYPE_OPTIONS = [
   { value: 'all', label: 'All Types' },
   { value: EMAIL_TYPES.BOOKING_REMINDER, label: 'Booking Reminder' },
   { value: EMAIL_TYPES.BOOKING_CONFIRMATION, label: 'Booking Confirmation' },
-  { value: EMAIL_TYPES.PAYMENT_LINK, label: 'Payment Link' },
+  { value: EMAIL_TYPES.RECURRING_BOOKING_CONFIRMATION, label: 'Recurring Booking Confirmation' },
   { value: EMAIL_TYPES.PAYMENT_CONFIRMATION, label: 'Payment Confirmation' },
-  { value: EMAIL_TYPES.PAYMENT_REMINDER, label: 'Payment Reminder' },
-  { value: EMAIL_TYPES.BOOKING_RESCHEDULED, label: 'Booking Rescheduled' },
+  { value: EMAIL_TYPES.REFUND_CONFIRMATION, label: 'Refund Confirmation' },
 ]
 
 function getStatusBadge(status: string) {

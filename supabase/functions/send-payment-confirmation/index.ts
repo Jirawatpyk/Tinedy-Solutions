@@ -23,6 +23,16 @@ interface BookingData {
   profiles?: { full_name: string } | null
 }
 
+// HTML escape helper — prevents XSS in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -32,14 +42,6 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
     if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set')
 
-    const { bookingId } = await req.json()
-    if (!bookingId) {
-      return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !supabaseKey) throw new Error('Supabase configuration is missing')
@@ -47,6 +49,34 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // Auth: verify caller is admin or manager
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.id).single()
+    if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { bookingId } = await req.json()
+    if (!bookingId) {
+      return new Response(JSON.stringify({ error: 'Missing bookingId' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Business settings
     let fromName = 'Tinedy CRM'
@@ -117,32 +147,32 @@ serve(async (req) => {
         const totalPrice = groupBookings.reduce((sum, gb) => sum + Number(gb.total_price || 0), 0)
         const pricePerBooking = Number(groupBookings[0].total_price || 0)
         emailHtml = generateRecurringPaymentConfirmationEmail({
-          customerName: b.customers.full_name,
-          serviceName,
+          customerName: escapeHtml(b.customers.full_name),
+          serviceName: escapeHtml(serviceName),
           bookings: groupBookings,
-          staffName,
-          location,
+          staffName: staffName ? escapeHtml(staffName) : undefined,
+          location: location ? escapeHtml(location) : undefined,
           totalPrice,
           pricePerBooking,
           frequency: groupBookings.length,
-          fromName,
-          businessPhone,
-          businessAddress,
+          fromName: escapeHtml(fromName),
+          businessPhone: escapeHtml(businessPhone),
+          businessAddress: escapeHtml(businessAddress),
           businessLogoUrl,
         })
       } else {
         emailHtml = generatePaymentConfirmationEmail({
-          customerName: b.customers.full_name,
-          serviceName,
-          formattedDate: formatDateRange(b.booking_date, b.end_date),
+          customerName: escapeHtml(b.customers.full_name),
+          serviceName: escapeHtml(serviceName),
+          formattedDate: escapeHtml(formatDateRange(b.booking_date, b.end_date)),
           startTime: b.start_time?.slice(0, 5) ?? '',
           endTime: b.end_time?.slice(0, 5) ?? '',
-          staffName,
-          location,
+          staffName: staffName ? escapeHtml(staffName) : undefined,
+          location: location ? escapeHtml(location) : undefined,
           totalPrice: b.total_price ?? 0,
-          fromName,
-          businessPhone,
-          businessAddress,
+          fromName: escapeHtml(fromName),
+          businessPhone: escapeHtml(businessPhone),
+          businessAddress: escapeHtml(businessAddress),
           businessLogoUrl,
         })
       }

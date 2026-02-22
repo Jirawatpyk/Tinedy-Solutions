@@ -1,10 +1,19 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// HTML escape helper — prevents XSS in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
 }
 
 serve(async (req) => {
@@ -23,6 +32,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // Auth: verify caller is admin or manager
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.id).single()
+    if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const { bookingId } = await req.json()
     if (!bookingId) {
@@ -131,20 +160,20 @@ serve(async (req) => {
     }
 
     const emailHtml = generateRecurringConfirmationEmail({
-      customerName,
-      serviceName,
+      customerName: escapeHtml(customerName),
+      serviceName: escapeHtml(serviceName),
       bookings: allBookings,
       startTime: p.start_time?.slice(0, 5) ?? '',
       endTime: p.end_time?.slice(0, 5) ?? '',
       totalPrice,
       pricePerBooking,
       frequency,
-      staffName,
-      location,
-      notes: p.notes ?? undefined,
-      fromName,
-      businessPhone,
-      businessAddress,
+      staffName: staffName ? escapeHtml(staffName) : undefined,
+      location: location ? escapeHtml(location) : undefined,
+      notes: p.notes ? escapeHtml(p.notes) : undefined,
+      fromName: escapeHtml(fromName),
+      businessPhone: escapeHtml(businessPhone),
+      businessAddress: escapeHtml(businessAddress),
       businessLogoUrl,
     })
 

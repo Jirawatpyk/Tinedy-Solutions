@@ -21,10 +21,9 @@ vi.mock('@/constants/email-types', () => ({
   EMAIL_TYPES: {
     BOOKING_REMINDER: 'booking_reminder',
     BOOKING_CONFIRMATION: 'booking_confirmation',
-    PAYMENT_LINK: 'payment_link',
+    RECURRING_BOOKING_CONFIRMATION: 'recurring_booking_confirmation',
     PAYMENT_CONFIRMATION: 'payment_confirmation',
-    PAYMENT_REMINDER: 'payment_reminder',
-    BOOKING_RESCHEDULED: 'booking_rescheduled',
+    REFUND_CONFIRMATION: 'refund_confirmation',
   },
 }))
 
@@ -142,11 +141,11 @@ describe('EmailLogsSection', () => {
         {
           id: 'log-2',
           booking_id: 'b-2',
-          email_type: 'payment_link',
+          email_type: 'booking_confirmation',
           recipient_email: 'fail@example.com',
           recipient_name: 'Fail User',
           status: 'failed',
-          subject: 'Payment',
+          subject: 'Booking Confirmed',
           error_message: 'SMTP error',
           attempts: 3,
           max_attempts: 3,

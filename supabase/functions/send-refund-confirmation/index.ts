@@ -19,6 +19,16 @@ interface BookingData {
   service_packages_v2?: { name: string } | null
 }
 
+// HTML escape helper — prevents XSS in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -35,6 +45,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // Auth: verify caller is admin or manager
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.id).single()
+    if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const { bookingId } = await req.json()
     if (!bookingId) {
@@ -109,27 +139,27 @@ serve(async (req) => {
         refundCount = groupBookings.length
         const totalRefund = groupBookings.reduce((sum, gb) => sum + Number(gb.amount_paid || gb.total_price || 0), 0)
         emailHtml = generateRecurringRefundEmail({
-          customerName: b.customers.full_name,
-          serviceName,
+          customerName: escapeHtml(b.customers.full_name),
+          serviceName: escapeHtml(serviceName),
           bookings: groupBookings,
           totalRefund,
           refundCount,
-          fromName,
-          businessPhone,
-          businessAddress,
+          fromName: escapeHtml(fromName),
+          businessPhone: escapeHtml(businessPhone),
+          businessAddress: escapeHtml(businessAddress),
           businessLogoUrl,
         })
       } else {
         emailHtml = generateSingleRefundEmail({
-          customerName: b.customers.full_name,
-          serviceName,
-          formattedDate: formatDateRange(b.booking_date, b.end_date),
+          customerName: escapeHtml(b.customers.full_name),
+          serviceName: escapeHtml(serviceName),
+          formattedDate: escapeHtml(formatDateRange(b.booking_date, b.end_date)),
           startTime: b.start_time?.slice(0, 5) ?? '',
           endTime: b.end_time?.slice(0, 5) ?? '',
           refundAmount,
-          fromName,
-          businessPhone,
-          businessAddress,
+          fromName: escapeHtml(fromName),
+          businessPhone: escapeHtml(businessPhone),
+          businessAddress: escapeHtml(businessAddress),
           businessLogoUrl,
         })
       }

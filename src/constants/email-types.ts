@@ -5,10 +5,9 @@
 export const EMAIL_TYPES = {
   BOOKING_REMINDER: 'booking_reminder',
   BOOKING_CONFIRMATION: 'booking_confirmation',
-  PAYMENT_LINK: 'payment_link',
+  RECURRING_BOOKING_CONFIRMATION: 'recurring_booking_confirmation',
   PAYMENT_CONFIRMATION: 'payment_confirmation',
-  PAYMENT_REMINDER: 'payment_reminder',
-  BOOKING_RESCHEDULED: 'booking_rescheduled',
+  REFUND_CONFIRMATION: 'refund_confirmation',
 } as const
 
 export type EmailType = (typeof EMAIL_TYPES)[keyof typeof EMAIL_TYPES]

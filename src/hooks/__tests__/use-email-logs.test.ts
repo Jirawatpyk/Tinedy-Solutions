@@ -43,7 +43,7 @@ const mockLogs = [
   {
     id: 'log-2',
     booking_id: 'booking-2',
-    email_type: 'payment_link',
+    email_type: 'booking_confirmation',
     recipient_email: 'customer2@example.com',
     recipient_name: 'Customer 2',
     status: 'failed',
