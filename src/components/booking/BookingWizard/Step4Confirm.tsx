@@ -125,7 +125,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
         <div className="pl-5 text-sm">
           {isNewCustomer ? (
             <div>
-              <p className="font-medium">{newCustomerData.full_name} <Badge variant="secondary" className="text-xs ml-1">New</Badge></p>
+              <span className="font-medium">{newCustomerData.full_name} <Badge variant="secondary" className="text-xs ml-1">New</Badge></span>
               <p className="text-muted-foreground">{newCustomerData.phone}</p>
               {newCustomerData.email && (
                 <p className="text-muted-foreground">{newCustomerData.email}</p>
@@ -155,7 +155,7 @@ export function Step4Confirm({ state, dispatch, staffName, teamName }: Step4Conf
         />
         <div className="pl-5 space-y-1 text-sm">
           {price_mode === PriceMode.Custom ? (
-            <p className="font-medium">{job_name || '-'} <Badge variant="outline" className="text-xs ml-1">Custom</Badge></p>
+            <span className="font-medium">{job_name || '-'} <Badge variant="outline" className="text-xs ml-1">Custom</Badge></span>
           ) : selectedPackage ? (
             <p className="font-medium">{selectedPackage.name}</p>
           ) : (
