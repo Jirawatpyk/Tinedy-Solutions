@@ -30,6 +30,47 @@ serve(async (req) => {
       )
     }
 
+    // Initialize Supabase admin client with service role key
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
+    // Verify caller's auth token
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'No authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: caller }, error: callerError } = await supabase.auth.getUser(token)
+
+    if (callerError || !caller) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Only admin can delete users
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', caller.id)
+      .single()
+
+    if (callerProfile?.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden: Only admins can delete users' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { userId } = await req.json()
 
     if (!userId) {
@@ -44,14 +85,6 @@ serve(async (req) => {
         }
       )
     }
-
-    // Initialize Supabase admin client with service role key
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
 
     // Check if user is a team lead
     const { data: teams, error: teamsError } = await supabase
