@@ -173,15 +173,17 @@ serve(async (req) => {
     if (!response.ok) throw new Error(responseData.message || 'Failed to send email')
 
     // Queue for tracking
-    await supabase.from('email_queue').insert({
-      booking_id: bookingId,
-      email_type: 'booking_confirmation',
-      recipient_email: customerEmail,
-      recipient_name: customerName,
-      subject: `Booking Confirmed — ${serviceName}`,
-      html_content: '',
-      status: 'pending',
-    }).catch(() => {})
+    try {
+      await supabase.from('email_queue').insert({
+        booking_id: bookingId,
+        email_type: 'booking_confirmation',
+        recipient_email: customerEmail,
+        recipient_name: customerName,
+        subject: `Booking Confirmed — ${serviceName}`,
+        html_content: '',
+        status: 'pending',
+      })
+    } catch { /* ignore tracking errors */ }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Email sent successfully', data: responseData }),

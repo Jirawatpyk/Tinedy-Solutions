@@ -195,15 +195,17 @@ serve(async (req) => {
     if (!response.ok) throw new Error(responseData.message || 'Failed to send email')
 
     // Queue for tracking
-    await supabase.from('email_queue').insert({
-      booking_id: bookingId,
-      email_type: 'recurring_booking_confirmation',
-      recipient_email: customerEmail,
-      recipient_name: customerName,
-      subject: `Recurring Booking Confirmed — ${serviceName} (${frequency} sessions)`,
-      html_content: '',
-      status: 'pending',
-    }).catch(() => {})
+    try {
+      await supabase.from('email_queue').insert({
+        booking_id: bookingId,
+        email_type: 'recurring_booking_confirmation',
+        recipient_email: customerEmail,
+        recipient_name: customerName,
+        subject: `Recurring Booking Confirmed — ${serviceName} (${frequency} sessions)`,
+        html_content: '',
+        status: 'pending',
+      })
+    } catch { /* ignore tracking errors */ }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Recurring confirmation sent successfully', data: responseData }),
