@@ -24,6 +24,7 @@ import {
   NotificationSettingsTransformSchema,
   type NotificationSettingsFormData,
 } from '@/schemas'
+import { Badge } from '@/components/ui/badge'
 import { Bell, Save } from 'lucide-react'
 
 interface NotificationSettingsFormProps {
@@ -108,7 +109,10 @@ export function NotificationSettingsForm({ initialData, settingsId, onSuccess }:
             {/* SMS Notifications */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="sms_notifications">SMS Notifications</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="sms_notifications">SMS Notifications</Label>
+                  <Badge variant="warning" className="text-xs">Coming Soon</Badge>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   Receive notifications via SMS
                 </p>
@@ -121,13 +125,16 @@ export function NotificationSettingsForm({ initialData, settingsId, onSuccess }:
                     id="sms_notifications"
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled
                   />
                 )}
               />
             </div>
           </div>
 
-          <div className="border-t pt-6">
+          {/* Phase 2: Booking Events — hidden until backend triggers check settings
+              See: tech-spec-functional-booking-event-toggles.md */}
+          <div className="border-t pt-6" hidden>
             <h3 className="text-sm font-medium mb-4">Booking Events</h3>
 
             {/* Notify New Booking */}

@@ -207,6 +207,20 @@ serve(async (req) => {
     const emailResult = await emailResponse.json()
     if (!emailResponse.ok) throw new Error(emailResult.message || 'Failed to send email')
 
+    // Log to email_queue for tracking
+    try {
+      await supabase.from('email_queue').insert({
+        booking_id: bookingId,
+        email_type: 'payment_confirmation',
+        recipient_email: b.customers.email,
+        recipient_name: b.customers.full_name,
+        subject: `Payment Confirmed — ${serviceName}`,
+        html_content: '',
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+      })
+    } catch { /* ignore tracking errors */ }
+
     return new Response(
       JSON.stringify({ success: true, emailId: emailResult.id, message: 'Payment confirmation email sent successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

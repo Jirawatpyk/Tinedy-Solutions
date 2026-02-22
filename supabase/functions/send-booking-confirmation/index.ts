@@ -172,7 +172,7 @@ serve(async (req) => {
     const responseData = await response.json()
     if (!response.ok) throw new Error(responseData.message || 'Failed to send email')
 
-    // Queue for tracking
+    // Log to email_queue for tracking
     try {
       await supabase.from('email_queue').insert({
         booking_id: bookingId,
@@ -181,7 +181,8 @@ serve(async (req) => {
         recipient_name: customerName,
         subject: `Booking Confirmed — ${serviceName}`,
         html_content: '',
-        status: 'pending',
+        status: 'sent',
+        sent_at: new Date().toISOString(),
       })
     } catch { /* ignore tracking errors */ }
 
