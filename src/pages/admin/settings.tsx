@@ -90,15 +90,15 @@ export default function AdminSettings() {
         {/* Settings Content with Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-3 mb-6">
-            <TabsTrigger value="general" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0">
+            <TabsTrigger value="general" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
               <Building2 className="h-4 w-4 hidden sm:block shrink-0" />
               <span className="truncate">General</span>
             </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0">
+            <TabsTrigger value="payment" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
               <CreditCard className="h-4 w-4 hidden sm:block shrink-0" />
               <span className="truncate">Payment</span>
             </TabsTrigger>
-            <TabsTrigger value="notification" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0">
+            <TabsTrigger value="notification" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
               <Bell className="h-4 w-4 hidden sm:block shrink-0" />
               <span className="truncate">Notification</span>
             </TabsTrigger>
