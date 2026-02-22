@@ -43,7 +43,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/permission-guard'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import type { ServicePackageV2WithTiers } from '@/types'
 import { PricingModel } from '@/types'
 
@@ -342,7 +342,7 @@ export function PackageCard({
         {/* Created Date */}
         <div className="flex items-center text-xs text-muted-foreground pt-2 border-t">
           <Calendar className="h-3 w-3 mr-1" />
-          Created {new Date(pkg.created_at).toLocaleDateString('en-US')}
+          Created {formatDate(pkg.created_at)}
         </div>
       </CardContent>
     </Card>

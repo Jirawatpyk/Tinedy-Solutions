@@ -1,6 +1,5 @@
 import { memo } from 'react'
 import { Plus } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
 export interface LoadMoreCardProps {
@@ -19,21 +18,20 @@ function LoadMoreCardComponent({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-6">
-        <p className="text-sm text-muted-foreground mb-4">
-          Showing {Math.min(displayCount, totalCount)} of {totalCount} packages
-        </p>
-        <Button
-          variant="outline"
-          onClick={onLoadMore}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Load More Packages
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center py-4">
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+        Showing {Math.min(displayCount, totalCount)} of {totalCount} packages
+      </p>
+      <Button
+        variant="outline"
+        onClick={onLoadMore}
+        className="gap-2"
+        size="sm"
+      >
+        <Plus className="h-4 w-4" />
+        Load More
+      </Button>
+    </div>
   )
 }
 

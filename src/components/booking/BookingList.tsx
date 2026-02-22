@@ -181,7 +181,7 @@ function BookingListComponent({
                 return (
                   <div
                     key={booking.id}
-                    className={`p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${isArchived ? 'opacity-60 border-dashed bg-tinedy-off-white/50' : ''}`}
+                    className={`group p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer ${isArchived ? 'opacity-60 border-dashed bg-tinedy-off-white/50' : ''}`}
                     onClick={() => onBookingClick(booking)}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-1 gap-3 sm:gap-4">
@@ -240,19 +240,23 @@ function BookingListComponent({
                           </p>
                         )}
                       </div>
-                      {/* Right Section: Price, Badges, Actions (Desktop) */}
-                      <div className="hidden sm:flex sm:flex-col items-end gap-3 sm:gap-4 flex-shrink-0">
-                        {/* Price - top */}
-                        <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
-                          {formatCurrency(Number(booking.total_price))}
-                        </p>
-                        {/* Status + Payment badges */}
-                        <div className="flex flex-wrap gap-2 items-center justify-end">
-                          {getStatusBadge(booking.status)}
+                      {/* Right Section: Price + Payment, Status, Actions (Desktop) */}
+                      <div className="hidden sm:flex sm:flex-col items-end gap-2 flex-shrink-0">
+                        {/* Price + Payment badge - top */}
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
+                            {formatCurrency(Number(booking.total_price))}
+                          </p>
                           {getPaymentStatusBadge(booking.payment_status)}
                         </div>
-                        {/* Status dropdown + Delete button - bottom */}
-                        <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                        {/* Status badge - ONLY for final states (no dropdown shown) */}
+                        {([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status) && (
+                          <div className="flex items-center justify-end">
+                            {getStatusBadge(booking.status)}
+                          </div>
+                        )}
+                        {/* Status dropdown + Delete button */}
+                        <div className="flex gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
                             <AdminOnly>
                               <Button
@@ -270,7 +274,7 @@ function BookingListComponent({
                             </AdminOnly>
                           ) : (
                             <>
-                              {/* Hide status dropdown for final states (completed, cancelled, no_show) */}
+                              {/* Status dropdown - hidden for final states */}
                               {!([BookingStatus.Completed, BookingStatus.Cancelled, BookingStatus.NoShow] as string[]).includes(booking.status) && (
                                 <Select
                                   value={booking.status}
@@ -279,7 +283,7 @@ function BookingListComponent({
                                   }
                                   disabled={isArchived}
                                 >
-                                  <SelectTrigger className="w-32 h-8 text-xs">
+                                  <SelectTrigger className="w-[140px] h-8 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -297,7 +301,7 @@ function BookingListComponent({
                                 onDelete={() => onDeleteBooking(booking.id)}
                                 onCancel={onArchiveBooking ? () => onArchiveBooking(booking.id) : () => onDeleteBooking(booking.id)}
                                 cancelText="Archive"
-                                className="h-8 w-8"
+                                className="h-8 w-8 opacity-50 group-hover:opacity-100 transition-opacity"
                               />
                             </>
                           )}

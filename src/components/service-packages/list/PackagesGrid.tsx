@@ -169,17 +169,15 @@ const PackagesGrid = React.memo(
 
         {/* Load More Button */}
         {displayCount < packages.length && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <p className="text-sm text-muted-foreground mb-4">
-                Showing {Math.min(displayCount, packages.length)} of {packages.length} packages
-              </p>
-              <Button variant="outline" onClick={onLoadMore} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Load More Packages
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center py-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+              Showing {Math.min(displayCount, packages.length)} of {packages.length} packages
+            </p>
+            <Button variant="outline" onClick={onLoadMore} className="gap-2" size="sm">
+              <Plus className="h-4 w-4" />
+              Load More
+            </Button>
+          </div>
         )}
       </>
     )
