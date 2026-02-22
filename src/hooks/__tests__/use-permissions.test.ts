@@ -163,16 +163,16 @@ describe('usePermissions', () => {
       expect(result.current.can('export', 'reports')).toBe(true)
     })
 
-    it('should NOT allow manager to create service packages', () => {
+    it('should allow manager to create and update service packages', () => {
       const { result } = renderHook(() => usePermissions())
-      expect(result.current.can('create', 'service_packages')).toBe(false)
-      expect(result.current.can('update', 'service_packages')).toBe(false)
-      expect(result.current.can('delete', 'service_packages')).toBe(false)
+      expect(result.current.can('create', 'service_packages')).toBe(true)
+      expect(result.current.can('read', 'service_packages')).toBe(true)
+      expect(result.current.can('update', 'service_packages')).toBe(true)
     })
 
-    it('should allow manager to read service packages', () => {
+    it('should NOT allow manager to hard delete service packages', () => {
       const { result } = renderHook(() => usePermissions())
-      expect(result.current.can('read', 'service_packages')).toBe(true)
+      expect(result.current.can('delete', 'service_packages')).toBe(false)
     })
 
     it('should allow manager to access manager routes', () => {
