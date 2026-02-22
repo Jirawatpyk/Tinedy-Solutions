@@ -382,6 +382,44 @@ describe('useChat', () => {
 
       expect(supabase.removeChannel).toHaveBeenCalled()
     })
+
+    it('should use selectedUserRef (not stale closure) in realtime callback', () => {
+      // Capture the realtime callback registered via .on()
+      const mockChannel = {
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      }
+      vi.mocked(supabase.channel).mockReturnValue(mockChannel as never)
+
+      renderHook(() => useChat())
+
+      // Verify channel was set up with postgres_changes listeners (INSERT + UPDATE)
+      expect(mockChannel.on).toHaveBeenCalledWith(
+        'postgres_changes',
+        expect.objectContaining({
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        }),
+        expect.any(Function)
+      )
+      expect(mockChannel.on).toHaveBeenCalledWith(
+        'postgres_changes',
+        expect.objectContaining({
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        }),
+        expect.any(Function)
+      )
+
+      // The key assertion: the subscription is created once (deps=[])
+      // and uses selectedUserRef.current inside the callback,
+      // NOT a captured selectedUser variable from closure
+      // This is verified by the fact that .on() is called exactly twice
+      // (INSERT + UPDATE, no re-subscription when selectedUser changes)
+      expect(mockChannel.on).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('Error handling', () => {

@@ -78,6 +78,12 @@ export const BookingCreateRequestSchema = z.object({
     path: ['staff_id'],
   }
 ).refine(
+  (data) => !(data.staff_id !== null && data.team_id !== null),
+  {
+    message: 'Cannot assign to both staff_id and team_id simultaneously',
+    path: ['team_id'],
+  }
+).refine(
   (data) => data.package_id !== null || data.package_v2_id !== null,
   {
     message: 'Either package_id or package_v2_id must be provided',
@@ -153,6 +159,12 @@ export const RecurringBookingCreateRequestSchema = z.object({
   {
     message: 'Either staff_id or team_id must be provided',
     path: ['staff_id'],
+  }
+).refine(
+  (data) => !(data.staff_id !== null && data.team_id !== null),
+  {
+    message: 'Cannot assign to both staff_id and team_id simultaneously',
+    path: ['team_id'],
   }
 ).refine(
   (data) => data.package_id !== null || data.package_v2_id !== null,
