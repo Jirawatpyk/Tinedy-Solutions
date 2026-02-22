@@ -29,6 +29,7 @@ interface MembershipPeriod {
 }
 
 const ITEMS_PER_PAGE = 5
+const MAX_BOOKINGS_FETCH = 100
 
 /**
  * Filter bookings by membership periods
@@ -166,6 +167,7 @@ export const StaffRecentBookings = memo(function StaffRecentBookings({
 
       const { data, error } = await dataQuery
         .order('booking_date', { ascending: false })
+        .limit(MAX_BOOKINGS_FETCH)
 
       if (error) throw error
 

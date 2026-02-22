@@ -113,7 +113,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       // Search Bookings - ปรับปรุงใหม่: รองรับค้นหาด้วย ID และชื่อลูกค้า
       if (isUuidPattern) {
-        // ค้นหาด้วย Booking ID - ดึงทั้งหมดแล้วกรองที่ client (exclude archived)
+        // ค้นหาด้วย Booking ID - server-side filtering via UUID text cast
         const { data: bookingsByID, error: bookingError } = await supabase
           .from('bookings')
           .select(`
@@ -123,17 +123,15 @@ export function Header({ onMenuClick }: HeaderProps) {
             customers (full_name)
           `)
           .is('deleted_at', null)
+          .filter('id::text', 'ilike', `%${cleanedQuery}%`)
           .order('created_at', { ascending: false })
-          .limit(500)
+          .limit(5)
 
         if (bookingError) {
           console.error('Booking search error:', bookingError)
         }
 
-        // Filter bookings by ID at client side (case-insensitive)
-        const filteredBookings = bookingsByID?.filter(booking =>
-          booking.id.toLowerCase().includes(cleanedQuery.toLowerCase())
-        ).slice(0, 5) || []
+        const filteredBookings = bookingsByID || []
 
         filteredBookings.forEach((booking) => {
           const customers = booking.customers as { full_name: string } | { full_name: string }[] | null
