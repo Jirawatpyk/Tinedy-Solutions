@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { User, Users, ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { formatCurrency, formatBookingId } from '@/lib/utils'
@@ -253,18 +254,20 @@ function BookingListComponent({
                         {/* Status dropdown + Delete button - bottom */}
                         <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                           {isArchived && onRestoreBooking ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onRestoreBooking(booking.id)
-                              }}
-                              className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-                              <span className="hidden sm:inline">Restore</span>
-                            </Button>
+                            <AdminOnly>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onRestoreBooking(booking.id)
+                                }}
+                                className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Restore</span>
+                              </Button>
+                            </AdminOnly>
                           ) : (
                             <>
                               {/* Hide status dropdown for final states (completed, cancelled, no_show) */}
@@ -311,18 +314,20 @@ function BookingListComponent({
                         <div className="flex items-center gap-2">
                           {getPaymentStatusBadge(booking.payment_status)}
                           {isArchived && onRestoreBooking ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onRestoreBooking(booking.id)
-                              }}
-                              className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
-                            >
-                              <RotateCcw className="h-3 w-3 mr-1" />
-                              Restore
-                            </Button>
+                            <AdminOnly>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onRestoreBooking(booking.id)
+                                }}
+                                className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Restore
+                              </Button>
+                            </AdminOnly>
                           ) : (
                             <PermissionAwareDeleteButton
                               resource="bookings"

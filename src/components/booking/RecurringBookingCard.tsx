@@ -37,6 +37,7 @@ import { getRecurringPatternLabel } from '@/lib/recurring-utils'
 import { formatDateRange } from '@/lib/date-range-utils'
 import { formatTime } from '@/lib/booking-utils'
 import type { RecurringGroup } from '@/types/recurring-booking'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { getPaymentStatusVariant, getPaymentStatusLabel } from '@/lib/status-utils'
@@ -264,19 +265,21 @@ export function RecurringBookingCard({
                 )}
               </Button>
               {allBookingsArchived && onRestoreRecurringGroup ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRestoreRecurringGroup(group.groupId)
-                  }}
-                  className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
-                  title="Restore all bookings in group"
-                >
-                  <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Restore</span>
-                </Button>
+                <AdminOnly>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRestoreRecurringGroup(group.groupId)
+                    }}
+                    className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
+                    title="Restore all bookings in group"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Restore</span>
+                  </Button>
+                </AdminOnly>
               ) : (
                 (onDeleteGroup || onArchiveGroup) && (
                   <PermissionAwareDeleteButton
@@ -313,19 +316,21 @@ export function RecurringBookingCard({
               )
             })()}
             {allBookingsArchived && onRestoreRecurringGroup ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRestoreRecurringGroup(group.groupId)
-                }}
-                className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
-                title="Restore all bookings in group"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Restore
-              </Button>
+              <AdminOnly>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRestoreRecurringGroup(group.groupId)
+                  }}
+                  className="border-green-500 text-green-700 hover:bg-green-50 h-7 text-xs px-2"
+                  title="Restore all bookings in group"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Restore
+                </Button>
+              </AdminOnly>
             ) : (
               (onDeleteGroup || onArchiveGroup) && (
                 <PermissionAwareDeleteButton
@@ -391,18 +396,20 @@ export function RecurringBookingCard({
                   {/* Actions: Status Dropdown or Restore Button */}
                   <div onClick={(e) => e.stopPropagation()} className="w-full sm:w-auto">
                     {isArchived && onRestoreBooking ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onRestoreBooking(booking.id)
-                        }}
-                        className="border-green-500 text-green-700 hover:bg-green-50 w-full sm:w-auto h-8 text-xs"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-                        <span className="hidden sm:inline">Restore</span>
-                      </Button>
+                      <AdminOnly>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onRestoreBooking(booking.id)
+                          }}
+                          className="border-green-500 text-green-700 hover:bg-green-50 w-full sm:w-auto h-8 text-xs"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Restore</span>
+                        </Button>
+                      </AdminOnly>
                     ) : (
                       <Select
                         value={booking.status}

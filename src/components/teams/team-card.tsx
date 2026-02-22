@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Edit, UserPlus, Users, Crown, Star, ArrowRight, RotateCcw } from 'lucide-react'
+import { AdminOnly } from '@/components/auth/permission-guard'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
 import { DeleteButton } from '@/components/common/DeleteButton'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
@@ -109,15 +110,17 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
           </div>
           <div className="flex gap-1 flex-shrink-0">
             {isArchived && onRestore ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRestore(team.id)}
-                className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
-              >
-                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                Restore
-              </Button>
+              <AdminOnly>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRestore(team.id)}
+                  className="border-green-500 text-green-700 hover:bg-green-50 h-8 text-xs"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                  Restore
+                </Button>
+              </AdminOnly>
             ) : (
               <>
                 <SimpleTooltip content="Edit team">

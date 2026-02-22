@@ -144,14 +144,14 @@ describe('checkPermission', () => {
       expect(checkPermission(role, 'update', 'settings')).toBe(false)
     })
 
-    it('should NOT allow manager to manage service packages', () => {
-      expect(checkPermission(role, 'create', 'service_packages')).toBe(false)
-      expect(checkPermission(role, 'update', 'service_packages')).toBe(false)
-      expect(checkPermission(role, 'delete', 'service_packages')).toBe(false)
+    it('should allow manager to create and update service packages', () => {
+      expect(checkPermission(role, 'create', 'service_packages')).toBe(true)
+      expect(checkPermission(role, 'read', 'service_packages')).toBe(true)
+      expect(checkPermission(role, 'update', 'service_packages')).toBe(true)
     })
 
-    it('should allow manager to read service packages', () => {
-      expect(checkPermission(role, 'read', 'service_packages')).toBe(true)
+    it('should NOT allow manager to hard delete service packages', () => {
+      expect(checkPermission(role, 'delete', 'service_packages')).toBe(false)
     })
 
     it('should allow manager to manage teams except delete', () => {

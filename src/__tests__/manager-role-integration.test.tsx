@@ -114,14 +114,14 @@ describe('Manager Role - Permission Integration', () => {
   })
 
   describe('Service Packages Permissions', () => {
-    it('should NOT allow manager to manage service packages', () => {
-      expect(checkPermission(managerRole, 'create', 'service_packages')).toBe(false)
-      expect(checkPermission(managerRole, 'update', 'service_packages')).toBe(false)
-      expect(checkPermission(managerRole, 'delete', 'service_packages')).toBe(false)
+    it('should allow manager to create and update service packages', () => {
+      expect(checkPermission(managerRole, 'create', 'service_packages')).toBe(true)
+      expect(checkPermission(managerRole, 'read', 'service_packages')).toBe(true)
+      expect(checkPermission(managerRole, 'update', 'service_packages')).toBe(true)
     })
 
-    it('should allow manager to read service packages', () => {
-      expect(checkPermission(managerRole, 'read', 'service_packages')).toBe(true)
+    it('should NOT allow manager to hard delete service packages', () => {
+      expect(checkPermission(managerRole, 'delete', 'service_packages')).toBe(false)
     })
   })
 

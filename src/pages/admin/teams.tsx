@@ -10,7 +10,7 @@ import { StatCard } from '@/components/common/StatCard/StatCard'
 import { Users, Plus, Search, Crown, UsersRound } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { toast } from 'sonner'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { TeamCard } from '@/components/teams/team-card'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog/ConfirmDialog'
@@ -288,7 +288,7 @@ export function AdminTeams() {
         actions={
           <>
             {/* Show archived toggle - Admin only */}
-            <AdminOnly>
+            <ManagerOrAdmin>
               <div className="flex items-center gap-2">
                 <Switch
                   id="show-archived"
@@ -302,7 +302,7 @@ export function AdminTeams() {
                   Show archived
                 </label>
               </div>
-            </AdminOnly>
+            </ManagerOrAdmin>
             <Button onClick={() => setIsCreateSheetOpen(true)} className="bg-tinedy-blue hover:bg-tinedy-blue/90">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">New Team</span>

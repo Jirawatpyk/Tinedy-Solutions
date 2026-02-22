@@ -11,7 +11,7 @@ import { StatCard } from '@/components/common/StatCard/StatCard'
 import { getLoadErrorMessage } from '@/lib/error-messages'
 import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/use-debounce'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin, AdminOnly } from '@/components/auth/permission-guard'
 import { Plus, Search, Edit, Mail, Phone, MapPin, Users, UserCheck, UserPlus, MessageCircle, RotateCcw, UserX } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -216,7 +216,7 @@ export function AdminCustomers() {
         subtitle="Manage your customer database"
         actions={
           <>
-            <AdminOnly>
+            <ManagerOrAdmin>
               <div className="flex items-center gap-2">
                 <Switch
                   id="show-archived-customers"
@@ -230,7 +230,7 @@ export function AdminCustomers() {
                   Show archived
                 </label>
               </div>
-            </AdminOnly>
+            </ManagerOrAdmin>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={openCreateDialog}
@@ -453,18 +453,20 @@ export function AdminCustomers() {
                     </div>
                     <div className="flex gap-1">
                       {isArchived ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            restoreCustomer(customer.id)
-                          }}
-                          className="border-green-500 text-green-700 hover:bg-green-50 text-xs"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-                          <span className="hidden sm:inline">Restore</span>
-                        </Button>
+                        <AdminOnly>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              restoreCustomer(customer.id)
+                            }}
+                            className="border-green-500 text-green-700 hover:bg-green-50 text-xs"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Restore</span>
+                          </Button>
+                        </AdminOnly>
                       ) : (
                         <>
                           <SimpleTooltip content="Edit customer">

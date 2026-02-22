@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { PermissionGuard } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 
 export interface PackagesHeaderProps {
@@ -24,8 +24,8 @@ function PackagesHeaderComponent({
       subtitle="Manage cleaning and training service packages"
       actions={
         <>
-          {/* Show Archived - Admin only */}
-          <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+          {/* Show Archived - Admin & Manager */}
+          <ManagerOrAdmin>
             <div className="flex items-center gap-2">
               <Switch
                 id="showArchived"
@@ -39,7 +39,7 @@ function PackagesHeaderComponent({
                 Show archived
               </label>
             </div>
-          </PermissionGuard>
+          </ManagerOrAdmin>
           {canCreate && (
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"

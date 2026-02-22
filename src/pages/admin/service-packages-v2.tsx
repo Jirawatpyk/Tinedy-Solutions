@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/common/StatCard/StatCard'
 import { EmptyState } from '@/components/common/EmptyState'
-import { PermissionGuard } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin } from '@/components/auth/permission-guard'
 import { AppSheet } from '@/components/ui/app-sheet'
 import { PackageWizardSheet } from '@/components/service-packages/PackageWizardSheet'
 import {
@@ -287,8 +287,8 @@ export function AdminServicePackagesV2() {
         subtitle="Manage cleaning service packages with tiered pricing"
         actions={
           <>
-            {/* Show Archived - Admin only */}
-            <PermissionGuard requires={{ mode: 'role', roles: ['admin'] }}>
+            {/* Show Archived - Admin & Manager */}
+            <ManagerOrAdmin>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="showArchived"
@@ -302,7 +302,7 @@ export function AdminServicePackagesV2() {
                   Show archived
                 </label>
               </div>
-            </PermissionGuard>
+            </ManagerOrAdmin>
             <Button
               className="bg-tinedy-blue hover:bg-tinedy-blue/90"
               onClick={handleCreatePackage}

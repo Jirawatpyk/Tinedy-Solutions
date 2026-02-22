@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import { AdminOnly } from '@/components/auth/permission-guard'
+import { ManagerOrAdmin } from '@/components/auth/permission-guard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Plus } from 'lucide-react'
 import { BookingFiltersPanel } from '@/components/booking/BookingFiltersPanel'
@@ -184,7 +184,7 @@ export function AdminBookings() {
         subtitle="Manage all service bookings"
         actions={
           <>
-            <AdminOnly>
+            <ManagerOrAdmin>
               <div className="flex items-center gap-2">
                 <Switch
                   id="show-archived-bookings"
@@ -198,7 +198,7 @@ export function AdminBookings() {
                   Show archived
                 </label>
               </div>
-            </AdminOnly>
+            </ManagerOrAdmin>
             <Button className="bg-tinedy-blue hover:bg-tinedy-blue/90" onClick={() => dispatch({ type: 'SET_DIALOG_OPEN', payload: true })}>
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">New Booking</span>
