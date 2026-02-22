@@ -32,7 +32,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-96 w-full" />
@@ -46,7 +46,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -84,23 +84,23 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
 
         {/* Settings Content with Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-3 mb-6">
-            <TabsTrigger value="general" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
-              <Building2 className="h-4 w-4 hidden sm:block shrink-0" />
-              <span className="truncate">General</span>
+            <TabsTrigger value="general" className="flex items-center justify-center gap-2">
+              <Building2 className="h-4 w-4" />
+              General
             </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
-              <CreditCard className="h-4 w-4 hidden sm:block shrink-0" />
-              <span className="truncate">Payment</span>
+            <TabsTrigger value="payment" className="flex items-center justify-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Payment
             </TabsTrigger>
-            <TabsTrigger value="notification" className="flex items-center justify-center gap-1.5 text-xs sm:text-sm sm:gap-2 min-w-0 overflow-hidden px-1.5 sm:px-3">
-              <Bell className="h-4 w-4 hidden sm:block shrink-0" />
-              <span className="truncate">Notification</span>
+            <TabsTrigger value="notification" className="flex items-center justify-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notification
             </TabsTrigger>
           </TabsList>
 

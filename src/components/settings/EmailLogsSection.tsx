@@ -105,7 +105,7 @@ export function EmailLogsSection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -115,7 +115,7 @@ export function EmailLogsSection() {
               View sent emails and their delivery status
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {totalCount > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowClearAll(true)} disabled={loading} className="text-destructive hover:text-destructive">
                 <Trash2 className="h-4 w-4 sm:mr-2" />
