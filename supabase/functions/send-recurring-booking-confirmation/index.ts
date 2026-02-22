@@ -250,8 +250,8 @@ function generateRecurringConfirmationEmail(data: {
     </div>
   ` : ''
 
-  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
-  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>` : ''
+  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -269,7 +269,7 @@ function generateRecurringConfirmationEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">✅ Recurring Booking Confirmed!</h1>
               <p style="margin:8px 0 0;color:#8fb996;font-size:15px;font-weight:600;">${data.frequency} sessions scheduled</p>
             </td>
@@ -320,7 +320,7 @@ function generateRecurringConfirmationEmail(data: {
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
-              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
             </td>
           </tr>

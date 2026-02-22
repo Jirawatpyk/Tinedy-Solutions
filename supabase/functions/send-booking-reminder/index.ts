@@ -9,6 +9,7 @@ const corsHeaders = {
 interface BookingData {
   id: string
   booking_date: string
+  end_date?: string | null
   start_time: string
   end_time: string
   address?: string
@@ -47,6 +48,7 @@ serve(async (req) => {
       .select(`
         id,
         booking_date,
+        end_date,
         start_time,
         end_time,
         address,
@@ -128,7 +130,7 @@ serve(async (req) => {
         emailHtml = generateSingleReminderEmail({
           customerName: b.customers.full_name,
           serviceName,
-          formattedDate: formatDate(b.booking_date),
+          formattedDate: formatDateRange(b.booking_date, b.end_date),
           startTime: b.start_time?.slice(0, 5) ?? '',
           endTime: b.end_time?.slice(0, 5) ?? '',
           staffName,
@@ -145,7 +147,7 @@ serve(async (req) => {
       emailHtml = generateSingleReminderEmail({
         customerName: b.customers.full_name,
         serviceName,
-        formattedDate: formatDate(b.booking_date),
+        formattedDate: formatDateRange(b.booking_date, b.end_date),
         startTime: b.start_time?.slice(0, 5) ?? '',
         endTime: b.end_time?.slice(0, 5) ?? '',
         staffName,
@@ -195,6 +197,13 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function formatDateRange(startDate: string, endDate?: string | null): string {
+  const start = formatDate(startDate)
+  if (!endDate || endDate === startDate) return start
+  const end = formatDate(endDate)
+  return `${start} – ${end}`
+}
+
 // ============================================================================
 // EMAIL TEMPLATES — Tinedy Brand (inline CSS for email client compatibility)
 // Color Palette:
@@ -241,8 +250,8 @@ function generateSingleReminderEmail(data: {
     </div>
   ` : ''
 
-  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
-  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>` : ''
+  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -260,7 +269,7 @@ function generateSingleReminderEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">🔔 Appointment Reminder</h1>
               <p style="margin:8px 0 0;color:#e7d188;font-size:15px;font-weight:600;">Your appointment is tomorrow!</p>
             </td>
@@ -289,7 +298,7 @@ function generateSingleReminderEmail(data: {
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
-              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated reminder. Please do not reply directly to this email.</p>
             </td>
           </tr>
@@ -349,8 +358,8 @@ function generateRecurringReminderEmail(data: {
     </div>
   ` : ''
 
-  const footerPhone = data.businessPhone ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>` : ''
-  const footerAddress = data.businessAddress ? `<span>📍 ${data.businessAddress}</span>` : ''
+  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>` : ''
+  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -368,7 +377,7 @@ function generateRecurringReminderEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">🔔 Booking Reminder</h1>
               <p style="margin:8px 0 0;color:#e7d188;font-size:15px;font-weight:600;">Recurring Booking — ${data.frequency} sessions</p>
             </td>
@@ -401,7 +410,7 @@ function generateRecurringReminderEmail(data: {
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
-              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated reminder. Please do not reply directly to this email.</p>
             </td>
           </tr>
