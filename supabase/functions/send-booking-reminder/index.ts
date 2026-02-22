@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface BookingData {
   id: string
+  status: string
   booking_date: string
   end_date?: string | null
   start_time: string
@@ -21,6 +22,16 @@ interface BookingData {
   customers: { full_name: string; email: string }
   service_packages_v2?: { name: string } | null
   profiles?: { full_name: string } | null
+}
+
+// HTML escape helper — prevents XSS in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
 }
 
 serve(async (req) => {
@@ -40,6 +51,47 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    // Auth check: verify caller is admin/manager OR internal cron call
+    const authHeader = req.headers.get('Authorization')
+    const cronSecret = Deno.env.get('CRON_SECRET')
+    const internalSecret = req.headers.get('X-Internal-Secret')
+
+    // Allow internal cron calls with shared secret
+    const isInternalCall = cronSecret && internalSecret === cronSecret
+
+    if (!isInternalCall) {
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token)
+
+      if (authError || !caller) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Only admin or manager can send reminders
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', caller.id)
+        .single()
+
+      if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Forbidden' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     const { bookingId } = await req.json()
     if (!bookingId) throw new Error('Missing bookingId')
 
@@ -47,6 +99,7 @@ serve(async (req) => {
       .from('bookings')
       .select(`
         id,
+        status,
         booking_date,
         end_date,
         start_time,
@@ -62,16 +115,80 @@ serve(async (req) => {
         profiles:staff_id (full_name)
       `)
       .eq('id', bookingId)
+      .is('deleted_at', null)
       .single()
 
     if (fetchError || !booking) {
-      return new Response(JSON.stringify({ error: 'Booking not found' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Booking not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const b = booking as unknown as BookingData
+
+    // Status guard: only send reminders for pending or confirmed bookings
+    const allowedStatuses = ['pending', 'confirmed']
+    if (!allowedStatuses.includes(b.status)) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Cannot send reminder for status: ${b.status}`, status: b.status }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // Idempotent check: INSERT into email_queue (unique index on booking_id + email_type)
+    // Handles both first-send and retry-after-failure scenarios
+    let queueId: string | undefined
+    let currentAttempts = 0
+
+    const { data: queueInsert, error: queueError } = await supabase
+      .from('email_queue')
+      .insert({
+        booking_id: bookingId,
+        email_type: 'booking_reminder',
+        recipient_email: b.customers.email,
+        recipient_name: b.customers.full_name,
+        status: 'pending',
+        subject: '',
+        attempts: 0,
+        max_attempts: 3,
+      })
+      .select('id')
+      .single()
+
+    if (queueError) {
+      if (queueError.code === '23505') { // unique_violation — row already exists
+        // Check existing row: if 'sent', skip; if 'failed'/'pending', allow retry
+        const { data: existingRow } = await supabase
+          .from('email_queue')
+          .select('id, status, attempts')
+          .eq('booking_id', bookingId)
+          .eq('email_type', 'booking_reminder')
+          .single()
+
+        if (existingRow?.status === 'sent') {
+          return new Response(
+            JSON.stringify({ success: true, message: 'Already sent', skipped: true }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          )
+        }
+
+        // Allow retry for 'failed' or 'pending' — reset status and proceed
+        if (existingRow) {
+          queueId = existingRow.id
+          currentAttempts = existingRow.attempts ?? 0
+          await supabase
+            .from('email_queue')
+            .update({ status: 'pending', error_message: null })
+            .eq('id', existingRow.id)
+        }
+      } else {
+        console.error('[send-reminder] email_queue insert error:', { bookingId, error: queueError })
+        // Non-unique error: continue with sending (prefer delivery over tracking)
+      }
+    } else {
+      queueId = queueInsert?.id
+    }
     const serviceName = b.service_packages_v2?.name ?? 'Service'
     const staffName = b.profiles?.full_name ?? undefined
     const location = [b.address, b.city, b.state, b.zip_code].filter(Boolean).join(', ') || undefined
@@ -109,6 +226,8 @@ serve(async (req) => {
         .from('bookings')
         .select('id, booking_date, start_time, end_time')
         .eq('recurring_group_id', b.recurring_group_id)
+        .is('deleted_at', null)
+        .eq('status', 'confirmed')
         .order('booking_date')
 
       if (groupBookings && groupBookings.length > 0) {
@@ -119,7 +238,6 @@ serve(async (req) => {
           staffName,
           location,
           notes: b.notes,
-          frequency: groupBookings.length,
           fromName,
           businessPhone,
           businessAddress,
@@ -161,6 +279,14 @@ serve(async (req) => {
       emailSubject = `Reminder: Your ${serviceName} Appointment Tomorrow`
     }
 
+    // Update email_queue with subject before sending
+    if (queueId) {
+      await supabase
+        .from('email_queue')
+        .update({ subject: emailSubject })
+        .eq('id', queueId)
+    }
+
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -176,14 +302,32 @@ serve(async (req) => {
     })
 
     const emailResult = await emailResponse.json()
-    if (!emailResponse.ok) throw new Error(emailResult.message || 'Failed to send email')
+
+    if (!emailResponse.ok) {
+      const errorMsg = emailResult.message || 'Failed to send email'
+      if (queueId) {
+        await supabase
+          .from('email_queue')
+          .update({ status: 'failed', error_message: errorMsg, attempts: currentAttempts + 1 })
+          .eq('id', queueId)
+      }
+      throw new Error(errorMsg)
+    }
+
+    // Update email_queue to sent
+    if (queueId) {
+      await supabase
+        .from('email_queue')
+        .update({ status: 'sent', sent_at: new Date().toISOString(), attempts: currentAttempts + 1 })
+        .eq('id', queueId)
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Reminder sent successfully', data: emailResult }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('Error sending reminder email:', error)
+    console.error('[send-reminder] Error:', { error: error instanceof Error ? error.message : error })
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -229,11 +373,11 @@ function generateSingleReminderEmail(data: {
   businessLogoUrl: string
 }): string {
   const detailRows = [
-    { label: '📋 Service', value: data.serviceName },
-    { label: '📅 Date', value: data.formattedDate },
-    { label: '🕐 Time', value: `${data.startTime} – ${data.endTime}` },
-    ...(data.staffName ? [{ label: '👤 Staff', value: data.staffName }] : []),
-    ...(data.location ? [{ label: '📍 Location', value: data.location }] : []),
+    { label: '📋 Service', value: escapeHtml(data.serviceName) },
+    { label: '📅 Date', value: escapeHtml(data.formattedDate) },
+    { label: '🕐 Time', value: `${escapeHtml(data.startTime)} – ${escapeHtml(data.endTime)}` },
+    ...(data.staffName ? [{ label: '👤 Staff', value: escapeHtml(data.staffName) }] : []),
+    ...(data.location ? [{ label: '📍 Location', value: escapeHtml(data.location) }] : []),
   ]
 
   const detailRowsHtml = detailRows.map(({ label, value }) => `
@@ -246,12 +390,12 @@ function generateSingleReminderEmail(data: {
   const notesSection = data.notes ? `
     <div style="background-color:#fdf9e8;border-left:4px solid #e7d188;border-radius:4px;padding:16px 20px;margin:20px 0;">
       <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">📝 Notes</p>
-      <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">${data.notes}</p>
+      <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">${escapeHtml(data.notes)}</p>
     </div>
   ` : ''
 
-  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>` : ''
-  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>` : ''
+  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${escapeHtml(data.businessPhone)}</p>` : ''
+  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${escapeHtml(data.businessAddress)}</p>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -269,7 +413,7 @@ function generateSingleReminderEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
+              <img src="${escapeHtml(data.businessLogoUrl)}" alt="${escapeHtml(data.fromName)}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">🔔 Appointment Reminder</h1>
               <p style="margin:8px 0 0;color:#e7d188;font-size:15px;font-weight:600;">Your appointment is tomorrow!</p>
             </td>
@@ -278,8 +422,8 @@ function generateSingleReminderEmail(data: {
           <!-- BODY -->
           <tr>
             <td style="padding:36px 40px;">
-              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
-              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">Just a friendly reminder about your upcoming appointment with <strong>${data.fromName}</strong>.</p>
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${escapeHtml(data.customerName)}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">Just a friendly reminder about your upcoming appointment with <strong>${escapeHtml(data.fromName)}</strong>.</p>
 
               <!-- INFO CARD -->
               <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
@@ -297,7 +441,7 @@ function generateSingleReminderEmail(data: {
           <!-- FOOTER -->
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${escapeHtml(data.fromName)}</p>
               ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated reminder. Please do not reply directly to this email.</p>
             </td>
@@ -318,7 +462,6 @@ function generateRecurringReminderEmail(data: {
   staffName?: string
   location?: string
   notes?: string
-  frequency: number
   fromName: string
   businessPhone: string
   businessAddress: string
@@ -339,9 +482,9 @@ function generateRecurringReminderEmail(data: {
   }).join('')
 
   const infoRows = [
-    { label: '📋 Service', value: data.serviceName },
-    ...(data.staffName ? [{ label: '👤 Staff', value: data.staffName }] : []),
-    ...(data.location ? [{ label: '📍 Location', value: data.location }] : []),
+    { label: '📋 Service', value: escapeHtml(data.serviceName) },
+    ...(data.staffName ? [{ label: '👤 Staff', value: escapeHtml(data.staffName) }] : []),
+    ...(data.location ? [{ label: '📍 Location', value: escapeHtml(data.location) }] : []),
   ]
 
   const infoRowsHtml = infoRows.map(({ label, value }) => `
@@ -354,12 +497,12 @@ function generateRecurringReminderEmail(data: {
   const notesSection = data.notes ? `
     <div style="background-color:#fdf9e8;border-left:4px solid #e7d188;border-radius:4px;padding:16px 20px;margin:20px 0;">
       <p style="margin:0;font-weight:600;color:#2d241d;font-size:14px;">📝 Notes</p>
-      <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">${data.notes}</p>
+      <p style="margin:8px 0 0;color:#2d241d;font-size:14px;">${escapeHtml(data.notes)}</p>
     </div>
   ` : ''
 
-  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>` : ''
-  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>` : ''
+  const footerPhone = data.businessPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${escapeHtml(data.businessPhone)}</p>` : ''
+  const footerAddress = data.businessAddress ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${escapeHtml(data.businessAddress)}</p>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -377,17 +520,17 @@ function generateRecurringReminderEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
+              <img src="${escapeHtml(data.businessLogoUrl)}" alt="${escapeHtml(data.fromName)}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">🔔 Booking Reminder</h1>
-              <p style="margin:8px 0 0;color:#e7d188;font-size:15px;font-weight:600;">Recurring Booking — ${data.frequency} sessions</p>
+              <p style="margin:8px 0 0;color:#e7d188;font-size:15px;font-weight:600;">Recurring Booking — ${data.bookings.length} sessions</p>
             </td>
           </tr>
 
           <!-- BODY -->
           <tr>
             <td style="padding:36px 40px;">
-              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${data.customerName}</strong>,</p>
-              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">Here's a reminder about your upcoming sessions with <strong>${data.fromName}</strong>.</p>
+              <p style="margin:0 0 24px;font-size:16px;color:#2d241d;">Hi <strong>${escapeHtml(data.customerName)}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#2d241d;line-height:1.6;">Here's a reminder about your upcoming sessions with <strong>${escapeHtml(data.fromName)}</strong>.</p>
 
               <!-- SERVICE INFO -->
               <div style="background-color:#f5f3ee;border-left:4px solid #2e4057;border-radius:6px;padding:20px 24px;margin:0 0 24px;">
@@ -395,7 +538,7 @@ function generateRecurringReminderEmail(data: {
               </div>
 
               <!-- SCHEDULE TABLE -->
-              <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#2e4057;">📅 Your Schedule (${data.frequency} sessions)</p>
+              <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#2e4057;">📅 Your Schedule (${data.bookings.length} sessions)</p>
               <table width="100%" cellpadding="0" cellspacing="2" style="border-collapse:separate;border-spacing:0 4px;">
                 ${scheduleRowsHtml}
               </table>
@@ -409,7 +552,7 @@ function generateRecurringReminderEmail(data: {
           <!-- FOOTER -->
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${escapeHtml(data.fromName)}</p>
               ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated reminder. Please do not reply directly to this email.</p>
             </td>

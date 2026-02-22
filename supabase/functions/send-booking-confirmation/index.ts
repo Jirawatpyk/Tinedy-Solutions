@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// HTML escape helper — prevents XSS in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -22,6 +32,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // Auth: verify caller is admin or manager
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.id).single()
+    if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const { bookingId } = await req.json()
     if (!bookingId) {
@@ -110,18 +140,18 @@ serve(async (req) => {
       : startDateStr
 
     const emailHtml = generateBookingConfirmationEmail({
-      customerName,
-      serviceName,
-      bookingDateFormatted,
+      customerName: escapeHtml(customerName),
+      serviceName: escapeHtml(serviceName),
+      bookingDateFormatted: escapeHtml(bookingDateFormatted),
       startTime: b.start_time?.slice(0, 5) ?? '',
       endTime: b.end_time?.slice(0, 5) ?? '',
       totalPrice: b.total_price ?? 0,
-      staffName,
-      location,
-      notes: b.notes ?? undefined,
-      fromName,
-      businessPhone,
-      businessAddress,
+      staffName: staffName ? escapeHtml(staffName) : undefined,
+      location: location ? escapeHtml(location) : undefined,
+      notes: b.notes ? escapeHtml(b.notes) : undefined,
+      fromName: escapeHtml(fromName),
+      businessPhone: escapeHtml(businessPhone),
+      businessAddress: escapeHtml(businessAddress),
       businessLogoUrl,
     })
 

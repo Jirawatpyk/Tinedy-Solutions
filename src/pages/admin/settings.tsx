@@ -4,6 +4,7 @@
  * จัดการการตั้งค่าระบบ:
  * - General Tab: ข้อมูลธุรกิจ
  * - Payment Tab: การตั้งค่าการชำระเงิน
+ * - Notification Tab: การตั้งค่าการแจ้งเตือน + Email Logs
  *
  * Integrated with Zod schemas (Phase 5)
  */
@@ -16,8 +17,10 @@ import { useSettings } from '@/hooks/use-settings'
 import { AdminOnly } from '@/components/auth/permission-guard'
 import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm'
 import { PaymentSettingsForm } from '@/components/settings/PaymentSettingsForm'
+import { NotificationSettingsForm } from '@/components/settings/NotificationSettingsForm'
+import { EmailLogsSection } from '@/components/settings/EmailLogsSection'
 import { PageHeader } from '@/components/common/PageHeader'
-import { AlertCircle, Building2, CreditCard } from 'lucide-react'
+import { AlertCircle, Building2, CreditCard, Bell } from 'lucide-react'
 
 export default function AdminSettings() {
   const { settings, loading, error, refresh } = useSettings()
@@ -29,7 +32,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information and payment settings"
+          subtitle="Manage your business information, payment, and notification settings"
         />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-96 w-full" />
@@ -43,7 +46,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information and payment settings"
+          subtitle="Manage your business information, payment, and notification settings"
         />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -81,12 +84,12 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information and payment settings"
+          subtitle="Manage your business information, payment, and notification settings"
         />
 
         {/* Settings Content with Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-2 mb-6">
+          <TabsList className="w-full grid grid-cols-3 mb-6">
             <TabsTrigger value="general" className="flex items-center justify-center gap-2">
               <Building2 className="h-4 w-4" />
               General
@@ -94,6 +97,10 @@ export default function AdminSettings() {
             <TabsTrigger value="payment" className="flex items-center justify-center gap-2">
               <CreditCard className="h-4 w-4" />
               Payment
+            </TabsTrigger>
+            <TabsTrigger value="notification" className="flex items-center justify-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notification
             </TabsTrigger>
           </TabsList>
 
@@ -111,6 +118,28 @@ export default function AdminSettings() {
               settingsId={settings.id}
               onSuccess={refresh}
             />
+          </TabsContent>
+
+          <TabsContent value="notification">
+            <div className="space-y-6">
+              <NotificationSettingsForm
+                initialData={{
+                  email_notifications: settings.email_notifications,
+                  sms_notifications: settings.sms_notifications,
+                  notify_new_booking: settings.notify_new_booking,
+                  notify_cancellation: settings.notify_cancellation,
+                  notify_payment: settings.notify_payment,
+                  reminder_hours: (['1', '2', '4', '12', '24', '48'] as const).includes(
+                    String(settings.reminder_hours || 24) as '1' | '2' | '4' | '12' | '24' | '48'
+                  )
+                    ? (String(settings.reminder_hours || 24) as '1' | '2' | '4' | '12' | '24' | '48')
+                    : '24',
+                }}
+                settingsId={settings.id}
+                onSuccess={refresh}
+              />
+              <EmailLogsSection />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
