@@ -286,7 +286,7 @@ export const FEATURE_FLAGS: Record<string, UserRole[]> = {
   view_all_data: [UserRole.Admin, UserRole.Manager],
   manage_teams: [UserRole.Admin, UserRole.Manager],
   assign_staff: [UserRole.Admin, UserRole.Manager],
-  view_archived: [UserRole.Admin], // Only admin can view archived/soft-deleted records
+  view_archived: [UserRole.Admin, UserRole.Manager], // Admin and Manager can view archived/soft-deleted records (consistent with canSoftDelete/canRestore)
 }
 
 /**

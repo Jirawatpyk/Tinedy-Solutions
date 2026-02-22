@@ -14,7 +14,7 @@
  * Pattern: Same as useReportStats (Phase 2 migration)
  */
 
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +27,15 @@ import {
   type StaffStats,
 } from '@/lib/queries/staff-bookings-queries'
 import { BookingStatus } from '@/types/booking'
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Delay (ms) after UPDATE events to let DB commit before refetch */
+const MUTATION_SETTLE_DELAY_MS = 300
+/** Delay (ms) after INSERT/DELETE events for query invalidation */
+const REALTIME_SETTLE_DELAY_MS = 100
 
 // ============================================================================
 // HOOK INTERFACE
@@ -216,28 +225,34 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
           logger.debug('Real-time update received', { event: payload.eventType }, { context: 'StaffDashboard' })
 
           // Use moderate delay for UPDATE events to avoid conflict with mutations
-          const delay = payload.eventType === 'UPDATE' ? 300 : 100
+          const delay = payload.eventType === 'UPDATE' ? MUTATION_SETTLE_DELAY_MS : REALTIME_SETTLE_DELAY_MS
 
-          setTimeout(async () => {
-            // IMPORTANT: Invalidate teamMembership FIRST to ensure fresh membership data
-            // Then wait a bit for React Query to refetch before invalidating bookings
-            // This prevents stale closure issue where queryFn uses old allMembershipPeriods
-            await queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
+          setTimeout(() => {
+            void (async () => {
+              try {
+                // IMPORTANT: Invalidate teamMembership FIRST to ensure fresh membership data
+                // Then wait a bit for React Query to refetch before invalidating bookings
+                // This prevents stale closure issue where queryFn uses old allMembershipPeriods
+                await queryClient.invalidateQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
 
-            // Wait for membership refetch to complete before invalidating bookings
-            await queryClient.refetchQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
+                // Wait for membership refetch to complete before invalidating bookings
+                await queryClient.refetchQueries({ queryKey: queryKeys.staffBookings.teamMembership(userId) })
 
-            // Now invalidate ALL staff bookings queries using partial key match
-            // This ensures all queries with any membershipHash are invalidated
-            // The useQuery hooks will automatically refetch with current allMembershipPeriods
-            queryClient.invalidateQueries({
-              queryKey: ['staff-bookings'],
-              predicate: (query) => {
-                const key = query.queryKey as string[]
-                // Match queries for this user
-                return key.includes(userId)
+                // Now invalidate ALL staff bookings queries using partial key match
+                // This ensures all queries with any membershipHash are invalidated
+                // The useQuery hooks will automatically refetch with current allMembershipPeriods
+                queryClient.invalidateQueries({
+                  queryKey: ['staff-bookings'],
+                  predicate: (query) => {
+                    const key = query.queryKey as string[]
+                    // Match queries for this user
+                    return key.includes(userId)
+                  }
+                })
+              } catch (err) {
+                logger.error('Failed to invalidate queries after realtime event', { err }, { context: 'StaffDashboard' })
               }
-            })
+            })()
           }, delay)
         }
       )
@@ -250,10 +265,13 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
   }, [userId, teamsLoaded, queryClient]) // Removed teamIds and allMembershipPeriods to avoid re-subscription
 
   // Helper to get current queryKey for today bookings (includes membershipHash)
-  const getTodayQueryKey = () => staffBookingsQueryOptions.today(userId, teamIds, allMembershipPeriods).queryKey
+  const getTodayQueryKey = useCallback(
+    () => staffBookingsQueryOptions.today(userId, teamIds, allMembershipPeriods).queryKey,
+    [userId, teamIds, allMembershipPeriods]
+  )
 
   // Helper to invalidate all staff bookings queries for this user
-  const invalidateStaffBookings = () => {
+  const invalidateStaffBookings = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: ['staff-bookings'],
       predicate: (query) => {
@@ -261,7 +279,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
         return key.includes(userId)
       }
     })
-  }
+  }, [queryClient, userId])
 
   // Mutation: Start Progress
   const startProgressMutation = useMutation({
@@ -312,7 +330,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     },
     onSettled: async () => {
       // Increased delay to ensure DB update is committed before refetch
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => setTimeout(resolve, MUTATION_SETTLE_DELAY_MS))
       // Invalidate all staff bookings queries
       invalidateStaffBookings()
     },
@@ -362,7 +380,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
     },
     onSettled: async () => {
       // Small delay to ensure DB update is committed before refetch
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, REALTIME_SETTLE_DELAY_MS))
       // Invalidate all staff bookings queries
       invalidateStaffBookings()
     },
@@ -413,7 +431,7 @@ export function useStaffDashboard(): UseStaffDashboardReturn {
       logger.debug('Rolled back revertToInProgress optimistic update', {}, { context: 'StaffDashboard' })
     },
     onSettled: async () => {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, REALTIME_SETTLE_DELAY_MS))
       invalidateStaffBookings()
     },
   })
