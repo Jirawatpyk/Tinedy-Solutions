@@ -157,24 +157,8 @@ export function useInAppNotifications() {
       return
     }
 
-    // Load notifications immediately
-    ;(async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (error) {
-        console.error('[InAppNotifications] Error loading notifications:', error)
-        return
-      }
-
-      setNotifications(data || [])
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0)
-      setLoading(false)
-    })()
+    // Load notifications immediately (reuse existing callback)
+    loadNotifications()
 
     // Subscribe to real-time changes
     const channel = supabase
@@ -232,6 +216,9 @@ export function useInAppNotifications() {
     return () => {
       supabase.removeChannel(channel)
     }
+  // loadNotifications is stable (useCallback with [user] dep) — adding it would
+  // cause re-subscription on every notification change. Keep [user] only.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   return {

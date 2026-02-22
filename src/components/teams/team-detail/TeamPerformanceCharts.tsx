@@ -32,6 +32,7 @@ export function TeamPerformanceCharts({ teamId }: TeamPerformanceChartsProps) {
         .from('bookings')
         .select('booking_date')
         .eq('team_id', teamId)
+        .is('deleted_at', null)
         .order('booking_date', { ascending: false })
 
       if (error) throw error
