@@ -82,6 +82,33 @@ export function useEmailLogs({
     fetchLogs()
   }, [fetchLogs])
 
+  const deleteLog = useCallback(async (id: string) => {
+    const { error: deleteError } = await supabase
+      .from('email_queue')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) throw deleteError
+    await fetchLogs()
+  }, [fetchLogs])
+
+  const clearAllLogs = useCallback(async () => {
+    let query = supabase.from('email_queue').delete()
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
+    }
+    if (emailType && emailType !== 'all') {
+      query = query.eq('email_type', emailType)
+    }
+
+    // gte created_at epoch ensures all rows match when no other filter applied
+    const { error: deleteError } = await query.gte('created_at', '1970-01-01T00:00:00Z')
+
+    if (deleteError) throw deleteError
+    await fetchLogs()
+  }, [status, emailType, fetchLogs])
+
   return {
     logs,
     loading,
@@ -89,5 +116,7 @@ export function useEmailLogs({
     totalCount,
     totalPages: Math.ceil(totalCount / pageSize),
     refresh: fetchLogs,
+    deleteLog,
+    clearAllLogs,
   }
 }

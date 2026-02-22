@@ -32,7 +32,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-96 w-full" />
@@ -46,7 +46,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -84,7 +84,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <PageHeader
           title="Settings"
-          subtitle="Manage your business information, payment, and notification settings"
+          subtitle="Manage business, payment, and notifications"
         />
 
         {/* Settings Content with Tabs */}

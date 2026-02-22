@@ -76,7 +76,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
   )
 
   return (
-    <Card className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
+    <Card className={`group/card card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}>
       <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
@@ -140,7 +140,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                   onDelete={() => onDelete(team.id)}
                   onCancel={onCancel ? () => onCancel(team.id) : undefined}
                   cancelText="Archive"
-                  className="h-7 w-7 sm:h-8 sm:w-8"
+                  className="h-7 w-7 sm:h-8 sm:w-8 opacity-50 group-hover/card:opacity-100 transition-opacity"
                   warningMessage={
                     (team.member_count || 0) > 0 || (team.booking_count || 0) > 0
                       ? `This team has ${team.member_count || 0} member(s)${(team.booking_count || 0) > 0 ? ` and ${team.booking_count} booking(s)` : ''} that will be affected.`
@@ -200,7 +200,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
               displayedMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-md hover:bg-muted transition-colors group"
+                  className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-md hover:bg-muted transition-colors group/member"
                 >
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                     <AvatarImage src={member.avatar_url || undefined} />
@@ -221,7 +221,7 @@ export const TeamCard = memo(function TeamCard({ team, onEdit, onDelete, onCance
                     </div>
                     <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{member.email}</p>
                   </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="opacity-0 group-hover/member:opacity-100 transition-opacity">
                     <DeleteButton
                       itemName={member.full_name}
                       onDelete={() => onRemoveMember(team.id, member.id)}

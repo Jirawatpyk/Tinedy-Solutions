@@ -351,7 +351,6 @@ export function AdminCustomers() {
           <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredCustomers.slice(0, displayCount).map((customer) => {
             const isArchived = !!customer.deleted_at
-            const hasCompleteProfile = customer.address && customer.city && customer.state
             const isRecent = () => {
               const createdDate = new Date(customer.created_at)
               const sevenDaysAgo = new Date()
@@ -380,7 +379,7 @@ export function AdminCustomers() {
             return (
               <Card
                 key={customer.id}
-                className={`card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}
+                className={`group card-interactive ${isArchived ? 'opacity-60 border-dashed' : ''}`}
                 onClick={() => navigate(`${basePath}/customers/${customer.id}`)}
               >
                 <CardHeader className="pb-3 px-4 sm:px-6">
@@ -406,21 +405,12 @@ export function AdminCustomers() {
                           {relationshipInfo.label}
                         </Badge>
 
-                        {/* Preferred Contact Badge */}
-                        <Badge variant="outline" className="text-[10px] sm:text-xs border-blue-300 text-blue-700 bg-blue-50">
-                          <span className="flex items-center gap-0.5 sm:gap-1">
+                        {/* Preferred Contact */}
+                        <SimpleTooltip content={`Preferred: ${customer.preferred_contact_method}`}>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 text-blue-600 cursor-default">
                             {contactIcons[customer.preferred_contact_method]}
-                            <span>{customer.preferred_contact_method.toUpperCase()}</span>
                           </span>
-                        </Badge>
-
-                        {/* Complete Profile Badge */}
-                        {hasCompleteProfile && (
-                          <Badge variant="outline" className="border-tinedy-green text-tinedy-green bg-green-50 text-[10px] sm:text-xs">
-                            <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                            Complete
-                          </Badge>
-                        )}
+                        </SimpleTooltip>
 
                         {/* Recent Badge */}
                         {isRecent() && (
@@ -489,7 +479,7 @@ export function AdminCustomers() {
                             onDelete={() => deleteCustomer(customer.id)}
                             onCancel={() => archiveCustomer(customer.id)}
                             cancelText="Archive"
-                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            className="h-7 w-7 sm:h-8 sm:w-8 opacity-50 group-hover:opacity-100 transition-opacity"
                             warningMessage={
                               customer.booking_count > 0
                                 ? `This customer has ${customer.booking_count} booking(s) that will also be deleted.`
@@ -553,24 +543,20 @@ export function AdminCustomers() {
 
           {/* Load More Button */}
           {displayCount < filteredCustomers.length && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-4 sm:py-6 px-4 sm:px-6">
-                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                  <span className="hidden sm:inline">Showing {displayCount} of {filteredCustomers.length} customers</span>
-                  <span className="sm:hidden">{displayCount} of {filteredCustomers.length}</span>
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
-                  className="gap-2"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Load More Customers</span>
-                  <span className="sm:hidden">Load More</span>
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-4">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+                Showing {displayCount} of {filteredCustomers.length} customers
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                className="gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Load More
+              </Button>
+            </div>
           )}
         </>
       )}

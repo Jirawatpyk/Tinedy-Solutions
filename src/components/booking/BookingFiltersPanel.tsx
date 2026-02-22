@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Search, X, Calendar, SlidersHorizontal } from 'lucide-react'
 import { AdvancedFiltersModal } from './AdvancedFiltersModal'
 import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/constants/booking-status'
+import { getBangkokDateString } from '@/lib/utils'
 import type { BookingFilterState } from '@/hooks/use-booking-filters'
 
 interface BookingFiltersPanelProps {
@@ -79,6 +80,30 @@ const BookingFiltersPanelComponent = ({
 
   const advancedFilterCount = getAdvancedFilterCount()
 
+  /**
+   * Detect which quick filter is currently active by comparing date range
+   */
+  const getActiveQuickFilter = (): 'today' | 'week' | 'month' | null => {
+    if (!filters.dateFrom || !filters.dateTo) return null
+    const now = new Date()
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    const todayStr = getBangkokDateString()
+    if (filters.dateFrom === todayStr && filters.dateTo === todayStr) return 'today'
+
+    const ws = new Date(now); ws.setDate(now.getDate() - now.getDay())
+    const we = new Date(ws); we.setDate(ws.getDate() + 6)
+    if (filters.dateFrom === fmt(ws) && filters.dateTo === fmt(we)) return 'week'
+
+    const ms = new Date(now.getFullYear(), now.getMonth(), 1)
+    const me = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    if (filters.dateFrom === fmt(ms) && filters.dateTo === fmt(me)) return 'month'
+
+    return null
+  }
+  const activeQuickFilter = getActiveQuickFilter()
+
   return (
     <>
       <Card>
@@ -91,7 +116,9 @@ const BookingFiltersPanelComponent = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setQuickFilter('today')}
-                className="h-8 text-xs"
+                className={activeQuickFilter === 'today'
+                  ? 'h-8 text-xs bg-tinedy-blue/10 text-tinedy-blue border-tinedy-blue/30 hover:bg-tinedy-blue/20'
+                  : 'h-8 text-xs'}
               >
                 <Calendar className="h-3 w-3 mr-1" />
                 Today
@@ -100,17 +127,23 @@ const BookingFiltersPanelComponent = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setQuickFilter('week')}
-                className="h-8 text-xs hidden sm:inline-flex"
+                className={activeQuickFilter === 'week'
+                  ? 'h-8 text-xs bg-tinedy-blue/10 text-tinedy-blue border-tinedy-blue/30 hover:bg-tinedy-blue/20'
+                  : 'h-8 text-xs'}
               >
-                This Week
+                <span className="sm:hidden">Week</span>
+                <span className="hidden sm:inline">This Week</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setQuickFilter('month')}
-                className="h-8 text-xs hidden sm:inline-flex"
+                className={activeQuickFilter === 'month'
+                  ? 'h-8 text-xs bg-tinedy-blue/10 text-tinedy-blue border-tinedy-blue/30 hover:bg-tinedy-blue/20'
+                  : 'h-8 text-xs'}
               >
-                This Month
+                <span className="sm:hidden">Month</span>
+                <span className="hidden sm:inline">This Month</span>
               </Button>
 
               {hasActiveFilters() && (

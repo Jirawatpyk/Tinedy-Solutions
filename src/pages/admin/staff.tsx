@@ -312,7 +312,7 @@ export function AdminStaff() {
             {filteredStaff.slice(0, displayCount).map((member) => (
               <Card
                 key={member.id}
-                className="card-interactive"
+                className="group card-interactive"
                 onClick={() => navigate(`${basePath}/staff/${member.id}`)}
               >
                 <CardHeader className="p-4 sm:p-6 pb-1 sm:pb-2">
@@ -373,7 +373,7 @@ export function AdminStaff() {
                           resource="staff"
                           itemName={member.full_name}
                           onDelete={() => deleteStaff(member.id)}
-                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          className="h-7 w-7 sm:h-8 sm:w-8 opacity-50 group-hover:opacity-100 transition-opacity"
                           warningMessage={
                             (member.booking_count || 0) > 0 || (member.team_count || 0) > 0
                               ? `This staff has ${member.booking_count || 0} booking(s)${(member.team_count || 0) > 0 ? ` and is a member of ${member.team_count} team(s)` : ''}.`
@@ -401,7 +401,7 @@ export function AdminStaff() {
                       {member.staff_number}
                     </div>
                   )}
-                  {member.skills && member.skills.length > 0 ? (
+                  {member.skills && member.skills.length > 0 && (
                     <div className="flex items-start sm:items-center gap-2">
                       <div className="flex items-center text-xs sm:text-sm text-muted-foreground flex-shrink-0">
                         <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
@@ -415,11 +415,6 @@ export function AdminStaff() {
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Award className="h-4 w-4 mr-2" />
-                      <span className="italic">No skills added</span>
-                    </div>
                   )}
                   <p className="text-xs text-muted-foreground border-t pt-2">
                     Joined {formatDate(member.created_at)}
@@ -431,21 +426,20 @@ export function AdminStaff() {
 
           {/* Load More Button */}
           {displayCount < filteredStaff.length && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-6">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Showing {displayCount} of {filteredStaff.length} staff members
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Load More Staff
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-4">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+                Showing {displayCount} of {filteredStaff.length} staff members
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                className="gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Load More
+              </Button>
+            </div>
           )}
         </>
       )}

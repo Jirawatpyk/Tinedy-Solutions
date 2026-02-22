@@ -56,7 +56,7 @@ export function BulkActionsToolbar({
               {selectedBookings.length} selected
             </Badge>
             <Select value={bulkStatus} onValueChange={onBulkStatusChange}>
-              <SelectTrigger className="w-32 sm:w-40 h-8 text-xs sm:text-sm">
+              <SelectTrigger className="w-[140px] sm:w-[160px] h-8 text-xs sm:text-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

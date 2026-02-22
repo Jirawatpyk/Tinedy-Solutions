@@ -105,7 +105,7 @@ export function RecurringBookingCard({
 
   return (
     <Card className={cn(
-      "hover:shadow-md transition-shadow",
+      "group hover:shadow-md transition-shadow",
       allBookingsArchived && "bg-tinedy-off-white/50 opacity-60 border-dashed"
     )}>
       <CardHeader
@@ -204,25 +204,15 @@ export function RecurringBookingCard({
             </div>
           </div>
 
-          {/* Right Section: Total Amount, Payment Badge, Delete & Expand Button */}
-          <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-4 flex-shrink-0">
-            {/* Desktop: ราคาด้านบนขวา */}
-            <div className="hidden sm:block flex-1 sm:flex-none">
-              <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-                <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
-                  {formatCurrency(totalAmount)}
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                  Total ({group.totalBookings})
-                </p>
-              </div>
-            </div>
-            {/* Payment Status Badge - แยกออกมาด้านขวา (เหมือน Individual) */}
-            <div className="hidden sm:flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {/* Right Section: Price + Payment, Expand/Delete (Desktop) */}
+          <div className="hidden sm:flex sm:flex-col items-end gap-2 flex-shrink-0">
+            {/* Price + Payment badge - top row */}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <p className="font-semibold text-tinedy-dark text-base sm:text-lg whitespace-nowrap">
+                {formatCurrency(totalAmount)}
+              </p>
               {(() => {
-                // ใช้ payment_status จาก booking แรก (เพราะจ่ายรวมทั้งกลุ่ม)
                 const paymentStatus = firstBooking.payment_status || 'unpaid'
-
                 return (
                   <>
                     <StatusBadge variant={getPaymentStatusVariant(paymentStatus)}>
@@ -234,8 +224,6 @@ export function RecurringBookingCard({
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation()
-                          // Use onVerifyRecurringGroup to verify ALL bookings in group
-                          // Fallback to onVerifyPayment for single booking (backward compatibility)
                           if (onVerifyRecurringGroup && group.groupId) {
                             onVerifyRecurringGroup(group.groupId)
                           } else if (onVerifyPayment) {
@@ -251,9 +239,11 @@ export function RecurringBookingCard({
                 )
               })()}
             </div>
-
-            {/* Expand/Collapse Button & Delete/Restore Button (Desktop only) */}
-            <div className="hidden sm:flex gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+              Total ({group.totalBookings})
+            </p>
+            {/* Expand + Delete buttons */}
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" onClick={(e) => {
                 e.stopPropagation()
                 setExpanded(!expanded)
@@ -288,7 +278,7 @@ export function RecurringBookingCard({
                     onDelete={onDeleteGroup ? () => onDeleteGroup(group.groupId) : undefined}
                     onCancel={onArchiveGroup ? () => onArchiveGroup(group.groupId) : undefined}
                     cancelText="Archive Group"
-                    className="h-8 w-8"
+                    className="h-8 w-8 opacity-50 group-hover:opacity-100 transition-opacity"
                   />
                 )
               )}
@@ -416,7 +406,7 @@ export function RecurringBookingCard({
                         onValueChange={(newStatus) => onStatusChange?.(booking.id, booking.status, newStatus)}
                         disabled={isFinalStatus(booking.status)}
                       >
-                        <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+                        <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

@@ -388,21 +388,20 @@ export function AdminTeams() {
 
           {/* Load More Button */}
           {displayCount < filteredTeams.length && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-6">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Showing {displayCount} of {filteredTeams.length} teams
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Load More Teams
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-4">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+                Showing {displayCount} of {filteredTeams.length} teams
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setDisplayCount(prev => prev + ITEMS_PER_LOAD)}
+                className="gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Load More
+              </Button>
+            </div>
           )}
         </>
       )}
