@@ -14,7 +14,7 @@
 import type { Booking } from '@/types'
 import { BookingStatus, PaymentStatus, PaymentMethod, PriceMode } from '@/types/booking'
 import { PAYMENT_METHOD_LABELS } from '@/constants/booking-status'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -55,9 +55,11 @@ import { toast } from 'sonner'
 import { formatTime, formatFullAddress } from '@/lib/booking-utils'
 import { getServiceTypeBadge } from '@/lib/booking-badges'
 import { PermissionAwareDeleteButton } from '@/components/common/PermissionAwareDeleteButton'
+import { usePermissions } from '@/hooks/use-permissions'
 import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 import { getFrequencyLabel } from '@/types/service-package-v2'
 import { formatDateRange, bookingDurationDays } from '@/lib/date-range-utils'
+import { EMAIL_TYPES } from '@/constants/email-types'
 
 /** ms to show clipboard feedback before reverting the button label */
 const CLIPBOARD_FEEDBACK_MS = 2000
@@ -120,7 +122,11 @@ export function BookingDetailSheet({
   getStatusLabel,
   actionLoading,
 }: BookingDetailSheetProps) {
+  const { can } = usePermissions()
+  const canSendReminder = can('update', 'bookings')
+  const sendingRef = useRef(false)
   const [sendingReminder, setSendingReminder] = useState(false)
+  const [reminderStatus, setReminderStatus] = useState<'sent' | 'failed' | 'pending' | null>(null)
   const [review, setReview] = useState<Review | null>(null)
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
@@ -179,6 +185,35 @@ export function BookingDetailSheet({
     setTeamMembers([])
   }, [booking?.id])
 
+  // Fetch reminder status from email_queue
+  const fetchReminderStatus = useCallback(async () => {
+    if (!booking?.id || !booking?.customers?.email) {
+      setReminderStatus(null)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('email_queue')
+        .select('status')
+        .eq('booking_id', booking.id)
+        .eq('email_type', EMAIL_TYPES.BOOKING_REMINDER)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) throw error
+      setReminderStatus(data?.status as 'sent' | 'failed' | 'pending' | null ?? null)
+    } catch {
+      // Silently fail — don't block UI
+      setReminderStatus(null)
+    }
+  }, [booking?.id, booking?.customers?.email])
+
+  useEffect(() => {
+    fetchReminderStatus()
+  }, [fetchReminderStatus])
+
   const fetchReview = useCallback(async () => {
     if (!booking?.id) return
 
@@ -201,7 +236,7 @@ export function BookingDetailSheet({
       console.error('Error fetching review:', error)
       toast.error('Failed to load review data')
     }
-  }, [booking, resetReview, toast])
+  }, [booking?.id, resetReview])
 
   useEffect(() => {
     if (booking?.id) {
@@ -284,11 +319,11 @@ export function BookingDetailSheet({
       .catch(() => {
         toast.error('Failed to copy link')
       })
-  }, [booking, toast])
+  }, [booking?.id, booking?.parent_booking_id])
 
   const handleSendReminder = async () => {
-    if (!booking || !booking.customers) return
-
+    if (!booking || !booking.customers || sendingRef.current) return
+    sendingRef.current = true
     setSendingReminder(true)
 
     try {
@@ -299,11 +334,14 @@ export function BookingDetailSheet({
       }
 
       toast.success('Reminder Sent!', { description: `Email sent to ${booking.customers.email}` })
+      await fetchReminderStatus()
     } catch (error) {
       toast.error('Failed to Send Reminder', {
         description: error instanceof Error ? error.message : 'An error occurred while sending the email',
       })
+      await fetchReminderStatus()
     } finally {
+      sendingRef.current = false
       setSendingReminder(false)
     }
   }
@@ -598,19 +636,41 @@ export function BookingDetailSheet({
                     </SelectContent>
                   </Select>
                 )}
-                {/* Send Reminder */}
-                <SimpleTooltip content={!booking.customers?.email ? 'No customer email' : 'Send reminder email'}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                    onClick={handleSendReminder}
-                    disabled={sendingReminder || !booking.customers?.email}
-                  >
-                    <Send className="h-3.5 w-3.5 mr-1.5" />
-                    {sendingReminder ? 'Sending...' : 'Send Reminder'}
-                  </Button>
-                </SimpleTooltip>
+                {/* Reminder Status / Send Button (admin/manager only) */}
+                {canSendReminder && booking.customers?.email && reminderStatus === 'sent' && (
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 h-8 px-3 text-xs">
+                    <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    Reminder Sent
+                  </Badge>
+                )}
+                {canSendReminder && booking.customers?.email && reminderStatus === 'failed' && (
+                  <SimpleTooltip content="Previous send failed — click to retry">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                      onClick={handleSendReminder}
+                      disabled={sendingReminder}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1.5" />
+                      {sendingReminder ? 'Retrying...' : 'Retry Reminder'}
+                    </Button>
+                  </SimpleTooltip>
+                )}
+                {canSendReminder && booking.customers?.email && (reminderStatus === null || reminderStatus === 'pending') && (
+                  <SimpleTooltip content="Send reminder email">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                      onClick={handleSendReminder}
+                      disabled={sendingReminder || reminderStatus === 'pending'}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1.5" />
+                      {sendingReminder ? 'Sending...' : reminderStatus === 'pending' ? 'Queued' : 'Send Reminder'}
+                    </Button>
+                  </SimpleTooltip>
+                )}
               </div>
             </div>
 
