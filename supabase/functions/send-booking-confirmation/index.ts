@@ -37,6 +37,7 @@ serve(async (req) => {
       .select(`
         id,
         booking_date,
+        end_date,
         start_time,
         end_time,
         total_price,
@@ -100,9 +101,13 @@ serve(async (req) => {
       // continue with defaults
     }
 
-    const bookingDateFormatted = new Date(b.booking_date).toLocaleDateString('en-US', {
+    const formatSingleDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
+    const startDateStr = formatSingleDate(b.booking_date)
+    const bookingDateFormatted = b.end_date && b.end_date !== b.booking_date
+      ? `${startDateStr} – ${formatSingleDate(b.end_date)}`
+      : startDateStr
 
     const emailHtml = generateBookingConfirmationEmail({
       customerName,
@@ -211,10 +216,10 @@ function generateBookingConfirmationEmail(data: {
   ` : ''
 
   const footerPhone = data.businessPhone
-    ? `<span style="margin-right:16px;">📞 ${data.businessPhone}</span>`
+    ? `<p style="margin:0 0 4px;font-size:13px;color:#6b6b6b;">📞 ${data.businessPhone}</p>`
     : ''
   const footerAddress = data.businessAddress
-    ? `<span>📍 ${data.businessAddress}</span>`
+    ? `<p style="margin:0;font-size:13px;color:#6b6b6b;">📍 ${data.businessAddress}</p>`
     : ''
 
   return `<!DOCTYPE html>
@@ -233,7 +238,7 @@ function generateBookingConfirmationEmail(data: {
           <!-- HEADER -->
           <tr>
             <td style="background-color:#2e4057;padding:32px 40px;text-align:center;">
-              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;" />
+              <img src="${data.businessLogoUrl}" alt="${data.fromName}" style="max-height:80px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;background-color:#ffffff;padding:8px 12px;border-radius:8px;" />
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.3px;">✅ Booking Confirmed!</h1>
               <p style="margin:8px 0 0;color:#8fb996;font-size:15px;">Your appointment is all set.</p>
             </td>
@@ -266,7 +271,7 @@ function generateBookingConfirmationEmail(data: {
           <tr>
             <td style="background-color:#f5f3ee;border-top:1px solid #e8e4df;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2e4057;">${data.fromName}</p>
-              <p style="margin:0;font-size:13px;color:#6b6b6b;">${footerPhone}${footerAddress}</p>
+              ${footerPhone}${footerAddress}
               <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply directly to this email.</p>
             </td>
           </tr>
