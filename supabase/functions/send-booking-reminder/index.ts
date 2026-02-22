@@ -86,7 +86,7 @@ serve(async (req) => {
 
       if (!callerProfile || !['admin', 'manager'].includes(callerProfile.role)) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Forbidden: Only admin or manager can send reminders' }),
+          JSON.stringify({ success: false, error: 'Forbidden' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -127,10 +127,11 @@ serve(async (req) => {
 
     const b = booking as unknown as BookingData
 
-    // Status guard: only send reminders for confirmed bookings
-    if (b.status !== 'confirmed') {
+    // Status guard: only send reminders for pending or confirmed bookings
+    const allowedStatuses = ['pending', 'confirmed']
+    if (!allowedStatuses.includes(b.status)) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Booking is not confirmed', status: b.status }),
+        JSON.stringify({ success: false, error: `Cannot send reminder for status: ${b.status}`, status: b.status }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
